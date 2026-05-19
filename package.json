@@ -12,6 +12,7 @@
     "format": "prettier --write .",
     "prisma:generate": "npm --workspace @oman-sale/api run prisma:generate",
     "prisma:migrate": "npm --workspace @oman-sale/api run prisma:migrate",
+    "prisma:deploy": "npm --workspace @oman-sale/api run prisma:deploy",
     "jobs:dev": "npm --workspace @oman-sale/jobs run dev",
     "jobs:start": "npm --workspace @oman-sale/jobs run start"
   },

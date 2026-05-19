@@ -80,6 +80,12 @@ npm run build
 
 إذا غيرت `NEXT_PUBLIC_API_URL` أو بورت Nginx لاحقًا، أعد بناء الواجهة لأن متغيرات `NEXT_PUBLIC_*` تدخل داخل build.
 
+## Prisma على السيرفر (مهم)
+
+- على الإنتاج استخدم **`npm run prisma:deploy`** (يطبّق المايجريشن الموجودة في المستودع دون إنشاء مايجريشن جديدة).
+- **`npm run prisma:migrate`** يشغّل `migrate dev` وهو مخصص التطوير المحلي ويحتاج قاعدة **shadow** (`SHADOW_DATABASE_URL` / `oman_sale_shadow`). إذا لم تنشئها سيظهر خطأ `P1003`.
+- إن أردت استخدام `migrate dev` على السيرفر (غير مُستحسن): أنشئ قاعدة `oman_sale_shadow` وضع `SHADOW_DATABASE_URL` في `.env` كما في `.env.example`.
+
 ## تشغيل الخدمات بـ PM2
 
 ```bash
