@@ -47,6 +47,10 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', service: 'oman-sale-api' });
 });
 
+app.get('/api/v1/health', (_req, res) => {
+  res.json({ status: 'ok', service: 'oman-sale-api' });
+});
+
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', usersRoutes);
 app.use('/api/v1/ads', adsRoutes);

@@ -1,0 +1,56 @@
+# Frontend site.
+# Current no-domain access: http://72.62.197.60:3601
+# Later, when DNS is ready, point omansale.om to this VPS.
+#
+# Important: Next.js also runs on port 3601, but only on 127.0.0.1.
+# Nginx listens on the public VPS IP:3601 to avoid a port conflict.
+
+upstream omansale_web {
+  server 127.0.0.1:3601;
+}
+
+upstream omansale_api {
+  server 127.0.0.1:3600;
+}
+
+server {
+  listen 72.62.197.60:3601 default_server;
+  server_name omansale.om 72.62.197.60;
+
+  client_max_body_size 20m;
+
+  location /api/ {
+    proxy_pass http://omansale_api;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Port $server_port;
+  }
+
+  location /socket.io/ {
+    proxy_pass http://omansale_api;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Port $server_port;
+  }
+
+  location / {
+    proxy_pass http://omansale_web;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Port $server_port;
+  }
+}

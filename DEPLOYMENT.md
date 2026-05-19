@@ -4,11 +4,11 @@
 
 ## البورتات المقترحة
 
-- الواجهة Next.js داخليًا فقط: `127.0.0.1:3310`
-- الباكند API داخليًا فقط: `127.0.0.1:4310`
-- Nginx خارجيًا للمستخدمين: `http://SERVER_IP:8088`
+- الباكند API داخليًا فقط: `127.0.0.1:3600`
+- الواجهة Next.js داخليًا فقط: `127.0.0.1:3601`
+- Nginx خارجيًا للمستخدمين: `http://72.62.197.60:3601`
 
-يمكن تغيير `8088` إذا كان مستخدمًا من مشروع آخر.
+مهم: لأن Next.js وNginx يستخدمان نفس رقم البورت `3601`، يجب أن يعمل Next على `127.0.0.1:3601` فقط، ويعمل Nginx على IP السيرفر العام `72.62.197.60:3601`. لا تجعل Next يستمع على `0.0.0.0:3601`.
 
 ## لماذا هذا مهم للـ rate limit والمشاهدات؟
 
@@ -23,7 +23,7 @@
 - `apiRateLimiter`
 - تسجيل مشاهدات الإعلانات
 
-مهم: اجعل API يعمل على `HOST=127.0.0.1` ولا تفتح بورت `4310` للعامة، حتى لا يستطيع أحد إرسال `X-Forwarded-For` مزيف مباشرة إلى الباكند.
+مهم: اجعل API يعمل على `HOST=127.0.0.1` ولا تفتح بورت `3600` للعامة، حتى لا يستطيع أحد إرسال `X-Forwarded-For` مزيف مباشرة إلى الباكند.
 
 ## ملفات البيئة
 
@@ -39,18 +39,18 @@ cp apps/web/.env.production.example apps/web/.env.production
 ```env
 NODE_ENV=production
 HOST=127.0.0.1
-PORT=4310
+PORT=3600
 TRUST_PROXY=1
-API_URL=http://SERVER_IP:8088
-WEB_URL=http://SERVER_IP:8088
-CORS_ORIGINS=http://SERVER_IP:8088
+API_URL=http://72.62.197.60:3601
+WEB_URL=http://72.62.197.60:3601
+CORS_ORIGINS=http://72.62.197.60:3601
 ```
 
 عدّل `apps/web/.env.production`:
 
 ```env
 NEXT_PUBLIC_API_URL=/api/v1
-NEXT_PUBLIC_API_PORT=4310
+NEXT_PUBLIC_API_PORT=3600
 ```
 
 استخدام `/api/v1` يجعل الواجهة تتصل بنفس IP ونفس بورت Nginx، لذلك لا تحتاج دومين ولا CORS بين بورتات مختلفة.
@@ -85,9 +85,7 @@ npm run build
 ```bash
 sudo npm install -g pm2
 
-HOST=127.0.0.1 PORT=4310 pm2 start npm --name omansale-api -- --workspace @oman-sale/api run start
-HOSTNAME=127.0.0.1 PORT=3310 pm2 start npm --name omansale-web -- --workspace @oman-sale/web run start
-pm2 start npm --name omansale-jobs -- --workspace @oman-sale/jobs run start
+pm2 start ecosystem.config.cjs
 
 pm2 save
 pm2 startup
@@ -95,17 +93,24 @@ pm2 startup
 
 ## إعداد Nginx
 
-استخدم الملف:
+يوجد ملفان:
 
 ```bash
-infra/nginx/omansale-vps.conf.example
+infra/nginx/omansale.om
+infra/nginx/api.omansale.om
 ```
 
-انسخه إلى Nginx:
+`omansale.om` خاص بالواجهة، ويحتوي أيضًا على توجيه `/api/` و`/socket.io/` إلى الباكند حتى يعمل المشروع بدون دومين عبر IP واحد.
+
+`api.omansale.om` خاص بالباكند ومجهز للدومين لاحقًا. يمكن تفعيله الآن بدون ضرر، لكنه لن يستخدم من المتصفح إلا عند وجود DNS أو عند إرسال `Host: api.omansale.om`.
+
+انسخهما إلى Nginx:
 
 ```bash
-sudo cp infra/nginx/omansale-vps.conf.example /etc/nginx/sites-available/omansale
-sudo ln -s /etc/nginx/sites-available/omansale /etc/nginx/sites-enabled/omansale
+sudo cp infra/nginx/omansale.om /etc/nginx/sites-available/omansale.om
+sudo cp infra/nginx/api.omansale.om /etc/nginx/sites-available/api.omansale.om
+sudo ln -s /etc/nginx/sites-available/omansale.om /etc/nginx/sites-enabled/omansale.om
+sudo ln -s /etc/nginx/sites-available/api.omansale.om /etc/nginx/sites-enabled/api.omansale.om
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -113,19 +118,19 @@ sudo systemctl reload nginx
 افتح البورت في الجدار الناري:
 
 ```bash
-sudo ufw allow 8088/tcp
+sudo ufw allow 3601/tcp
 ```
 
 ثم افتح:
 
 ```text
-http://SERVER_IP:8088
+http://72.62.197.60:3601
 ```
 
 ## فحص سريع
 
 ```bash
-curl http://SERVER_IP:8088/api/v1/health
+curl http://72.62.197.60:3601/api/v1/health
 ```
 
 يجب أن يرجع:
@@ -138,7 +143,8 @@ curl http://SERVER_IP:8088/api/v1/health
 
 عند توفر دومين:
 
-- غيّر `server_name _;` في Nginx إلى الدومين.
+- `omansale.om` سيخدم الواجهة.
+- `api.omansale.om` سيخدم الباكند.
 - غيّر `WEB_URL` و`API_URL` و`CORS_ORIGINS`.
-- أبقِ `NEXT_PUBLIC_API_URL=/api/v1` إذا ستستمر بالاتصال عبر نفس الدومين.
+- أبقِ `NEXT_PUBLIC_API_URL=/api/v1` إذا ستستمر بتوجيه `/api/` من ملف الواجهة إلى الباكند.
 - أعد build للواجهة.
