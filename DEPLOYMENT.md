@@ -145,6 +145,15 @@ curl http://72.62.197.60:3601/api/v1/health
 {"status":"ok","service":"oman-sale-api"}
 ```
 
+## إذا حوّلك المتصفح إلى `localhost` بعد فتح IP:البورت
+
+يحدث ذلك لأن Next يستقبل الطلب من Nginx على `127.0.0.1` فيُبنى عنوان خاطئ. تم ضبط `middleware` ليقرأ `X-Forwarded-Host` و`X-Forwarded-Proto`، وملف `omansale.om` يمرّر `Host` و`X-Forwarded-Host` كـ `$http_host` (مع البورت). بعد `git pull` أعد بناء الواجهة ثم أعد تحميل Nginx:
+
+```bash
+npm run build
+sudo nginx -t && sudo systemctl reload nginx
+```
+
 ## ملاحظات عند إضافة دومين لاحقًا
 
 عند توفر دومين:
