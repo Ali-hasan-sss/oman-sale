@@ -3,7 +3,7 @@
 import { ArrowRight, Check, CheckCheck, EllipsisVertical, Globe, Image, Phone, Send, User } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
+import { FormEvent, KeyboardEvent, PointerEvent, useEffect, useRef, useState } from 'react';
 
 import { HeaderAuthAction } from '@/components/auth/user-menu';
 import { ChatNavLink } from '@/components/chat/chat-nav-link';
@@ -93,6 +93,7 @@ export function ChatConversationPage({ conversationId }: { conversationId: strin
   const [error, setError] = useState('');
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const typingTimeoutRef = useRef<number | undefined>();
   const isSendingRef = useRef(false);
 
@@ -102,6 +103,12 @@ export function ChatConversationPage({ conversationId }: { conversationId: strin
     setMessages((current) => {
       if (current.some((messageItem) => messageItem.id === nextMessage.id)) return current;
       return [...current, nextMessage];
+    });
+  };
+
+  const focusComposer = () => {
+    requestAnimationFrame(() => {
+      composerRef.current?.focus({ preventScroll: true });
     });
   };
 
@@ -187,7 +194,7 @@ export function ChatConversationPage({ conversationId }: { conversationId: strin
     container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
   }, [isOtherTyping, messages.length]);
 
-  const sendMessage = async () => {
+  const sendMessage = async (keepComposerFocused = false) => {
     const token = getUserAccessToken();
     if (!token || !otherUser || !message.trim() || isSendingRef.current) return;
 
@@ -215,6 +222,7 @@ export function ChatConversationPage({ conversationId }: { conversationId: strin
     } finally {
       isSendingRef.current = false;
       setIsSending(false);
+      if (keepComposerFocused) focusComposer();
     }
   };
 
@@ -227,7 +235,12 @@ export function ChatConversationPage({ conversationId }: { conversationId: strin
     if (event.key !== 'Enter' || event.shiftKey) return;
 
     event.preventDefault();
-    await sendMessage();
+    await sendMessage(true);
+  };
+
+  const handleSendPointerDown = (event: PointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    void sendMessage(true);
   };
 
   const updateMessageDraft = (value: string) => {
@@ -373,6 +386,7 @@ export function ChatConversationPage({ conversationId }: { conversationId: strin
                   </button>
                   <div className="relative flex-1">
                     <textarea
+                      ref={composerRef}
                       value={message}
                       onChange={(event) => updateMessageDraft(event.target.value)}
                       onKeyDown={handleMessageKeyDown}
@@ -383,10 +397,11 @@ export function ChatConversationPage({ conversationId }: { conversationId: strin
                   </div>
                   <button
                     disabled={isSending || !message.trim()}
+                    onPointerDown={handleSendPointerDown}
                     className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg transition ${
                       message.trim() ? 'bg-green-600 text-white hover:bg-green-700' : 'cursor-not-allowed bg-gray-100 text-gray-400'
                     }`}
-                    type="submit"
+                    type="button"
                   >
                     <Send size={20} />
                   </button>
