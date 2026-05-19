@@ -19,5 +19,17 @@ export const changePasswordSchema = z.object({
   newPassword: z.string().min(8)
 });
 
+export const requestEmailChangeSchema = z.object({
+  email: z.string().email().transform((value) => value.trim().toLowerCase()),
+  locale: z.enum(['ar', 'en']).default('ar')
+});
+
+export const verifyEmailChangeSchema = z.object({
+  email: z.string().email().transform((value) => value.trim().toLowerCase()),
+  code: z.string().regex(/^\d{6}$/)
+});
+
 export type UpdateProfileDto = z.infer<typeof updateProfileSchema>;
 export type ChangePasswordDto = z.infer<typeof changePasswordSchema>;
+export type RequestEmailChangeDto = z.infer<typeof requestEmailChangeSchema>;
+export type VerifyEmailChangeDto = z.infer<typeof verifyEmailChangeSchema>;

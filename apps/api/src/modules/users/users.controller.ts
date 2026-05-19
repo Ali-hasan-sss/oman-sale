@@ -15,6 +15,14 @@ export class UsersController {
     res.json({ data: await usersService.changePassword(req.user!.id, req.body) });
   }
 
+  async requestEmailChange(req: Request, res: Response) {
+    res.json({ data: await usersService.requestEmailChange(req.user!.id, req.body) });
+  }
+
+  async verifyEmailChange(req: Request, res: Response) {
+    res.json({ data: await usersService.verifyEmailChange(req.user!.id, req.body) });
+  }
+
   async list(_req: Request, res: Response) {
     res.json({ data: await usersService.list() });
   }

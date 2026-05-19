@@ -32,16 +32,24 @@ const playNotificationSound = () => {
   if (!AudioContextClass) return;
 
   const context = new AudioContextClass();
-  const oscillator = context.createOscillator();
-  const gain = context.createGain();
+  const playTone = (frequency: number, startAt: number, duration: number, volume: number) => {
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(frequency, startAt);
+    gain.gain.setValueAtTime(0.001, startAt);
+    gain.gain.exponentialRampToValueAtTime(volume, startAt + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, startAt + duration);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start(startAt);
+    oscillator.stop(startAt + duration + 0.02);
+  };
 
-  oscillator.type = 'sine';
-  oscillator.frequency.value = 880;
-  gain.gain.value = 0.08;
-  oscillator.connect(gain);
-  gain.connect(context.destination);
-  oscillator.start();
-  oscillator.stop(context.currentTime + 0.16);
+  const startAt = context.currentTime;
+  playTone(520, startAt, 0.14, 0.035);
+  playTone(660, startAt + 0.11, 0.18, 0.03);
+  window.setTimeout(() => context.close().catch(() => undefined), 450);
 };
 
 export const useChatRealtimeStore = create<ChatRealtimeState>((set, get) => ({

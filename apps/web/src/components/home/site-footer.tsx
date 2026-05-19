@@ -2,15 +2,48 @@
 
 import { ArrowUp, Facebook, Instagram, Mail, MapPin, Phone, Twitter, Youtube } from 'lucide-react';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
+import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { siteContactEmail, siteContactPhone } from '@/lib/site-contact';
 
-const footerCategoryHrefs = ['/cars', '/real-estate-sale', '/jobs', '/electronics', '/services', '/home-garden'];
+type FooterCategory = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
+type FooterTourismDestination = {
+  id: string;
+  slug: string;
+  titleAr: string;
+  titleEn: string;
+};
 
 export function SiteFooter() {
-  const { localizedPath, m } = useI18n();
-  const footerCategories = m.home.categories.slice(2, 8).map((label, index) => [label, footerCategoryHrefs[index] ?? '#'] as [string, string]);
+  const { locale, m } = useI18n();
+  const [categories, setCategories] = useState<FooterCategory[]>([]);
+  const [tourismDestinations, setTourismDestinations] = useState<FooterTourismDestination[]>([]);
+  const footerCategories = categories.map((category) => [category.name, `/category/${category.slug}`] as [string, string]);
+  const footerRegions = tourismDestinations.map((destination) => [
+    locale === 'en' ? destination.titleEn : destination.titleAr,
+    `/destination/${destination.slug}`
+  ] as [string, string]);
+
+  useEffect(() => {
+    api
+      .get<{ data: FooterCategory[] }>('/categories', { params: { locale } })
+      .then((response) => setCategories(response.data.data.slice(0, 6)))
+      .catch(() => setCategories([]));
+  }, [locale]);
+
+  useEffect(() => {
+    api
+      .get<{ data: FooterTourismDestination[] }>('/tourism/destinations')
+      .then((response) => setTourismDestinations(response.data.data.slice(0, 6)))
+      .catch(() => setTourismDestinations([]));
+  }, []);
 
   return (
     <footer className="bg-ink-950 text-white">
@@ -18,8 +51,8 @@ export function SiteFooter() {
         <div className="grid grid-cols-1 gap-8 border-b border-slate-800 pb-12 lg:grid-cols-3">
           <div>
             <div className="mb-4 flex items-center gap-3">
-              <span className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-white">
-                <img src="/logo.png" alt="Oman Sale" className="h-full w-full object-contain p-1" />
+              <span className="flex h-20 w-20 items-center justify-center overflow-hidden">
+                <img src="/logo.png" alt="Oman Sale" className="h-full w-full object-contain" />
               </span>
               <span className="text-2xl font-black">Oman Sale</span>
             </div>
@@ -41,18 +74,7 @@ export function SiteFooter() {
           </div>
 
           <FooterList title={m.footer.categories} items={footerCategories} />
-          <div>
-            <h4 className="mb-4 font-bold">{m.footer.regions}</h4>
-            <ul className="space-y-3 text-sm">
-              {m.footer.regionsList.map((region) => (
-                <li key={region}>
-                  <Link href={localizedPath(`/region/${region}`)} className="text-slate-400 transition hover:text-brand-500">
-                    {region}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <FooterList title={m.footer.regions} items={footerRegions} />
         </div>
 
 

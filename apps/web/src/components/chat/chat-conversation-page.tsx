@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowRight, Check, CheckCheck, EllipsisVertical, Globe, Image, Phone, Search, Send, User } from 'lucide-react';
+import { ArrowRight, Check, CheckCheck, EllipsisVertical, Globe, Image, Phone, Send, User } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
@@ -94,9 +94,16 @@ export function ChatConversationPage({ conversationId }: { conversationId: strin
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const typingTimeoutRef = useRef<number | undefined>();
+  const isSendingRef = useRef(false);
 
   const otherUser = conversation?.participants.find((participant) => participant.userId !== currentUser?.id)?.user;
   const isOtherUserOnline = otherUser ? onlineUserIds.has(otherUser.id) : false;
+  const appendMessage = (nextMessage: ChatMessage) => {
+    setMessages((current) => {
+      if (current.some((messageItem) => messageItem.id === nextMessage.id)) return current;
+      return [...current, nextMessage];
+    });
+  };
 
   useEffect(() => {
     hydrateFromStorage();
@@ -133,10 +140,7 @@ export function ChatConversationPage({ conversationId }: { conversationId: strin
 
     const receiveMessage = (nextMessage: ChatMessage) => {
       if (nextMessage.conversationId !== conversationId) return;
-      setMessages((current) => {
-        if (current.some((messageItem) => messageItem.id === nextMessage.id)) return current;
-        return [...current, nextMessage];
-      });
+      appendMessage(nextMessage);
       setConversationRead(conversationId);
       const token = getUserAccessToken();
       if (token) {
@@ -185,9 +189,10 @@ export function ChatConversationPage({ conversationId }: { conversationId: strin
 
   const sendMessage = async () => {
     const token = getUserAccessToken();
-    if (!token || !otherUser || !message.trim()) return;
+    if (!token || !otherUser || !message.trim() || isSendingRef.current) return;
 
     setError('');
+    isSendingRef.current = true;
     setIsSending(true);
 
     try {
@@ -201,13 +206,14 @@ export function ChatConversationPage({ conversationId }: { conversationId: strin
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setMessages((current) => [...current, response.data.data]);
+      appendMessage(response.data.data);
       setMessage('');
       window.clearTimeout(typingTimeoutRef.current);
       getRealtimeSocket()?.emit('typing:stopped', { conversationId, userId: currentUser?.id });
     } catch {
       setError(text.sendError);
     } finally {
+      isSendingRef.current = false;
       setIsSending(false);
     }
   };
@@ -263,14 +269,6 @@ export function ChatConversationPage({ conversationId }: { conversationId: strin
               <HeaderAuthAction loginClassName="rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-50" />
             </div>
           </div>
-          <div className="relative">
-            <Search className={`absolute top-1/2 -translate-y-1/2 text-gray-400 ${dir === 'rtl' ? 'right-3' : 'left-3'}`} size={20} />
-            <input
-              type="text"
-              placeholder={m.home.searchPlaceholder}
-              className={`w-full rounded-lg border border-gray-300 py-3 outline-none focus:ring-2 focus:ring-green-500 ${dir === 'rtl' ? 'pl-4 pr-12' : 'pl-12 pr-4'}`}
-            />
-          </div>
         </div>
       </header>
 
@@ -283,8 +281,8 @@ export function ChatConversationPage({ conversationId }: { conversationId: strin
           <div className="rounded-2xl bg-white p-10 text-center font-bold text-red-600 shadow-sm">{error}</div>
         </main>
       ) : conversation ? (
-        <div className="flex h-[calc(100vh-132px)] flex-col bg-gray-50" dir={dir}>
-          <div className="border-b border-gray-200 bg-white px-4 py-3">
+        <div className="flex max-h-[90vh] flex-col bg-gray-50 lg:h-[calc(100vh-132px)] lg:max-h-none" dir={dir}>
+          <div className="sticky top-[100px] z-30 border-b border-gray-200 bg-white px-4 py-3 lg:static">
             <div className="mx-auto flex max-w-7xl items-center justify-between">
               <div className="flex items-center gap-3">
                 <Link className="rounded-lg p-2 transition hover:bg-gray-100" href={localizedPath('/chats')}>
@@ -324,7 +322,7 @@ export function ChatConversationPage({ conversationId }: { conversationId: strin
                 <AdSummaryCard ad={conversation.ad} locale={locale} localizedPath={localizedPath} text={text.aboutAd} />
               </div>
 
-              <div ref={messagesContainerRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+              <div ref={messagesContainerRef} className="min-h-0 flex-1 overflow-y-auto overscroll-auto">
                 <div className={`space-y-4 px-4 pt-6 ${isOtherTyping ? 'pb-8' : 'pb-4'}`}>
                   {messages.length === 0 ? <p className="text-center text-sm font-bold text-gray-400">{text.noMessages}</p> : null}
                   {messages.map((item) => {

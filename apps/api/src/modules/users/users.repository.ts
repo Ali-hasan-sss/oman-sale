@@ -62,6 +62,27 @@ export class UsersRepository {
       data: { password }
     });
   }
+
+  updateEmail(id: string, email: string) {
+    return prisma.user.update({
+      where: { id },
+      data: { email, isVerified: true },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        phone: true,
+        avatar: true,
+        role: true,
+        bio: true,
+        isVerified: true,
+        isActive: true,
+        isBlocked: true,
+        lastSeenAt: true,
+        createdAt: true
+      }
+    });
+  }
 }
 
 export const usersRepository = new UsersRepository();

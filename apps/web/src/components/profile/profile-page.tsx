@@ -6,12 +6,13 @@ import { useRouter } from 'next/navigation';
 import { ChangeEvent, FormEvent, ReactNode, useEffect, useState } from 'react';
 
 import { HeaderAuthAction } from '@/components/auth/user-menu';
+import { VerificationCodeInput } from '@/components/auth/verification-code-input';
 import { ChatNavLink } from '@/components/chat/chat-nav-link';
 import { SiteFooter } from '@/components/home/site-footer';
 import { MobileNavMenu } from '@/components/navigation/mobile-nav-menu';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
-import { getUserAccessToken, saveUser, type UserAuthUser } from '@/lib/user-auth';
+import { getUserAccessToken, saveUser, saveUserSession, type UserAuthSession, type UserAuthUser } from '@/lib/user-auth';
 import { useAuthStore } from '@/store/auth-store';
 
 type ProfileMessages = {
@@ -37,6 +38,15 @@ type ProfileMessages = {
   passwordSaved: string;
   profileError: string;
   passwordError: string;
+  emailChangeTitle: string;
+  newEmail: string;
+  requestEmailCode: string;
+  verifyEmail: string;
+  verificationCode: string;
+  emailCodeSent: string;
+  emailChanged: string;
+  emailChangeError: string;
+  emailVerifyError: string;
 };
 
 const messages: Record<'ar' | 'en', ProfileMessages> = {
@@ -49,7 +59,7 @@ const messages: Record<'ar' | 'en', ProfileMessages> = {
     removePhoto: 'إزالة الصورة',
     fullName: 'الاسم الكامل',
     email: 'البريد الإلكتروني',
-    emailHint: 'لا يمكن تغيير البريد الإلكتروني حاليًا. سنضيف طلب تغيير البريد لاحقًا.',
+    emailHint: 'لتغيير البريد استخدم نموذج تغيير البريد وأكّد الرمز المرسل إلى البريد الجديد.',
     phone: 'رقم الهاتف',
     bio: 'نبذة عنك',
     bioPlaceholder: 'اكتب نبذة قصيرة تظهر في ملفك الشخصي...',
@@ -62,7 +72,16 @@ const messages: Record<'ar' | 'en', ProfileMessages> = {
     profileSaved: 'تم تحديث الملف الشخصي بنجاح.',
     passwordSaved: 'تم تغيير كلمة المرور بنجاح.',
     profileError: 'تعذر تحديث الملف الشخصي. تحقق من البيانات وحاول مرة أخرى.',
-    passwordError: 'تعذر تغيير كلمة المرور. تأكد من كلمة المرور الحالية.'
+    passwordError: 'تعذر تغيير كلمة المرور. تأكد من كلمة المرور الحالية.',
+    emailChangeTitle: 'تغيير البريد الإلكتروني',
+    newEmail: 'البريد الإلكتروني الجديد',
+    requestEmailCode: 'إرسال رمز التحقق',
+    verifyEmail: 'تأكيد البريد الجديد',
+    verificationCode: 'رمز التحقق',
+    emailCodeSent: 'تم إرسال رمز التحقق إلى البريد الجديد.',
+    emailChanged: 'تم تحديث البريد الإلكتروني بنجاح.',
+    emailChangeError: 'تعذر إرسال رمز التحقق. تأكد من البريد وحاول مرة أخرى.',
+    emailVerifyError: 'تعذر تأكيد البريد. تحقق من الرمز وحاول مرة أخرى.'
   },
   en: {
     title: 'My Profile',
@@ -73,7 +92,7 @@ const messages: Record<'ar' | 'en', ProfileMessages> = {
     removePhoto: 'Remove photo',
     fullName: 'Full name',
     email: 'Email address',
-    emailHint: 'Email cannot be changed yet. A dedicated email change request will be added later.',
+    emailHint: 'To change your email, use the email change form and verify the code sent to the new address.',
     phone: 'Phone number',
     bio: 'Bio',
     bioPlaceholder: 'Write a short bio for your profile...',
@@ -86,7 +105,16 @@ const messages: Record<'ar' | 'en', ProfileMessages> = {
     profileSaved: 'Profile updated successfully.',
     passwordSaved: 'Password changed successfully.',
     profileError: 'Could not update your profile. Check your details and try again.',
-    passwordError: 'Could not change password. Check your current password.'
+    passwordError: 'Could not change password. Check your current password.',
+    emailChangeTitle: 'Change email address',
+    newEmail: 'New email address',
+    requestEmailCode: 'Send verification code',
+    verifyEmail: 'Verify new email',
+    verificationCode: 'Verification code',
+    emailCodeSent: 'We sent a verification code to your new email.',
+    emailChanged: 'Email address updated successfully.',
+    emailChangeError: 'Could not send the verification code. Check the email and try again.',
+    emailVerifyError: 'Could not verify the email. Check the code and try again.'
   }
 };
 
@@ -104,12 +132,18 @@ export function ProfilePage() {
   const [avatar, setAvatar] = useState<string | null>(null);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [newEmail, setNewEmail] = useState('');
+  const [emailVerificationCode, setEmailVerificationCode] = useState('');
+  const [pendingEmailChange, setPendingEmailChange] = useState(false);
   const [profileMessage, setProfileMessage] = useState('');
   const [profileError, setProfileError] = useState('');
   const [passwordMessage, setPasswordMessage] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [emailMessage, setEmailMessage] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [isSavingEmail, setIsSavingEmail] = useState(false);
 
   const inputClass = 'w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:ring-2 focus:ring-green-500';
 
@@ -204,6 +238,49 @@ export function ProfilePage() {
       setPasswordError(profileMessages.passwordError);
     } finally {
       setIsSavingPassword(false);
+    }
+  };
+
+  const requestEmailChange = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setEmailError('');
+    setEmailMessage('');
+    setIsSavingEmail(true);
+
+    try {
+      await api.post('/users/me/email-change', { email: newEmail, locale }, { headers: getAuthHeaders() });
+      setPendingEmailChange(true);
+      setEmailVerificationCode('');
+      setEmailMessage(profileMessages.emailCodeSent);
+    } catch {
+      setEmailError(profileMessages.emailChangeError);
+    } finally {
+      setIsSavingEmail(false);
+    }
+  };
+
+  const verifyEmailChange = async () => {
+    setEmailError('');
+    setEmailMessage('');
+    setIsSavingEmail(true);
+
+    try {
+      const response = await api.post<{ data: UserAuthSession }>(
+        '/users/me/email-change/verify',
+        { email: newEmail, code: emailVerificationCode },
+        { headers: getAuthHeaders() }
+      );
+      saveUserSession(response.data.data);
+      setSession({ accessToken: response.data.data.tokens.accessToken, user: response.data.data.user });
+      applyUser(response.data.data.user);
+      setNewEmail('');
+      setEmailVerificationCode('');
+      setPendingEmailChange(false);
+      setEmailMessage(profileMessages.emailChanged);
+    } catch {
+      setEmailError(profileMessages.emailVerifyError);
+    } finally {
+      setIsSavingEmail(false);
     }
   };
 
@@ -338,44 +415,96 @@ export function ProfilePage() {
             </button>
           </form>
 
-          <form onSubmit={changePassword} className="h-fit rounded-3xl bg-white p-6 shadow-sm md:p-8">
-            <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-green-50 text-green-700">
-              <Lock size={24} />
-            </div>
-            <h2 className="mb-6 text-2xl font-black">{profileMessages.passwordTitle}</h2>
-            <div className="space-y-5">
-              <Field label={profileMessages.currentPassword}>
-                <input
-                  type="password"
-                  value={currentPassword}
-                  onChange={(event) => setCurrentPassword(event.target.value)}
-                  required
-                  className={inputClass}
-                />
-              </Field>
-              <Field label={profileMessages.newPassword}>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(event) => setNewPassword(event.target.value)}
-                  required
-                  minLength={8}
-                  className={inputClass}
-                />
-              </Field>
-            </div>
+          <div className="space-y-6">
+            <form onSubmit={changePassword} className="h-fit rounded-3xl bg-white p-6 shadow-sm md:p-8">
+              <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-green-50 text-green-700">
+                <Lock size={24} />
+              </div>
+              <h2 className="mb-6 text-2xl font-black">{profileMessages.passwordTitle}</h2>
+              <div className="space-y-5">
+                <Field label={profileMessages.currentPassword}>
+                  <input
+                    type="password"
+                    value={currentPassword}
+                    onChange={(event) => setCurrentPassword(event.target.value)}
+                    required
+                    className={inputClass}
+                  />
+                </Field>
+                <Field label={profileMessages.newPassword}>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(event) => setNewPassword(event.target.value)}
+                    required
+                    minLength={8}
+                    className={inputClass}
+                  />
+                </Field>
+              </div>
 
-            {passwordError ? <p className="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{passwordError}</p> : null}
-            {passwordMessage ? <p className="mt-5 rounded-xl bg-green-50 px-4 py-3 text-sm font-bold text-green-700">{passwordMessage}</p> : null}
+              {passwordError ? <p className="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{passwordError}</p> : null}
+              {passwordMessage ? <p className="mt-5 rounded-xl bg-green-50 px-4 py-3 text-sm font-bold text-green-700">{passwordMessage}</p> : null}
 
-            <button
-              type="submit"
-              disabled={isSavingPassword}
-              className="mt-6 w-full rounded-xl bg-slate-900 px-6 py-3 font-bold text-white transition hover:bg-slate-800 disabled:opacity-70"
-            >
-              {isSavingPassword ? profileMessages.saving : profileMessages.changePassword}
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={isSavingPassword}
+                className="mt-6 w-full rounded-xl bg-slate-900 px-6 py-3 font-bold text-white transition hover:bg-slate-800 disabled:opacity-70"
+              >
+                {isSavingPassword ? profileMessages.saving : profileMessages.changePassword}
+              </button>
+            </form>
+
+            <form onSubmit={requestEmailChange} className="h-fit rounded-3xl bg-white p-6 shadow-sm md:p-8">
+              <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-green-50 text-green-700">
+                <Mail size={24} />
+              </div>
+              <h2 className="mb-6 text-2xl font-black">{profileMessages.emailChangeTitle}</h2>
+              <div className="space-y-5">
+                <Field label={profileMessages.newEmail}>
+                  <input
+                    type="email"
+                    value={newEmail}
+                    onChange={(event) => {
+                      setNewEmail(event.target.value);
+                      setPendingEmailChange(false);
+                      setEmailVerificationCode('');
+                    }}
+                    required
+                    className={inputClass}
+                    dir="ltr"
+                  />
+                </Field>
+                {pendingEmailChange ? (
+                  <Field label={profileMessages.verificationCode}>
+                    <VerificationCodeInput value={emailVerificationCode} onChange={setEmailVerificationCode} disabled={isSavingEmail} />
+                  </Field>
+                ) : null}
+              </div>
+
+              {emailError ? <p className="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{emailError}</p> : null}
+              {emailMessage ? <p className="mt-5 rounded-xl bg-green-50 px-4 py-3 text-sm font-bold text-green-700">{emailMessage}</p> : null}
+
+              {pendingEmailChange ? (
+                <button
+                  type="button"
+                  onClick={verifyEmailChange}
+                  disabled={isSavingEmail || emailVerificationCode.length !== 6}
+                  className="mt-6 w-full rounded-xl bg-green-600 px-6 py-3 font-bold text-white transition hover:bg-green-700 disabled:opacity-70"
+                >
+                  {isSavingEmail ? profileMessages.saving : profileMessages.verifyEmail}
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={isSavingEmail || !newEmail.trim()}
+                  className="mt-6 w-full rounded-xl bg-green-600 px-6 py-3 font-bold text-white transition hover:bg-green-700 disabled:opacity-70"
+                >
+                  {isSavingEmail ? profileMessages.saving : profileMessages.requestEmailCode}
+                </button>
+              )}
+            </form>
+          </div>
         </div>
       </main>
 

@@ -3,7 +3,7 @@
 import { Heart, LayoutDashboard, LogOut, User } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { ConfirmationDialog } from '@/components/confirmation-dialog';
 import { clearAdminSession, getAdminAccessToken, getStoredAdminUser, type AdminUser } from '@/lib/admin-auth';
@@ -82,7 +82,21 @@ function AdminMenu({ admin }: { admin: AdminUser }) {
   const { locale, localizedPath, m } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const logoutText = logoutDialogLabels[locale];
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', closeOnOutsideClick);
+    return () => document.removeEventListener('pointerdown', closeOnOutsideClick);
+  }, [isOpen]);
 
   const logout = () => {
     clearAdminSession();
@@ -93,7 +107,7 @@ function AdminMenu({ admin }: { admin: AdminUser }) {
   };
 
   return (
-    <div className="relative">
+    <div ref={menuRef} className="relative">
       <button
         type="button"
         onClick={() => setIsOpen((current) => !current)}
@@ -162,7 +176,21 @@ function UserMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const logoutText = logoutDialogLabels[locale];
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', closeOnOutsideClick);
+    return () => document.removeEventListener('pointerdown', closeOnOutsideClick);
+  }, [isOpen]);
 
   useEffect(() => {
     const updateOnlineStatus = () => setIsOnline(window.navigator.onLine);
@@ -190,7 +218,7 @@ function UserMenu() {
   if (!user) return null;
 
   return (
-    <div className="relative">
+    <div ref={menuRef} className="relative">
       <button
         type="button"
         onClick={() => setIsOpen((current) => !current)}
