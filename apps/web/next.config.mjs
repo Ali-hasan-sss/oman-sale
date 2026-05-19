@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const apiPort = process.env.NEXT_PUBLIC_API_PORT ?? '4000';
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? `http://127.0.0.1:${apiPort}/api/v1`;
+const apiBaseUrl =
+  process.env.NEXT_PUBLIC_API_URL ?? (process.env.NODE_ENV === 'production' ? '/api/v1' : `http://127.0.0.1:${apiPort}/api/v1`);
 const contactEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'info@omansale.om';
 const contactPhone = process.env.NEXT_PUBLIC_CONTACT_PHONE ?? '+968 2456 7890';
 
