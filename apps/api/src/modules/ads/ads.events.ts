@@ -1,0 +1,6 @@
+export const AdEvents = {
+  AD_CREATED: 'AD_CREATED',
+  AD_APPROVED: 'AD_APPROVED',
+  AD_REJECTED: 'AD_REJECTED',
+  AD_EXPIRED: 'AD_EXPIRED'
+} as const;

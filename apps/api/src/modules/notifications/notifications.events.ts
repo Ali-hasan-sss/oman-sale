@@ -1,0 +1,4 @@
+export const NotificationEvents = {
+  NOTIFICATION_CREATED: 'NOTIFICATION_CREATED',
+  NOTIFICATION_READ: 'NOTIFICATION_READ'
+} as const;

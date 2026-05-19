@@ -1,0 +1,4 @@
+export const CategoryEvents = {
+  CATEGORY_CREATED: 'CATEGORY_CREATED',
+  CATEGORY_UPDATED: 'CATEGORY_UPDATED'
+} as const;

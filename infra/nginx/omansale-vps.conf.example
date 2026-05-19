@@ -1,0 +1,53 @@
+# No-domain deployment example.
+# Access the site with: http://SERVER_IP:8088
+# Change 8088 if this port is already used by another project.
+
+upstream omansale_web {
+  server 127.0.0.1:3310;
+}
+
+upstream omansale_api {
+  server 127.0.0.1:4310;
+}
+
+server {
+  listen 8088;
+  server_name _;
+
+  client_max_body_size 20m;
+
+  location /api/ {
+    proxy_pass http://omansale_api;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Port $server_port;
+  }
+
+  location /socket.io/ {
+    proxy_pass http://omansale_api;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Port $server_port;
+  }
+
+  location / {
+    proxy_pass http://omansale_web;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Port $server_port;
+  }
+}

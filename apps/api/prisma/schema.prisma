@@ -1,0 +1,586 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  MODERATOR
+}
+
+enum CategoryType {
+  PRODUCT
+  SERVICE
+  JOB
+  JOB_REQUEST
+  LOGISTICS
+  CONSTRUCTION
+}
+
+enum AdType {
+  PRODUCT
+  SERVICE
+  JOB
+  JOB_REQUEST
+  LOGISTICS
+  CONSTRUCTION
+}
+
+enum AdStatus {
+  DRAFT
+  PENDING
+  ACTIVE
+  REJECTED
+  EXPIRED
+  ARCHIVED
+}
+
+enum AdCondition {
+  NEW
+  USED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum PaymentProvider {
+  STRIPE
+  THAWANI
+  PAYPAL
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  SYSTEM
+}
+
+enum NotificationType {
+  MESSAGE
+  AD_APPROVED
+  AD_REJECTED
+  PAYMENT_SUCCESS
+  PROMOTION_ACTIVE
+}
+
+enum ViewSource {
+  WEB
+  MOBILE
+}
+
+enum AuthCodePurpose {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+model User {
+  id               String    @id @default(uuid())
+  fullName         String
+  email            String    @unique
+  phone            String?   @unique
+  password         String
+  avatar           String?
+  role             UserRole  @default(USER)
+  bio              String?
+  isVerified       Boolean   @default(false)
+  isActive         Boolean   @default(true)
+  isBlocked        Boolean   @default(false)
+  lastSeenAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+
+  ads              Ad[]
+  payments         Payment[]
+  favorites        Favorite[]
+  reports          Report[]
+  sentMessages     Message[] @relation("MessageSender")
+  receivedMessages Message[] @relation("MessageReceiver")
+  chatParticipants ConversationParticipant[]
+  notifications    Notification[]
+  refreshTokens    RefreshToken[]
+  authCodes        AuthVerificationCode[]
+
+  @@index([role])
+  @@index([isActive, isBlocked])
+  @@index([createdAt])
+  @@index([deletedAt])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model AuthVerificationCode {
+  id         String          @id @default(uuid())
+  email      String
+  codeHash   String
+  purpose    AuthCodePurpose
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime        @default(now())
+
+  userId     String?
+  user       User?           @relation(fields: [userId], references: [id])
+
+  @@index([email, purpose])
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Category {
+  id        String       @id @default(uuid())
+  name      String
+  nameAr    String       @default("")
+  nameEn    String       @default("")
+  slug      String       @unique
+  icon      String?
+  type      CategoryType
+  parentId  String?
+  sortOrder Int          @default(0)
+  isActive  Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  deletedAt DateTime?
+
+  parent    Category?    @relation("CategoryTree", fields: [parentId], references: [id])
+  children  Category[]   @relation("CategoryTree")
+  ads       Ad[]
+  filters   CategoryFilter[]
+
+  @@index([type])
+  @@index([type, isActive])
+  @@index([parentId])
+  @@index([isActive])
+  @@index([deletedAt])
+}
+
+model CategoryFilter {
+  id        String                 @id @default(uuid())
+  titleAr   String
+  titleEn   String
+  slug      String
+  sortOrder Int                    @default(0)
+  isActive  Boolean                @default(true)
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+  deletedAt DateTime?
+
+  categoryId String
+  category   Category               @relation(fields: [categoryId], references: [id])
+  options    CategoryFilterOption[]
+  values     AdFilterValue[]
+
+  @@unique([categoryId, slug])
+  @@index([categoryId])
+  @@index([isActive])
+  @@index([deletedAt])
+}
+
+model CategoryFilterOption {
+  id        String          @id @default(uuid())
+  labelAr   String
+  labelEn   String
+  slug      String
+  sortOrder Int             @default(0)
+  isActive  Boolean         @default(true)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  deletedAt DateTime?
+
+  filterId  String
+  filter    CategoryFilter  @relation(fields: [filterId], references: [id])
+  values    AdFilterValue[]
+
+  @@unique([filterId, slug])
+  @@index([filterId])
+  @@index([isActive])
+  @@index([deletedAt])
+}
+
+model Ad {
+  id           String       @id @default(uuid())
+  title        String
+  slug         String       @unique
+  description  String
+  type         AdType
+  condition    AdCondition?
+  price        Decimal?     @db.Decimal(12, 3)
+  currency     String       @default("OMR")
+  city         String?
+  area         String?
+  latitude     Float?
+  longitude    Float?
+  contactPhone String?
+  status       AdStatus     @default(ACTIVE)
+  isApproved   Boolean      @default(true)
+  isActive     Boolean      @default(true)
+  isSold       Boolean      @default(false)
+  soldAt       DateTime?
+  views        Int          @default(0)
+  expiresAt    DateTime?
+  approvedAt   DateTime?
+  rejectedAt   DateTime?
+  rejectionReason String?
+  searchVector Unsupported("tsvector")?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  deletedAt    DateTime?
+
+  userId       String
+  user         User         @relation(fields: [userId], references: [id])
+  categoryId   String
+  category     Category     @relation(fields: [categoryId], references: [id])
+  images       AdImage[]
+  payment      Payment?
+  promotion    AdPromotion?
+  reports      Report[]
+  favorites    Favorite[]
+  conversations Conversation[]
+  filterValues  AdFilterValue[]
+  adViews       AdView[]
+
+  @@index([status])
+  @@index([isActive])
+  @@index([isSold])
+  @@index([createdAt])
+  @@index([categoryId])
+  @@index([userId])
+  @@index([type])
+  @@index([city, area])
+  @@index([expiresAt])
+  @@index([deletedAt])
+}
+
+model AdView {
+  id         String     @id @default(uuid())
+  adId       String
+  ad         Ad         @relation(fields: [adId], references: [id], onDelete: Cascade)
+  visitorKey String
+  ipAddress  String?
+  source     ViewSource @default(WEB)
+  userAgent  String?
+  createdAt  DateTime   @default(now())
+
+  @@unique([adId, visitorKey])
+  @@index([adId])
+  @@index([ipAddress])
+  @@index([createdAt])
+}
+
+model AdFilterValue {
+  id        String               @id @default(uuid())
+  createdAt DateTime             @default(now())
+  deletedAt DateTime?
+
+  adId      String
+  ad        Ad                   @relation(fields: [adId], references: [id])
+  filterId  String
+  filter    CategoryFilter       @relation(fields: [filterId], references: [id])
+  optionId  String
+  option    CategoryFilterOption @relation(fields: [optionId], references: [id])
+
+  @@unique([adId, filterId])
+  @@index([adId])
+  @@index([filterId])
+  @@index([optionId])
+  @@index([deletedAt])
+}
+
+model AdImage {
+  id        String   @id @default(uuid())
+  imageUrl  String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  deletedAt DateTime?
+
+  adId      String
+  ad        Ad       @relation(fields: [adId], references: [id])
+
+  @@index([adId])
+  @@index([deletedAt])
+}
+
+model Payment {
+  id            String          @id @default(uuid())
+  amount        Decimal         @db.Decimal(12, 3)
+  currency      String          @default("OMR")
+  status        PaymentStatus   @default(PENDING)
+  provider      PaymentProvider
+  transactionId String?
+  paymentUrl    String?
+  paidAt        DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  deletedAt     DateTime?
+
+  userId        String
+  user          User            @relation(fields: [userId], references: [id])
+  adId          String?         @unique
+  ad            Ad?             @relation(fields: [adId], references: [id])
+  promotionId   String?
+  promotion     AdPromotion?    @relation(fields: [promotionId], references: [id])
+
+  @@index([status])
+  @@index([provider])
+  @@index([userId])
+  @@index([promotionId])
+  @@index([createdAt])
+  @@index([deletedAt])
+}
+
+model PromotionPlan {
+  id               String        @id @default(uuid())
+  name             String        @unique
+  description      String?
+  nameAr           String        @default("")
+  nameEn           String        @default("")
+  descriptionAr    String        @default("")
+  descriptionEn    String        @default("")
+  pricePerDay      Decimal       @db.Decimal(12, 3)
+  weekPrice        Decimal       @default(0) @db.Decimal(12, 3)
+  twoWeeksPrice    Decimal       @default(0) @db.Decimal(12, 3)
+  monthPrice       Decimal       @default(0) @db.Decimal(12, 3)
+  priorityScore    Int
+  dailyImpressions Int
+  appearsFirst     Boolean       @default(false)
+  badgeLabel       String?
+  color            String?
+  isActive         Boolean       @default(true)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  deletedAt        DateTime?
+
+  promotions       AdPromotion[]
+
+  @@index([isActive])
+  @@index([priorityScore])
+  @@index([deletedAt])
+}
+
+model AdPromotion {
+  id              String        @id @default(uuid())
+  startsAt        DateTime
+  endsAt          DateTime
+  totalPrice      Decimal       @db.Decimal(12, 3)
+  impressionsUsed Int           @default(0)
+  isActive        Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  deletedAt       DateTime?
+
+  adId            String        @unique
+  ad              Ad            @relation(fields: [adId], references: [id])
+  planId          String
+  plan            PromotionPlan @relation(fields: [planId], references: [id])
+  payments        Payment[]
+  dailyStats      AdPromotionDailyImpression[]
+
+  @@index([planId])
+  @@index([isActive])
+  @@index([startsAt, endsAt])
+  @@index([deletedAt])
+}
+
+model AdPromotionDailyImpression {
+  id          String      @id @default(uuid())
+  date        DateTime
+  impressions Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  promotionId String
+  promotion   AdPromotion @relation(fields: [promotionId], references: [id])
+
+  @@unique([promotionId, date])
+  @@index([date])
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  deletedAt DateTime?
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  adId      String
+  ad        Ad       @relation(fields: [adId], references: [id])
+
+  @@unique([userId, adId])
+  @@index([adId])
+  @@index([deletedAt])
+}
+
+model Report {
+  id        String   @id @default(uuid())
+  reason    String
+  createdAt DateTime @default(now())
+  deletedAt DateTime?
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  adId      String
+  ad        Ad       @relation(fields: [adId], references: [id])
+
+  @@index([userId])
+  @@index([adId])
+  @@index([createdAt])
+  @@index([deletedAt])
+}
+
+model Conversation {
+  id            String   @id @default(uuid())
+  directKey     String?  @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  lastMessageAt DateTime?
+  isBlocked     Boolean  @default(false)
+  deletedAt     DateTime?
+
+  adId          String
+  ad            Ad       @relation(fields: [adId], references: [id])
+  messages      Message[]
+  participants  ConversationParticipant[]
+
+  @@index([adId])
+  @@index([lastMessageAt])
+  @@index([deletedAt])
+}
+
+model ConversationParticipant {
+  id             String       @id @default(uuid())
+  joinedAt       DateTime     @default(now())
+  lastReadAt     DateTime?
+  isMuted        Boolean      @default(false)
+  deletedAt      DateTime?
+
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  userId         String
+  user           User         @relation(fields: [userId], references: [id])
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@index([deletedAt])
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  content        String
+  type           MessageType  @default(TEXT)
+  imageUrl       String?
+  createdAt      DateTime     @default(now())
+  readAt         DateTime?
+  isRead         Boolean      @default(false)
+  deletedAt      DateTime?
+
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  senderId       String
+  sender         User         @relation("MessageSender", fields: [senderId], references: [id])
+  receiverId     String
+  receiver       User         @relation("MessageReceiver", fields: [receiverId], references: [id])
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([createdAt])
+  @@index([deletedAt])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  title     String
+  body      String
+  type      NotificationType
+  isRead    Boolean          @default(false)
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+  deletedAt DateTime?
+
+  userId    String
+  user      User             @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([type])
+  @@index([isRead])
+  @@index([createdAt])
+  @@index([deletedAt])
+}
+
+model HeroSlide {
+  id            String   @id @default(uuid())
+  sortOrder     Int      @default(0)
+  imageUrl      String
+  titleAr       String
+  titleEn       String
+  subtitleAr    String
+  subtitleEn    String
+  buttonLabelAr String
+  buttonLabelEn String
+  buttonLink    String
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+model HeroBanner {
+  id        String   @id @default(uuid())
+  sortOrder Int      @default(0)
+  imageUrl  String
+  textAr    String?
+  textEn    String?
+  linkUrl   String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+model TourismDestination {
+  id                String   @id @default(uuid())
+  slug              String   @unique
+  sortOrder         Int      @default(0)
+  imageUrl          String
+  titleAr           String
+  titleEn           String
+  rating            String   @default("4.9")
+  ratingLabelAr     String
+  ratingLabelEn     String
+  aboutAr           String
+  aboutEn           String
+  highlightsAr      Json
+  highlightsEn      Json
+  activitiesAr      Json
+  activitiesEn      Json
+  bestTimeAr        String
+  bestTimeEn        String
+  addressAr         String
+  addressEn         String
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}

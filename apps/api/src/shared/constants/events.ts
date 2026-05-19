@@ -1,0 +1,10 @@
+export const AppEvents = {
+  PAYMENT_SUCCESS: 'PAYMENT_SUCCESS',
+  AD_APPROVED: 'AD_APPROVED',
+  AD_REJECTED: 'AD_REJECTED',
+  MESSAGE_SENT: 'MESSAGE_SENT',
+  PROMOTION_ACTIVATED: 'PROMOTION_ACTIVATED',
+  NOTIFICATION_CREATED: 'NOTIFICATION_CREATED'
+} as const;
+
+export type AppEventName = (typeof AppEvents)[keyof typeof AppEvents];

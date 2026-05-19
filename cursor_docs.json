@@ -1,0 +1,95 @@
+{
+    "projectName": "Oman Sale",
+    "architecture": "Modular Monolith",
+    "frontend": {
+    "framework": "Next.js",
+    "router": "App Router",
+    "language": "TypeScript",
+    "stateManagement": "Zustand",
+    "dataFetching": "TanStack Query",
+    "ui": "Shadcn UI",
+    "styling": "TailwindCSS"
+    },
+    "backend": {
+    "framework": "Express.js",
+    "language": "TypeScript",
+    "orm": "Prisma",
+    "database": "PostgreSQL",
+    "cache": "Redis",
+    "realtime": "Socket.IO",
+    "queues": "BullMQ"
+    },
+    "database": {
+    "strategy": "Universal Listing System",
+    "softDelete": true,
+    "fullTextSearch": true
+    },
+    "modules": [
+    "auth",
+    "users",
+    "ads",
+    "categories",
+    "payments",
+    "promotions",
+    "chat",
+    "notifications",
+    "admin",
+    "search"
+    ],
+    "adTypes": [
+    "PRODUCT",
+    "SERVICE",
+    "JOB",
+    "JOB_REQUEST",
+    "LOGISTICS",
+    "CONSTRUCTION"
+    ],
+    "importantRules": [
+    "Use clean architecture",
+    "Use repository pattern",
+    "Use Zod validation",
+    "No business logic in controllers",
+    "Use DTOs",
+    "Prepare architecture for future microservices migration",
+    "Use events instead of tight coupling",
+    "Use soft delete",
+    "Add proper database indexes",
+    "Keep modules isolated"
+    ],
+    "events": [
+    "PAYMENT_SUCCESS",
+    "AD_APPROVED",
+    "MESSAGE_SENT",
+    "PROMOTION_ACTIVATED"
+    ],
+    "chatSystem": {
+    "conversationLinkedToAd": true,
+    "supportRealtime": true,
+    "supportReadState": true,
+    "supportImageMessages": true,
+    "supportFutureGroupChats": true
+    },
+    "promotionSystem": {
+    "dynamicPlans": true,
+    "features": [
+    "priorityScore",
+    "dailyImpressions",
+    "appearsFirst",
+    "badgeLabel",
+    "customColors"
+    ]
+    },
+    "infrastructure": {
+    "docker": true,
+    "nginx": true,
+    "pm2": true
+    },
+    "futureReady": [
+    "Microservices",
+    "Elasticsearch",
+    "Mobile Apps",
+    "AI Moderation",
+    "Recommendation Engine"
+    ]
+    }
+    

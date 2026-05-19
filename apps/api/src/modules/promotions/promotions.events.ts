@@ -1,0 +1,4 @@
+export const PromotionEvents = {
+  PROMOTION_ACTIVATED: 'PROMOTION_ACTIVATED',
+  PROMOTION_EXPIRED: 'PROMOTION_EXPIRED'
+} as const;
