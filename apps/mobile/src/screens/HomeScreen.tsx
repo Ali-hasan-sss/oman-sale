@@ -1,53 +1,96 @@
-import { useEffect } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect } from 'react';
+import { ActivityIndicator, FlatList, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { HeroBannersSection } from '../components/HeroBannersSection';
+import { HomeCategoriesSection } from '../components/HomeCategoriesSection';
 import { HomeHeroSection } from '../components/HomeHeroSection';
 import { ListingCard } from '../components/ListingCard';
 import { SectionTitle } from '../components/SectionTitle';
-import { AppText } from '../components/AppText';
+import { ListingCardSkeletonRow } from '../components/skeleton';
+import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
 import { useListingsStore } from '../stores';
-import { colors, radius } from '../theme';
+import { colors } from '../theme';
 
 type HomeScreenProps = {
   onBrowseOffers: () => void;
+  onListingPress: (listingId: string) => void;
+  onCategoryPress: (categoryId: string) => void;
 };
 
-export function HomeScreen({ onBrowseOffers }: HomeScreenProps) {
+export function HomeScreen({ onBrowseOffers, onListingPress, onCategoryPress }: HomeScreenProps) {
   const { locale, t, isRtl } = useI18n();
+  const { scrollBottomPadding } = useScreenInsets();
   const listings = useListingsStore((state) => state.latest);
   const isLoading = useListingsStore((state) => state.isLoadingLatest);
+  const isLoadingMore = useListingsStore((state) => state.isLoadingMoreLatest);
+  const isRefreshing = useListingsStore((state) => state.isRefreshingLatest);
+  const hasLoadedLatest = useListingsStore((state) => state.hasLoadedLatest);
   const loadLatest = useListingsStore((state) => state.loadLatest);
+  const loadMoreLatest = useListingsStore((state) => state.loadMoreLatest);
 
   useEffect(() => {
-    loadLatest(8).catch(() => undefined);
+    loadLatest({ refresh: useListingsStore.getState().hasLoadedLatest }).catch(() => undefined);
   }, [locale, loadLatest]);
 
+  const handleRefresh = useCallback(() => {
+    loadLatest({ refresh: true }).catch(() => undefined);
+  }, [loadLatest]);
+
+  const handleLoadMore = useCallback(() => {
+    loadMoreLatest().catch(() => undefined);
+  }, [loadMoreLatest]);
+
+  const showLatestSkeleton = isLoading && !hasLoadedLatest;
+
   return (
-    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      contentContainerStyle={[styles.content, { paddingBottom: scrollBottomPadding }]}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefreshing}
+          onRefresh={handleRefresh}
+          colors={[colors.brand]}
+          tintColor={colors.brand}
+        />
+      }
+    >
       <HomeHeroSection onBrowseOffers={onBrowseOffers} />
       <HeroBannersSection />
 
-      <View style={styles.section}>
-        <SectionTitle title={t.home.categories} />
-        <View style={[styles.chips, isRtl && styles.chipsRtl]}>
-          {t.home.categoryNames.map((name) => (
-            <View key={name} style={styles.chip}>
-              <AppText style={[styles.chipText, isRtl && styles.chipTextRtl]}>{name}</AppText>
-            </View>
-          ))}
-        </View>
-      </View>
+      <HomeCategoriesSection onCategoryPress={onCategoryPress} />
 
       <View style={styles.section}>
         <SectionTitle title={t.home.latest} actionLabel={t.common.viewAll} onAction={onBrowseOffers} />
-        {isLoading ? (
-          <ActivityIndicator color={colors.brand} />
+        {showLatestSkeleton ? (
+          <ListingCardSkeletonRow count={3} layout="horizontal" />
         ) : (
-          listings.map((listing) => (
-            <ListingCard key={listing.id} listing={listing} locale={locale} featuredLabel={t.common.featured} />
-          ))
+          <FlatList
+            horizontal
+            nestedScrollEnabled
+            data={listings}
+            keyExtractor={(item) => item.id}
+            showsHorizontalScrollIndicator={false}
+            style={isRtl ? styles.latestScrollRtl : undefined}
+            contentContainerStyle={[styles.latestScroll, isRtl && styles.latestScrollContentRtl]}
+            renderItem={({ item }) => (
+              <ListingCard
+                listing={item}
+                locale={locale}
+                featuredLabel={t.common.featured}
+                layout="horizontal"
+                onPress={() => onListingPress(item.id)}
+              />
+            )}
+            onEndReached={handleLoadMore}
+            onEndReachedThreshold={0.4}
+            ListFooterComponent={
+              isLoadingMore ? (
+                <ActivityIndicator color={colors.brand} style={styles.latestMoreLoader} />
+              ) : null
+            }
+          />
         )}
       </View>
     </ScrollView>
@@ -55,34 +98,25 @@ export function HomeScreen({ onBrowseOffers }: HomeScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  content: {
-    paddingBottom: 120
-  },
+  content: {},
   section: {
     paddingHorizontal: 16,
     marginBottom: 10
   },
-  chips: {
+  latestMoreLoader: {
+    marginVertical: 24,
+    marginHorizontal: 12
+  },
+  latestScrollRtl: {
+    direction: 'rtl'
+  },
+  latestScroll: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    justifyContent: 'flex-start'
+    gap: 12,
+    paddingEnd: 4,
+    paddingBottom: 4
   },
-  chipsRtl: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'flex-end'
-  },
-  chip: {
-    backgroundColor: colors.brandSoft,
-    borderRadius: radius.pill,
-    paddingHorizontal: 14,
-    paddingVertical: 8
-  },
-  chipText: {
-    color: colors.brandDark,
-    fontWeight: '800'
-  },
-  chipTextRtl: {
-    textAlign: 'right'
+  latestScrollContentRtl: {
+    flexDirection: 'row-reverse'
   }
 });

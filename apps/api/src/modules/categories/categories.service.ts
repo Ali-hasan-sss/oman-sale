@@ -19,13 +19,35 @@ export class CategoriesService {
   }
 
   async create(dto: CreateCategoryDto) {
+    await this.assertValidParent(dto.parentId ?? null);
     return categoriesRepository.create(dto);
   }
 
   async update(id: string, dto: UpdateCategoryDto) {
     const category = await categoriesRepository.findById(id);
     if (!category) throw new ApiError(404, 'Category not found');
+
+    if (dto.parentId !== undefined) {
+      if (dto.parentId === id) {
+        throw new ApiError(400, 'Category cannot be its own parent');
+      }
+      await this.assertValidParent(dto.parentId, id);
+    }
+
     return categoriesRepository.update(id, dto);
+  }
+
+  private async assertValidParent(parentId: string | null, categoryId?: string) {
+    if (!parentId) return;
+
+    const parent = await categoriesRepository.findById(parentId);
+    if (!parent) throw new ApiError(400, 'Parent category not found');
+    if (parent.parentId) throw new ApiError(400, 'Subcategories can only be added under a main category');
+
+    if (categoryId) {
+      const hasChildren = await categoriesRepository.hasChildren(categoryId);
+      if (hasChildren) throw new ApiError(400, 'A main category with subcategories cannot be moved under another category');
+    }
   }
 
   async checkSlugAvailability(slug: string, excludeId?: string) {

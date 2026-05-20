@@ -55,7 +55,8 @@ export const listCategoriesQuerySchema = z.object({
 
 export const listAdminCategoriesQuerySchema = z.object({
   type: z.nativeEnum(CategoryType).optional(),
-  page: z.coerce.number().int().positive().default(1)
+  page: z.coerce.number().int().positive().default(1),
+  all: z.coerce.boolean().optional()
 });
 
 export const checkCategorySlugQuerySchema = z.object({

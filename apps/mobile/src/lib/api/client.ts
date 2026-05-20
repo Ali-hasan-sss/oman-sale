@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const defaultApiUrl = 'http://127.0.0.1:4000/api/v1';
+const defaultApiUrl = 'https://omansale.om/api/v1';
 
 export const getApiBaseUrl = () => process.env.EXPO_PUBLIC_API_URL?.trim().replace(/\/$/, '') || defaultApiUrl;
 

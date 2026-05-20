@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'reac
 import { AppText } from '../components/AppText';
 import { AppTextInput } from '../components/AppTextInput';
 import { VerificationCodeInput } from '../components/VerificationCodeInput';
+import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
 import { useAuthStore } from '../stores';
 import { colors, radius } from '../theme';
@@ -19,6 +20,8 @@ type AuthScreenProps = {
 
 export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
   const { locale, t, isRtl } = useI18n();
+  const { scrollBottomPadding } = useScreenInsets();
+  const scrollContentStyle = [styles.content, { paddingBottom: scrollBottomPadding }];
   const login = useAuthStore((state) => state.login);
   const register = useAuthStore((state) => state.register);
   const verifyEmail = useAuthStore((state) => state.verifyEmail);
@@ -157,7 +160,7 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
 
   if (step === 'verify') {
     return (
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={scrollContentStyle}>
         <AppText style={[styles.title, textAlign]}>{t.auth.verifyTitle}</AppText>
         <AppText style={[styles.subtitle, textAlign]}>{t.auth.verifySubtitle}</AppText>
         <VerificationCodeInput value={verificationCode} onChange={setVerificationCode} disabled={isSubmitting} isRtl={isRtl} />
@@ -187,7 +190,7 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
     const isResetStep = step === 'forgot-reset';
 
     return (
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={scrollContentStyle}>
         <AppText style={[styles.title, textAlign]}>
           {isResetStep ? t.auth.resetPasswordTitle : t.auth.forgotPasswordTitle}
         </AppText>
@@ -242,7 +245,7 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScrollView contentContainerStyle={scrollContentStyle}>
       <AppText style={[styles.title, textAlign]}>{isRegister ? t.auth.registerTitle : t.auth.loginTitle}</AppText>
       <AppText style={[styles.subtitle, textAlign]}>
         {isRegister ? t.auth.registerSubtitle : t.auth.loginSubtitle}
@@ -312,7 +315,7 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
 const styles = StyleSheet.create({
   content: {
     padding: 20,
-    paddingBottom: 40
+    flexGrow: 1
   },
   title: {
     fontSize: 28,

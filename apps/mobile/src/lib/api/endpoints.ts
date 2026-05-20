@@ -37,9 +37,10 @@ export const API_ENDPOINTS = {
   },
   chat: {
     conversations: '/chat/conversations',
+    conversationById: (conversationId: string) => `/chat/conversations/${conversationId}`,
     unreadCount: '/chat/unread-count',
-    start: '/chat/conversations/start',
     messages: (conversationId: string) => `/chat/conversations/${conversationId}/messages`,
+    sendMessage: '/chat/messages',
     read: (conversationId: string) => `/chat/conversations/${conversationId}/read`,
     block: (conversationId: string) => `/chat/conversations/${conversationId}/block`,
     unblock: (conversationId: string) => `/chat/conversations/${conversationId}/unblock`
@@ -53,7 +54,8 @@ export const API_ENDPOINTS = {
     banners: '/hero/banners'
   },
   promotions: {
-    plans: '/promotions/plans'
+    plans: '/promotions/plans',
+    adPromotions: '/promotions/ad-promotions'
   },
   tourism: {
     destinations: '/tourism/destinations',

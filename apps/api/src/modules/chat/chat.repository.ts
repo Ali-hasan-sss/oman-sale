@@ -47,16 +47,31 @@ export class ChatRepository {
     });
   }
 
-  listUserConversations(userId: string) {
-    return prisma.conversation.findMany({
-      where: { participants: { some: { userId, deletedAt: null } }, deletedAt: null },
-      include: {
-        ad: { include: { images: { where: { deletedAt: null }, orderBy: { sortOrder: 'asc' } } } },
-        participants: { include: { user: true } },
-        messages: { orderBy: { createdAt: 'desc' }, take: 1 }
-      },
-      orderBy: [{ lastMessageAt: 'desc' }, { updatedAt: 'desc' }]
-    });
+  listUserConversations(userId: string, page: number, limit: number) {
+    const where = { participants: { some: { userId, deletedAt: null } }, deletedAt: null };
+    const skip = (page - 1) * limit;
+
+    return Promise.all([
+      prisma.conversation.findMany({
+        where,
+        include: {
+          ad: { include: { images: { where: { deletedAt: null }, orderBy: { sortOrder: 'asc' } } } },
+          participants: { include: { user: true } },
+          messages: { orderBy: { createdAt: 'desc' }, take: 1 },
+          _count: {
+            select: {
+              messages: {
+                where: { receiverId: userId, isRead: false, deletedAt: null }
+              }
+            }
+          }
+        },
+        orderBy: [{ lastMessageAt: 'desc' }, { updatedAt: 'desc' }],
+        skip,
+        take: limit
+      }),
+      prisma.conversation.count({ where })
+    ]).then(([items, total]) => ({ items, total, page, limit }));
   }
 
   unreadCount(userId: string) {

@@ -5,7 +5,7 @@ import { ApiError } from '../../shared/utils/api-error';
 import { eventBus } from '../../shared/utils/event-bus';
 import { getSocketServer } from '../../config/socket';
 import { chatRepository } from './chat.repository';
-import type { OpenConversationDto, SendMessageDto } from './chat.validation';
+import type { ListConversationsQuery, OpenConversationDto, SendMessageDto } from './chat.validation';
 
 export class ChatService {
   async openConversation(senderId: string, dto: OpenConversationDto) {
@@ -26,8 +26,21 @@ export class ChatService {
     }
   }
 
-  listConversations(userId: string) {
-    return chatRepository.listUserConversations(userId);
+  async listConversations(userId: string, query: ListConversationsQuery) {
+    const { items, total, page, limit } = await chatRepository.listUserConversations(
+      userId,
+      query.page,
+      query.limit
+    );
+    return {
+      items: items.map(({ _count, ...conversation }) => ({
+        ...conversation,
+        unreadCount: _count.messages
+      })),
+      total,
+      page,
+      limit
+    };
   }
 
   unreadCount(userId: string) {

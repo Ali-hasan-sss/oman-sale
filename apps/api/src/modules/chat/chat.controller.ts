@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 
 import { getRequiredParam } from '../../shared/utils/request';
 import { chatService } from './chat.service';
+import type { ListConversationsQuery } from './chat.validation';
 
 export class ChatController {
   async openConversation(req: Request, res: Response) {
@@ -9,7 +10,12 @@ export class ChatController {
   }
 
   async listConversations(req: Request, res: Response) {
-    res.json({ data: await chatService.listConversations(req.user!.id) });
+    res.json({
+      data: await chatService.listConversations(
+        req.user!.id,
+        req.query as unknown as ListConversationsQuery
+      )
+    });
   }
 
   async unreadCount(req: Request, res: Response) {

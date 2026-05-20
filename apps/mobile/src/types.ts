@@ -10,13 +10,17 @@ export type ScreenName =
   | 'register'
   | 'profile'
   | 'settings'
-  | 'favorites';
+  | 'favorites'
+  | 'listingDetail'
+  | 'chatConversation'
+  | 'categoryOffers';
 
 export type User = {
   id: string;
   fullName: string;
   email: string;
   phone?: string | null;
+  bio?: string | null;
   role?: string;
   avatar?: string | null;
 };
@@ -38,11 +42,23 @@ export type Listing = {
   city?: string | null;
   area?: string | null;
   views?: number;
+  createdAt?: string;
+  contactPhone?: string | null;
+  isSold?: boolean;
+  isActive?: boolean;
   images?: Array<{ imageUrl: string }>;
   category?: {
     name?: string;
     nameAr?: string;
     nameEn?: string;
+  } | null;
+  user?: {
+    id: string;
+    fullName: string;
+    email?: string;
+    phone?: string | null;
+    avatar?: string | null;
+    createdAt?: string;
   } | null;
   promotion?: {
     plan?: {
@@ -51,13 +67,38 @@ export type Listing = {
   } | null;
 };
 
-export type Conversation = {
+export type ChatAd = {
   id: string;
-  adTitle: string;
-  sellerName: string;
-  lastMessage: string;
+  title: string;
+  price?: string | number | null;
+  currency: string;
+  city?: string | null;
+  area?: string | null;
+  images?: Array<{ imageUrl: string }>;
+};
+
+export type ChatMessage = {
+  id: string;
+  conversationId: string;
+  content: string;
+  senderId: string;
+  receiverId: string;
+  createdAt: string;
+  isRead: boolean;
+  readAt?: string | null;
+};
+
+export type ChatConversation = {
+  id: string;
   updatedAt: string;
-  unread?: boolean;
+  lastMessageAt?: string | null;
+  unreadCount?: number;
+  ad: ChatAd;
+  participants: Array<{
+    userId: string;
+    user: User;
+  }>;
+  messages: ChatMessage[];
 };
 
 export type HeroBanner = {

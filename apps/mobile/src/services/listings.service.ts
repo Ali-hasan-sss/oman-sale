@@ -1,4 +1,6 @@
-import { API_ENDPOINTS, http, type ApiEnvelope, type ApiListPage } from '../lib/api';
+import { API_ENDPOINTS, http, type ApiEnvelope, type ApiListPage, type PagedResult } from '../lib/api';
+import { normalizePage } from '../lib/pagination';
+import { unwrapListItems } from '../lib/api/unwrap-list';
 import type { Listing } from '../types';
 
 export type CategoryOption = {
@@ -6,47 +8,122 @@ export type CategoryOption = {
   name: string;
   nameAr?: string;
   nameEn?: string;
+  slug?: string;
+  icon?: string | null;
+  parentId?: string | null;
   type: string;
+  sortOrder?: number;
+  _count?: {
+    ads: number;
+    children?: number;
+  };
 };
 
-export async function fetchLatestListings(limit = 8) {
+export type CategoryFilter = {
+  id: string;
+  title: string;
+  options: Array<{
+    id: string;
+    label: string;
+  }>;
+};
+
+export type ListingsFilterParams = {
+  page?: number;
+  limit?: number;
+  q?: string;
+  categoryId?: string;
+  city?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  filterOptionIds?: string[];
+};
+
+export async function fetchLatestListings(page = 1, limit = 8) {
   const response = await http.get<ApiEnvelope<ApiListPage<Listing>>>(API_ENDPOINTS.ads.latest, {
-    params: { limit }
+    params: { page, limit }
   });
-  return response.data.data.items;
+  return normalizePage(response.data.data, page, limit);
 }
 
-export async function fetchAllListings(limit = 30) {
+export async function fetchAllListings(page = 1, limit = 12) {
+  return fetchFilteredListings({ page, limit });
+}
+
+export async function fetchFilteredListings({
+  page = 1,
+  limit = 12,
+  q,
+  categoryId,
+  city,
+  minPrice,
+  maxPrice,
+  filterOptionIds
+}: ListingsFilterParams) {
   const response = await http.get<ApiEnvelope<ApiListPage<Listing>>>(API_ENDPOINTS.ads.all, {
-    params: { limit }
+    params: {
+      page,
+      limit,
+      q: q || undefined,
+      categoryId: categoryId || undefined,
+      city: city || undefined,
+      minPrice: minPrice !== undefined ? minPrice : undefined,
+      maxPrice: maxPrice !== undefined ? maxPrice : undefined,
+      filterOptionIds: filterOptionIds?.length ? filterOptionIds.join(',') : undefined
+    }
   });
-  return response.data.data.items;
+  return normalizePage(response.data.data, page, limit);
 }
 
-export async function fetchFeaturedListings(limit = 8) {
+export async function fetchCategoryFilters(categoryId: string, locale: string) {
+  const response = await http.get<ApiEnvelope<CategoryFilter[]>>(API_ENDPOINTS.categories.filters(categoryId), {
+    params: { locale }
+  });
+  return Array.isArray(response.data.data) ? response.data.data : [];
+}
+
+export async function fetchFeaturedListings(page = 1, limit = 8) {
   const response = await http.get<ApiEnvelope<ApiListPage<Listing>>>(API_ENDPOINTS.ads.featured, {
-    params: { limit }
+    params: { page, limit }
   });
-  return response.data.data.items;
+  return normalizePage(response.data.data, page, limit);
 }
 
-export async function fetchMyListings(limit = 40) {
+export async function fetchMyListings(page = 1, limit = 20) {
   const response = await http.get<ApiEnvelope<ApiListPage<Listing>>>(API_ENDPOINTS.ads.my, {
-    params: { limit }
+    params: { page, limit }
   });
-  return response.data.data.items;
+  return normalizePage(response.data.data, page, limit);
 }
 
 export async function fetchFavoriteListings() {
-  const response = await http.get<ApiEnvelope<ApiListPage<Listing>>>(API_ENDPOINTS.ads.favorites);
-  return response.data.data.items;
+  const response = await http.get<ApiEnvelope<ApiListPage<Listing> | Listing[]>>(API_ENDPOINTS.ads.favorites);
+  return unwrapListItems(response.data.data);
+}
+
+export async function fetchListingById(id: string) {
+  const response = await http.get<ApiEnvelope<Listing>>(API_ENDPOINTS.ads.byId(id));
+  return response.data.data;
+}
+
+export async function fetchSimilarListings(id: string) {
+  const response = await http.get<ApiEnvelope<Listing[]>>(API_ENDPOINTS.ads.similar(id));
+  return response.data.data;
+}
+
+export async function fetchFavoriteIds() {
+  const response = await http.get<ApiEnvelope<string[]>>(API_ENDPOINTS.ads.favoriteIds);
+  return response.data.data;
 }
 
 export async function fetchCategories(locale: string) {
-  const response = await http.get<ApiEnvelope<CategoryOption[]>>(API_ENDPOINTS.categories.list, {
-    params: { locale }
-  });
-  return response.data.data;
+  const response = await http.get<ApiEnvelope<CategoryOption[] | ApiListPage<CategoryOption>>>(
+    API_ENDPOINTS.categories.list,
+    {
+      params: { locale }
+    }
+  );
+  return unwrapListItems(response.data.data);
 }
 
 export async function createListingRequest(payload: {

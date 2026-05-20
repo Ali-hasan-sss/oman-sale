@@ -1,18 +1,27 @@
-import { useEffect } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet } from 'react-native';
+import { useCallback, useEffect } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet } from 'react-native';
 
 import { AppText } from '../components/AppText';
 import { EmptyState } from '../components/EmptyState';
 import { ListingCard } from '../components/ListingCard';
+import { ListingListSkeleton } from '../components/skeleton';
+import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
 import { useAuthStore, useListingsStore } from '../stores';
 import { colors } from '../theme';
 
-export function MyOffersScreen() {
+type MyOffersScreenProps = {
+  onListingPress: (listingId: string) => void;
+};
+
+export function MyOffersScreen({ onListingPress }: MyOffersScreenProps) {
   const accessToken = useAuthStore((state) => state.accessToken);
   const { locale, t, isRtl } = useI18n();
+  const { scrollBottomPadding } = useScreenInsets();
   const listings = useListingsStore((state) => state.my);
   const isLoading = useListingsStore((state) => state.isLoadingMy);
+  const isRefreshing = useListingsStore((state) => state.isRefreshingMy);
+  const hasLoadedMy = useListingsStore((state) => state.hasLoadedMy);
   const loadMy = useListingsStore((state) => state.loadMy);
   const resetMy = useListingsStore((state) => state.resetMy);
 
@@ -21,22 +30,47 @@ export function MyOffersScreen() {
       resetMy();
       return;
     }
-    loadMy().catch(() => undefined);
+    loadMy({ refresh: useListingsStore.getState().hasLoadedMy }).catch(() => undefined);
   }, [accessToken, locale, loadMy, resetMy]);
 
+  const handleRefresh = useCallback(() => {
+    loadMy({ refresh: true }).catch(() => undefined);
+  }, [loadMy]);
+
+  const showSkeleton = isLoading && !hasLoadedMy;
+
   return (
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScrollView
+      contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefreshing}
+          onRefresh={handleRefresh}
+          colors={[colors.brand]}
+          tintColor={colors.brand}
+        />
+      }
+    >
       <AppText style={[styles.title, isRtl ? styles.rtl : styles.ltr]}>{t.myOffers.title}</AppText>
       <AppText style={[styles.subtitle, isRtl ? styles.rtl : styles.ltr]}>{t.myOffers.subtitle}</AppText>
-      {isLoading ? (
-        <ActivityIndicator color={colors.brand} style={{ marginTop: 24 }} />
+      {showSkeleton ? (
+        <ListingListSkeleton count={4} />
       ) : listings.length === 0 ? (
         <EmptyState message={t.myOffers.empty} />
       ) : (
         listings.map((listing) => (
-          <ListingCard key={listing.id} listing={listing} locale={locale} featuredLabel={t.common.featured} />
+          <ListingCard
+            key={listing.id}
+            listing={listing}
+            locale={locale}
+            featuredLabel={t.common.featured}
+            onPress={() => onListingPress(listing.id)}
+          />
         ))
       )}
+      {isRefreshing && listings.length > 0 ? (
+        <ActivityIndicator color={colors.brand} style={styles.refreshHint} />
+      ) : null}
     </ScrollView>
   );
 }
@@ -44,7 +78,7 @@ export function MyOffersScreen() {
 const styles = StyleSheet.create({
   content: {
     padding: 16,
-    paddingBottom: 120
+    flexGrow: 1
   },
   title: {
     fontSize: 28,
@@ -55,6 +89,9 @@ const styles = StyleSheet.create({
     color: colors.muted,
     marginTop: 6,
     marginBottom: 16
+  },
+  refreshHint: {
+    marginTop: 12
   },
   rtl: {
     textAlign: 'right'

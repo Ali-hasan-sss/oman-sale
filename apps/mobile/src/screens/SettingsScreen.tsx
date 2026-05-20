@@ -1,5 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+
+import { useScreenInsets } from '../hooks/use-screen-insets';
 
 import { AppText } from '../components/AppText';
 import { useI18n } from '../i18n';
@@ -7,6 +9,7 @@ import { colors, radius } from '../theme';
 
 export function SettingsScreen() {
   const { t, isRtl, toggleLocale } = useI18n();
+  const { scrollBottomPadding } = useScreenInsets();
 
   const items = [
     { label: t.common.language, icon: 'language-outline' as const, onPress: toggleLocale },
@@ -16,7 +19,10 @@ export function SettingsScreen() {
   ];
 
   return (
-    <View style={styles.content}>
+    <ScrollView
+      contentContainerStyle={[styles.content, { paddingBottom: scrollBottomPadding }]}
+      showsVerticalScrollIndicator={false}
+    >
       <AppText style={[styles.title, isRtl ? styles.rtl : styles.ltr]}>{t.settings.title}</AppText>
       <AppText style={[styles.subtitle, isRtl ? styles.rtl : styles.ltr]}>{t.settings.subtitle}</AppText>
       {items.map((item) => (
@@ -25,13 +31,14 @@ export function SettingsScreen() {
           <AppText style={[styles.label, isRtl ? styles.labelRtl : styles.labelLtr]}>{item.label}</AppText>
         </Pressable>
       ))}
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   content: {
-    padding: 16
+    padding: 16,
+    flexGrow: 1
   },
   title: {
     fontSize: 28,

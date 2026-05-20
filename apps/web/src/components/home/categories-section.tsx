@@ -8,6 +8,7 @@ import {
   Briefcase,
   Building2,
   Car,
+  ChevronDown,
   Gamepad2,
   GraduationCap,
   Heart,
@@ -29,9 +30,10 @@ import {
   Wrench
 } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { api } from '@/lib/api';
+import { buildCategoryTree, type CategoryTreeNode } from '@/lib/category-tree';
 import { useI18n } from '@/lib/i18n';
 
 const fallbackCategories = [
@@ -107,16 +109,113 @@ type ApiCategory = {
   id: string;
   name: string;
   slug: string;
+  parentId?: string | null;
   icon?: keyof typeof iconMap | string | null;
   _count?: {
     ads: number;
+    children?: number;
   };
 };
+
+type DisplayCategory = {
+  key: string;
+  name: string;
+  count: string;
+  href: string;
+  icon: typeof Car;
+  color: string;
+};
+
+const mapCategoryToDisplay = (category: ApiCategory, index: number): DisplayCategory => {
+  const fallback = fallbackCategories[index % fallbackCategories.length]!;
+  const Icon = category.icon && category.icon in iconMap ? iconMap[category.icon as keyof typeof iconMap] : fallback.icon;
+
+  return {
+    key: category.id,
+    name: category.name,
+    count: String(category._count?.ads ?? 0),
+    href: `/category/${category.slug}`,
+    icon: Icon,
+    color: fallback.color
+  };
+};
+
+type CategoryGridCardProps = {
+  category: DisplayCategory;
+  childrenCategories: DisplayCategory[];
+  isExpanded: boolean;
+  onToggleChildren: () => void;
+  localizedPath: (path: string) => string;
+  adCountLabel: string;
+  expandLabel: string;
+};
+
+function CategoryGridCard({
+  category,
+  childrenCategories,
+  isExpanded,
+  onToggleChildren,
+  localizedPath,
+  adCountLabel,
+  expandLabel
+}: CategoryGridCardProps) {
+  const Icon = category.icon;
+  const hasChildren = childrenCategories.length > 0;
+
+  return (
+    <div
+      className={`${colorClasses[category.color]} flex h-full flex-col overflow-hidden rounded-2xl shadow-sm transition-shadow hover:shadow-lg`}
+    >
+      <Link
+        href={localizedPath(category.href)}
+        className="group flex flex-1 flex-col items-center p-6 text-center transition-transform hover:-translate-y-0.5"
+      >
+        <Icon size={40} strokeWidth={1.5} />
+        <h3 className="mt-4 font-bold text-ink-900">{category.name}</h3>
+        <p className="mt-1 text-sm text-slate-500">
+          {category.count} {adCountLabel}
+        </p>
+      </Link>
+
+      {hasChildren ? (
+        <>
+          <button
+            type="button"
+            onClick={onToggleChildren}
+            aria-expanded={isExpanded}
+            aria-label={expandLabel}
+            className="flex w-full items-center justify-center border-t border-black/5 py-2 text-current transition hover:bg-black/5"
+          >
+            <ChevronDown size={20} className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+          </button>
+
+          {isExpanded ? (
+            <div className="space-y-1.5 border-t border-black/5 px-3 pb-3 pt-2">
+              {childrenCategories.map((child) => (
+                <Link
+                  key={child.key}
+                  href={localizedPath(child.href)}
+                  className="block rounded-xl bg-white/70 px-3 py-2 text-sm font-bold text-ink-900 transition hover:bg-white"
+                >
+                  <span className="line-clamp-1">{child.name}</span>
+                  <span className="mt-0.5 block text-xs font-medium text-slate-500">
+                    {child.count} {adCountLabel}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          ) : null}
+        </>
+      ) : null}
+    </div>
+  );
+}
 
 export function CategoriesSection() {
   const { locale, localizedPath, m } = useI18n();
   const [apiCategories, setApiCategories] = useState<ApiCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [expandedParents, setExpandedParents] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     setIsLoading(true);
@@ -127,21 +226,15 @@ export function CategoriesSection() {
       .finally(() => setIsLoading(false));
   }, [locale]);
 
-  const categories = apiCategories.map((category, index) => {
-    const fallback = fallbackCategories[index] ?? fallbackCategories[0]!;
-    const Icon = category.icon && category.icon in iconMap ? iconMap[category.icon as keyof typeof iconMap] : fallback.icon;
+  const categoryTree = useMemo(() => buildCategoryTree(apiCategories), [apiCategories]);
 
-    return {
-      key: category.id,
-      name: category.name,
-      count: String(category._count?.ads ?? 0),
-      href: `/category/${category.slug}`,
-      icon: Icon,
-      color: fallback.color
-    };
-  });
+  const toggleChildren = (parentId: string) => {
+    setExpandedParents((current) => ({ ...current, [parentId]: !current[parentId] }));
+  };
+
   const loadingText = locale === 'ar' ? 'جاري تحميل البيانات...' : 'Loading data...';
   const emptyText = locale === 'ar' ? 'لا توجد فئات متاحة حاليًا' : 'No categories are available right now';
+  const expandLabel = locale === 'ar' ? 'عرض الفئات الفرعية' : 'Show subcategories';
 
   return (
     <section className="mb-14">
@@ -154,29 +247,29 @@ export function CategoriesSection() {
         <div className="mb-8 rounded-2xl bg-white p-8 text-center font-bold text-slate-500 shadow-sm">
           {loadingText}
         </div>
-      ) : categories.length === 0 ? (
+      ) : categoryTree.length === 0 ? (
         <div className="mb-8 rounded-2xl bg-white p-8 text-center font-bold text-slate-500 shadow-sm">
           {emptyText}
         </div>
       ) : (
         <div className="mb-8 grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-6">
-          {categories.map((category) => {
-            const Icon = category.icon;
+          {categoryTree.map((parent: CategoryTreeNode<ApiCategory>, parentIndex) => {
+            const parentDisplay = mapCategoryToDisplay(parent, parentIndex);
+            const childDisplays = parent.children.map((child, childIndex) =>
+              mapCategoryToDisplay(child, parentIndex + childIndex + 1)
+            );
 
             return (
-              <Link
-                key={category.key}
-                href={localizedPath(category.href)}
-                className={`${colorClasses[category.color]} group rounded-2xl p-6 text-center shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg`}
-              >
-                <div className="flex flex-col items-center">
-                  <Icon size={40} strokeWidth={1.5} />
-                  <h3 className="mt-4 font-bold text-ink-900">{category.name}</h3>
-                  <p className="mt-1 text-sm text-slate-500">
-                    {category.count} {m.home.adCount}
-                  </p>
-                </div>
-              </Link>
+              <CategoryGridCard
+                key={parent.id}
+                category={parentDisplay}
+                childrenCategories={childDisplays}
+                isExpanded={Boolean(expandedParents[parent.id])}
+                onToggleChildren={() => toggleChildren(parent.id)}
+                localizedPath={localizedPath}
+                adCountLabel={m.home.adCount}
+                expandLabel={expandLabel}
+              />
             );
           })}
         </div>

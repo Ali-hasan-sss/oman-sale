@@ -18,17 +18,21 @@
     },
     "android": {
       "package": "com.omansale.mobile",
-      "usesCleartextTraffic": true,
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "foregroundImage": "./assets/app-icon.png",
         "backgroundColor": "#ffffff"
       }
     },
     "extra": {
-      "supportsRTL": false
+      "supportsRTL": false,
+      "eas": {
+        "projectId": "e2a334ce-c188-4368-b610-78cb4b24ccc1"
+      }
     },
     "plugins": [
-      "expo-font"
+      "expo-font",
+      "expo-av"
     ]
   }
 }

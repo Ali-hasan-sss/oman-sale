@@ -1,8 +1,9 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
   ImageBackground,
+  InteractionManager,
   Linking,
   NativeScrollEvent,
   NativeSyntheticEvent,
@@ -13,7 +14,13 @@ import {
 } from 'react-native';
 
 import { AppText } from './AppText';
+import { HomeHeroSkeleton } from './skeleton';
 import { useI18n } from '../i18n';
+import {
+  getCachedHeroSlides,
+  isHeroSlidesLoaded,
+  setCachedHeroSlides
+} from '../lib/screen-data-cache';
 import { fetchHeroSlides } from '../services/hero.service';
 import type { HeroSlide } from '../types';
 import { colors, radius, shadow } from '../theme';
@@ -23,6 +30,7 @@ type HomeHeroSectionProps = {
 };
 
 const SLIDE_INTERVAL_MS = 3000;
+const HERO_HEIGHT = 220;
 const HERO_OVERLAY: [string, string] = ['rgba(15,159,103,0.45)', 'rgba(8,122,80,0.55)'];
 
 const resolveHeroAction = (link: string, onBrowseOffers: () => void) => {
@@ -37,9 +45,21 @@ const resolveHeroAction = (link: string, onBrowseOffers: () => void) => {
   }
 };
 
+const buildLoopSlides = (slides: HeroSlide[]) => {
+  if (slides.length <= 1) return slides;
+  return [slides[slides.length - 1]!, ...slides, slides[0]!];
+};
+
+const loopIndexToReal = (loopIndex: number, slideCount: number) => {
+  if (slideCount <= 1) return 0;
+  if (loopIndex === 0) return slideCount - 1;
+  if (loopIndex === slideCount + 1) return 0;
+  return loopIndex - 1;
+};
+
 type HeroSlideCardProps = {
   slide: HeroSlide;
-  width?: number;
+  width: number;
   isRtl: boolean;
   isCarousel?: boolean;
   onBrowseOffers: () => void;
@@ -48,8 +68,12 @@ type HeroSlideCardProps = {
 function HeroSlideCard({ slide, width, isRtl, isCarousel, onBrowseOffers }: HeroSlideCardProps) {
   const content = (
     <>
-      <AppText style={[styles.heroTitle, isRtl ? styles.rtl : styles.ltr]}>{slide.title}</AppText>
-      <AppText style={[styles.heroSubtitle, isRtl ? styles.rtl : styles.ltr]}>{slide.subtitle}</AppText>
+      <AppText style={[styles.heroTitle, isRtl ? styles.rtl : styles.ltr]} numberOfLines={2}>
+        {slide.title}
+      </AppText>
+      <AppText style={[styles.heroSubtitle, isRtl ? styles.rtl : styles.ltr]} numberOfLines={3}>
+        {slide.subtitle}
+      </AppText>
       <Pressable
         style={[styles.heroButton, isRtl ? styles.heroButtonRtl : styles.heroButtonLtr]}
         onPress={() => resolveHeroAction(slide.buttonLink, onBrowseOffers)}
@@ -61,8 +85,13 @@ function HeroSlideCard({ slide, width, isRtl, isCarousel, onBrowseOffers }: Hero
 
   if (slide.imageUrl) {
     return (
-      <View style={[styles.slide, width ? { width } : null]}>
-        <ImageBackground source={{ uri: slide.imageUrl }} style={styles.heroImage} imageStyle={styles.heroImageRadius}>
+      <View style={[styles.slide, { width }]}>
+        <ImageBackground
+          source={{ uri: slide.imageUrl }}
+          style={styles.heroImage}
+          imageStyle={styles.heroImageFill}
+          resizeMode="cover"
+        >
           <LinearGradient colors={HERO_OVERLAY} style={[styles.heroOverlay, isCarousel && styles.heroOverlayCarousel]}>
             {content}
           </LinearGradient>
@@ -72,8 +101,8 @@ function HeroSlideCard({ slide, width, isRtl, isCarousel, onBrowseOffers }: Hero
   }
 
   return (
-    <View style={[styles.slide, width ? { width } : null]}>
-      <LinearGradient colors={[colors.brand, colors.brandDark]} style={[styles.hero, isCarousel && styles.heroOverlayCarousel]}>
+    <View style={[styles.slide, { width }]}>
+      <LinearGradient colors={[colors.brand, colors.brandDark]} style={[styles.heroFill, isCarousel && styles.heroOverlayCarousel]}>
         {content}
       </LinearGradient>
     </View>
@@ -82,27 +111,46 @@ function HeroSlideCard({ slide, width, isRtl, isCarousel, onBrowseOffers }: Hero
 
 export function HomeHeroSection({ onBrowseOffers }: HomeHeroSectionProps) {
   const { locale, t, isRtl } = useI18n();
-  const [slides, setSlides] = useState<HeroSlide[]>([]);
+  const [slides, setSlides] = useState<HeroSlide[]>(() => getCachedHeroSlides(locale));
+  const [isLoadingApi, setIsLoadingApi] = useState(() => !isHeroSlidesLoaded(locale));
   const [activeIndex, setActiveIndex] = useState(0);
   const [slideWidth, setSlideWidth] = useState(0);
   const listRef = useRef<FlatList<HeroSlide>>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const loopIndexRef = useRef(0);
+  const isAdjustingLoopRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
+    const hadCache = isHeroSlidesLoaded(locale);
+
+    if (hadCache) {
+      setSlides(getCachedHeroSlides(locale));
+      setIsLoadingApi(false);
+    } else {
+      setIsLoadingApi(true);
+    }
 
     fetchHeroSlides(locale, 'mobile')
       .then((items) => {
         if (!cancelled) {
-          setSlides(items.filter((item) => item.platform !== 'WEB'));
+          const filtered = items.filter((item) => item.platform !== 'WEB');
+          setCachedHeroSlides(locale, filtered);
+          setSlides(filtered);
           setActiveIndex(0);
+          loopIndexRef.current = 0;
         }
       })
       .catch(() => {
         if (!cancelled) {
+          setCachedHeroSlides(locale, []);
           setSlides([]);
           setActiveIndex(0);
+          loopIndexRef.current = 0;
         }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingApi(false);
       });
 
     return () => {
@@ -123,15 +171,16 @@ export function HomeHeroSection({ onBrowseOffers }: HomeHeroSectionProps) {
   ];
 
   const displaySlides = slides.length > 0 ? slides : fallbackSlides;
+  const loopSlides = useMemo(() => buildLoopSlides(displaySlides), [displaySlides]);
+  const hasLoop = displaySlides.length > 1;
 
-  const goToSlide = useCallback(
-    (index: number, animated = true) => {
-      if (slideWidth <= 0 || displaySlides.length <= 1) return;
-      const safeIndex = ((index % displaySlides.length) + displaySlides.length) % displaySlides.length;
-      listRef.current?.scrollToOffset({ offset: safeIndex * slideWidth, animated });
-      setActiveIndex(safeIndex);
+  const scrollToLoopIndex = useCallback(
+    (loopIndex: number, animated: boolean) => {
+      if (slideWidth <= 0) return;
+      listRef.current?.scrollToOffset({ offset: loopIndex * slideWidth, animated });
+      loopIndexRef.current = loopIndex;
     },
-    [displaySlides.length, slideWidth]
+    [slideWidth]
   );
 
   const clearAutoPlay = useCallback(() => {
@@ -141,23 +190,52 @@ export function HomeHeroSection({ onBrowseOffers }: HomeHeroSectionProps) {
     }
   }, []);
 
+  const lastRealLoopIndex = displaySlides.length;
+
+  const advanceAutoPlay = useCallback(() => {
+    const current = loopIndexRef.current;
+    if (current >= lastRealLoopIndex) {
+      scrollToLoopIndex(1, false);
+      setActiveIndex(0);
+      return;
+    }
+    scrollToLoopIndex(current + 1, true);
+  }, [lastRealLoopIndex, scrollToLoopIndex]);
+
   const startAutoPlay = useCallback(() => {
     clearAutoPlay();
-    if (displaySlides.length <= 1 || slideWidth <= 0) return;
+    if (!hasLoop || slideWidth <= 0) return;
 
     timerRef.current = setInterval(() => {
-      setActiveIndex((current) => {
-        const next = (current + 1) % displaySlides.length;
-        listRef.current?.scrollToOffset({ offset: next * slideWidth, animated: true });
-        return next;
-      });
+      advanceAutoPlay();
     }, SLIDE_INTERVAL_MS);
-  }, [clearAutoPlay, displaySlides.length, slideWidth]);
+  }, [advanceAutoPlay, clearAutoPlay, hasLoop, slideWidth]);
+
+  const finishLoopJump = useCallback(
+    (onDone: () => void) => {
+      InteractionManager.runAfterInteractions(() => {
+        requestAnimationFrame(() => {
+          onDone();
+          requestAnimationFrame(() => {
+            isAdjustingLoopRef.current = false;
+            startAutoPlay();
+          });
+        });
+      });
+    },
+    [startAutoPlay]
+  );
 
   useEffect(() => {
     startAutoPlay();
     return clearAutoPlay;
   }, [startAutoPlay, clearAutoPlay]);
+
+  useEffect(() => {
+    if (!hasLoop || slideWidth <= 0) return;
+    scrollToLoopIndex(1, false);
+    setActiveIndex(0);
+  }, [hasLoop, slideWidth, scrollToLoopIndex, loopSlides.length]);
 
   const handleLayout = (event: LayoutChangeEvent) => {
     const width = event.nativeEvent.layout.width;
@@ -166,22 +244,63 @@ export function HomeHeroSection({ onBrowseOffers }: HomeHeroSectionProps) {
     }
   };
 
-  const handleScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    if (slideWidth <= 0) return;
-    const index = Math.round(event.nativeEvent.contentOffset.x / slideWidth);
-    setActiveIndex(index);
+  const handleLoopScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (slideWidth <= 0 || isAdjustingLoopRef.current) return;
+    loopIndexRef.current = Math.round(event.nativeEvent.contentOffset.x / slideWidth);
+  };
+
+  const handleLoopScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (slideWidth <= 0 || !hasLoop || isAdjustingLoopRef.current) return;
+
+    const loopIndex = Math.round(event.nativeEvent.contentOffset.x / slideWidth);
+    const cloneEndIndex = loopSlides.length - 1;
+
+    if (loopIndex === 0) {
+      isAdjustingLoopRef.current = true;
+      clearAutoPlay();
+      scrollToLoopIndex(lastRealLoopIndex, false);
+      setActiveIndex(displaySlides.length - 1);
+      finishLoopJump(() => undefined);
+      return;
+    }
+
+    if (loopIndex === cloneEndIndex) {
+      isAdjustingLoopRef.current = true;
+      clearAutoPlay();
+      scrollToLoopIndex(1, false);
+      setActiveIndex(0);
+      finishLoopJump(() => undefined);
+      return;
+    }
+
+    loopIndexRef.current = loopIndex;
+    setActiveIndex(loopIndexToReal(loopIndex, displaySlides.length));
     startAutoPlay();
   };
 
-  const handleDotPress = (index: number) => {
-    goToSlide(index);
+  const handleDotPress = (realIndex: number) => {
+    if (!hasLoop) return;
+    scrollToLoopIndex(realIndex + 1, true);
+    setActiveIndex(realIndex);
     startAutoPlay();
   };
 
-  if (displaySlides.length === 1) {
+  if (isLoadingApi && !isHeroSlidesLoaded(locale) && slides.length === 0) {
     return (
       <View style={styles.wrapper} onLayout={handleLayout}>
-        <HeroSlideCard slide={displaySlides[0]!} isRtl={isRtl} onBrowseOffers={onBrowseOffers} />
+        <HomeHeroSkeleton embedded />
+      </View>
+    );
+  }
+
+  if (!hasLoop) {
+    return (
+      <View style={styles.wrapper} onLayout={handleLayout}>
+        {slideWidth > 0 ? (
+          <HeroSlideCard slide={displaySlides[0]!} width={slideWidth} isRtl={isRtl} onBrowseOffers={onBrowseOffers} />
+        ) : (
+          <View style={styles.heightPlaceholder} />
+        )}
       </View>
     );
   }
@@ -191,20 +310,26 @@ export function HomeHeroSection({ onBrowseOffers }: HomeHeroSectionProps) {
       {slideWidth > 0 ? (
         <FlatList
           ref={listRef}
-          data={displaySlides}
+          data={loopSlides}
           horizontal
           pagingEnabled
           bounces={false}
           decelerationRate="fast"
           showsHorizontalScrollIndicator={false}
-          keyExtractor={(item) => item.id}
+          removeClippedSubviews={false}
+          initialScrollIndex={1}
+          keyExtractor={(item, index) => `${item.id}-loop-${index}`}
           getItemLayout={(_, index) => ({ length: slideWidth, offset: slideWidth * index, index })}
-          onMomentumScrollEnd={handleScrollEnd}
+          onScroll={handleLoopScroll}
+          scrollEventThrottle={16}
+          onMomentumScrollEnd={handleLoopScrollEnd}
           renderItem={({ item }) => (
             <HeroSlideCard slide={item} width={slideWidth} isRtl={isRtl} isCarousel onBrowseOffers={onBrowseOffers} />
           )}
         />
-      ) : null}
+      ) : (
+        <View style={styles.heightPlaceholder} />
+      )}
 
       <View style={styles.dots}>
         {displaySlides.map((slide, index) => (
@@ -225,48 +350,61 @@ const styles = StyleSheet.create({
     margin: 16,
     borderRadius: radius.lg,
     overflow: 'hidden',
+    height: HERO_HEIGHT,
     ...shadow
   },
-  slide: {
-    overflow: 'hidden',
-    borderRadius: radius.lg
+  heightPlaceholder: {
+    height: HERO_HEIGHT
   },
-  hero: {
-    padding: 24,
-    minHeight: 200,
+  slide: {
+    height: HERO_HEIGHT,
+    overflow: 'hidden',
+    backgroundColor: colors.brandDark
+  },
+  heroFill: {
+    flex: 1,
+    height: HERO_HEIGHT,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     justifyContent: 'center'
   },
   heroImage: {
-    minHeight: 200
+    width: '100%',
+    height: HERO_HEIGHT
   },
-  heroImageRadius: {
-    borderRadius: radius.lg
+  heroImageFill: {
+    width: '100%',
+    height: '100%'
   },
   heroOverlay: {
     flex: 1,
-    padding: 24,
-    justifyContent: 'center',
-    minHeight: 200
+    height: HERO_HEIGHT,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 14,
+    justifyContent: 'center'
   },
   heroOverlayCarousel: {
-    paddingBottom: 36
+    paddingBottom: 28
   },
   heroTitle: {
     color: '#fff',
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: '900',
-    marginBottom: 10
+    marginBottom: 6,
+    lineHeight: 26
   },
   heroSubtitle: {
     color: 'rgba(255,255,255,0.92)',
-    lineHeight: 24,
-    marginBottom: 18
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 12
   },
   heroButton: {
     backgroundColor: '#fff',
     borderRadius: radius.md,
-    paddingHorizontal: 18,
-    paddingVertical: 12
+    paddingHorizontal: 14,
+    paddingVertical: 9
   },
   heroButtonLtr: {
     alignSelf: 'flex-start'
@@ -276,7 +414,8 @@ const styles = StyleSheet.create({
   },
   heroButtonText: {
     color: colors.brandDark,
-    fontWeight: '900'
+    fontWeight: '900',
+    fontSize: 13
   },
   dots: {
     position: 'absolute',

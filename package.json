@@ -16,20 +16,32 @@
     "jobs:dev": "npm --workspace @oman-sale/jobs run dev",
     "jobs:start": "npm --workspace @oman-sale/jobs run start",
     "mobile:dev": "npm --workspace @oman-sale/mobile run dev",
-    "mobile:dev:clear": "npm --workspace @oman-sale/mobile run dev:clear"
+    "mobile:dev:clear": "npm --workspace @oman-sale/mobile run dev:clear",
+    "mobile:eas:init": "npm --workspace @oman-sale/mobile run eas:init",
+    "mobile:credentials:android": "npm --workspace @oman-sale/mobile run credentials:android",
+    "mobile:build:apk": "npm --workspace @oman-sale/mobile run build:android:preview",
+    "mobile:build:apk:production": "npm --workspace @oman-sale/mobile run build:android:production"
   },
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
   "overrides": {
+    "@oman-sale/mobile": {
+      "zustand": "5.0.13",
+      "react": "19.1.0",
+      "react-dom": "19.1.0",
+      "react-freeze": {
+        "react": "19.1.0"
+      },
+      "use-sync-external-store": {
+        "react": "19.1.0"
+      }
+    },
     "react-freeze": {
       "react": "19.1.0"
     },
     "use-sync-external-store": {
-      "react": "19.1.0"
-    },
-    "zustand": {
       "react": "19.1.0"
     }
   },

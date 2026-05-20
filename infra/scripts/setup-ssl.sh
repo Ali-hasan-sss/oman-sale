@@ -27,11 +27,19 @@ nginx -t
 systemctl reload nginx
 
 echo "==> Request certificate (single cert for all hostnames)"
+DOMAINS=(-d "${DOMAIN_ROOT}" -d "${DOMAIN_WWW}")
+if dig +short "${DOMAIN_API}" | grep -q .; then
+  echo "DNS found for ${DOMAIN_API}, including in certificate."
+  DOMAINS+=(-d "${DOMAIN_API}")
+else
+  echo "WARNING: no DNS A record for ${DOMAIN_API} — skipping it."
+  echo "         Add DNS later, then run: certbot certonly --webroot -w /var/www/certbot --expand -d ${DOMAIN_ROOT} -d ${DOMAIN_WWW} -d ${DOMAIN_API}"
+fi
+
 certbot certonly --webroot \
   -w /var/www/certbot \
-  -d "${DOMAIN_ROOT}" \
-  -d "${DOMAIN_WWW}" \
-  -d "${DOMAIN_API}" \
+  "${DOMAINS[@]}" \
+  --cert-name "${DOMAIN_ROOT}" \
   --email "${EMAIL}" \
   --agree-tos \
   --no-eff-email \

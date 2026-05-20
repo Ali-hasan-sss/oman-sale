@@ -5,14 +5,18 @@ import { requireAuth } from '../../shared/middleware/auth';
 import { asyncHandler } from '../../shared/utils/async-handler';
 import { validateRequest } from '../../shared/validators/validate-request';
 import { chatController } from './chat.controller';
-import { openConversationSchema, sendMessageSchema } from './chat.validation';
+import { listConversationsQuerySchema, openConversationSchema, sendMessageSchema } from './chat.validation';
 
 const conversationParams = z.object({ conversationId: z.string().uuid() });
 
 export const chatRoutes = Router();
 
 chatRoutes.use(requireAuth);
-chatRoutes.get('/conversations', asyncHandler(chatController.listConversations));
+chatRoutes.get(
+  '/conversations',
+  validateRequest({ query: listConversationsQuerySchema }),
+  asyncHandler(chatController.listConversations)
+);
 chatRoutes.get('/unread-count', asyncHandler(chatController.unreadCount));
 chatRoutes.post(
   '/conversations',

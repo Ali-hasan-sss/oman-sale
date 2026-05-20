@@ -13,12 +13,13 @@ type BottomTabBarProps = {
   activeScreen: ScreenName;
   onChange: (screen: TabKey) => void;
   onAddPress: () => void;
+  chatUnreadCount?: number;
 };
 
 const leftTabs: TabKey[] = ['chat', 'myOffers'];
 const rightTabs: TabKey[] = ['offers', 'home'];
 
-export function BottomTabBar({ activeScreen, onChange, onAddPress }: BottomTabBarProps) {
+export function BottomTabBar({ activeScreen, onChange, onAddPress, chatUnreadCount = 0 }: BottomTabBarProps) {
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
 
@@ -38,9 +39,19 @@ export function BottomTabBar({ activeScreen, onChange, onAddPress }: BottomTabBa
 
   const renderTab = (tab: TabKey) => {
     const active = activeScreen === tab;
+    const showChatBadge = tab === 'chat' && chatUnreadCount > 0;
+    const badgeLabel = chatUnreadCount > 9 ? '9+' : String(chatUnreadCount);
+
     return (
       <Pressable key={tab} style={styles.tab} onPress={() => onChange(tab)}>
-        <Ionicons name={icons[tab]} size={22} color={active ? colors.brand : colors.muted} />
+        <View style={styles.tabIconWrap}>
+          <Ionicons name={icons[tab]} size={22} color={active ? colors.brand : colors.muted} />
+          {showChatBadge ? (
+            <View style={styles.tabBadge}>
+              <AppText style={styles.tabBadgeText}>{badgeLabel}</AppText>
+            </View>
+          ) : null}
+        </View>
         <AppText style={[styles.label, active && styles.labelActive]}>{labels[tab]}</AppText>
       </Pressable>
     );
@@ -87,6 +98,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minWidth: 68,
     gap: 4
+  },
+  tabIconWrap: {
+    position: 'relative'
+  },
+  tabBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -10,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: colors.surface
+  },
+  tabBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '800'
   },
   label: {
     fontSize: 11,

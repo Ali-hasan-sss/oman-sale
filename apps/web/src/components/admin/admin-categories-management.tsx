@@ -8,6 +8,8 @@ import {
   Building2,
   Car,
   Check,
+  ChevronDown,
+  ChevronLeft,
   Edit3,
   Gamepad2,
   GraduationCap,
@@ -32,9 +34,11 @@ import {
   Wrench,
   X
 } from 'lucide-react';
-import { FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import { adminApi } from '@/lib/admin-auth';
+import { buildCategoryTree, type CategoryTreeNode } from '@/lib/category-tree';
 import { useI18n } from '@/lib/i18n';
 
 type CategoryType = 'PRODUCT' | 'SERVICE' | 'JOB' | 'JOB_REQUEST' | 'LOGISTICS' | 'CONSTRUCTION';
@@ -107,6 +111,7 @@ type CategoryFormState = {
 
 type CategoryFormErrors = Partial<Record<keyof CategoryFormState, string>>;
 type SlugStatus = 'idle' | 'checking' | 'available' | 'unavailable' | 'invalid';
+type FormMode = 'create-parent' | 'create-child' | 'edit';
 type CategoryFilter = {
   id: string;
   titleAr: string;
@@ -173,9 +178,10 @@ export function AdminCategoriesManagement() {
   const [formErrors, setFormErrors] = useState<CategoryFormErrors>({});
   const [slugStatus, setSlugStatus] = useState<SlugStatus>('idle');
   const [editingId, setEditingId] = useState<string>();
-  const [page, setPage] = useState(1);
+  const [formMode, setFormMode] = useState<FormMode>('create-parent');
+  const [lockedParentName, setLockedParentName] = useState('');
   const [total, setTotal] = useState(0);
-  const [limit, setLimit] = useState(25);
+  const [expandedParents, setExpandedParents] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string>();
@@ -183,7 +189,7 @@ export function AdminCategoriesManagement() {
   const [filterTitleAr, setFilterTitleAr] = useState('');
   const [filterTitleEn, setFilterTitleEn] = useState('');
   const [filterOptionsText, setFilterOptionsText] = useState('');
-  const formRef = useRef<HTMLFormElement>(null);
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
 
   const typeLabels = useMemo<Record<CategoryType, string>>(
     () => ({
@@ -197,8 +203,7 @@ export function AdminCategoriesManagement() {
     [m.admin]
   );
 
-  const totalPages = Math.max(1, Math.ceil(total / limit));
-  const parentOptions = categories.filter((category) => category.id !== editingId);
+  const categoryTree = useMemo(() => buildCategoryTree(categories), [categories]);
 
   const loadCategories = async () => {
     setIsLoading(true);
@@ -207,13 +212,12 @@ export function AdminCategoriesManagement() {
     try {
       const response = await adminApi().get<{ data: CategoriesResponse }>('/admin/categories', {
         params: {
-          page,
+          all: true,
           type: typeFilter || undefined
         }
       });
       setCategories(response.data.data.items);
       setTotal(response.data.data.total);
-      setLimit(response.data.data.limit);
     } catch {
       setError(m.admin.categoriesLoadError);
     } finally {
@@ -223,7 +227,17 @@ export function AdminCategoriesManagement() {
 
   useEffect(() => {
     loadCategories();
-  }, [page, typeFilter, m.admin.categoriesLoadError]);
+  }, [typeFilter, m.admin.categoriesLoadError]);
+
+  useEffect(() => {
+    setExpandedParents((current) => {
+      const next = { ...current };
+      categoryTree.forEach((parent) => {
+        if (next[parent.id] === undefined) next[parent.id] = true;
+      });
+      return next;
+    });
+  }, [categoryTree]);
 
   const loadCategoryFilters = async (categoryId: string) => {
     const response = await adminApi().get<{ data: CategoryFilter[] }>(`/categories/${categoryId}/filters`, {
@@ -246,10 +260,45 @@ export function AdminCategoriesManagement() {
     setFormErrors({});
     setSlugStatus('idle');
     setEditingId(undefined);
+    setFormMode('create-parent');
+    setLockedParentName('');
+    setIsFormModalOpen(false);
+  };
+
+  const openFormModal = () => {
+    setIsFormModalOpen(true);
+  };
+
+  const startAddParent = () => {
+    setForm(initialForm);
+    setFormErrors({});
+    setSlugStatus('idle');
+    setEditingId(undefined);
+    setFormMode('create-parent');
+    setLockedParentName('');
+    openFormModal();
+  };
+
+  const startAddChild = (parent: ManagedCategory) => {
+    setEditingId(undefined);
+    setFormMode('create-child');
+    setLockedParentName(`${parent.nameAr} / ${parent.nameEn}`);
+    setForm({
+      ...initialForm,
+      type: parent.type,
+      parentId: parent.id
+    });
+    setFormErrors({});
+    setSlugStatus('idle');
+    setExpandedParents((current) => ({ ...current, [parent.id]: true }));
+    openFormModal();
   };
 
   const startEdit = (category: ManagedCategory) => {
+    const parent = category.parentId ? categories.find((item) => item.id === category.parentId) : undefined;
     setEditingId(category.id);
+    setFormMode('edit');
+    setLockedParentName(parent ? `${parent.nameAr} / ${parent.nameEn}` : '');
     setForm({
       nameAr: category.nameAr,
       nameEn: category.nameEn,
@@ -261,9 +310,14 @@ export function AdminCategoriesManagement() {
     });
     setFormErrors({});
     setSlugStatus('idle');
-    window.setTimeout(() => {
-      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 0);
+    if (category.parentId) {
+      setExpandedParents((current) => ({ ...current, [category.parentId!]: true }));
+    }
+    openFormModal();
+  };
+
+  const toggleParentExpanded = (parentId: string) => {
+    setExpandedParents((current) => ({ ...current, [parentId]: !current[parentId] }));
   };
 
   const createFilter = async () => {
@@ -378,8 +432,14 @@ export function AdminCategoriesManagement() {
 
   const changeTypeFilter = (nextType: string) => {
     setTypeFilter(nextType);
-    setPage(1);
   };
+
+  const formTitle =
+    formMode === 'create-child'
+      ? `${m.admin.subcategoryOf}: ${lockedParentName}`
+      : formMode === 'edit'
+        ? m.admin.updateCategory
+        : m.admin.addParentCategory;
 
   return (
     <div className="space-y-6">
@@ -391,6 +451,15 @@ export function AdminCategoriesManagement() {
               {total} {m.admin.totalResults}
             </p>
           </div>
+          <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={startAddParent}
+            className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-3 font-bold text-white transition hover:bg-brand-700"
+          >
+            <Plus size={18} />
+            {m.admin.addParentCategory}
+          </button>
           <select
             value={typeFilter}
             onChange={(event) => changeTypeFilter(event.target.value)}
@@ -403,281 +472,456 @@ export function AdminCategoriesManagement() {
               </option>
             ))}
           </select>
+          </div>
         </div>
 
         {error ? <div className="mb-4 rounded-xl bg-red-50 p-4 text-sm font-bold text-red-700">{error}</div> : null}
-        {Object.keys(formErrors).length > 0 ? (
-          <div className="mb-4 rounded-xl bg-amber-50 p-4 text-sm font-bold text-amber-800">{m.admin.categoryFormError}</div>
-        ) : null}
 
-        <form ref={formRef} onSubmit={submit} className="mb-8 grid gap-4 rounded-2xl bg-slate-50 p-4 lg:grid-cols-3">
-          <Field label={m.admin.nameAr} error={formErrors.nameAr}>
-            <input
-              value={form.nameAr}
-              onChange={(event) => setForm((current) => ({ ...current, nameAr: event.target.value }))}
-              className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
-            />
-          </Field>
+        <div className="space-y-3">
+          {isLoading ? (
+            <div className="rounded-2xl border border-slate-200 px-4 py-8 text-center font-bold text-slate-500">
+              {m.admin.loading}
+            </div>
+          ) : categoryTree.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center font-bold text-slate-500">
+              {m.admin.noCategories}
+            </div>
+          ) : (
+            categoryTree.map((parent) => (
+              <CategoryTreeGroup
+                key={parent.id}
+                parent={parent}
+                isExpanded={expandedParents[parent.id] !== false}
+                typeLabels={typeLabels}
+                onToggle={() => toggleParentExpanded(parent.id)}
+                onAddChild={() => startAddChild(parent)}
+                onEdit={startEdit}
+                onDelete={deleteCategory}
+                labels={{
+                  subcategories: m.admin.subcategories,
+                  noSubcategories: m.admin.noSubcategories,
+                  addSubcategory: m.admin.addSubcategory,
+                  editCategory: m.admin.editCategory,
+                  deleteCategory: m.admin.deleteCategory,
+                  adsCount: m.admin.adsCount,
+                  active: m.admin.active,
+                  inactive: m.admin.inactive
+                }}
+              />
+            ))
+          )}
+        </div>
+      </section>
 
-          <Field label={m.admin.nameEn} error={formErrors.nameEn}>
-            <input
-              dir="ltr"
-              value={form.nameEn}
-              onChange={(event) => setForm((current) => ({ ...current, nameEn: event.target.value }))}
-              className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
-            />
-          </Field>
+      {isFormModalOpen ? (
+        <CategoryFormModal title={formTitle} onClose={resetForm}>
+          {Object.keys(formErrors).length > 0 ? (
+            <div className="mb-4 rounded-xl bg-amber-50 p-4 text-sm font-bold text-amber-800">{m.admin.categoryFormError}</div>
+          ) : null}
 
-          <Field label={m.admin.slug} error={formErrors.slug}>
-            <div className="relative">
+          {formMode === 'edit' && form.parentId ? (
+            <p className="mb-4 text-sm text-slate-500">
+              {m.admin.subcategoryOf}: {lockedParentName}
+            </p>
+          ) : null}
+          {formMode === 'create-parent' ? <p className="mb-4 text-sm text-slate-500">{m.admin.mainCategory}</p> : null}
+          {formMode === 'create-child' ? (
+            <p className="mb-4 text-sm font-bold text-brand-700">
+              {m.admin.subcategoryOf}: {lockedParentName}
+            </p>
+          ) : null}
+
+          <form onSubmit={submit} className="grid gap-4 lg:grid-cols-2">
+            <Field label={m.admin.nameAr} error={formErrors.nameAr}>
+              <input
+                value={form.nameAr}
+                onChange={(event) => setForm((current) => ({ ...current, nameAr: event.target.value }))}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
+              />
+            </Field>
+
+            <Field label={m.admin.nameEn} error={formErrors.nameEn}>
               <input
                 dir="ltr"
-                value={form.slug}
-                onChange={(event) => setForm((current) => ({ ...current, slug: event.target.value }))}
-                placeholder={createSlug(form.nameEn || form.nameAr)}
-                className="w-full rounded-xl border border-slate-200 px-4 py-3 pr-12 outline-none focus:ring-2 focus:ring-brand-500"
+                value={form.nameEn}
+                onChange={(event) => setForm((current) => ({ ...current, nameEn: event.target.value }))}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
               />
-              <SlugStatusIndicator
-                availableLabel={m.admin.slugAvailable}
-                checkingLabel={m.admin.slugChecking}
-                status={slugStatus}
-                unavailableLabel={m.admin.slugUnavailable}
+            </Field>
+
+            <Field label={m.admin.slug} error={formErrors.slug}>
+              <div className="relative">
+                <input
+                  dir="ltr"
+                  value={form.slug}
+                  onChange={(event) => setForm((current) => ({ ...current, slug: event.target.value }))}
+                  placeholder={createSlug(form.nameEn || form.nameAr)}
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 pe-12 outline-none focus:ring-2 focus:ring-brand-500"
+                />
+                <SlugStatusIndicator
+                  availableLabel={m.admin.slugAvailable}
+                  checkingLabel={m.admin.slugChecking}
+                  status={slugStatus}
+                  unavailableLabel={m.admin.slugUnavailable}
+                />
+              </div>
+            </Field>
+
+            <Field label={m.admin.icon} error={formErrors.icon}>
+              <IconPicker
+                emptyLabel={m.admin.selectIcon}
+                onChange={(icon) => setForm((current) => ({ ...current, icon }))}
+                value={form.icon}
               />
-            </div>
-          </Field>
+            </Field>
 
-          <Field label={m.admin.icon} error={formErrors.icon}>
-            <IconPicker
-              emptyLabel={m.admin.selectIcon}
-              onChange={(icon) => setForm((current) => ({ ...current, icon }))}
-              value={form.icon}
-            />
-          </Field>
+            <Field label={m.admin.adType}>
+              <select
+                value={form.type}
+                disabled={formMode === 'create-child'}
+                onChange={(event) => setForm((current) => ({ ...current, type: event.target.value as CategoryType }))}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500 disabled:bg-slate-100"
+              >
+                {categoryTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {typeLabels[type]}
+                  </option>
+                ))}
+              </select>
+            </Field>
 
-          <Field label={m.admin.adType}>
-            <select
-              value={form.type}
-              onChange={(event) => setForm((current) => ({ ...current, type: event.target.value as CategoryType }))}
-              className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
-            >
-              {categoryTypes.map((type) => (
-                <option key={type} value={type}>
-                  {typeLabels[type]}
-                </option>
-              ))}
-            </select>
-          </Field>
+            <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 lg:col-span-2">
+              <input
+                type="checkbox"
+                checked={form.isActive}
+                onChange={(event) => setForm((current) => ({ ...current, isActive: event.target.checked }))}
+              />
+              {m.admin.isActive}
+            </label>
 
-          <Field label={m.admin.parentCategory}>
-            <select
-              value={form.parentId}
-              onChange={(event) => setForm((current) => ({ ...current, parentId: event.target.value }))}
-              className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
-            >
-              <option value="">{m.admin.noParent}</option>
-              {parentOptions.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.nameAr} / {category.nameEn}
-                </option>
-              ))}
-            </select>
-          </Field>
-
-          <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700">
-            <input
-              type="checkbox"
-              checked={form.isActive}
-              onChange={(event) => setForm((current) => ({ ...current, isActive: event.target.checked }))}
-            />
-            {m.admin.isActive}
-          </label>
-
-          <div className="flex gap-3 lg:col-span-3">
-            <button
-              disabled={isSaving}
-              className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-3 font-bold text-white transition hover:bg-brand-700 disabled:opacity-60"
-            >
-              <Plus size={18} />
-              {editingId ? m.admin.updateCategory : m.admin.createCategory}
-            </button>
-            {editingId ? (
+            <div className="flex flex-wrap gap-3 lg:col-span-2">
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-3 font-bold text-white transition hover:bg-brand-700 disabled:opacity-60"
+              >
+                <Plus size={18} />
+                {editingId ? m.admin.updateCategory : formMode === 'create-child' ? m.admin.addSubcategory : m.admin.createCategory}
+              </button>
               <button type="button" onClick={resetForm} className="rounded-xl border border-slate-200 px-5 py-3 font-bold text-slate-700">
                 {m.admin.cancel}
               </button>
-            ) : null}
-          </div>
-        </form>
-
-        {editingId ? (
-          <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="mb-4">
-              <h3 className="text-lg font-black">فلاتر هذه الفئة</h3>
-              <p className="text-sm text-slate-500">
-                اكتب الخيارات كل خيار في سطر، ويمكن فصل العربي والإنجليزي بعلامة | مثل: جديد | New
-              </p>
             </div>
+          </form>
 
-            <div className="mb-5 grid gap-4 lg:grid-cols-3">
-              <input
-                value={filterTitleAr}
-                onChange={(event) => setFilterTitleAr(event.target.value)}
-                placeholder="عنوان الفلتر بالعربية"
-                className="rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
-              />
-              <input
-                dir="ltr"
-                value={filterTitleEn}
-                onChange={(event) => setFilterTitleEn(event.target.value)}
-                placeholder="Filter title in English"
-                className="rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
-              />
-              <textarea
-                value={filterOptionsText}
-                onChange={(event) => setFilterOptionsText(event.target.value)}
-                placeholder={'جديد | New\nمستعمل | Used'}
-                className="min-h-24 rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
-              />
-              <button
-                type="button"
-                onClick={createFilter}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-3 font-bold text-white transition hover:bg-brand-700 lg:col-span-3"
-              >
-                <Plus size={18} />
-                إضافة فلتر للفئة
-              </button>
-            </div>
+          {editingId ? (
+            <section className="mt-6 border-t border-slate-200 pt-6">
+              <div className="mb-4">
+                <h3 className="text-lg font-black">فلاتر هذه الفئة</h3>
+                <p className="text-sm text-slate-500">
+                  اكتب الخيارات كل خيار في سطر، ويمكن فصل العربي والإنجليزي بعلامة | مثل: جديد | New
+                </p>
+              </div>
 
-            <div className="space-y-3">
-              {categoryFilters.map((filter) => (
-                <div key={filter.id} className="rounded-xl border border-slate-100 bg-slate-50 p-4">
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-black">{filter.titleAr}</p>
-                      <p className="text-sm text-slate-500">{filter.titleEn}</p>
+              <div className="mb-5 grid gap-4 lg:grid-cols-2">
+                <input
+                  value={filterTitleAr}
+                  onChange={(event) => setFilterTitleAr(event.target.value)}
+                  placeholder="عنوان الفلتر بالعربية"
+                  className="rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
+                />
+                <input
+                  dir="ltr"
+                  value={filterTitleEn}
+                  onChange={(event) => setFilterTitleEn(event.target.value)}
+                  placeholder="Filter title in English"
+                  className="rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
+                />
+                <textarea
+                  value={filterOptionsText}
+                  onChange={(event) => setFilterOptionsText(event.target.value)}
+                  placeholder={'جديد | New\nمستعمل | Used'}
+                  className="min-h-24 rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500 lg:col-span-2"
+                />
+                <button
+                  type="button"
+                  onClick={createFilter}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-3 font-bold text-white transition hover:bg-brand-700 lg:col-span-2"
+                >
+                  <Plus size={18} />
+                  إضافة فلتر للفئة
+                </button>
+              </div>
+
+              <div className="max-h-48 space-y-3 overflow-y-auto">
+                {categoryFilters.map((filter) => (
+                  <div key={filter.id} className="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div>
+                        <p className="font-black">{filter.titleAr}</p>
+                        <p className="text-sm text-slate-500">{filter.titleEn}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => deleteFilter(filter.id)}
+                        className="rounded-lg border border-red-100 px-3 py-2 text-sm font-bold text-red-600 transition hover:bg-red-50"
+                      >
+                        حذف
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => deleteFilter(filter.id)}
-                      className="rounded-lg border border-red-100 px-3 py-2 text-sm font-bold text-red-600 transition hover:bg-red-50"
-                    >
-                      حذف
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      {filter.options.map((option) => (
+                        <span key={option.id} className="rounded-full bg-white px-3 py-1 text-sm text-slate-700 ring-1 ring-slate-200">
+                          {option.labelAr} / {option.labelEn}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {filter.options.map((option) => (
-                      <span key={option.id} className="rounded-full bg-white px-3 py-1 text-sm text-slate-700 ring-1 ring-slate-200">
-                        {option.labelAr} / {option.labelEn}
-                      </span>
-                    ))}
-                  </div>
-                </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
+        </CategoryFormModal>
+      ) : null}
+    </div>
+  );
+}
+
+function CategoryFormModal({ children, onClose, title }: { children: ReactNode; onClose: () => void; title: string }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [mounted, onClose]);
+
+  if (!mounted) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="category-form-modal-title"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-slate-200"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="sticky top-0 z-10 -mx-6 mb-5 flex items-start justify-between gap-4 border-b border-slate-100 bg-white px-6 pb-4 pt-1">
+          <div className="min-w-0">
+            <h2 id="category-form-modal-title" className="text-xl font-black text-slate-900 md:text-2xl">
+              {title}
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 rounded-xl border border-slate-200 p-2 text-slate-600 transition hover:bg-slate-50"
+            aria-label="Close"
+          >
+            <X size={20} />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+type CategoryTreeGroupProps = {
+  parent: CategoryTreeNode<ManagedCategory>;
+  isExpanded: boolean;
+  typeLabels: Record<CategoryType, string>;
+  onToggle: () => void;
+  onAddChild: () => void;
+  onEdit: (category: ManagedCategory) => void;
+  onDelete: (categoryId: string) => void;
+  labels: {
+    subcategories: string;
+    noSubcategories: string;
+    addSubcategory: string;
+    editCategory: string;
+    deleteCategory: string;
+    adsCount: string;
+    active: string;
+    inactive: string;
+  };
+};
+
+function CategoryTreeGroup({
+  parent,
+  isExpanded,
+  typeLabels,
+  onToggle,
+  onAddChild,
+  onEdit,
+  onDelete,
+  labels
+}: CategoryTreeGroupProps) {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <CategoryTreeRow
+        category={parent}
+        depth={0}
+        typeLabels={typeLabels}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onAddChild={onAddChild}
+        onToggle={onToggle}
+        isExpanded={isExpanded}
+        showExpandToggle={parent.children.length > 0}
+        labels={labels}
+      />
+
+      {isExpanded ? (
+        <div className="border-t border-slate-100 bg-slate-50/60">
+          {parent.children.length > 0 ? (
+            parent.children.map((child) => (
+              <CategoryTreeRow
+                key={child.id}
+                category={child}
+                depth={1}
+                typeLabels={typeLabels}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                labels={labels}
+              />
+            ))
+          ) : (
+            <p className="px-4 py-4 text-sm font-bold text-slate-400">{labels.noSubcategories}</p>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+type CategoryTreeRowProps = {
+  category: ManagedCategory;
+  depth: number;
+  typeLabels: Record<CategoryType, string>;
+  onEdit: (category: ManagedCategory) => void;
+  onDelete: (categoryId: string) => void;
+  labels: CategoryTreeGroupProps['labels'];
+  onAddChild?: () => void;
+  onToggle?: () => void;
+  isExpanded?: boolean;
+  showExpandToggle?: boolean;
+};
+
+function CategoryTreeRow({
+  category,
+  depth,
+  typeLabels,
+  onEdit,
+  onDelete,
+  labels,
+  onAddChild,
+  onToggle,
+  isExpanded,
+  showExpandToggle
+}: CategoryTreeRowProps) {
+  const Icon = category.icon ? iconMap[category.icon] ?? Tag : Tag;
+
+  return (
+    <div
+      className={`flex flex-col gap-4 border-b border-slate-100 px-4 py-4 last:border-b-0 lg:flex-row lg:items-center lg:justify-between ${
+        depth > 0 ? 'ps-10' : ''
+      }`}
+    >
+      <div className="flex min-w-0 flex-1 items-start gap-3">
+        {depth === 0 && showExpandToggle ? (
+          <button
+            type="button"
+            onClick={onToggle}
+            className="mt-1 rounded-lg border border-slate-200 p-2 text-slate-600 transition hover:bg-slate-100"
+            aria-expanded={isExpanded}
+          >
+            {isExpanded ? <ChevronDown size={18} /> : <ChevronLeft size={18} className="-rotate-90" />}
+          </button>
+        ) : (
+          <span className="mt-1 w-10 shrink-0" />
+        )}
+
+        <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+          <Icon size={20} />
+        </span>
+
+        <div className="min-w-0">
+          <p className="font-black text-slate-900">{category.nameAr}</p>
+          <p className="text-sm text-slate-500">{category.nameEn}</p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">{typeLabels[category.type]}</span>
+            <span className="text-xs font-bold text-slate-500">
+              {labels.adsCount}: {category._count?.ads ?? 0}
+            </span>
+            <span
+              className={`rounded-full px-2.5 py-1 text-xs font-bold ${
+                category.isActive ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-600'
+              }`}
+            >
+              {category.isActive ? labels.active : labels.inactive}
+            </span>
+          </div>
+          {category.filters && category.filters.length > 0 ? (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {category.filters.map((filter) => (
+                <span key={filter.id} className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700 ring-1 ring-blue-100">
+                  {filter.titleAr}
+                </span>
               ))}
             </div>
-          </section>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2 lg:justify-end">
+        {depth === 0 && onAddChild ? (
+          <button
+            type="button"
+            onClick={onAddChild}
+            className="inline-flex items-center gap-1 rounded-lg border border-brand-100 bg-brand-50 px-3 py-2 text-sm font-bold text-brand-700 transition hover:bg-brand-100"
+          >
+            <Plus size={14} />
+            {labels.addSubcategory}
+          </button>
         ) : null}
-
-        <div className="overflow-hidden rounded-2xl border border-slate-200">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-500">
-              <tr>
-                <th className="px-4 py-3 text-start">{m.admin.icon}</th>
-                <th className="px-4 py-3 text-start">{m.admin.nameAr}</th>
-                <th className="px-4 py-3 text-start">{m.admin.nameEn}</th>
-                <th className="px-4 py-3 text-start">{m.admin.adType}</th>
-                <th className="px-4 py-3 text-start">الفلاتر</th>
-                <th className="px-4 py-3 text-start">{m.admin.adsCount}</th>
-                <th className="px-4 py-3 text-start">{m.admin.status}</th>
-                <th className="px-4 py-3 text-start">{m.admin.actions}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center font-bold text-slate-500">
-                    {m.admin.loading}
-                  </td>
-                </tr>
-              ) : (
-                categories.map((category) => {
-                  const Icon = category.icon ? iconMap[category.icon] ?? Tag : Tag;
-
-                  return (
-                    <tr key={category.id}>
-                      <td className="px-4 py-3">
-                        <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
-                          <Icon size={20} />
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 font-bold">{category.nameAr}</td>
-                      <td className="px-4 py-3 text-slate-600">{category.nameEn}</td>
-                      <td className="px-4 py-3">{typeLabels[category.type]}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex max-w-56 flex-wrap gap-1.5">
-                          {category.filters && category.filters.length > 0 ? (
-                            category.filters.map((filter) => (
-                              <span key={filter.id} className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700 ring-1 ring-blue-100">
-                                {filter.titleAr}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-xs text-slate-400">-</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">{category._count?.ads ?? 0}</td>
-                      <td className="px-4 py-3">
-                        <span className={`rounded-full px-3 py-1 text-xs font-bold ${category.isActive ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
-                          {category.isActive ? m.admin.active : m.admin.inactive}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            onClick={() => startEdit(category)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 font-bold text-slate-700 transition hover:bg-slate-50"
-                          >
-                            <Edit3 size={14} />
-                            {m.admin.editCategory}
-                          </button>
-                          <button
-                            onClick={() => deleteCategory(category.id)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-red-100 px-3 py-2 font-bold text-red-600 transition hover:bg-red-50"
-                          >
-                            <Trash2 size={14} />
-                            {m.admin.deleteCategory}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm font-bold text-slate-500">
-            {m.admin.page} {page} {m.admin.of} {totalPages}
-          </p>
-          <div className="flex gap-2">
-            <button
-              disabled={page <= 1 || isLoading}
-              onClick={() => setPage((current) => Math.max(1, current - 1))}
-              className="rounded-xl border border-slate-200 px-4 py-2 font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
-            >
-              {m.admin.previous}
-            </button>
-            <button
-              disabled={page >= totalPages || isLoading}
-              onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-              className="rounded-xl border border-slate-200 px-4 py-2 font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
-            >
-              {m.admin.next}
-            </button>
-          </div>
-        </div>
-      </section>
+        <button
+          type="button"
+          onClick={() => onEdit(category)}
+          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-white"
+        >
+          <Edit3 size={14} />
+          {labels.editCategory}
+        </button>
+        <button
+          type="button"
+          onClick={() => onDelete(category.id)}
+          className="inline-flex items-center gap-1 rounded-lg border border-red-100 px-3 py-2 text-sm font-bold text-red-600 transition hover:bg-red-50"
+        >
+          <Trash2 size={14} />
+          {labels.deleteCategory}
+        </button>
+      </div>
     </div>
   );
 }
@@ -728,7 +972,7 @@ function IconPicker({
       </button>
 
       {isOpen ? (
-        <div className="absolute z-40 mt-2 grid max-h-64 w-full grid-cols-5 gap-2 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
+        <div className="absolute z-[120] mt-2 grid max-h-64 w-full grid-cols-5 gap-2 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
           {iconOptions.map((option) => {
             const Icon = option.icon;
             const isSelected = value === option.key;

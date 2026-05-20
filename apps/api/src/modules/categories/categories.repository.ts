@@ -41,27 +41,35 @@ export class CategoriesRepository {
       deletedAt: null,
       ...(query.type && { type: query.type })
     };
+    const include = {
+      filters: {
+        where: { deletedAt: null },
+        orderBy: [{ sortOrder: 'asc' as const }, { titleAr: 'asc' as const }]
+      },
+      _count: {
+        select: {
+          ads: true,
+          children: true,
+          filters: true
+        }
+      }
+    };
+    const orderBy = [{ sortOrder: 'asc' as const }, { name: 'asc' as const }];
+
+    if (query.all) {
+      const items = await prisma.category.findMany({ where, include, orderBy });
+      return { items, total: items.length, page: 1, limit: items.length };
+    }
+
     const skip = (query.page - 1) * adminCategoriesPageSize;
 
     const [items, total] = await Promise.all([
       prisma.category.findMany({
         where,
-        include: {
-          filters: {
-            where: { deletedAt: null },
-            orderBy: [{ sortOrder: 'asc' }, { titleAr: 'asc' }]
-          },
-          _count: {
-            select: {
-              ads: true,
-              children: true,
-              filters: true
-            }
-          }
-        },
+        include,
         skip,
         take: adminCategoriesPageSize,
-        orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }]
+        orderBy
       }),
       prisma.category.count({ where })
     ]);
@@ -71,6 +79,12 @@ export class CategoriesRepository {
 
   findById(id: string) {
     return prisma.category.findFirst({ where: { id, deletedAt: null } });
+  }
+
+  hasChildren(id: string) {
+    return prisma.category
+      .count({ where: { parentId: id, deletedAt: null } })
+      .then((count) => count > 0);
   }
 
   findFilterById(id: string) {

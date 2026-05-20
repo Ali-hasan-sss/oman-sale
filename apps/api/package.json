@@ -15,6 +15,7 @@
     "prisma:generate": "node scripts/prisma.cjs generate",
     "prisma:migrate": "node scripts/prisma.cjs migrate dev --name auto",
     "prisma:deploy": "node scripts/prisma.cjs migrate deploy",
+    "verify:hero-platform": "node scripts/verify-hero-platform.cjs",
     "prisma:seed": "node prisma/seed.cjs",
     "prisma:seed:tsx": "tsx prisma/seed.ts"
   },

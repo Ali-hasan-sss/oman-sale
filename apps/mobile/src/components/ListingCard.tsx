@@ -1,4 +1,4 @@
-import { Image, StyleSheet, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from './AppText';
 import { formatPrice, getCategoryName } from '../data';
@@ -9,17 +9,20 @@ type ListingCardProps = {
   listing: Listing;
   locale: Locale;
   featuredLabel: string;
+  layout?: 'vertical' | 'horizontal';
+  onPress?: () => void;
 };
 
-export function ListingCard({ listing, locale, featuredLabel }: ListingCardProps) {
+export function ListingCard({ listing, locale, featuredLabel, layout = 'vertical', onPress }: ListingCardProps) {
+  const isHorizontal = layout === 'horizontal';
   const image = listing.images?.[0]?.imageUrl;
   const category = getCategoryName(listing, locale);
   const isFeatured = Boolean(listing.promotion);
   const contentRtl = locale === 'ar';
 
-  return (
-    <View style={styles.card}>
-      <View style={styles.imageWrap}>
+  const content = (
+    <>
+      <View style={[styles.imageWrap, isHorizontal && styles.imageWrapHorizontal]}>
         {image ? (
           <Image source={{ uri: image }} style={styles.image} />
         ) : (
@@ -38,7 +41,7 @@ export function ListingCard({ listing, locale, featuredLabel }: ListingCardProps
           </View>
         ) : null}
       </View>
-      <View style={styles.body}>
+      <View style={[styles.body, isHorizontal && styles.bodyHorizontal]}>
         <AppText style={[styles.title, contentRtl ? styles.textRtl : styles.textLtr]} numberOfLines={1}>
           {listing.title}
         </AppText>
@@ -47,8 +50,25 @@ export function ListingCard({ listing, locale, featuredLabel }: ListingCardProps
           {listing.area || listing.city || '-'}
         </AppText>
       </View>
-    </View>
+    </>
   );
+
+  if (onPress) {
+    return (
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [
+          styles.card,
+          isHorizontal && styles.cardHorizontal,
+          pressed && styles.cardPressed
+        ]}
+      >
+        {content}
+      </Pressable>
+    );
+  }
+
+  return <View style={[styles.card, isHorizontal && styles.cardHorizontal]}>{content}</View>;
 }
 
 const styles = StyleSheet.create({
@@ -59,9 +79,19 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     ...shadow
   },
+  cardHorizontal: {
+    width: 268,
+    marginBottom: 0
+  },
+  cardPressed: {
+    opacity: 0.92
+  },
   imageWrap: {
     height: 180,
     backgroundColor: colors.brandSoft
+  },
+  imageWrapHorizontal: {
+    height: 152
   },
   image: {
     width: '100%',
@@ -106,6 +136,10 @@ const styles = StyleSheet.create({
   },
   body: {
     padding: 14
+  },
+  bodyHorizontal: {
+    paddingVertical: 12,
+    paddingHorizontal: 12
   },
   title: {
     fontSize: 16,

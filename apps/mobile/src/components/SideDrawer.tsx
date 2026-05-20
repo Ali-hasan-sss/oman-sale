@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Dimensions, Easing, Image, Pressable, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from './AppText';
 
@@ -15,6 +16,7 @@ type SideDrawerProps = {
   visible: boolean;
   onClose: () => void;
   onNavigate: (screen: ScreenName) => void;
+  onLogoutRequest?: () => void;
 };
 
 type DrawerItem = {
@@ -23,10 +25,10 @@ type DrawerItem = {
   icon: keyof typeof Ionicons.glyphMap;
 };
 
-export function SideDrawer({ visible, onClose, onNavigate }: SideDrawerProps) {
+export function SideDrawer({ visible, onClose, onNavigate, onLogoutRequest }: SideDrawerProps) {
   const { t, toggleLocale, isRtl } = useI18n();
+  const insets = useSafeAreaInsets();
   const user = useAuthStore((state) => state.user);
-  const logout = useAuthStore((state) => state.logout);
   const translateX = useRef(new Animated.Value(-drawerWidth)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const [shouldRender, setShouldRender] = useState(visible);
@@ -84,7 +86,19 @@ export function SideDrawer({ visible, onClose, onNavigate }: SideDrawerProps) {
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       </Animated.View>
 
-      <Animated.View style={[styles.drawer, { width: drawerWidth, transform: [{ translateX }] }]}>
+      <Animated.View
+        style={[
+          styles.drawer,
+          {
+            width: drawerWidth,
+            top: insets.top,
+            bottom: insets.bottom,
+            paddingTop: 12,
+            paddingBottom: 12,
+            transform: [{ translateX }]
+          }
+        ]}
+      >
         <View style={styles.headerCard}>
           <View style={styles.headerText}>
             <AppText style={[styles.name, isRtl ? styles.textRtl : styles.textLtr]}>{user?.fullName ?? t.common.guest}</AppText>
@@ -122,8 +136,8 @@ export function SideDrawer({ visible, onClose, onNavigate }: SideDrawerProps) {
           <Pressable
             style={styles.item}
             onPress={() => {
-              void logout();
               onClose();
+              onLogoutRequest?.();
             }}
           >
             <View style={[styles.iconBubble, styles.dangerBubble]}>
@@ -194,11 +208,8 @@ const styles = StyleSheet.create({
   },
   drawer: {
     position: 'absolute',
-    top: 0,
-    bottom: 0,
     left: 0,
     backgroundColor: colors.surface,
-    paddingTop: 56,
     paddingHorizontal: 18,
     borderTopRightRadius: 28,
     borderBottomRightRadius: 28,

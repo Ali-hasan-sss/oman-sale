@@ -1,5 +1,5 @@
 import { ApiError } from '../../shared/utils/api-error';
-import { mapSlideForAdmin } from './hero-slide.mapper';
+import { buildHeroSlideUpdateData, mapSlideForAdmin } from './hero-slide.mapper';
 import { HeroRepository } from './hero.repository';
 import type {
   CreateHeroBannerInput,
@@ -76,19 +76,7 @@ export class HeroService {
 
   async update(id: string, input: UpdateHeroSlideInput) {
     await this.getById(id);
-    const slide = await heroRepository.update(id, {
-      sortOrder: input.sortOrder,
-      platform: input.platform,
-      imageUrl: input.imageUrl,
-      titleAr: input.titleAr,
-      titleEn: input.titleEn,
-      subtitleAr: input.subtitleAr,
-      subtitleEn: input.subtitleEn,
-      buttonLabelAr: input.buttonLabelAr,
-      buttonLabelEn: input.buttonLabelEn,
-      buttonLink: input.buttonLink,
-      isActive: input.isActive
-    });
+    const slide = await heroRepository.update(id, buildHeroSlideUpdateData(input));
     return mapSlideForAdmin(slide);
   }
 

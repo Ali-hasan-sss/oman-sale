@@ -10,6 +10,7 @@ import { ChatNavLink } from '@/components/chat/chat-nav-link';
 import { SiteFooter } from '@/components/home/site-footer';
 import { MobileNavMenu } from '@/components/navigation/mobile-nav-menu';
 import { api } from '@/lib/api';
+import { buildCategoryTree } from '@/lib/category-tree';
 import { useI18n } from '@/lib/i18n';
 import { getUserAccessToken } from '@/lib/user-auth';
 import { useAuthStore } from '@/store/auth-store';
@@ -19,6 +20,7 @@ type Category = {
   name: string;
   nameAr?: string;
   nameEn?: string;
+  parentId?: string | null;
   type: 'PRODUCT' | 'SERVICE' | 'JOB' | 'JOB_REQUEST' | 'LOGISTICS' | 'CONSTRUCTION';
 };
 
@@ -139,6 +141,7 @@ export function AddListingPage() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
+  const categoryTree = useMemo(() => buildCategoryTree(categories), [categories]);
   const selectedCategory = categories.find((category) => category.id === categoryId);
   const selectedPlan = plans.find((plan) => plan.id === selectedPlanId);
   const authHeaders = useMemo(() => {
@@ -275,10 +278,15 @@ export function AddListingPage() {
             <Field label={text.category}>
               <select value={categoryId} onChange={(event) => setCategoryId(event.target.value)} required className={inputClass}>
                 <option value="">{text.selectCategory}</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
+                {categoryTree.map((parent) => (
+                  <optgroup key={parent.id} label={parent.name}>
+                    <option value={parent.id}>{parent.name}</option>
+                    {parent.children.map((child) => (
+                      <option key={child.id} value={child.id}>
+                        {locale === 'ar' ? `— ${child.name}` : `${child.name} —`}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </Field>
