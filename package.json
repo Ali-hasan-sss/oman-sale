@@ -14,12 +14,25 @@
     "prisma:migrate": "npm --workspace @oman-sale/api run prisma:migrate",
     "prisma:deploy": "npm --workspace @oman-sale/api run prisma:deploy",
     "jobs:dev": "npm --workspace @oman-sale/jobs run dev",
-    "jobs:start": "npm --workspace @oman-sale/jobs run start"
+    "jobs:start": "npm --workspace @oman-sale/jobs run start",
+    "mobile:dev": "npm --workspace @oman-sale/mobile run dev",
+    "mobile:dev:clear": "npm --workspace @oman-sale/mobile run dev:clear"
   },
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
+  "overrides": {
+    "react-freeze": {
+      "react": "19.1.0"
+    },
+    "use-sync-external-store": {
+      "react": "19.1.0"
+    },
+    "zustand": {
+      "react": "19.1.0"
+    }
+  },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",

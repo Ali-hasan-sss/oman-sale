@@ -1,8 +1,10 @@
 import { ApiError } from '../../shared/utils/api-error';
+import { mapSlideForAdmin } from './hero-slide.mapper';
 import { HeroRepository } from './hero.repository';
 import type {
   CreateHeroBannerInput,
   CreateHeroSlideInput,
+  ListAdminHeroSlidesQuery,
   ListHeroSlidesQuery,
   UpdateHeroBannerInput,
   UpdateHeroSlideInput
@@ -16,6 +18,7 @@ const mapSlideForLocale = (
 ) => ({
   id: slide.id,
   sortOrder: slide.sortOrder,
+  platform: slide.platform,
   imageUrl: slide.imageUrl,
   title: locale === 'en' ? slide.titleEn : slide.titleAr,
   subtitle: locale === 'en' ? slide.subtitleEn : slide.subtitleAr,
@@ -37,24 +40,27 @@ const mapBannerForLocale = (
 export class HeroService {
   async listPublic(query: ListHeroSlidesQuery) {
     const locale = query.locale === 'en' ? 'en' : 'ar';
-    const slides = await heroRepository.listActive();
+    const platform = query.platform === 'mobile' ? 'MOBILE' : 'WEB';
+    const slides = await heroRepository.listActive(platform);
     return slides.map((slide) => mapSlideForLocale(slide, locale));
   }
 
-  async listForAdmin() {
-    return heroRepository.listAll();
+  async listForAdmin(query: ListAdminHeroSlidesQuery = {}) {
+    const slides = await heroRepository.listAll(query.platform);
+    return slides.map(mapSlideForAdmin);
   }
 
   async getById(id: string) {
     const slide = await heroRepository.findById(id);
     if (!slide) throw new ApiError(404, 'Hero slide not found');
-    return slide;
+    return mapSlideForAdmin(slide);
   }
 
   async create(input: CreateHeroSlideInput) {
     const sortOrder = input.sortOrder ?? (await heroRepository.getNextSortOrder());
-    return heroRepository.create({
+    const slide = await heroRepository.create({
       sortOrder,
+      platform: input.platform,
       imageUrl: input.imageUrl,
       titleAr: input.titleAr,
       titleEn: input.titleEn,
@@ -65,11 +71,25 @@ export class HeroService {
       buttonLink: input.buttonLink,
       isActive: input.isActive ?? true
     });
+    return mapSlideForAdmin(slide);
   }
 
   async update(id: string, input: UpdateHeroSlideInput) {
     await this.getById(id);
-    return heroRepository.update(id, input);
+    const slide = await heroRepository.update(id, {
+      sortOrder: input.sortOrder,
+      platform: input.platform,
+      imageUrl: input.imageUrl,
+      titleAr: input.titleAr,
+      titleEn: input.titleEn,
+      subtitleAr: input.subtitleAr,
+      subtitleEn: input.subtitleEn,
+      buttonLabelAr: input.buttonLabelAr,
+      buttonLabelEn: input.buttonLabelEn,
+      buttonLink: input.buttonLink,
+      isActive: input.isActive
+    });
+    return mapSlideForAdmin(slide);
   }
 
   async delete(id: string) {

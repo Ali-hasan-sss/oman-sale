@@ -56,7 +56,7 @@ export function HeroSection() {
     const loadSlides = async () => {
       try {
         const response = await api.get<{ data: HeroSlide[] }>(`/hero/slides`, {
-          params: { locale }
+          params: { locale, platform: 'web' }
         });
         if (!cancelled && response.data.data.length > 0) {
           setSlides(response.data.data);

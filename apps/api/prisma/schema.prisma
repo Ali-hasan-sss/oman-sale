@@ -76,6 +76,11 @@ enum ViewSource {
   MOBILE
 }
 
+enum HeroSlidePlatform {
+  WEB
+  MOBILE
+}
+
 enum AuthCodePurpose {
   EMAIL_VERIFICATION
   PASSWORD_RESET
@@ -527,8 +532,9 @@ model Notification {
 }
 
 model HeroSlide {
-  id            String   @id @default(uuid())
-  sortOrder     Int      @default(0)
+  id            String            @id @default(uuid())
+  sortOrder     Int               @default(0)
+  platform      HeroSlidePlatform @default(WEB)
   imageUrl      String
   titleAr       String
   titleEn       String
@@ -537,11 +543,11 @@ model HeroSlide {
   buttonLabelAr String
   buttonLabelEn String
   buttonLink    String
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  isActive      Boolean           @default(true)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
 
-  @@index([isActive, sortOrder])
+  @@index([isActive, platform, sortOrder])
 }
 
 model HeroBanner {

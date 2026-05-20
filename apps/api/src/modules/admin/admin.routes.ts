@@ -16,6 +16,7 @@ import { heroController } from '../hero/hero.controller';
 import {
   createHeroBannerSchema,
   createHeroSlideSchema,
+  listAdminHeroSlidesQuerySchema,
   updateHeroBannerSchema,
   updateHeroSlideSchema
 } from '../hero/hero.validation';
@@ -120,7 +121,11 @@ adminRoutes.delete(
   validateRequest({ params: idParams }),
   asyncHandler(adminController.deleteCategory)
 );
-adminRoutes.get('/hero-slides', asyncHandler(heroController.listForAdmin));
+adminRoutes.get(
+  '/hero-slides',
+  validateRequest({ query: listAdminHeroSlidesQuerySchema }),
+  asyncHandler(heroController.listForAdmin)
+);
 adminRoutes.get(
   '/hero-slides/:id',
   validateRequest({ params: idParams }),

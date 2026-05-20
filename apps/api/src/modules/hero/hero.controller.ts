@@ -2,15 +2,15 @@ import type { Request, Response } from 'express';
 
 import { getRequiredParam } from '../../shared/utils/request';
 import { heroService } from './hero.service';
-import type { ListHeroSlidesQuery } from './hero.validation';
+import type { ListAdminHeroSlidesQuery, ListHeroSlidesQuery } from './hero.validation';
 
 export class HeroController {
   async listPublic(req: Request, res: Response) {
     res.json({ data: await heroService.listPublic(req.query as unknown as ListHeroSlidesQuery) });
   }
 
-  async listForAdmin(_req: Request, res: Response) {
-    res.json({ data: await heroService.listForAdmin() });
+  async listForAdmin(req: Request, res: Response) {
+    res.json({ data: await heroService.listForAdmin(req.query as unknown as ListAdminHeroSlidesQuery) });
   }
 
   async getById(req: Request, res: Response) {

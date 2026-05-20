@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "Oman Sale",
+    "slug": "oman-sale-mobile",
+    "scheme": "omansale",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/app-icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.omansale.mobile"
+    },
+    "android": {
+      "package": "com.omansale.mobile",
+      "usesCleartextTraffic": true,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/app-icon.png",
+        "backgroundColor": "#ffffff"
+      }
+    },
+    "extra": {
+      "supportsRTL": false
+    },
+    "plugins": [
+      "expo-font"
+    ]
+  }
+}

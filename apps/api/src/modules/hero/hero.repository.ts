@@ -1,31 +1,35 @@
-import type { Prisma } from '@prisma/client';
+import type { HeroSlidePlatform, Prisma } from '@prisma/client';
 
 import { prisma } from '../../shared/prisma/client';
+import { heroSlideAdminSelect } from './hero-slide.mapper';
 
 export class HeroRepository {
-  listActive() {
+  listActive(platform: HeroSlidePlatform = 'WEB') {
     return prisma.heroSlide.findMany({
-      where: { isActive: true },
-      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }]
+      where: { isActive: true, platform },
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+      select: heroSlideAdminSelect
     });
   }
 
-  listAll() {
+  listAll(platform?: HeroSlidePlatform) {
     return prisma.heroSlide.findMany({
-      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }]
+      where: platform ? { platform } : undefined,
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+      select: heroSlideAdminSelect
     });
   }
 
   findById(id: string) {
-    return prisma.heroSlide.findUnique({ where: { id } });
+    return prisma.heroSlide.findUnique({ where: { id }, select: heroSlideAdminSelect });
   }
 
   create(data: Prisma.HeroSlideCreateInput) {
-    return prisma.heroSlide.create({ data });
+    return prisma.heroSlide.create({ data, select: heroSlideAdminSelect });
   }
 
   update(id: string, data: Prisma.HeroSlideUpdateInput) {
-    return prisma.heroSlide.update({ where: { id }, data });
+    return prisma.heroSlide.update({ where: { id }, data, select: heroSlideAdminSelect });
   }
 
   delete(id: string) {

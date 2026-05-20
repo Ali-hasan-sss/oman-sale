@@ -1,165 +1,178 @@
-# نشر Oman Sale على VPS بدون دومين
+# نشر Oman Sale على VPS
 
-هذا الدليل يفترض أن السيرفر عليه مشاريع أخرى، لذلك سنشغل Oman Sale على بورت عام مستقل عبر Nginx.
+## الدومين و SSL (الإنتاج)
 
-## البورتات المقترحة
+| الخدمة | الدومين |
+|--------|---------|
+| الواجهة | `https://omansale.om` |
+| الباكند | `https://api.omansale.om` |
 
-- الباكند API داخليًا فقط: `127.0.0.1:3600`
-- الواجهة Next.js داخليًا فقط: `127.0.0.1:3601`
-- Nginx خارجيًا للمستخدمين: `http://72.62.197.60:3601`
+### 1) DNS
 
-مهم: لأن Next.js وNginx يستخدمان نفس رقم البورت `3601`، يجب أن يعمل Next على `127.0.0.1:3601` فقط، ويعمل Nginx على IP السيرفر العام `72.62.197.60:3601`. لا تجعل Next يستمع على `0.0.0.0:3601`.
+أضف سجلات **A** عند مزود الدومين (كلها تشير إلى IP السيرفر، مثل `72.62.197.60`):
 
-## لماذا هذا مهم للـ rate limit والمشاهدات؟
+```text
+omansale.om       → 72.62.197.60
+www.omansale.om   → 72.62.197.60
+api.omansale.om   → 72.62.197.60
+```
 
-الـ API مضبوط على `TRUST_PROXY=1`، وNginx يرسل:
+تحقق قبل المتابعة:
 
-- `X-Real-IP`
-- `X-Forwarded-For`
-- `X-Forwarded-Proto`
+```bash
+dig +short omansale.om
+dig +short api.omansale.om
+```
 
-بهذا يقرأ Express عنوان IP الحقيقي للزائر من `req.ip` بدل أن يرى كل الطلبات كأنها من `127.0.0.1` أو IP الخاص بـ Nginx. هذا يؤثر مباشرة على:
+### 2) البورتات الداخلية
 
-- `apiRateLimiter`
-- تسجيل مشاهدات الإعلانات
+- API (داخلي): `127.0.0.1:3600`
+- Next.js (داخلي): `127.0.0.1:3601`
+- Nginx (عام): `80` و `443`
 
-مهم: اجعل API يعمل على `HOST=127.0.0.1` ولا تفتح بورت `3600` للعامة، حتى لا يستطيع أحد إرسال `X-Forwarded-For` مزيف مباشرة إلى الباكند.
+```bash
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+```
 
-## ملفات البيئة
-
-انسخ الأمثلة:
+### 3) ملفات البيئة
 
 ```bash
 cp .env.production.example .env
 cp apps/web/.env.production.example apps/web/.env.production
 ```
 
-عدّل `.env`:
+عدّل `.env` (أهم القيم):
 
 ```env
-NODE_ENV=production
+WEB_URL=https://omansale.om
+API_URL=https://api.omansale.om
+CORS_ORIGINS=https://omansale.om,https://www.omansale.om,https://api.omansale.om
 HOST=127.0.0.1
 PORT=3600
 TRUST_PROXY=1
-API_URL=http://72.62.197.60:3601
-WEB_URL=http://72.62.197.60:3601
-CORS_ORIGINS=http://72.62.197.60:3601
 ```
 
-عدّل `apps/web/.env.production`:
+`apps/web/.env.production`:
 
 ```env
 NEXT_PUBLIC_API_URL=/api/v1
-NEXT_PUBLIC_API_PORT=3600
 ```
 
-استخدام `/api/v1` يجعل الواجهة تتصل بنفس IP ونفس بورت Nginx، لذلك لا تحتاج دومين ولا CORS بين بورتات مختلفة.
+> الواجهة تتصل بالـ API عبر نفس الدومين (`/api/`) فلا تحتاج CORS منفصل للمتصفح.
 
-## قاعدة البيانات و Redis
+**تطبيق الموبايل** — في `apps/mobile/.env`:
 
-ثبّت PostgreSQL و Redis على السيرفر، ثم أنشئ قاعدة البيانات والمستخدم بما يناسب قيمة `DATABASE_URL`.
-
-مثال سريع:
-
-```bash
-sudo apt update
-sudo apt install -y postgresql redis-server nginx
-sudo systemctl enable --now postgresql redis-server nginx
+```env
+EXPO_PUBLIC_API_URL=https://api.omansale.om/api/v1
 ```
 
-## البناء
-
-من مجلد المشروع:
+### 4) البناء والتشغيل
 
 ```bash
 npm ci
 npm run prisma:generate
 npm run prisma:deploy
 npm run build
-```
-
-إذا غيرت `NEXT_PUBLIC_API_URL` أو بورت Nginx لاحقًا، أعد بناء الواجهة لأن متغيرات `NEXT_PUBLIC_*` تدخل داخل build.
-
-## Prisma على السيرفر (مهم)
-
-- على الإنتاج استخدم **`npm run prisma:deploy`** (يطبّق المايجريشن الموجودة في المستودع دون إنشاء مايجريشن جديدة).
-- **`npm run prisma:migrate`** يشغّل `migrate dev` وهو مخصص التطوير المحلي ويحتاج قاعدة **shadow** (`SHADOW_DATABASE_URL` / `oman_sale_shadow`). إذا لم تنشئها سيظهر خطأ `P1003`.
-- إن أردت استخدام `migrate dev` على السيرفر (غير مُستحسن): أنشئ قاعدة `oman_sale_shadow` وضع `SHADOW_DATABASE_URL` في `.env` كما في `.env.example`.
-
-## تشغيل الخدمات بـ PM2
-
-```bash
-sudo npm install -g pm2
-
 pm2 start ecosystem.config.cjs
-
 pm2 save
-pm2 startup
 ```
 
-## إعداد Nginx
+### 5) Nginx + شهادة SSL (Let's Encrypt)
 
-يوجد ملفان:
+ملفات جاهزة في `infra/nginx/`:
+
+| ملف | الغرض |
+|-----|--------|
+| `omansale.om.http.conf` | HTTP مؤقت قبل الشهادة |
+| `api.omansale.om.http.conf` | HTTP مؤقت قبل الشهادة |
+| `omansale.om` | HTTPS نهائي للواجهة |
+| `api.omansale.om` | HTTPS نهائي للـ API |
+
+**طريقة آلية (مُفضّلة):**
 
 ```bash
-infra/nginx/omansale.om
-infra/nginx/api.omansale.om
+cd /var/www/omansale   # مسار المشروع على السيرفر
+chmod +x infra/scripts/setup-ssl.sh
+sudo CERTBOT_EMAIL=info@omansale.om REPO_DIR=/var/www/omansale infra/scripts/setup-ssl.sh
 ```
 
-`omansale.om` خاص بالواجهة، ويحتوي أيضًا على توجيه `/api/` و`/socket.io/` إلى الباكند حتى يعمل المشروع بدون دومين عبر IP واحد.
-
-`api.omansale.om` خاص بالباكند ومجهز للدومين لاحقًا. يمكن تفعيله الآن بدون ضرر، لكنه لن يستخدم من المتصفح إلا عند وجود DNS أو عند إرسال `Host: api.omansale.om`.
-
-انسخهما إلى Nginx:
+**طريقة يدوية:**
 
 ```bash
+sudo mkdir -p /var/www/certbot
+sudo cp infra/nginx/omansale.om.http.conf /etc/nginx/sites-available/omansale.om
+sudo cp infra/nginx/api.omansale.om.http.conf /etc/nginx/sites-available/api.omansale.om
+sudo ln -sf /etc/nginx/sites-available/omansale.om /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/api.omansale.om /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+
+sudo apt install -y certbot
+sudo certbot certonly --webroot -w /var/www/certbot \
+  -d omansale.om -d www.omansale.om -d api.omansale.om \
+  --email info@omansale.om --agree-tos --no-eff-email
+
 sudo cp infra/nginx/omansale.om /etc/nginx/sites-available/omansale.om
 sudo cp infra/nginx/api.omansale.om /etc/nginx/sites-available/api.omansale.om
-sudo ln -s /etc/nginx/sites-available/omansale.om /etc/nginx/sites-enabled/omansale.om
-sudo ln -s /etc/nginx/sites-available/api.omansale.om /etc/nginx/sites-enabled/api.omansale.om
-sudo nginx -t
-sudo systemctl reload nginx
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot renew --dry-run
 ```
 
-افتح البورت في الجدار الناري:
+### 6) فحص
 
 ```bash
-sudo ufw allow 3601/tcp
+curl -I https://omansale.om
+curl https://omansale.om/api/v1/health
+curl https://api.omansale.om/api/v1/health
 ```
 
-ثم افتح:
-
-```text
-http://72.62.197.60:3601
-```
-
-## فحص سريع
-
-```bash
-curl http://72.62.197.60:3601/api/v1/health
-```
-
-يجب أن يرجع:
+المتوقع:
 
 ```json
 {"status":"ok","service":"oman-sale-api"}
 ```
 
-## إذا حوّلك المتصفح إلى `localhost` بعد فتح IP:البورت
+---
 
-يحدث ذلك لأن Next يستقبل الطلب من Nginx على `127.0.0.1` فيُبنى عنوان خاطئ. تم ضبط `middleware` ليقرأ `X-Forwarded-Host` و`X-Forwarded-Proto`، وملف `omansale.om` يمرّر `Host` و`X-Forwarded-Host` كـ `$http_host` (مع البورت). بعد `git pull` أعد بناء الواجهة ثم أعد تحميل Nginx:
+## الوصول القديم عبر IP:3601 (اختياري)
+
+إذا كنت ما زلت تستخدم `http://IP:3601` راجع `infra/nginx/omansale-vps.conf.example`.
+بعد تفعيل الدومين يُفضّل إيقاف البورت `3601` العام والاعتماد على `443` فقط.
+
+---
+
+## Prisma على السيرفر
+
+- استخدم **`npm run prisma:deploy`** على الإنتاج (لا `prisma migrate dev`).
+- `migrate dev` يحتاج قاعدة shadow ولا يُستخدم على السيرفر.
+
+---
+
+## PM2
+
+```bash
+sudo npm install -g pm2
+pm2 start ecosystem.config.cjs
+pm2 save
+pm2 startup
+```
+
+---
+
+## CORS — ملخص
+
+| المصدر | الإعداد |
+|--------|---------|
+| متصفح على `omansale.om` | same-origin `/api/v1` — لا يحتاج CORS إضافي |
+| طلبات مباشرة للـ API | `WEB_URL` + `CORS_ORIGINS` في `.env` |
+| تطبيق الموبايل | `https://api.omansale.om/api/v1` — لا يخضع لـ CORS المتصفح |
+
+---
+
+## تحديث بعد تغيير `NEXT_PUBLIC_*`
 
 ```bash
 npm run build
+pm2 restart oman-sale-web
 sudo nginx -t && sudo systemctl reload nginx
 ```
-
-## ملاحظات عند إضافة دومين لاحقًا
-
-عند توفر دومين:
-
-- `omansale.om` سيخدم الواجهة.
-- `api.omansale.om` سيخدم الباكند.
-- غيّر `WEB_URL` و`API_URL` و`CORS_ORIGINS`.
-- أبقِ `NEXT_PUBLIC_API_URL=/api/v1` إذا ستستمر بتوجيه `/api/` من ملف الواجهة إلى الباكند.
-- أعد build للواجهة.
