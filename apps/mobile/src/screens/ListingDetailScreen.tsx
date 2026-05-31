@@ -4,14 +4,18 @@ import {
   ActivityIndicator,
   Image,
   Linking,
+  Modal,
   Pressable,
   ScrollView,
   Share,
   StyleSheet,
   View
 } from 'react-native';
+import { AppTextInput } from '../components/AppTextInput';
 import { AppText } from '../components/AppText';
+import { AvatarWithBanBadge } from '../components/AvatarWithBanBadge';
 import { ListingCard } from '../components/ListingCard';
+import { ListingCoverImage } from '../components/ListingCoverImage';
 import { ListingImageModal } from '../components/ListingImageModal';
 import { ListingDetailSkeleton } from '../components/skeleton';
 import { fallbackListings, formatListingDate, formatPrice, getCategoryName } from '../data';
@@ -22,6 +26,7 @@ import {
   fetchListingById,
   fetchSimilarListings,
   removeFavoriteRequest,
+  reportListingRequest,
   toggleFavoriteRequest
 } from '../services/listings.service';
 import { openConversationRequest } from '../services/chat.service';
@@ -75,6 +80,11 @@ export function ListingDetailScreen({
   const [isOpeningChat, setIsOpeningChat] = useState(false);
   const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportError, setReportError] = useState('');
+  const [reportSuccess, setReportSuccess] = useState('');
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
   const text = t.listingDetail;
   const contentRtl = isRtl;
@@ -173,6 +183,45 @@ export function ListingDetailScreen({
     Linking.openURL(`tel:${phone}`).catch(() => undefined);
   };
 
+  const openReportModal = () => {
+    if (!accessToken) {
+      onLoginRequired();
+      return;
+    }
+    if (user?.id === listing?.user?.id) {
+      setReportError(text.reportOwnListing);
+      return;
+    }
+    setReportReason('');
+    setReportError('');
+    setReportSuccess('');
+    setReportOpen(true);
+  };
+
+  const submitReport = async () => {
+    if (!listing || isDemoId(listing.id)) return;
+    const reason = reportReason.trim();
+    if (reason.length < 5) {
+      setReportError(text.reportError);
+      return;
+    }
+
+    setIsSubmittingReport(true);
+    setReportError('');
+    try {
+      await reportListingRequest(listing.id, reason);
+      setReportSuccess(text.reportSuccess);
+      setReportReason('');
+    } catch (error: unknown) {
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      if (status === 409) setReportError(text.reportAlreadySent);
+      else if (status === 400) setReportError(text.reportOwnListing);
+      else setReportError(text.reportError);
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  };
+
   const openChat = async () => {
     if (!accessToken) {
       onLoginRequired();
@@ -228,9 +277,7 @@ export function ListingDetailScreen({
           {selectedImage ? (
             <Image source={{ uri: selectedImage }} style={styles.heroImage} />
           ) : (
-            <View style={styles.heroPlaceholder}>
-              <Ionicons name="image-outline" size={48} color={colors.muted} />
-            </View>
+            <ListingCoverImage uri={null} variant="hero" style={styles.heroPlaceholder} />
           )}
           <View style={[styles.heroActions, isRtl ? styles.heroActionsRtl : styles.heroActionsLtr]}>
             <Pressable style={styles.heroActionBtn} onPress={() => void shareListing()}>
@@ -315,6 +362,13 @@ export function ListingDetailScreen({
           <AppText style={[styles.description, contentRtl ? styles.textRtl : styles.textLtr]}>
             {listing.description || '-'}
           </AppText>
+          {!isDemoId(listing.id) ? (
+            <Pressable style={styles.reportBtn} onPress={openReportModal}>
+              <Ionicons name="flag-outline" size={18} color={colors.danger} />
+              <AppText style={styles.reportBtnText}>{text.report}</AppText>
+            </Pressable>
+          ) : null}
+          {reportError && !reportOpen ? <AppText style={styles.reportInlineError}>{reportError}</AppText> : null}
         </View>
 
         <View style={styles.card}>
@@ -322,19 +376,29 @@ export function ListingDetailScreen({
             {text.sellerInfo}
           </AppText>
           <View style={[styles.sellerRow, isRtl && styles.sellerRowRtl]}>
-            <View style={styles.avatar}>
-              {listing.user?.avatar ? (
-                <Image source={{ uri: listing.user.avatar }} style={styles.avatarImage} />
-              ) : (
-                <Ionicons name="person" size={28} color="#fff" />
-              )}
-            </View>
+            <AvatarWithBanBadge
+              uri={listing.store?.logoUrl ?? listing.user?.avatar}
+              fallbackLabel={
+                listing.store
+                  ? locale === 'en'
+                    ? listing.store.nameEn
+                    : listing.store.nameAr
+                  : listing.user?.fullName
+              }
+              size={56}
+              isBlocked={listing.user?.isBlocked}
+              badgeLabel={listing.user?.isBlocked ? t.profile.accountBlocked : undefined}
+            />
             <View style={styles.sellerBody}>
               <AppText style={[styles.sellerName, contentRtl ? styles.textRtl : styles.textLtr]}>
-                {listing.user?.fullName ?? '-'}
+                {listing.store
+                  ? locale === 'en'
+                    ? listing.store.nameEn
+                    : listing.store.nameAr
+                  : listing.user?.fullName ?? '-'}
               </AppText>
               <AppText style={[styles.sellerMeta, contentRtl ? styles.textRtl : styles.textLtr]}>
-                {text.memberSince} {memberYear}
+                {listing.store ? text.storeListing : `${text.memberSince} ${memberYear}`}
               </AppText>
             </View>
           </View>
@@ -415,6 +479,40 @@ export function ListingDetailScreen({
         imageLabel={text.imageOf}
         onClose={() => setGalleryOpen(false)}
       />
+
+      <Modal visible={reportOpen} transparent animationType="fade" onRequestClose={() => setReportOpen(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <AppText style={[styles.modalTitle, contentRtl ? styles.textRtl : styles.textLtr]}>{text.reportTitle}</AppText>
+            {reportSuccess ? <AppText style={styles.reportSuccess}>{reportSuccess}</AppText> : null}
+            {reportError ? <AppText style={styles.reportInlineError}>{reportError}</AppText> : null}
+            <AppTextInput
+              value={reportReason}
+              onChangeText={setReportReason}
+              placeholder={text.reportPlaceholder}
+              placeholderTextColor={colors.muted}
+              multiline
+              style={[styles.reportInput, contentRtl ? styles.textRtl : styles.textLtr]}
+            />
+            <View style={[styles.modalActions, isRtl && styles.modalActionsRtl]}>
+              <Pressable
+                style={[styles.primaryBtn, styles.modalPrimaryBtn, isSubmittingReport && styles.btnDisabled]}
+                onPress={submitReport}
+                disabled={isSubmittingReport}
+              >
+                {isSubmittingReport ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <AppText style={styles.primaryBtnText}>{text.reportSubmit}</AppText>
+                )}
+              </Pressable>
+              <Pressable style={styles.outlineBtn} onPress={() => setReportOpen(false)}>
+                <AppText style={styles.outlineBtnText}>{text.reportCancel}</AppText>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -498,7 +596,8 @@ const styles = StyleSheet.create({
   },
   heroImage: {
     width: '100%',
-    height: '100%'
+    height: '100%',
+    backgroundColor: colors.brandSoft
   },
   heroPlaceholder: {
     flex: 1,
@@ -549,7 +648,8 @@ const styles = StyleSheet.create({
   },
   thumbImage: {
     width: '100%',
-    height: '100%'
+    height: '100%',
+    backgroundColor: colors.brandSoft
   },
   card: {
     marginHorizontal: 16,
@@ -637,6 +737,67 @@ const styles = StyleSheet.create({
     color: colors.ink,
     lineHeight: 24,
     fontSize: 15
+  },
+  reportBtn: {
+    marginTop: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8
+  },
+  reportBtnText: {
+    color: colors.danger,
+    fontWeight: '700',
+    fontSize: 14
+  },
+  reportInlineError: {
+    marginTop: 10,
+    color: colors.danger,
+    fontWeight: '700',
+    fontSize: 13
+  },
+  reportSuccess: {
+    marginBottom: 10,
+    color: colors.brandDark,
+    fontWeight: '700',
+    fontSize: 13
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15,23,42,0.55)',
+    justifyContent: 'center',
+    padding: 20
+  },
+  modalCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: 18,
+    ...shadow
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: colors.ink,
+    marginBottom: 12
+  },
+  reportInput: {
+    minHeight: 120,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: colors.background,
+    textAlignVertical: 'top'
+  },
+  modalActions: {
+    marginTop: 14,
+    gap: 10
+  },
+  modalActionsRtl: {
+    direction: 'rtl'
+  },
+  modalPrimaryBtn: {
+    marginBottom: 0
   },
   sellerRow: {
     flexDirection: 'row',

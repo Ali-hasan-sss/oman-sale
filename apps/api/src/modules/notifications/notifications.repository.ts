@@ -1,3 +1,5 @@
+import { Prisma } from '@prisma/client';
+
 import { prisma } from '../../shared/prisma/client';
 import type { CreateNotificationDto } from './notifications.validation';
 
@@ -10,7 +12,13 @@ export class NotificationsRepository {
   }
 
   create(data: CreateNotificationDto) {
-    return prisma.notification.create({ data });
+    const { metadata, ...rest } = data;
+    return prisma.notification.create({
+      data: {
+        ...rest,
+        ...(metadata !== undefined && { metadata: metadata as Prisma.InputJsonValue })
+      }
+    });
   }
 
   markRead(id: string, userId: string) {

@@ -1,6 +1,7 @@
-import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from './AppText';
+import { ListingCoverImage } from './ListingCoverImage';
 import { formatPrice, getCategoryName } from '../data';
 import type { Listing, Locale } from '../types';
 import { colors, radius, shadow } from '../theme';
@@ -18,21 +19,31 @@ export function ListingCard({ listing, locale, featuredLabel, layout = 'vertical
   const image = listing.images?.[0]?.imageUrl;
   const category = getCategoryName(listing, locale);
   const isFeatured = Boolean(listing.promotion);
+  const storeName = listing.store ? (locale === 'en' ? listing.store.nameEn : listing.store.nameAr) : null;
   const contentRtl = locale === 'ar';
 
   const content = (
     <>
-      <View style={[styles.imageWrap, isHorizontal && styles.imageWrapHorizontal]}>
-        {image ? (
-          <Image source={{ uri: image }} style={styles.image} />
-        ) : (
-          <View style={styles.placeholder}>
-            <AppText style={styles.placeholderText}>Oman Sale</AppText>
-          </View>
-        )}
+      <View
+        style={[
+          styles.imageWrap,
+          isHorizontal && styles.imageWrapHorizontal,
+          !image && styles.imageWrapNoPhoto
+        ]}
+      >
+        <ListingCoverImage
+          uri={image}
+          variant={isHorizontal ? 'cardHorizontal' : 'card'}
+          style={styles.cover}
+        />
         {isFeatured ? (
           <View style={styles.badge}>
             <AppText style={styles.badgeText}>{listing.promotion?.plan?.badgeLabel ?? featuredLabel}</AppText>
+          </View>
+        ) : null}
+        {storeName ? (
+          <View style={styles.storeBadge}>
+            <AppText style={styles.storeBadgeText}>{storeName}</AppText>
           </View>
         ) : null}
         {category ? (
@@ -93,18 +104,12 @@ const styles = StyleSheet.create({
   imageWrapHorizontal: {
     height: 152
   },
-  image: {
+  imageWrapNoPhoto: {
+    backgroundColor: 'transparent'
+  },
+  cover: {
     width: '100%',
     height: '100%'
-  },
-  placeholder: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  placeholderText: {
-    color: colors.brand,
-    fontWeight: '800'
   },
   badge: {
     position: 'absolute',
@@ -116,6 +121,21 @@ const styles = StyleSheet.create({
     paddingVertical: 4
   },
   badgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '800'
+  },
+  storeBadge: {
+    position: 'absolute',
+    left: 12,
+    top: 44,
+    backgroundColor: 'rgba(15,23,42,0.82)',
+    borderRadius: radius.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    maxWidth: '70%'
+  },
+  storeBadgeText: {
     color: '#fff',
     fontSize: 11,
     fontWeight: '800'

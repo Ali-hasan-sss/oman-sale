@@ -87,6 +87,24 @@ export class CategoriesRepository {
       .then((count) => count > 0);
   }
 
+  async isUnderAncestor(ancestorId: string, nodeId: string) {
+    let currentId: string | null = nodeId;
+
+    while (currentId) {
+      if (currentId === ancestorId) return true;
+
+      const category: { parentId: string | null } | null = await prisma.category.findFirst({
+        where: { id: currentId, deletedAt: null },
+        select: { parentId: true }
+      });
+
+      if (!category) return false;
+      currentId = category.parentId;
+    }
+
+    return false;
+  }
+
   findFilterById(id: string) {
     return prisma.categoryFilter.findFirst({ where: { id, deletedAt: null } });
   }

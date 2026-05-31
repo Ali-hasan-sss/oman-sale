@@ -73,10 +73,10 @@ export function BottomTabBar({ activeScreen, onChange, onAddPress, chatUnreadCou
 
 const styles = StyleSheet.create({
   wrapper: {
-    position: 'relative',
     backgroundColor: colors.surface,
     borderTopWidth: 1,
-    borderTopColor: colors.line
+    borderTopColor: colors.line,
+    zIndex: 40
   },
   bar: {
     minHeight: 64,

@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronLeft, ChevronRight, Globe, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Globe, Search, Store } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -137,11 +137,20 @@ export function HeroSection() {
                 <span>{m.common.languageSwitch}</span>
               </button>
               <ChatNavLink className="rounded-lg border border-white/70 bg-white/90 px-4 py-2 shadow-lg transition hover:bg-white" />
+              <Link className="rounded-lg border border-white/70 bg-white/90 px-4 py-2 shadow-lg transition hover:bg-white" href={localizedPath('/stores')}>
+                {m.common.browseStores}
+              </Link>
               <Link className="rounded-lg border border-white/70 bg-white/90 px-4 py-2 shadow-lg transition hover:bg-white" href={localizedPath('/all-listings')}>
                 {m.common.allListings}
               </Link>
               <Link className="rounded-lg border border-white/70 bg-white/90 px-4 py-2 shadow-lg transition hover:bg-white" href={localizedPath('/my-listings')}>
                 {m.common.myListings}
+              </Link>
+              <Link className="rounded-lg border border-white/70 bg-white/90 px-4 py-2 shadow-lg transition hover:bg-white" href={localizedPath('/stores/create')}>
+                <span className="inline-flex items-center gap-2">
+                  <Store size={16} />
+                  {m.common.createStore}
+                </span>
               </Link>
               <Link className="rounded-lg bg-brand-600 px-4 py-2 text-white shadow-lg transition hover:bg-brand-700" href={localizedPath('/add-listing')}>
                 {m.common.addListing}

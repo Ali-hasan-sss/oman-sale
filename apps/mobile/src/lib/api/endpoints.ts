@@ -26,6 +26,7 @@ export const API_ENDPOINTS = {
     byId: (id: string) => `/ads/${id}`,
     similar: (id: string) => `/ads/${id}/similar`,
     favorite: (id: string) => `/ads/${id}/favorite`,
+    report: (id: string) => `/ads/${id}/reports`,
     promote: (id: string) => `/ads/${id}/promote`
   },
   categories: {
@@ -56,6 +57,18 @@ export const API_ENDPOINTS = {
   promotions: {
     plans: '/promotions/plans',
     adPromotions: '/promotions/ad-promotions'
+  },
+  stores: {
+    root: '/stores',
+    plans: '/stores/plans',
+    confirmPayment: '/stores/payments/thawani/confirm',
+    mine: '/stores/me',
+    byId: (id: string) => `/stores/${id}`,
+    bySlug: (slug: string) => `/stores/slug/${slug}`,
+    ads: (id: string) => `/stores/${id}/ads`,
+    adsBySlug: (slug: string) => `/stores/slug/${slug}/ads`,
+    activatePaid: (id: string) => `/stores/${id}/activate-paid`,
+    subscribe: (id: string) => `/stores/${id}/subscribe`
   },
   tourism: {
     destinations: '/tourism/destinations',

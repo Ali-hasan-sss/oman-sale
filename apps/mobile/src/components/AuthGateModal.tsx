@@ -1,6 +1,7 @@
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from './AppText';
+import { PrimaryButton } from './PrimaryButton';
 import { useI18n } from '../i18n';
 import { colors, radius } from '../theme';
 
@@ -21,12 +22,8 @@ export function AuthGateModal({ visible, onClose, onLogin, onRegister }: AuthGat
           <AppText style={[styles.title, isRtl ? styles.rtlText : styles.ltrText]}>{t.common.loginRequired}</AppText>
           <AppText style={[styles.subtitle, isRtl ? styles.rtlText : styles.ltrText]}>{t.common.loginRequiredHint}</AppText>
           <View style={styles.actions}>
-            <Pressable style={[styles.button, styles.primary]} onPress={onLogin}>
-              <AppText style={styles.primaryText}>{t.common.login}</AppText>
-            </Pressable>
-            <Pressable style={[styles.button, styles.secondary]} onPress={onRegister}>
-              <AppText style={styles.secondaryText}>{t.common.register}</AppText>
-            </Pressable>
+            <PrimaryButton label={t.common.login} onPress={onLogin} />
+            <PrimaryButton label={t.common.register} onPress={onRegister} variant="soft" />
             <Pressable onPress={onClose}>
               <AppText style={styles.cancel}>{t.common.cancel}</AppText>
             </Pressable>
@@ -71,25 +68,6 @@ const styles = StyleSheet.create({
   },
   actions: {
     gap: 10
-  },
-  button: {
-    borderRadius: radius.md,
-    paddingVertical: 14,
-    alignItems: 'center'
-  },
-  primary: {
-    backgroundColor: colors.brand
-  },
-  primaryText: {
-    color: '#fff',
-    fontWeight: '800'
-  },
-  secondary: {
-    backgroundColor: colors.brandSoft
-  },
-  secondaryText: {
-    color: colors.brandDark,
-    fontWeight: '800'
   },
   cancel: {
     textAlign: 'center',

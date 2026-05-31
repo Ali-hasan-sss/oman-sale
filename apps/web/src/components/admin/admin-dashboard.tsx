@@ -1,6 +1,6 @@
 'use client';
 
-import { BadgeDollarSign, FileClock, Megaphone, Users } from 'lucide-react';
+import { BadgeDollarSign, FileClock, Flag, Megaphone, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { adminApi } from '@/lib/admin-auth';
@@ -11,12 +11,14 @@ type AdminStats = {
   ads: number;
   pendingAds: number;
   payments: number;
+  reports: number;
 };
 
 const statMeta = [
   { key: 'users', labelKey: 'users', icon: Users, color: 'bg-blue-50 text-blue-600' },
   { key: 'ads', labelKey: 'ads', icon: Megaphone, color: 'bg-brand-50 text-brand-600' },
   { key: 'pendingAds', labelKey: 'pendingAds', icon: FileClock, color: 'bg-amber-50 text-amber-600' },
+  { key: 'reports', labelKey: 'reports', icon: Flag, color: 'bg-red-50 text-red-600' },
   { key: 'payments', labelKey: 'payments', icon: BadgeDollarSign, color: 'bg-purple-50 text-purple-600' }
 ] as const;
 

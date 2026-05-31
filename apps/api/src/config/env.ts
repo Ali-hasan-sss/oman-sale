@@ -46,7 +46,13 @@ const envSchema = z.object({
   SMTP_SECURE: z.preprocess((value) => value === 'true', z.boolean()).default(false),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
-  SMTP_FROM: z.string().default('Oman Sale <no-reply@omansale.local>')
+  SMTP_FROM: z.string().default('Oman Sale <no-reply@omansale.local>'),
+  THAWANI_SECRET_KEY: z.string().optional(),
+  THAWANI_PUBLISHABLE_KEY: z.string().optional(),
+  THAWANI_SANDBOX: z.preprocess((value) => value !== 'false', z.boolean()).default(true),
+  THAWANI_SKIP_CHECKOUT: z.preprocess((value) => value === 'true', z.boolean()).default(false),
+  /** Max stores a user may own. Increase later to allow multiple stores per account. */
+  STORES_MAX_PER_USER: z.coerce.number().int().positive().default(1)
 });
 
 export const env = envSchema.parse(process.env);

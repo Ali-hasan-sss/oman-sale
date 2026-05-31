@@ -114,6 +114,8 @@ export const adminApi = () => {
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    config.headers['Cache-Control'] = 'no-cache';
+    config.headers['Pragma'] = 'no-cache';
 
     return config;
   });

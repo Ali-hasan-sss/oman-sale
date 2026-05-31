@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 
 import { AppText } from '../components/AppText';
 import { AppTextInput } from '../components/AppTextInput';
+import { KeyboardAwareScrollView } from '../components/KeyboardAwareScrollView';
+import { PrimaryButton } from '../components/PrimaryButton';
 import { VerificationCodeInput } from '../components/VerificationCodeInput';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
@@ -11,6 +13,12 @@ import { colors, radius } from '../theme';
 
 type AuthMode = 'login' | 'register';
 type AuthStep = 'form' | 'verify' | 'forgot-request' | 'forgot-reset';
+
+const resolveAuthErrorMessage = (
+  errorCode: string | undefined,
+  fallback: string,
+  errors: Record<string, string>
+) => (errorCode && errors[errorCode] ? errors[errorCode] : fallback);
 
 type AuthScreenProps = {
   mode: AuthMode;
@@ -50,7 +58,7 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
     setStep('verify');
     if (autoResend) {
       const result = await resendVerification(targetEmail, locale);
-      if (!result.ok) setError(t.auth.verifyError);
+      if (!result.ok) setError(resolveAuthErrorMessage(result.errorCode, t.auth.verifyError, t.errors));
     }
   };
 
@@ -71,7 +79,7 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
           locale
         });
         if (!result.ok) {
-          setError(t.auth.registerError);
+          setError(resolveAuthErrorMessage(result.errorCode, t.auth.registerError, t.errors));
           return;
         }
         await beginVerification(result.email);
@@ -87,7 +95,7 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
         await beginVerification(result.email, true);
         return;
       }
-      setError(t.auth.loginError);
+      setError(resolveAuthErrorMessage('errorCode' in result ? result.errorCode : undefined, t.auth.loginError, t.errors));
     } finally {
       setIsSubmitting(false);
     }
@@ -99,7 +107,7 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
     try {
       const result = await verifyEmail(pendingVerificationEmail, verificationCode);
       if (!result.ok) {
-        setError(t.auth.verifyError);
+        setError(resolveAuthErrorMessage(result.errorCode, t.auth.verifyError, t.errors));
         return;
       }
       onSuccess();
@@ -113,7 +121,7 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
     setIsSubmitting(true);
     try {
       const result = await resendVerification(pendingVerificationEmail, locale);
-      if (!result.ok) setError(t.auth.verifyError);
+      if (!result.ok) setError(resolveAuthErrorMessage(result.errorCode, t.auth.verifyError, t.errors));
     } finally {
       setIsSubmitting(false);
     }
@@ -126,7 +134,7 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
     try {
       const result = await forgotPassword(email.trim(), locale);
       if (!result.ok) {
-        setError(t.auth.resetPasswordError);
+        setError(resolveAuthErrorMessage(result.errorCode, t.auth.resetPasswordError, t.errors));
         return;
       }
       setVerificationCode('');
@@ -143,7 +151,7 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
     try {
       const result = await resetPassword(email.trim(), verificationCode, password);
       if (!result.ok) {
-        setError(t.auth.resetPasswordError);
+        setError(resolveAuthErrorMessage(result.errorCode, t.auth.resetPasswordError, t.errors));
         return;
       }
       setSuccess(t.auth.resetPasswordSuccess);
@@ -160,29 +168,25 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
 
   if (step === 'verify') {
     return (
-      <ScrollView contentContainerStyle={scrollContentStyle}>
+      <KeyboardAwareScrollView contentContainerStyle={scrollContentStyle}>
         <AppText style={[styles.title, textAlign]}>{t.auth.verifyTitle}</AppText>
         <AppText style={[styles.subtitle, textAlign]}>{t.auth.verifySubtitle}</AppText>
         <VerificationCodeInput value={verificationCode} onChange={setVerificationCode} disabled={isSubmitting} isRtl={isRtl} />
         {error ? <AppText style={[styles.error, textAlign]}>{error}</AppText> : null}
-        <Pressable
-          style={[styles.submit, (isSubmitting || verificationCode.length !== 6) && styles.submitDisabled]}
+        <PrimaryButton
+          label={t.auth.verifyButton}
           onPress={submitVerification}
-          disabled={isSubmitting || verificationCode.length !== 6}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <AppText style={styles.submitText}>{t.auth.verifyButton}</AppText>
-          )}
-        </Pressable>
+          loading={isSubmitting}
+          disabled={verificationCode.length !== 6}
+          style={styles.submitSpacing}
+        />
         <Pressable onPress={submitResend} disabled={isSubmitting}>
           <AppText style={[styles.link, textAlign]}>{t.auth.resendCode}</AppText>
         </Pressable>
         <Pressable onPress={() => setStep('form')} disabled={isSubmitting}>
           <AppText style={[styles.switch, textAlign]}>{t.auth.backToLogin}</AppText>
         </Pressable>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     );
   }
 
@@ -190,7 +194,7 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
     const isResetStep = step === 'forgot-reset';
 
     return (
-      <ScrollView contentContainerStyle={scrollContentStyle}>
+      <KeyboardAwareScrollView contentContainerStyle={scrollContentStyle}>
         <AppText style={[styles.title, textAlign]}>
           {isResetStep ? t.auth.resetPasswordTitle : t.auth.forgotPasswordTitle}
         </AppText>
@@ -223,29 +227,23 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
         {error ? <AppText style={[styles.error, textAlign]}>{error}</AppText> : null}
         {success ? <AppText style={[styles.success, textAlign]}>{success}</AppText> : null}
 
-        <Pressable
-          style={[styles.submit, (isSubmitting || (isResetStep && verificationCode.length !== 6)) && styles.submitDisabled]}
+        <PrimaryButton
+          label={isResetStep ? t.auth.resetPasswordButton : t.auth.sendResetCode}
           onPress={isResetStep ? submitResetPassword : submitForgotRequest}
-          disabled={isSubmitting || (isResetStep && verificationCode.length !== 6)}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <AppText style={styles.submitText}>
-              {isResetStep ? t.auth.resetPasswordButton : t.auth.sendResetCode}
-            </AppText>
-          )}
-        </Pressable>
+          loading={isSubmitting}
+          disabled={isResetStep && verificationCode.length !== 6}
+          style={styles.submitSpacing}
+        />
 
         <Pressable onPress={() => setStep('form')} disabled={isSubmitting}>
           <AppText style={[styles.switch, textAlign]}>{t.auth.backToLogin}</AppText>
         </Pressable>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     );
   }
 
   return (
-    <ScrollView contentContainerStyle={scrollContentStyle}>
+    <KeyboardAwareScrollView contentContainerStyle={scrollContentStyle}>
       <AppText style={[styles.title, textAlign]}>{isRegister ? t.auth.registerTitle : t.auth.loginTitle}</AppText>
       <AppText style={[styles.subtitle, textAlign]}>
         {isRegister ? t.auth.registerSubtitle : t.auth.loginSubtitle}
@@ -295,20 +293,19 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
 
       {error ? <AppText style={[styles.error, textAlign]}>{error}</AppText> : null}
 
-      <Pressable style={[styles.submit, isSubmitting && styles.submitDisabled]} onPress={submitForm} disabled={isSubmitting}>
-        {isSubmitting ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <AppText style={styles.submitText}>{isRegister ? t.auth.submitRegister : t.auth.submitLogin}</AppText>
-        )}
-      </Pressable>
+      <PrimaryButton
+        label={isRegister ? t.auth.submitRegister : t.auth.submitLogin}
+        onPress={submitForm}
+        loading={isSubmitting}
+        style={styles.submitSpacing}
+      />
 
       <Pressable onPress={() => onSwitchMode(isRegister ? 'login' : 'register')}>
         <AppText style={[styles.switch, textAlign]}>
           {isRegister ? t.auth.switchToLogin : t.auth.switchToRegister}
         </AppText>
       </Pressable>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 
@@ -335,7 +332,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     paddingHorizontal: 14,
     paddingVertical: 14,
-    marginBottom: 12
+    marginBottom: 12,
+    fontSize: 15,
+    color: colors.ink
   },
   inputRtl: {
     textAlign: 'right'
@@ -346,19 +345,8 @@ const styles = StyleSheet.create({
   forgotRow: {
     marginBottom: 8
   },
-  submit: {
-    backgroundColor: colors.brand,
-    borderRadius: radius.md,
-    paddingVertical: 16,
-    alignItems: 'center',
+  submitSpacing: {
     marginTop: 8
-  },
-  submitDisabled: {
-    opacity: 0.7
-  },
-  submitText: {
-    color: '#fff',
-    fontWeight: '900'
   },
   switch: {
     marginTop: 16,

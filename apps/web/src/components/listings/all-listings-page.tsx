@@ -9,6 +9,11 @@ import { ChatNavLink } from '@/components/chat/chat-nav-link';
 import { SiteFooter } from '@/components/home/site-footer';
 import { MobileNavMenu } from '@/components/navigation/mobile-nav-menu';
 import { api } from '@/lib/api';
+import {
+  buildSubcategoryFilterLevels,
+  getEffectiveCategoryId,
+  updateSubcategoryPath
+} from '@/lib/category-subcategory-filters';
 import { useI18n } from '@/lib/i18n';
 import { getUserAccessToken } from '@/lib/user-auth';
 import { FavoriteButton } from './favorite-button';
@@ -19,6 +24,7 @@ type Category = {
   name: string;
   slug: string;
   parentId?: string | null;
+  sortOrder?: number;
 };
 
 type Listing = {
@@ -41,6 +47,13 @@ type Listing = {
       badgeLabel?: string | null;
       color?: string | null;
     };
+  } | null;
+  store?: {
+    id: string;
+    nameAr: string;
+    nameEn: string;
+    slug: string;
+    logoUrl?: string | null;
   } | null;
 };
 
@@ -130,6 +143,7 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
   const [categories, setCategories] = useState<Category[]>([]);
   const [listings, setListings] = useState<Listing[]>([]);
   const [categoryFilters, setCategoryFilters] = useState<CategoryFilter[]>([]);
+  const [selectedSubcategoryPath, setSelectedSubcategoryPath] = useState<string[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [selectedFilterOptionIds, setSelectedFilterOptionIds] = useState<string[]>([]);
   const [appliedSearch, setAppliedSearch] = useState('');
@@ -152,8 +166,18 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
     ? categories.find((category) => category.slug === decodedCategorySlug)
     : undefined;
   const isCategoryPage = Boolean(decodedCategorySlug);
-  const subcategories = activeCategory ? categories.filter((category) => category.parentId === activeCategory.id) : [];
-  const effectiveCategoryId = isCategoryPage ? selectedCategoryId || activeCategory?.id : appliedCategoryId;
+  const subcategoryLevels = activeCategory
+    ? buildSubcategoryFilterLevels(
+        categories,
+        activeCategory.id,
+        selectedSubcategoryPath,
+        (category) => category.name,
+        listingsPageMessages[locale].subcategories
+      )
+    : [];
+  const effectiveCategoryId = isCategoryPage
+    ? getEffectiveCategoryId(activeCategory?.id ?? '', selectedSubcategoryPath)
+    : appliedCategoryId;
 
   useEffect(() => {
     api
@@ -163,16 +187,25 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
   }, [locale]);
 
   useEffect(() => {
-    if (!activeCategory) {
+    if (!effectiveCategoryId) {
       setCategoryFilters([]);
       return;
     }
 
     api
-      .get<{ data: CategoryFilter[] }>(`/categories/${activeCategory.id}/filters`, { params: { locale } })
+      .get<{ data: CategoryFilter[] }>(`/categories/${effectiveCategoryId}/filters`, { params: { locale } })
       .then((response) => setCategoryFilters(response.data.data))
       .catch(() => setCategoryFilters([]));
-  }, [activeCategory, locale]);
+  }, [effectiveCategoryId, locale]);
+
+  useEffect(() => {
+    setSelectedSubcategoryPath([]);
+    setSelectedFilterOptionIds([]);
+  }, [activeCategory?.id]);
+
+  useEffect(() => {
+    setSelectedFilterOptionIds([]);
+  }, [selectedSubcategoryPath]);
 
   useEffect(() => {
     if (decodedCategorySlug && categories.length === 0) {
@@ -251,7 +284,7 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
   ];
 
   const resetFilters = () => {
-    setSelectedCategoryId('');
+    setSelectedSubcategoryPath([]);
     setAppliedCategoryId('');
     setCity('');
     setAppliedCity('');
@@ -267,10 +300,15 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
 
   const applyFilters = () => {
     setAppliedSearch(search);
-    setAppliedCategoryId(selectedCategoryId);
+    setAppliedCategoryId(getEffectiveCategoryId(activeCategory?.id ?? '', selectedSubcategoryPath));
     setAppliedCity(city);
     setAppliedMinPrice(minPrice > priceFloor ? String(minPrice) : '');
     setAppliedMaxPrice(maxPrice < priceCeiling ? String(maxPrice) : '');
+    setPage(1);
+  };
+
+  const handleSubcategorySelect = (levelIndex: number, categoryId: string) => {
+    setSelectedSubcategoryPath((current) => updateSubcategoryPath(current, levelIndex, categoryId));
     setPage(1);
   };
 
@@ -420,22 +458,30 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
                   </button>
                 </div>
                 <div className="filter-sidebar-scrollbar max-h-[calc(100vh-200px)] space-y-6 overflow-y-auto">
-                  {subcategories.length > 0 ? (
-                    <FilterSection title={pageMessages.subcategories}>
-                      <FilterChip active={!selectedCategoryId} onClick={() => setSelectedCategoryId('')}>
+                  {subcategoryLevels.map((level) => (
+                    <FilterSection key={`${level.parentId}-${level.levelIndex}`} title={level.title}>
+                      <FilterChip
+                        active={!level.selectedId}
+                        onClick={() => handleSubcategorySelect(level.levelIndex, '')}
+                      >
                         {pageMessages.all}
                       </FilterChip>
-                      {subcategories.map((category) => (
+                      {level.options.map((category) => (
                         <FilterChip
                           key={category.id}
-                          active={selectedCategoryId === category.id}
-                          onClick={() => setSelectedCategoryId(category.id)}
+                          active={level.selectedId === category.id}
+                          onClick={() =>
+                            handleSubcategorySelect(
+                              level.levelIndex,
+                              level.selectedId === category.id ? '' : category.id
+                            )
+                          }
                         >
                           {category.name}
                         </FilterChip>
                       ))}
                     </FilterSection>
-                  ) : null}
+                  ))}
 
                   {categoryFilters.map((filter) => (
                     <FilterSection key={filter.id} title={filter.title}>
@@ -579,6 +625,7 @@ function ListingCard({
     (locale === 'en' ? listing.category?.nameEn : listing.category?.nameAr) ?? listing.category?.name ?? '';
   const isFeatured = Boolean(listing.promotion);
   const badgeLabel = listing.promotion?.plan?.badgeLabel ?? m.common.featured;
+  const storeName = listing.store ? (locale === 'en' ? listing.store.nameEn : listing.store.nameAr) : null;
 
   return (
     <Link href={localizedPath(`/listing/${listing.id}`)} className="group block cursor-pointer overflow-hidden rounded-xl bg-white shadow-sm transition-all hover:shadow-lg">
@@ -597,6 +644,11 @@ function ListingCard({
         {isFeatured ? (
           <span className="absolute left-3 top-3 rounded-md bg-green-500 px-3 py-1 text-xs font-bold text-white">
             {badgeLabel}
+          </span>
+        ) : null}
+        {storeName ? (
+          <span className="absolute left-3 top-12 rounded-md bg-slate-900/80 px-3 py-1 text-xs font-bold text-white backdrop-blur-sm">
+            {storeName}
           </span>
         ) : null}
         {categoryName ? (

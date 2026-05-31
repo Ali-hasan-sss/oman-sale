@@ -69,6 +69,10 @@ enum NotificationType {
   AD_REJECTED
   PAYMENT_SUCCESS
   PROMOTION_ACTIVE
+  ACCOUNT_BLOCKED
+  STORE_TRIAL_EXPIRED
+  STORE_SUBSCRIPTION_EXPIRED
+  SYSTEM
 }
 
 enum ViewSource {
@@ -84,6 +88,24 @@ enum HeroSlidePlatform {
 enum AuthCodePurpose {
   EMAIL_VERIFICATION
   PASSWORD_RESET
+}
+
+enum StoreBillingPeriod {
+  MONTHLY
+  YEARLY
+}
+
+enum StoreDiscountType {
+  NONE
+  FIXED
+  PERCENTAGE
+}
+
+enum StoreSubscriptionStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  CANCELLED
 }
 
 model User {
@@ -113,6 +135,7 @@ model User {
   notifications    Notification[]
   refreshTokens    RefreshToken[]
   authCodes        AuthVerificationCode[]
+  stores           Store[]
 
   @@index([role])
   @@index([isActive, isBlocked])
@@ -162,6 +185,7 @@ model Category {
   parentId  String?
   sortOrder Int          @default(0)
   isActive  Boolean      @default(true)
+  storeBaseMonthlyPrice Decimal? @db.Decimal(12, 3)
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
   deletedAt DateTime?
@@ -170,6 +194,8 @@ model Category {
   children  Category[]   @relation("CategoryTree")
   ads       Ad[]
   filters   CategoryFilter[]
+  storePlanPricing StorePlanPricing[]
+  stores    Store[]
 
   @@index([type])
   @@index([type, isActive])
@@ -254,6 +280,8 @@ model Ad {
   user         User         @relation(fields: [userId], references: [id])
   categoryId   String
   category     Category     @relation(fields: [categoryId], references: [id])
+  storeId      String?
+  store        Store?       @relation(fields: [storeId], references: [id])
   images       AdImage[]
   payment      Payment?
   promotion    AdPromotion?
@@ -269,6 +297,7 @@ model Ad {
   @@index([createdAt])
   @@index([categoryId])
   @@index([userId])
+  @@index([storeId])
   @@index([type])
   @@index([city, area])
   @@index([expiresAt])
@@ -343,6 +372,8 @@ model Payment {
   ad            Ad?             @relation(fields: [adId], references: [id])
   promotionId   String?
   promotion     AdPromotion?    @relation(fields: [promotionId], references: [id])
+  storeSubscriptionId String?   @unique
+  storeSubscription   StoreSubscription? @relation(fields: [storeSubscriptionId], references: [id])
 
   @@index([status])
   @@index([provider])
@@ -375,6 +406,7 @@ model PromotionPlan {
   deletedAt        DateTime?
 
   promotions       AdPromotion[]
+  storePlans         StoreSubscriptionPlan[]
 
   @@index([isActive])
   @@index([priorityScore])
@@ -516,6 +548,7 @@ model Notification {
   title     String
   body      String
   type      NotificationType
+  metadata  Json?
   isRead    Boolean          @default(false)
   readAt    DateTime?
   createdAt DateTime         @default(now())
@@ -589,4 +622,121 @@ model TourismDestination {
   updatedAt         DateTime @updatedAt
 
   @@index([isActive, sortOrder])
+}
+
+model StoreSubscriptionPlan {
+  id            String   @id @default(uuid())
+  nameAr        String
+  nameEn        String
+  descriptionAr String   @default("")
+  descriptionEn String   @default("")
+  sortOrder     Int      @default(0)
+  trialDays          Int               @default(0)
+  trialMaxListings   Int               @default(0)
+  discountType       StoreDiscountType @default(NONE)
+  discountValue      Decimal           @default(0) @db.Decimal(12, 3)
+  isDiscountActive   Boolean           @default(false)
+  isActive           Boolean           @default(true)
+  promotionPlanId    String?
+  promotionPlan      PromotionPlan?    @relation(fields: [promotionPlanId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  pricing       StorePlanPricing[]
+  subscriptions StoreSubscription[]
+
+  @@index([isActive])
+  @@index([sortOrder])
+  @@index([deletedAt])
+  @@index([promotionPlanId])
+}
+
+model StorePlanPricing {
+  id               String             @id @default(uuid())
+  billingPeriod    StoreBillingPeriod
+  price            Decimal            @db.Decimal(12, 3)
+  maxListings      Int
+  discountType     StoreDiscountType  @default(NONE)
+  discountValue    Decimal            @default(0) @db.Decimal(12, 3)
+  isDiscountActive Boolean            @default(false)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  deletedAt        DateTime?
+
+  planId     String
+  plan       StoreSubscriptionPlan @relation(fields: [planId], references: [id])
+  categoryId String
+  category   Category              @relation(fields: [categoryId], references: [id])
+  subscriptions StoreSubscription[]
+
+  @@unique([planId, categoryId, billingPeriod])
+  @@index([categoryId])
+  @@index([planId])
+  @@index([deletedAt])
+}
+
+model Store {
+  id             String   @id @default(uuid())
+  slug           String   @unique
+  nameAr         String
+  nameEn         String
+  bioAr          String   @default("")
+  bioEn          String   @default("")
+  logoUrl        String?
+  coverUrl       String?
+  phone          String?
+  nationalId     String
+  commercialRegistrationNumber String
+  workingHours   Json?
+  isActive       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime?
+
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  rootCategoryId String
+  rootCategory   Category @relation(fields: [rootCategoryId], references: [id])
+  subscriptions  StoreSubscription[]
+  ads            Ad[]
+
+  @@index([userId])
+  @@index([rootCategoryId])
+  @@index([isActive])
+  @@index([deletedAt])
+}
+
+model StoreSubscription {
+  id             String                  @id @default(uuid())
+  billingPeriod  StoreBillingPeriod
+  basePrice      Decimal                 @db.Decimal(12, 3)
+  discountAmount Decimal                 @default(0) @db.Decimal(12, 3)
+  finalPrice     Decimal                 @db.Decimal(12, 3)
+  maxListings    Int
+  isTrial        Boolean                 @default(false)
+  status         StoreSubscriptionStatus @default(PENDING)
+  startsAt       DateTime?
+  endsAt         DateTime?
+  isActive       Boolean                 @default(false)
+  expiredNotifiedAt DateTime?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  deletedAt      DateTime?
+
+  storeId   String
+  store     Store                 @relation(fields: [storeId], references: [id])
+  planId    String
+  plan      StoreSubscriptionPlan @relation(fields: [planId], references: [id])
+  pricingId String
+  pricing   StorePlanPricing      @relation(fields: [pricingId], references: [id])
+  payment   Payment?
+
+  @@index([storeId])
+  @@index([planId])
+  @@index([pricingId])
+  @@index([status])
+  @@index([isActive])
+  @@index([endsAt])
+  @@index([deletedAt])
 }

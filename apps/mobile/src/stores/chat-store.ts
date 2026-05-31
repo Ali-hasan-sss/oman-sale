@@ -11,8 +11,21 @@ type TypingState = {
   userId: string;
 };
 
+export type ChatThreadBarState = {
+  conversationId: string;
+  peerId?: string;
+  peerName: string;
+  peerAvatar?: string | null;
+  peerPhone?: string | null;
+  isLoading: boolean;
+};
+
 type ChatRealtimeState = {
   activeConversationId: string | null;
+  /** Peer header shown in MainShell above the chat body (not affected by keyboard resize). */
+  threadBar: ChatThreadBarState | null;
+  /** True while the conversation composer keyboard is open (hides main AppHeader). */
+  conversationKeyboardOpen: boolean;
   initialized: boolean;
   onlineUserIds: Record<string, boolean>;
   typing: TypingState | null;
@@ -23,6 +36,8 @@ type ChatRealtimeState = {
   connect: () => void;
   disconnect: () => void;
   setActiveConversationId: (conversationId: string | null) => void;
+  setThreadBar: (bar: ChatThreadBarState | null) => void;
+  setConversationKeyboardOpen: (open: boolean) => void;
   setConversationRead: (conversationId: string) => void;
   refreshUnreadCount: () => Promise<void>;
   syncUnreadFromConversations: (
@@ -48,6 +63,8 @@ function buildUnreadLists(unreadByConversation: Record<string, number>) {
 
 export const useChatStore = create<ChatRealtimeState>((set, get) => ({
   activeConversationId: null,
+  threadBar: null,
+  conversationKeyboardOpen: false,
   initialized: false,
   onlineUserIds: {},
   typing: null,
@@ -150,7 +167,15 @@ export const useChatStore = create<ChatRealtimeState>((set, get) => ({
       socket?.emit('conversation:join', conversationId);
       get().setConversationRead(conversationId);
     }
+
+    if (!conversationId) {
+      set({ conversationKeyboardOpen: false, threadBar: null });
+    }
   },
+
+  setThreadBar: (bar) => set({ threadBar: bar }),
+
+  setConversationKeyboardOpen: (open) => set({ conversationKeyboardOpen: open }),
 
   setConversationRead: (conversationId) => {
     markConversationReadRequest(conversationId).catch(() => undefined);

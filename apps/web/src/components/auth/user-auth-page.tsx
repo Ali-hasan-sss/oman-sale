@@ -12,6 +12,7 @@ import { ChatNavLink } from '@/components/chat/chat-nav-link';
 import { SiteFooter } from '@/components/home/site-footer';
 import { MobileNavMenu } from '@/components/navigation/mobile-nav-menu';
 import { api } from '@/lib/api';
+import { ApiErrorCodes, getApiErrorCode, resolveApiErrorMessage } from '@/lib/api-errors';
 import { getAuthMessages, useI18n } from '@/lib/i18n';
 import { saveUserSession, type UserAuthSession } from '@/lib/user-auth';
 import { useAuthStore } from '@/store/auth-store';
@@ -23,6 +24,16 @@ type UserAuthPageProps = {
 };
 
 const emailVerificationRequiredMessage = 'Email verification required';
+
+const buildErrorMessages = (errors: {
+  ACCOUNT_BLOCKED: string;
+  ACCOUNT_INACTIVE: string;
+  EMAIL_VERIFICATION_REQUIRED: string;
+}) => ({
+  ACCOUNT_BLOCKED: errors.ACCOUNT_BLOCKED,
+  ACCOUNT_INACTIVE: errors.ACCOUNT_INACTIVE,
+  EMAIL_VERIFICATION_REQUIRED: errors.EMAIL_VERIFICATION_REQUIRED
+});
 
 export function UserAuthPage({ mode }: UserAuthPageProps) {
   const router = useRouter();
@@ -71,7 +82,11 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
       });
       router.push(localizedPath(isRegister ? '/' : '/my-listings'));
     } catch (error) {
-      if (!isRegister && isAxiosError<{ message?: string }>(error) && error.response?.data.message === emailVerificationRequiredMessage) {
+      if (
+        !isRegister &&
+        (getApiErrorCode(error) === ApiErrorCodes.EMAIL_VERIFICATION_REQUIRED ||
+          (isAxiosError<{ message?: string }>(error) && error.response?.data.message === emailVerificationRequiredMessage))
+      ) {
         try {
           const submittedEmail = email.trim();
           await api.post('/auth/resend-verification', { email: submittedEmail, locale });
@@ -83,7 +98,13 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
         return;
       }
 
-      setError(isRegister ? authMessages.registerError : authMessages.loginError);
+      setError(
+        resolveApiErrorMessage(
+          error,
+          buildErrorMessages(m.errors),
+          isRegister ? authMessages.registerError : authMessages.loginError
+        )
+      );
     } finally {
       setIsSubmitting(false);
     }

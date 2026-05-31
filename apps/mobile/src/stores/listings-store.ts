@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
 import { fallbackListings } from '../data';
+import { getApiErrorCode, isAccountBlockedError } from '../lib/api-errors';
 import { hasMorePages } from '../lib/pagination';
 import type { CategoryOption } from '../services/listings.service';
 import {
@@ -12,6 +13,7 @@ import {
   fetchMyListings
 } from '../services/listings.service';
 import type { Listing, Locale } from '../types';
+import { useAuthStore } from './auth-store';
 
 export const LATEST_PAGE_SIZE = 8;
 export const ALL_PAGE_SIZE = 12;
@@ -59,7 +61,8 @@ type ListingsState = {
     city: string;
     categoryId: string;
     imageUrls: string[];
-  }) => Promise<{ ok: true; id: string } | { ok: false; error: string }>;
+    storeId?: string;
+  }) => Promise<{ ok: true; id: string } | { ok: false; error: string; errorCode?: string; apiError?: unknown }>;
   resetMy: () => void;
   resetFavorites: () => void;
 };
@@ -254,9 +257,12 @@ export const useListingsStore = create<ListingsState>((set, get) => ({
       const result = await createListingRequest(payload);
       await get().loadMy({ refresh: true });
       return { ok: true, id: result.id };
-    } catch {
+    } catch (error) {
+      if (isAccountBlockedError(error)) {
+        await useAuthStore.getState().markAccountRestricted('blocked');
+      }
       set({ listingsError: 'create' });
-      return { ok: false, error: 'create' };
+      return { ok: false, error: 'create', errorCode: getApiErrorCode(error), apiError: error };
     } finally {
       set({ isSubmittingListing: false });
     }

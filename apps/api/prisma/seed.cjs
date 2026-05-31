@@ -85,19 +85,8 @@ async function main() {
     });
   }
 
-  await prisma.category.createMany({
-    data: [
-      { name: 'سيارات ومركبات', nameAr: 'سيارات ومركبات', nameEn: 'Cars & Vehicles', slug: 'cars', type: 'PRODUCT', icon: 'car', sortOrder: 10 },
-      { name: 'عقارات للبيع', nameAr: 'عقارات للبيع', nameEn: 'Real Estate for Sale', slug: 'real-estate-sale', type: 'PRODUCT', icon: 'building', sortOrder: 20 },
-      { name: 'عقارات للإيجار', nameAr: 'عقارات للإيجار', nameEn: 'Real Estate for Rent', slug: 'real-estate-rent', type: 'PRODUCT', icon: 'home', sortOrder: 30 },
-      { name: 'إلكترونيات', nameAr: 'إلكترونيات', nameEn: 'Electronics', slug: 'electronics', type: 'PRODUCT', icon: 'monitor', sortOrder: 40 },
-      { name: 'الخدمات', nameAr: 'الخدمات', nameEn: 'Services', slug: 'services', type: 'SERVICE', icon: 'wrench', sortOrder: 50 },
-      { name: 'وظائف شاغرة', nameAr: 'وظائف شاغرة', nameEn: 'Jobs', slug: 'jobs', type: 'JOB', icon: 'briefcase', sortOrder: 60 },
-      { name: 'باحثين عن عمل', nameAr: 'باحثين عن عمل', nameEn: 'Job Seekers', slug: 'job-seekers', type: 'JOB_REQUEST', icon: 'search', sortOrder: 70 },
-      { name: 'نقل وتوصيل', nameAr: 'نقل وتوصيل', nameEn: 'Logistics', slug: 'logistics', type: 'LOGISTICS', icon: 'truck', sortOrder: 80 }
-    ],
-    skipDuplicates: true
-  });
+  const { seedCategories } = require('./seed-categories.cjs');
+  await seedCategories(prisma);
 
   await prisma.promotionPlan.updateMany({
     where: { name: { in: ['Bronze', 'Silver', 'Gold', 'Platinum'] } },

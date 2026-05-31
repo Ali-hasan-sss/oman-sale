@@ -4,6 +4,7 @@ import { ActivityIndicator, FlatList, RefreshControl, ScrollView, StyleSheet, Vi
 import { HeroBannersSection } from '../components/HeroBannersSection';
 import { HomeCategoriesSection } from '../components/HomeCategoriesSection';
 import { HomeHeroSection } from '../components/HomeHeroSection';
+import { HomeStoresSection } from '../components/HomeStoresSection';
 import { ListingCard } from '../components/ListingCard';
 import { SectionTitle } from '../components/SectionTitle';
 import { ListingCardSkeletonRow } from '../components/skeleton';
@@ -16,9 +17,11 @@ type HomeScreenProps = {
   onBrowseOffers: () => void;
   onListingPress: (listingId: string) => void;
   onCategoryPress: (categoryId: string) => void;
+  onBrowseStores: () => void;
+  onStorePress: (slug: string) => void;
 };
 
-export function HomeScreen({ onBrowseOffers, onListingPress, onCategoryPress }: HomeScreenProps) {
+export function HomeScreen({ onBrowseOffers, onListingPress, onCategoryPress, onBrowseStores, onStorePress }: HomeScreenProps) {
   const { locale, t, isRtl } = useI18n();
   const { scrollBottomPadding } = useScreenInsets();
   const listings = useListingsStore((state) => state.latest);
@@ -60,6 +63,7 @@ export function HomeScreen({ onBrowseOffers, onListingPress, onCategoryPress }: 
       <HeroBannersSection />
 
       <HomeCategoriesSection onCategoryPress={onCategoryPress} />
+      <HomeStoresSection onBrowseStores={onBrowseStores} onStorePress={onStorePress} />
 
       <View style={styles.section}>
         <SectionTitle title={t.home.latest} actionLabel={t.common.viewAll} onAction={onBrowseOffers} />

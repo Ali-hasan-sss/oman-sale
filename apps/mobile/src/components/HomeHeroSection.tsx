@@ -354,7 +354,8 @@ const styles = StyleSheet.create({
     ...shadow
   },
   heightPlaceholder: {
-    height: HERO_HEIGHT
+    height: HERO_HEIGHT,
+    backgroundColor: colors.brandDark
   },
   slide: {
     height: HERO_HEIGHT,
@@ -370,7 +371,8 @@ const styles = StyleSheet.create({
   },
   heroImage: {
     width: '100%',
-    height: HERO_HEIGHT
+    height: HERO_HEIGHT,
+    backgroundColor: colors.brandDark
   },
   heroImageFill: {
     width: '100%',

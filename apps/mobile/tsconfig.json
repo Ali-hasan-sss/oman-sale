@@ -3,6 +3,7 @@
   "compilerOptions": {
     "strict": true,
     "noUncheckedIndexedAccess": true,
+    "jsx": "react-native",
     "baseUrl": ".",
     "paths": {
       "@/*": [
@@ -12,6 +13,9 @@
   },
   "include": [
     "App.tsx",
+    "app.config.js",
+    "babel.config.js",
+    "metro.config.js",
     "src/**/*.ts",
     "src/**/*.tsx"
   ]

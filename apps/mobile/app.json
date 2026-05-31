@@ -5,7 +5,7 @@
     "scheme": "omansale",
     "version": "0.1.0",
     "orientation": "portrait",
-    "icon": "./assets/app-icon.png",
+    "icon": "./assets/app-icon-safe.png",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash-logo.png",
@@ -20,9 +20,10 @@
       "package": "com.omansale.mobile",
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/app-icon.png",
+        "foregroundImage": "./assets/adaptive-icon-foreground.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "versionCode": 3
     },
     "extra": {
       "supportsRTL": false,
@@ -32,7 +33,15 @@
     },
     "plugins": [
       "expo-font",
-      "expo-av"
+      "expo-av",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "softwareKeyboardLayoutMode": "resize"
+          }
+        }
+      ]
     ]
   }
 }

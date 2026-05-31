@@ -69,6 +69,7 @@ export function VerificationCodeInput({ disabled, isRtl = true, onChange, value 
           selectTextOnFocus
           onChangeText={(text) => setDigit(index, text)}
           onKeyPress={(event) => handleKeyPress(event, index)}
+          keyboardAppearance="light"
           style={[styles.cell, disabled && styles.cellDisabled]}
         />
       ))}

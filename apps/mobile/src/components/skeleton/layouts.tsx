@@ -1,7 +1,7 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { Skeleton } from './Skeleton';
-import { colors, radius, shadow } from '../../theme';
+import { colors, radius } from '../../theme';
 
 export function ListingCardSkeleton({ layout = 'vertical' }: { layout?: 'vertical' | 'horizontal' }) {
   const horizontal = layout === 'horizontal';
@@ -70,6 +70,49 @@ export function HomeHeroSkeleton({ height = 220, embedded = false }: { height?: 
   );
 }
 
+export function StoreCirclesSkeleton({ count = 6 }: { count?: number }) {
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalRow}>
+      {Array.from({ length: count }).map((_, index) => (
+        <View key={index} style={styles.storeCircle}>
+          <Skeleton width={72} height={72} borderRadius={36} />
+          <Skeleton width={64} height={11} style={styles.gapSm} />
+        </View>
+      ))}
+    </ScrollView>
+  );
+}
+
+export function StoreBrowseGridSkeleton({ count = 4 }: { count?: number }) {
+  return (
+    <View style={styles.storeBrowseGrid}>
+      {Array.from({ length: count }).map((_, index) => (
+        <View key={index} style={styles.storeBrowseCard}>
+          <Skeleton width="100%" height={96} borderRadius={radius.md} />
+          <Skeleton width="70%" height={14} style={styles.gapSm} />
+          <Skeleton width="50%" height={11} style={styles.gapXs} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
+export function StoreDetailSkeleton() {
+  return (
+    <View>
+      <Skeleton width="100%" height={180} borderRadius={0} />
+      <View style={styles.storeDetailBody}>
+        <Skeleton width={96} height={96} borderRadius={48} />
+        <Skeleton width="75%" height={22} style={styles.gapMd} />
+        <Skeleton width="100%" height={14} style={styles.gapSm} />
+        <Skeleton width="92%" height={14} style={styles.gapSm} />
+        <Skeleton width="45%" height={14} style={styles.gapMd} />
+      </View>
+      <ListingListSkeleton count={3} />
+    </View>
+  );
+}
+
 export function ChatRowSkeleton() {
   return (
     <View style={styles.chatRow}>
@@ -99,14 +142,6 @@ export function ChatListSkeleton({ count = 6 }: { count?: number }) {
 export function ChatThreadSkeleton() {
   return (
     <View style={styles.thread}>
-      <View style={styles.threadHeader}>
-        <Skeleton width={40} height={40} borderRadius={12} />
-        <View style={styles.threadPeer}>
-          <Skeleton width={120} height={16} />
-          <Skeleton width={72} height={11} style={styles.gapXs} />
-        </View>
-        <Skeleton width={40} height={40} borderRadius={12} />
-      </View>
       <View style={styles.adCardSkel}>
         <Skeleton width={56} height={56} borderRadius={radius.sm} />
         <View style={styles.adCardBody}>
@@ -199,7 +234,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     overflow: 'hidden',
     marginBottom: 14,
-    ...shadow
+    borderWidth: 1,
+    borderColor: colors.line
   },
   listingCardHorizontal: {
     width: 268,
@@ -223,15 +259,16 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     padding: 20,
     borderRadius: radius.lg,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.brandSoft,
     justifyContent: 'flex-end',
-    ...shadow
+    borderWidth: 1,
+    borderColor: colors.line
   },
   homeHeroEmbedded: {
     flex: 1,
     width: '100%',
     padding: 20,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.brandSoft,
     justifyContent: 'flex-end'
   },
   chatRow: {
@@ -242,7 +279,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: 14,
     marginBottom: 12,
-    ...shadow
+    borderWidth: 1,
+    borderColor: colors.line
   },
   chatBody: {
     flex: 1
@@ -276,7 +314,8 @@ const styles = StyleSheet.create({
     padding: 10,
     backgroundColor: colors.surface,
     borderRadius: radius.md,
-    ...shadow
+    borderWidth: 1,
+    borderColor: colors.line
   },
   adCardBody: {
     flex: 1
@@ -323,7 +362,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: 16,
-    ...shadow
+    borderWidth: 1,
+    borderColor: colors.line
   },
   profileCardHeader: {
     flexDirection: 'row',
@@ -348,5 +388,22 @@ const styles = StyleSheet.create({
   },
   gapMd: {
     marginTop: 16
+  },
+  storeCircle: {
+    width: 84,
+    alignItems: 'center'
+  },
+  storeBrowseGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12
+  },
+  storeBrowseCard: {
+    width: '47%',
+    flexGrow: 1
+  },
+  storeDetailBody: {
+    padding: 16,
+    alignItems: 'center'
   }
 });

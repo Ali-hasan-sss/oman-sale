@@ -45,6 +45,13 @@ export class AuthRepository {
     });
   }
 
+  revokeAllRefreshTokens(userId: string) {
+    return prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() }
+    });
+  }
+
   createAuthCode(data: { email: string; codeHash: string; purpose: AuthCodePurpose; expiresAt: Date; userId?: string }) {
     return prisma.authVerificationCode.create({ data });
   }

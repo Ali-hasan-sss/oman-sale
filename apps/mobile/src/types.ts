@@ -5,6 +5,8 @@ export type ScreenName =
   | 'offers'
   | 'myOffers'
   | 'addOffer'
+  | 'addStore'
+  | 'myStore'
   | 'chat'
   | 'login'
   | 'register'
@@ -13,7 +15,9 @@ export type ScreenName =
   | 'favorites'
   | 'listingDetail'
   | 'chatConversation'
-  | 'categoryOffers';
+  | 'categoryOffers'
+  | 'storesBrowse'
+  | 'storeDetail';
 
 export type User = {
   id: string;
@@ -23,6 +27,8 @@ export type User = {
   bio?: string | null;
   role?: string;
   avatar?: string | null;
+  isBlocked?: boolean;
+  isActive?: boolean;
 };
 
 export type AuthSession = {
@@ -59,11 +65,19 @@ export type Listing = {
     phone?: string | null;
     avatar?: string | null;
     createdAt?: string;
+    isBlocked?: boolean;
   } | null;
   promotion?: {
     plan?: {
       badgeLabel?: string | null;
     } | null;
+  } | null;
+  store?: {
+    id: string;
+    nameAr: string;
+    nameEn: string;
+    slug: string;
+    logoUrl?: string | null;
   } | null;
 };
 

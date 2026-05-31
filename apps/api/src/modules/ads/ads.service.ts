@@ -3,6 +3,7 @@ import { ApiError } from '../../shared/utils/api-error';
 import { eventBus } from '../../shared/utils/event-bus';
 import { createSlug } from '../../shared/utils/slug';
 import type { ViewerContext } from '../../shared/utils/viewer-context';
+import { storesService } from '../stores/stores.service';
 import { adsRepository } from './ads.repository';
 import type { AdminListAdsQuery, CreateAdDto, ListAdsQuery, ReportAdDto, UpdateAdDto } from './ads.validation';
 
@@ -61,9 +62,19 @@ export class AdsService {
     return adsRepository.listFavoriteIds(userId);
   }
 
-  create(userId: string, dto: CreateAdDto) {
+  async create(userId: string, dto: CreateAdDto) {
+    if (dto.storeId) {
+      await storesService.assertCanPublishAsStore(userId, dto.storeId);
+    }
     const slug = `${createSlug(dto.title)}-${Date.now()}`;
-    return adsRepository.create(userId, slug, { ...dto, status: 'ACTIVE' });
+    const ad = await adsRepository.create(userId, slug, { ...dto, status: 'ACTIVE' });
+
+    if (dto.storeId) {
+      await storesService.applyStoreListingPromotion(ad.id, dto.storeId);
+      return adsRepository.findById(ad.id);
+    }
+
+    return ad;
   }
 
   createForAdmin(userId: string, dto: CreateAdDto) {
@@ -158,6 +169,11 @@ export class AdsService {
   async report(id: string, userId: string, dto: ReportAdDto) {
     const ad = await adsRepository.findById(id);
     if (!ad) throw new ApiError(404, 'Ad not found');
+    if (ad.userId === userId) throw new ApiError(400, 'You cannot report your own listing');
+
+    const existing = await adsRepository.findReportByReporter(id, userId);
+    if (existing) throw new ApiError(409, 'You have already reported this listing');
+
     return adsRepository.report(id, userId, dto);
   }
 }

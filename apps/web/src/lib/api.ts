@@ -1,8 +1,10 @@
 import axios, { type AxiosInstance } from 'axios';
 
+import { ApiErrorCodes, getApiErrorCode } from './api-errors';
 import { getApiBaseUrl } from './api-base-url';
 import { getDeviceId } from './device-id';
 import { clearUserSession, getUserAccessToken, getUserRefreshToken, saveUserTokens, type UserAuthSession } from './user-auth';
+import { useAuthStore } from '@/store/auth-store';
 
 export const api = axios.create({
   withCredentials: true
@@ -86,6 +88,15 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config as typeof error.config & UserAuthRequestConfig;
+    const errorCode = getApiErrorCode(error);
+
+    if (error.response?.status === 403) {
+      if (errorCode === ApiErrorCodes.ACCOUNT_BLOCKED) {
+        useAuthStore.getState().markAccountRestricted('blocked');
+      } else if (errorCode === ApiErrorCodes.ACCOUNT_INACTIVE) {
+        useAuthStore.getState().markAccountRestricted('inactive');
+      }
+    }
 
     if (
       error.response?.status !== 401 ||

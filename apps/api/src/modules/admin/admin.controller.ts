@@ -4,7 +4,7 @@ import { categoriesService } from '../categories/categories.service';
 import type { CheckCategorySlugQuery, ListAdminCategoriesQuery } from '../categories/categories.validation';
 import { getRequiredParam } from '../../shared/utils/request';
 import { adminService } from './admin.service';
-import type { ListAdminUsersQuery } from './admin.validation';
+import type { ListAdminReportsQuery, ListAdminUsersQuery } from './admin.validation';
 
 export class AdminController {
   async statistics(_req: Request, res: Response) {
@@ -21,6 +21,18 @@ export class AdminController {
 
   async updateUser(req: Request, res: Response) {
     res.json({ data: await adminService.updateUser(getRequiredParam(req, 'id'), req.body) });
+  }
+
+  async listReports(req: Request, res: Response) {
+    res.json({ data: await adminService.listReports(req.query as unknown as ListAdminReportsQuery) });
+  }
+
+  async dismissReport(req: Request, res: Response) {
+    res.json({ data: await adminService.dismissReport(getRequiredParam(req, 'id')) });
+  }
+
+  async banUserFromReport(req: Request, res: Response) {
+    res.json({ data: await adminService.banUserFromReport(getRequiredParam(req, 'id')) });
   }
 
   async listCategories(req: Request, res: Response) {

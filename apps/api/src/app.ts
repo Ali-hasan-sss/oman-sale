@@ -16,6 +16,8 @@ import { chatRoutes } from './modules/chat/chat.routes';
 import { notificationsRoutes } from './modules/notifications/notifications.routes';
 import { paymentsRoutes } from './modules/payments/payments.routes';
 import { promotionsRoutes } from './modules/promotions/promotions.routes';
+import { storePlansRoutes } from './modules/store-plans/store-plans.routes';
+import { storesRoutes } from './modules/stores/stores.routes';
 import { searchRoutes } from './modules/search/search.routes';
 import { tourismRoutes } from './modules/tourism/tourism.routes';
 import { usersRoutes } from './modules/users/users.routes';
@@ -61,6 +63,8 @@ app.use('/api/v1/promotions', promotionsRoutes);
 app.use('/api/v1/chat', chatRoutes);
 app.use('/api/v1/notifications', notificationsRoutes);
 app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/store-plans', storePlansRoutes);
+app.use('/api/v1/stores', storesRoutes);
 app.use('/api/v1/search', searchRoutes);
 app.use('/api/v1/tourism', tourismRoutes);
 

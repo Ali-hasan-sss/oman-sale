@@ -5,18 +5,18 @@ import {
   FlatList,
   Image,
   Keyboard,
-  type KeyboardEvent,
-  Linking,
   Platform,
   Pressable,
   StyleSheet,
   TextInput,
   View
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '../components/AppText';
+import { ListingCoverImage } from '../components/ListingCoverImage';
 import { ChatThreadSkeleton } from '../components/skeleton';
+import { CHAT_THREAD_BAR_BODY_HEIGHT } from '../constants/chat-layout';
 import { formatChatTime, formatPrice } from '../data';
 import { useI18n } from '../i18n';
 import { getRealtimeSocket } from '../lib/realtime/socket';
@@ -26,6 +26,7 @@ import {
   markConversationReadRequest,
   sendChatMessageRequest
 } from '../services/chat.service';
+import { useComposerKeyboardLift } from '../hooks/use-composer-keyboard-lift';
 import { useAuthStore, useChatStore } from '../stores';
 import type { ChatConversation, ChatMessage } from '../types';
 import { colors, radius, shadow } from '../theme';
@@ -54,9 +55,13 @@ export function ChatConversationScreen({
   const emitTypingStarted = useChatStore((state) => state.emitTypingStarted);
   const emitTypingStopped = useChatStore((state) => state.emitTypingStopped);
   const setConversationRead = useChatStore((state) => state.setConversationRead);
+  const setConversationKeyboardOpen = useChatStore((state) => state.setConversationKeyboardOpen);
+  const setThreadBar = useChatStore((state) => state.setThreadBar);
+  const conversationKeyboardOpen = useChatStore((state) => state.conversationKeyboardOpen);
 
   const [conversation, setConversation] = useState<ChatConversation | null>(null);
-  const [keyboardInset, setKeyboardInset] = useState(0);
+  const safeInsets = useSafeAreaInsets();
+  const composerLift = useComposerKeyboardLift();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -91,7 +96,6 @@ export function ChatConversationScreen({
   const otherUser = conversation ? getOtherParticipant(conversation, user?.id) : undefined;
   const otherUserId = otherUser?.id;
 
-  const isOtherOnline = useChatStore((state) => (otherUserId ? state.isUserOnline(otherUserId) : false));
   const isOtherTyping = useChatStore((state) =>
     otherUserId ? state.isOtherTypingIn(conversationId, otherUserId) : false
   );
@@ -133,12 +137,43 @@ export function ChatConversationScreen({
   }, [conversationId]);
 
   useEffect(() => {
+    setConversationKeyboardOpen(false);
+  }, [conversationId, setConversationKeyboardOpen]);
+
+  useEffect(() => {
+    setThreadBar({
+      conversationId,
+      peerId: otherUser?.id,
+      peerName: otherUser?.fullName ?? '',
+      peerAvatar: otherUser?.avatar ?? null,
+      peerPhone: otherUser?.phone ?? null,
+      isLoading
+    });
+  }, [
+    conversationId,
+    isLoading,
+    otherUser?.avatar,
+    otherUser?.fullName,
+    otherUser?.id,
+    otherUser?.phone,
+    setThreadBar
+  ]);
+
+  useEffect(() => {
     setActiveConversationId(conversationId);
     return () => {
       emitTypingStopped(conversationId);
       setActiveConversationId(null);
+      setConversationKeyboardOpen(false);
+      setThreadBar(null);
     };
-  }, [conversationId, emitTypingStopped, setActiveConversationId]);
+  }, [
+    conversationId,
+    emitTypingStopped,
+    setActiveConversationId,
+    setConversationKeyboardOpen,
+    setThreadBar
+  ]);
 
   useEffect(() => {
     if (!otherUserId) return;
@@ -200,16 +235,12 @@ export function ChatConversationScreen({
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
-    const onShow = (event: KeyboardEvent) => {
-      if (Platform.OS === 'ios') {
-        setKeyboardInset(event.endCoordinates.height);
-      }
+    const onShow = () => {
+      setConversationKeyboardOpen(true);
       scrollToBottomReliable(true);
     };
     const onHide = () => {
-      if (Platform.OS === 'ios') {
-        setKeyboardInset(0);
-      }
+      setConversationKeyboardOpen(false);
     };
 
     const showSub = Keyboard.addListener(showEvent, onShow);
@@ -217,8 +248,9 @@ export function ChatConversationScreen({
     return () => {
       showSub.remove();
       hideSub.remove();
+      setConversationKeyboardOpen(false);
     };
-  }, [scrollToBottomReliable]);
+  }, [scrollToBottomReliable, setConversationKeyboardOpen]);
 
   useEffect(
     () => () => {
@@ -258,23 +290,24 @@ export function ChatConversationScreen({
     }
   };
 
-  const renderShell = (children: ReactNode) => (
-    <SafeAreaView style={styles.root} edges={['bottom']}>
-      {children}
-    </SafeAreaView>
-  );
+  const renderShell = (children: ReactNode) => <View style={styles.root}>{children}</View>;
 
-  const useKeyboardLift = Platform.OS === 'ios';
-  const composerBottomPad = useKeyboardLift && keyboardInset > 0 ? 0 : 8;
-  const composerLift = useKeyboardLift ? keyboardInset : 0;
+  const keyboardOpen = conversationKeyboardOpen;
+  const composerBottomPad = keyboardOpen ? 8 : Math.max(safeInsets.bottom, 8);
+  const showAdCard = adCardVisible && !keyboardOpen;
+  const threadTopInset = safeInsets.top + CHAT_THREAD_BAR_BODY_HEIGHT;
 
   if (isLoading && !conversation) {
-    return renderShell(<ChatThreadSkeleton />);
+    return renderShell(
+      <View style={[styles.chatBody, { paddingTop: threadTopInset }]}>
+        <ChatThreadSkeleton />
+      </View>
+    );
   }
 
   if (error && !conversation) {
     return renderShell(
-      <View style={styles.centered}>
+      <View style={[styles.centered, { paddingTop: threadTopInset }]}>
         <AppText style={styles.errorText}>{error}</AppText>
         <Pressable style={styles.retryBtn} onPress={onBack}>
           <AppText style={styles.retryBtnText}>{t.listingDetail.back}</AppText>
@@ -288,54 +321,14 @@ export function ChatConversationScreen({
   const adImage = conversation.ad.images?.[0]?.imageUrl;
 
   return renderShell(
-    <View style={styles.flex}>
-      <View style={[styles.threadHeader, isRtl && styles.threadHeaderRtl]}>
-        <Pressable style={styles.headerIconBtn} onPress={onBack}>
-          <Ionicons name={isRtl ? 'arrow-forward' : 'arrow-back'} size={22} color={colors.ink} />
-        </Pressable>
-        <View style={[styles.peerRow, isRtl && styles.peerRowRtl]}>
-          <View style={styles.avatar}>
-            {otherUser?.avatar ? (
-              <Image source={{ uri: otherUser.avatar }} style={styles.avatarImage} />
-            ) : (
-              <Ionicons name="person" size={22} color="#fff" />
-            )}
-          </View>
-          <View style={styles.peerMeta}>
-            <AppText style={[styles.peerName, isRtl && styles.textRtl]} numberOfLines={1}>
-              {otherUser?.fullName ?? '-'}
-            </AppText>
-            <View style={[styles.statusRow, isRtl && styles.statusRowRtl]}>
-              <View style={[styles.statusDot, isOtherOnline ? styles.statusDotOnline : styles.statusDotOffline]} />
-              <AppText style={styles.statusText}>{isOtherOnline ? text.online : text.offline}</AppText>
-            </View>
-          </View>
-        </View>
-        {otherUser?.phone ? (
-          <Pressable
-            style={styles.headerIconBtn}
-            onPress={() => Linking.openURL(`tel:${otherUser.phone}`).catch(() => undefined)}
-          >
-            <Ionicons name="call-outline" size={22} color={colors.brand} />
-          </Pressable>
-        ) : (
-          <View style={styles.headerIconSpacer} />
-        )}
-      </View>
-
-      {adCardVisible ? (
-        <View style={styles.adCardWrap}>
+    <View style={styles.chatBody}>
+      {showAdCard ? (
+        <View style={[styles.adCardWrap, { marginTop: threadTopInset }]}>
           <Pressable
             style={[styles.adCard, isRtl && styles.adCardRtl]}
             onPress={() => onOpenListing(conversation.ad.id)}
           >
-            {adImage ? (
-              <Image source={{ uri: adImage }} style={styles.adImage} />
-            ) : (
-              <View style={styles.adImagePlaceholder}>
-                <Ionicons name="image-outline" size={20} color={colors.muted} />
-              </View>
-            )}
+            <ListingCoverImage uri={adImage} variant="thumb" style={styles.adImage} />
             <View style={styles.adBody}>
               <AppText style={[styles.adLabel, isRtl && styles.textRtl]}>{text.aboutAd}</AppText>
               <AppText style={[styles.adTitle, isRtl && styles.textRtl]} numberOfLines={2}>
@@ -357,7 +350,7 @@ export function ChatConversationScreen({
             accessibilityLabel={text.hideAdCard}
             hitSlop={8}
           >
-            <Ionicons name="close" size={18} color={colors.muted} />
+            <Ionicons name="close" size={20} color={colors.muted} />
           </Pressable>
         </View>
       ) : null}
@@ -366,11 +359,12 @@ export function ChatConversationScreen({
         ref={listRef}
         data={messages}
         keyExtractor={(item) => item.id}
-        style={styles.messagesList}
+        style={[styles.messagesList, composerLift > 0 && { marginBottom: composerLift }]}
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={[
           styles.messagesContent,
+          !showAdCard && { paddingTop: threadTopInset },
           messages.length > 0 && styles.messagesContentAnchored,
           messages.length === 0 && !isOtherTyping && styles.messagesContentEmpty
         ]}
@@ -469,9 +463,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#efeae2'
   },
-  flex: {
-    flex: 1
-  },
   centered: {
     flex: 1,
     alignItems: 'center',
@@ -499,94 +490,19 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700'
   },
-  threadHeader: {
-    zIndex: 20,
-    elevation: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.line
-  },
-  threadHeaderRtl: {
-    flexDirection: 'row-reverse'
-  },
-  headerIconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background
-  },
-  headerIconSpacer: {
-    width: 40
-  },
-  peerRow: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10
-  },
-  peerRowRtl: {
-    flexDirection: 'row-reverse'
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.brand,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden'
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%'
-  },
-  peerMeta: {
-    flex: 1,
-    minWidth: 0
-  },
-  peerName: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: colors.ink
-  },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 2
-  },
-  statusRowRtl: {
-    flexDirection: 'row-reverse'
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4
-  },
-  statusDotOnline: {
-    backgroundColor: colors.brand
-  },
-  statusDotOffline: {
-    backgroundColor: '#94a3b8'
-  },
-  statusText: {
-    fontSize: 12,
-    color: colors.muted
+  chatBody: {
+    flex: 1
   },
   adCardWrap: {
     position: 'relative',
     marginHorizontal: 10,
     marginTop: 10,
     marginBottom: 6,
-    zIndex: 20,
-    elevation: 20
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.line,
+    overflow: 'hidden'
   },
   adCard: {
     flexDirection: 'row',
@@ -594,11 +510,8 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingTop: 10,
     paddingBottom: 10,
-    paddingLeft: 10,
-    paddingRight: 36,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    ...shadow
+    paddingLeft: 12,
+    paddingRight: 40
   },
   adCardRtl: {
     flexDirection: 'row-reverse',
@@ -607,34 +520,22 @@ const styles = StyleSheet.create({
   },
   adCardClose: {
     position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    top: 8,
+    right: 10,
+    width: 32,
+    height: 32,
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.line,
-    zIndex: 2
+    justifyContent: 'center'
   },
   adCardCloseRtl: {
     right: undefined,
-    left: 6
+    left: 10
   },
   adImage: {
     width: 56,
     height: 56,
-    borderRadius: radius.sm
-  },
-  adImagePlaceholder: {
-    width: 56,
-    height: 56,
     borderRadius: radius.sm,
-    backgroundColor: colors.brandSoft,
-    alignItems: 'center',
-    justifyContent: 'center'
+    overflow: 'hidden'
   },
   adBody: {
     flex: 1,
@@ -795,7 +696,6 @@ const styles = StyleSheet.create({
   },
   composerDock: {
     zIndex: 30,
-    elevation: 30,
     backgroundColor: colors.surface
   },
   composer: {
@@ -833,9 +733,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     backgroundColor: colors.brand,
     alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 31,
-    elevation: 31
+    justifyContent: 'center'
   },
   sendBtnDisabled: {
     backgroundColor: colors.line

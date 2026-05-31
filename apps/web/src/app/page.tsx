@@ -1,4 +1,5 @@
 import { CategoriesSection } from '@/components/home/categories-section';
+import { CreateStoreBanner } from '@/components/home/create-store-banner';
 import { HeroBannersSection } from '@/components/home/hero-banners-section';
 import { HeroSection } from '@/components/home/hero-section';
 import { LatestListingsSection } from '@/components/home/latest-listings-section';
@@ -11,6 +12,7 @@ export default function HomePage() {
     <div id="top" className="min-h-screen bg-slate-50">
       <HeroSection />
       <HeroBannersSection />
+      <CreateStoreBanner />
       <main className="mx-auto max-w-7xl px-4 py-10">
         <CategoriesSection />
         <LatestListingsSection />

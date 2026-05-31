@@ -134,6 +134,7 @@ export async function createListingRequest(payload: {
   city: string;
   categoryId: string;
   imageUrls: string[];
+  storeId?: string;
 }) {
   const response = await http.post<ApiEnvelope<{ id: string }>>(API_ENDPOINTS.ads.root, {
     ...payload,
@@ -149,4 +150,8 @@ export async function toggleFavoriteRequest(listingId: string) {
 
 export async function removeFavoriteRequest(listingId: string) {
   await http.delete(API_ENDPOINTS.ads.favorite(listingId));
+}
+
+export async function reportListingRequest(listingId: string, reason: string) {
+  await http.post(API_ENDPOINTS.ads.report(listingId), { reason });
 }

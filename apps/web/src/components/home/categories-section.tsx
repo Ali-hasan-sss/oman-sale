@@ -33,6 +33,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
 import { api } from '@/lib/api';
+import { CategoryIcon, categoryIconMap, isCategoryIconKey } from '@/lib/category-icons';
 import { buildCategoryTree, type CategoryTreeNode } from '@/lib/category-tree';
 import { useI18n } from '@/lib/i18n';
 
@@ -122,33 +123,89 @@ type DisplayCategory = {
   name: string;
   count: string;
   href: string;
-  icon: typeof Car;
+  iconKey: string | null;
   color: string;
 };
 
 const mapCategoryToDisplay = (category: ApiCategory, index: number): DisplayCategory => {
   const fallback = fallbackCategories[index % fallbackCategories.length]!;
-  const Icon = category.icon && category.icon in iconMap ? iconMap[category.icon as keyof typeof iconMap] : fallback.icon;
+  const fallbackKey = Object.entries(categoryIconMap).find(([, Icon]) => Icon === fallback.icon)?.[0] ?? 'car';
+  const iconKey =
+    category.icon && (isCategoryIconKey(category.icon) || /\p{Extended_Pictographic}/u.test(category.icon))
+      ? category.icon
+      : fallbackKey;
 
   return {
     key: category.id,
     name: category.name,
     count: String(category._count?.ads ?? 0),
     href: `/category/${category.slug}`,
-    icon: Icon,
+    iconKey,
     color: fallback.color
   };
 };
 
 type CategoryGridCardProps = {
   category: DisplayCategory;
-  childrenCategories: DisplayCategory[];
+  childrenCategories: CategoryTreeNode<ApiCategory>[];
   isExpanded: boolean;
   onToggleChildren: () => void;
   localizedPath: (path: string) => string;
   adCountLabel: string;
   expandLabel: string;
+  mapCategoryToDisplay: (category: ApiCategory, index: number) => DisplayCategory;
+  parentIndex: number;
 };
+
+function NestedSubcategoryLinks({
+  nodes,
+  localizedPath,
+  adCountLabel,
+  mapCategoryToDisplay,
+  parentIndex,
+  depth = 0
+}: {
+  nodes: CategoryTreeNode<ApiCategory>[];
+  localizedPath: (path: string) => string;
+  adCountLabel: string;
+  mapCategoryToDisplay: (category: ApiCategory, index: number) => DisplayCategory;
+  parentIndex: number;
+  depth?: number;
+}) {
+  return (
+    <>
+      {nodes.map((node, index) => {
+        const display = mapCategoryToDisplay(node, parentIndex + index + 1);
+
+        return (
+          <div key={node.id} style={{ marginInlineStart: depth * 12 }}>
+            <Link
+              href={localizedPath(display.href)}
+              className="block rounded-xl bg-white/70 px-3 py-2 text-sm font-bold text-ink-900 transition hover:bg-white"
+            >
+              <span className="line-clamp-1">{display.name}</span>
+              <span className="mt-0.5 block text-xs font-medium text-slate-500">
+                {display.count} {adCountLabel}
+              </span>
+            </Link>
+            {node.children.length > 0 ? (
+              <div className="mt-1.5 space-y-1.5">
+                <NestedSubcategoryLinks
+                  nodes={node.children}
+                  localizedPath={localizedPath}
+                  adCountLabel={adCountLabel}
+                  mapCategoryToDisplay={mapCategoryToDisplay}
+                  parentIndex={parentIndex + index + 1}
+                  depth={depth + 1}
+                />
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
+    </>
+  );
+}
 
 function CategoryGridCard({
   category,
@@ -157,9 +214,10 @@ function CategoryGridCard({
   onToggleChildren,
   localizedPath,
   adCountLabel,
-  expandLabel
+  expandLabel,
+  mapCategoryToDisplay,
+  parentIndex
 }: CategoryGridCardProps) {
-  const Icon = category.icon;
   const hasChildren = childrenCategories.length > 0;
 
   return (
@@ -170,7 +228,7 @@ function CategoryGridCard({
         href={localizedPath(category.href)}
         className="group flex flex-1 flex-col items-center p-6 text-center transition-transform hover:-translate-y-0.5"
       >
-        <Icon size={40} strokeWidth={1.5} />
+        <CategoryIcon icon={category.iconKey} size={40} />
         <h3 className="mt-4 font-bold text-ink-900">{category.name}</h3>
         <p className="mt-1 text-sm text-slate-500">
           {category.count} {adCountLabel}
@@ -191,18 +249,13 @@ function CategoryGridCard({
 
           {isExpanded ? (
             <div className="space-y-1.5 border-t border-black/5 px-3 pb-3 pt-2">
-              {childrenCategories.map((child) => (
-                <Link
-                  key={child.key}
-                  href={localizedPath(child.href)}
-                  className="block rounded-xl bg-white/70 px-3 py-2 text-sm font-bold text-ink-900 transition hover:bg-white"
-                >
-                  <span className="line-clamp-1">{child.name}</span>
-                  <span className="mt-0.5 block text-xs font-medium text-slate-500">
-                    {child.count} {adCountLabel}
-                  </span>
-                </Link>
-              ))}
+              <NestedSubcategoryLinks
+                nodes={childrenCategories}
+                localizedPath={localizedPath}
+                adCountLabel={adCountLabel}
+                mapCategoryToDisplay={mapCategoryToDisplay}
+                parentIndex={parentIndex}
+              />
             </div>
           ) : null}
         </>
@@ -255,20 +308,19 @@ export function CategoriesSection() {
         <div className="mb-8 grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-6">
           {categoryTree.map((parent: CategoryTreeNode<ApiCategory>, parentIndex) => {
             const parentDisplay = mapCategoryToDisplay(parent, parentIndex);
-            const childDisplays = parent.children.map((child, childIndex) =>
-              mapCategoryToDisplay(child, parentIndex + childIndex + 1)
-            );
 
             return (
               <CategoryGridCard
                 key={parent.id}
                 category={parentDisplay}
-                childrenCategories={childDisplays}
+                childrenCategories={parent.children}
                 isExpanded={Boolean(expandedParents[parent.id])}
                 onToggleChildren={() => toggleChildren(parent.id)}
                 localizedPath={localizedPath}
                 adCountLabel={m.home.adCount}
                 expandLabel={expandLabel}
+                mapCategoryToDisplay={mapCategoryToDisplay}
+                parentIndex={parentIndex}
               />
             );
           })}

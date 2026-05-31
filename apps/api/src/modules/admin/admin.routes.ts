@@ -22,8 +22,13 @@ import {
 } from '../hero/hero.validation';
 import { tourismController } from '../tourism/tourism.controller';
 import { tourismDestinationSchema, updateTourismDestinationSchema } from '../tourism/tourism.validation';
+import { storesController } from '../stores/stores.controller';
+import {
+  adminAssignStorePlanSchema,
+  listAdminStoresQuerySchema
+} from '../stores/stores.validation';
 import { adminController } from './admin.controller';
-import { listAdminUsersQuerySchema, updateAdminUserSchema } from './admin.validation';
+import { listAdminReportsQuerySchema, listAdminUsersQuerySchema, updateAdminUserSchema } from './admin.validation';
 import { z } from 'zod';
 
 export const adminRoutes = Router();
@@ -92,6 +97,23 @@ adminRoutes.patch(
   authorize(UserRole.ADMIN),
   validateRequest({ params: idParams, body: updateAdminUserSchema }),
   asyncHandler(adminController.updateUser)
+);
+adminRoutes.get(
+  '/reports',
+  validateRequest({ query: listAdminReportsQuerySchema }),
+  asyncHandler(adminController.listReports)
+);
+adminRoutes.delete(
+  '/reports/:id',
+  authorize(UserRole.ADMIN, UserRole.MODERATOR),
+  validateRequest({ params: idParams }),
+  asyncHandler(adminController.dismissReport)
+);
+adminRoutes.post(
+  '/reports/:id/ban-user',
+  authorize(UserRole.ADMIN),
+  validateRequest({ params: idParams }),
+  asyncHandler(adminController.banUserFromReport)
 );
 adminRoutes.get(
   '/categories',
@@ -192,4 +214,38 @@ adminRoutes.delete(
   authorize(UserRole.ADMIN),
   validateRequest({ params: idParams }),
   asyncHandler(tourismController.delete)
+);
+adminRoutes.get(
+  '/stores',
+  validateRequest({ query: listAdminStoresQuerySchema }),
+  asyncHandler(storesController.listForAdmin)
+);
+adminRoutes.get(
+  '/stores/:id',
+  validateRequest({ params: idParams }),
+  asyncHandler(storesController.getByIdForAdmin)
+);
+adminRoutes.post(
+  '/stores/:id/activate',
+  authorize(UserRole.ADMIN, UserRole.MODERATOR),
+  validateRequest({ params: idParams }),
+  asyncHandler(storesController.activateForAdmin)
+);
+adminRoutes.post(
+  '/stores/:id/deactivate',
+  authorize(UserRole.ADMIN, UserRole.MODERATOR),
+  validateRequest({ params: idParams }),
+  asyncHandler(storesController.deactivateForAdmin)
+);
+adminRoutes.post(
+  '/stores/:id/assign-plan',
+  authorize(UserRole.ADMIN),
+  validateRequest({ params: idParams, body: adminAssignStorePlanSchema }),
+  asyncHandler(storesController.assignPlanForAdmin)
+);
+adminRoutes.delete(
+  '/stores/:id',
+  authorize(UserRole.ADMIN),
+  validateRequest({ params: idParams }),
+  asyncHandler(storesController.removeForAdmin)
 );

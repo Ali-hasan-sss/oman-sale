@@ -33,6 +33,6 @@ export function Skeleton({ width = '100%', height = 14, borderRadius = 10, style
 
 const styles = StyleSheet.create({
   block: {
-    backgroundColor: colors.line
+    backgroundColor: colors.brandSoft
   }
 });

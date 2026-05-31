@@ -1,4 +1,3 @@
-import { isAxiosError } from 'axios';
 import { create } from 'zustand';
 
 import { setupApiInterceptors } from '../lib/api/interceptors';
@@ -9,10 +8,11 @@ import {
   persistSession,
   persistTokens
 } from '../lib/session-storage';
+import { getApiErrorCode } from '../lib/api-errors';
 import {
-  EMAIL_VERIFICATION_REQUIRED,
   forgotPasswordRequest,
   getApiErrorMessage,
+  isEmailVerificationRequiredError,
   loginRequest,
   refreshTokensRequest,
   registerRequest,
@@ -39,7 +39,7 @@ type AuthState = {
   login: (email: string, password: string) => Promise<
     | { ok: true }
     | { ok: false; needsVerification: true; email: string }
-    | { ok: false; error: string }
+    | { ok: false; error: string; errorCode?: string }
   >;
   register: (payload: {
     fullName: string;
@@ -47,16 +47,17 @@ type AuthState = {
     phone: string;
     password: string;
     locale: Locale;
-  }) => Promise<{ ok: true; email: string } | { ok: false; error: string }>;
-  verifyEmail: (email: string, code: string) => Promise<{ ok: true } | { ok: false; error: string }>;
-  resendVerification: (email: string, locale: Locale) => Promise<{ ok: true } | { ok: false; error: string }>;
-  forgotPassword: (email: string, locale: Locale) => Promise<{ ok: true } | { ok: false; error: string }>;
+  }) => Promise<{ ok: true; email: string } | { ok: false; error: string; errorCode?: string }>;
+  verifyEmail: (email: string, code: string) => Promise<{ ok: true } | { ok: false; error: string; errorCode?: string }>;
+  resendVerification: (email: string, locale: Locale) => Promise<{ ok: true } | { ok: false; error: string; errorCode?: string }>;
+  forgotPassword: (email: string, locale: Locale) => Promise<{ ok: true } | { ok: false; error: string; errorCode?: string }>;
   resetPassword: (
     email: string,
     code: string,
     password: string
-  ) => Promise<{ ok: true } | { ok: false; error: string }>;
+  ) => Promise<{ ok: true } | { ok: false; error: string; errorCode?: string }>;
   refreshAccessToken: () => Promise<AuthTokens>;
+  markAccountRestricted: (reason: 'blocked' | 'inactive') => Promise<void>;
 };
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -112,12 +113,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await get().setSession(session);
       return { ok: true };
     } catch (error) {
-      if (isAxiosError<{ message?: string }>(error) && error.response?.data.message === EMAIL_VERIFICATION_REQUIRED) {
+      if (isEmailVerificationRequiredError(error)) {
         return { ok: false, needsVerification: true, email };
       }
       const message = getApiErrorMessage(error, 'login');
+      const errorCode = getApiErrorCode(error);
       set({ authError: message });
-      return { ok: false, error: message };
+      return { ok: false, error: message, errorCode };
     } finally {
       set({ isAuthenticating: false });
     }
@@ -131,7 +133,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error) {
       const message = getApiErrorMessage(error, 'register');
       set({ authError: message });
-      return { ok: false, error: message };
+      return { ok: false, error: message, errorCode: getApiErrorCode(error) };
     } finally {
       set({ isAuthenticating: false });
     }
@@ -146,7 +148,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error) {
       const message = getApiErrorMessage(error, 'verify');
       set({ authError: message });
-      return { ok: false, error: message };
+      return { ok: false, error: message, errorCode: getApiErrorCode(error) };
     } finally {
       set({ isAuthenticating: false });
     }
@@ -160,7 +162,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error) {
       const message = getApiErrorMessage(error, 'resend');
       set({ authError: message });
-      return { ok: false, error: message };
+      return { ok: false, error: message, errorCode: getApiErrorCode(error) };
     } finally {
       set({ isAuthenticating: false });
     }
@@ -174,7 +176,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error) {
       const message = getApiErrorMessage(error, 'reset');
       set({ authError: message });
-      return { ok: false, error: message };
+      return { ok: false, error: message, errorCode: getApiErrorCode(error) };
     } finally {
       set({ isAuthenticating: false });
     }
@@ -188,7 +190,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error) {
       const message = getApiErrorMessage(error, 'reset');
       set({ authError: message });
-      return { ok: false, error: message };
+      return { ok: false, error: message, errorCode: getApiErrorCode(error) };
     } finally {
       set({ isAuthenticating: false });
     }
@@ -200,6 +202,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const tokens = await refreshTokensRequest(refreshToken);
     await get().setTokens(tokens);
     return tokens;
+  },
+
+  markAccountRestricted: async (reason) => {
+    const { user, accessToken, refreshToken } = get();
+    if (!user || !accessToken || !refreshToken) return;
+
+    const updated: User = {
+      ...user,
+      ...(reason === 'blocked'
+        ? { isBlocked: true, isActive: false }
+        : { isActive: false })
+    };
+
+    await persistSession({
+      user: updated,
+      tokens: { accessToken, refreshToken }
+    });
+    set({ user: updated });
   }
 }));
 
@@ -208,7 +228,8 @@ export function bindAuthStoreToApi() {
   setupApiInterceptors({
     getAccessToken: () => useAuthStore.getState().accessToken,
     refreshTokens: () => useAuthStore.getState().refreshAccessToken(),
-    clearSession: () => useAuthStore.getState().clearSession()
+    clearSession: () => useAuthStore.getState().clearSession(),
+    markAccountRestricted: (reason) => useAuthStore.getState().markAccountRestricted(reason)
   });
   setupApiLogging();
 }

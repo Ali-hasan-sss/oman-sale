@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Dimensions, Easing, Image, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -7,6 +7,7 @@ import { AppText } from './AppText';
 
 import { useAuthStore } from '../stores';
 import { useI18n } from '../i18n';
+import { fetchMyStores } from '../services/stores.service';
 import type { ScreenName } from '../types';
 import { colors, radius } from '../theme';
 
@@ -32,12 +33,29 @@ export function SideDrawer({ visible, onClose, onNavigate, onLogoutRequest }: Si
   const translateX = useRef(new Animated.Value(-drawerWidth)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const [shouldRender, setShouldRender] = useState(visible);
+  const [hasStore, setHasStore] = useState(false);
 
-  const items: DrawerItem[] = [
-    { screen: 'profile', label: t.common.profile, icon: 'person-circle-outline' },
-    { screen: 'favorites', label: t.common.favorites, icon: 'heart-outline' },
-    { screen: 'settings', label: t.common.settings, icon: 'settings-outline' }
-  ];
+  const items: DrawerItem[] = useMemo(() => {
+    const base: DrawerItem[] = [
+      { screen: 'storesBrowse', label: t.common.browseStores, icon: 'storefront-outline' },
+      { screen: 'myStore', label: t.common.myStore, icon: 'storefront' },
+      { screen: 'addStore', label: t.common.createStore, icon: 'storefront-outline' },
+      { screen: 'profile', label: t.common.profile, icon: 'person-circle-outline' },
+      { screen: 'favorites', label: t.common.favorites, icon: 'heart-outline' },
+      { screen: 'settings', label: t.common.settings, icon: 'settings-outline' }
+    ];
+    return hasStore ? base.filter((item) => item.screen !== 'addStore') : base;
+  }, [hasStore, t.common.browseStores, t.common.createStore, t.common.favorites, t.common.myStore, t.common.profile, t.common.settings]);
+
+  useEffect(() => {
+    if (!visible || !user) {
+      setHasStore(false);
+      return;
+    }
+    fetchMyStores()
+      .then((stores) => setHasStore(stores.length > 0))
+      .catch(() => setHasStore(false));
+  }, [visible, user]);
 
   useEffect(() => {
     if (visible) {

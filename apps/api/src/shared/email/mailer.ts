@@ -74,3 +74,51 @@ export const sendAuthCodeEmail = async (to: string, code: string, kind: EmailKin
     html: buildHtml(kind, code, locale)
   });
 };
+
+export const sendNotificationEmail = async (
+  to: string,
+  subject: string,
+  title: string,
+  body: string,
+  locale: EmailLocale
+) => {
+  if (env.EMAIL_SKIP_SEND) return;
+  if (!env.SMTP_HOST || !env.SMTP_USER || !env.SMTP_PASS) {
+    console.warn('[email] notification skipped — SMTP not configured');
+    return;
+  }
+
+  const isAr = locale === 'ar';
+  const html = `<!doctype html>
+<html lang="${locale}" dir="${isAr ? 'rtl' : 'ltr'}">
+  <body style="margin:0;background:#f8fafc;font-family:Arial,Tahoma,sans-serif;color:#0f172a;">
+    <table width="100%" cellspacing="0" cellpadding="0" style="padding:32px 12px;background:#f8fafc;">
+      <tr><td align="center">
+        <table width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:white;border-radius:24px;overflow:hidden;border:1px solid #e2e8f0;">
+          <tr><td style="background:#0f766e;padding:28px;text-align:center;color:white;">
+            <h1 style="margin:0;font-size:26px;">Oman Sale</h1>
+          </td></tr>
+          <tr><td style="padding:32px;">
+            <h2 style="margin:0 0 12px;font-size:22px;">${title}</h2>
+            <p style="margin:0;color:#475569;line-height:1.7;white-space:pre-line;">${body}</p>
+          </td></tr>
+        </table>
+      </td></tr>
+    </table>
+  </body>
+</html>`;
+
+  const transporter = nodemailer.createTransport({
+    host: env.SMTP_HOST,
+    port: env.SMTP_PORT,
+    secure: env.SMTP_SECURE,
+    auth: { user: env.SMTP_USER, pass: env.SMTP_PASS }
+  });
+
+  await transporter.sendMail({
+    from: env.SMTP_FROM,
+    to,
+    subject,
+    html
+  });
+};

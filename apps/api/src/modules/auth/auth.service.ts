@@ -1,6 +1,7 @@
 import { AuthCodePurpose, UserRole } from '@prisma/client';
 
 import { env } from '../../config/env';
+import { ErrorCodes } from '../../shared/constants/error-codes';
 import { sendAuthCodeEmail } from '../../shared/email/mailer';
 import { ApiError } from '../../shared/utils/api-error';
 import { hashPassword, verifyPassword } from '../../shared/utils/password';
@@ -33,8 +34,14 @@ export class AuthService {
   async login(dto: LoginDto): Promise<{ user: AuthUserResponse; tokens: AuthTokens }> {
     const user = await authRepository.findByEmail(dto.email);
     if (!user || user.deletedAt) throw new ApiError(401, 'Invalid credentials');
-    if (!user.isActive || user.isBlocked) throw new ApiError(403, 'Account is not allowed');
-    if (!user.isVerified) throw new ApiError(403, 'Email verification required');
+    if (!user.isActive || user.isBlocked) {
+      throw new ApiError(
+        403,
+        'Account is not allowed',
+        user.isBlocked ? ErrorCodes.ACCOUNT_BLOCKED : ErrorCodes.ACCOUNT_INACTIVE
+      );
+    }
+    if (!user.isVerified) throw new ApiError(403, 'Email verification required', ErrorCodes.EMAIL_VERIFICATION_REQUIRED);
 
     const validPassword = await verifyPassword(dto.password, user.password);
     if (!validPassword) throw new ApiError(401, 'Invalid credentials');

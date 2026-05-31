@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -11,6 +10,7 @@ import {
 } from 'react-native';
 
 import { AppText } from '../components/AppText';
+import { ListingCoverImage } from '../components/ListingCoverImage';
 import { AppTextInput } from '../components/AppTextInput';
 import { EmptyState } from '../components/EmptyState';
 import { ChatListSkeleton } from '../components/skeleton';
@@ -93,13 +93,14 @@ export function ChatScreen({ onConversationPress }: ChatScreenProps) {
         const result = await fetchConversations(nextPage, CHAT_PAGE_SIZE);
         const batch = result.items;
 
+        let merged: ChatConversation[] = batch;
         setConversations((current) => {
-          const merged = nextPage === 1 ? batch : [...current, ...batch];
+          merged = nextPage === 1 ? batch : [...current, ...batch];
           setCachedChatConversations(merged);
-          syncPresenceAndUnread(merged);
-          setHasMore(hasMorePages(merged.length, batch.length, CHAT_PAGE_SIZE, result.total));
           return merged;
         });
+        setHasMore(hasMorePages(merged.length, batch.length, CHAT_PAGE_SIZE, result.total));
+        syncPresenceAndUnread(merged);
         setPage(nextPage);
       } catch {
         if (nextPage === 1 && !hasLoadedOnce) {
@@ -183,13 +184,7 @@ export function ChatScreen({ onConversationPress }: ChatScreenProps) {
         onPress={() => onConversationPress(conversation.id)}
       >
         <View style={styles.thumbWrap}>
-          {image ? (
-            <Image source={{ uri: image }} style={styles.thumb} />
-          ) : (
-            <View style={styles.thumbPlaceholder}>
-              <Ionicons name="image-outline" size={20} color={colors.muted} />
-            </View>
-          )}
+          <ListingCoverImage uri={image} variant="thumb" style={styles.thumb} />
           {hasUnread ? (
             <View style={styles.thumbBadge}>
               <AppText style={styles.thumbBadgeText}>{badgeLabel}</AppText>
@@ -365,13 +360,9 @@ const styles = StyleSheet.create({
   },
   thumb: {
     width: '100%',
-    height: '100%'
-  },
-  thumbPlaceholder: {
-    flex: 1,
-    backgroundColor: colors.brandSoft,
-    alignItems: 'center',
-    justifyContent: 'center'
+    height: '100%',
+    borderRadius: radius.sm,
+    overflow: 'hidden'
   },
   body: {
     flex: 1,

@@ -50,11 +50,13 @@ export function MobileNavMenu({ variant = 'light' }: MobileNavMenuProps) {
             </div>
 
             <nav className="space-y-2">
+              <MobileLink href="/stores" label={m.common.browseStores} onClick={() => setIsOpen(false)} />
               <MobileLink href="/all-listings" label={m.common.allListings} onClick={() => setIsOpen(false)} />
               <div onClick={() => setIsOpen(false)}>
                 <ChatNavLink className="block rounded-xl px-4 py-3 font-bold text-gray-700 transition hover:bg-gray-50" />
               </div>
               <MobileLink href="/my-listings" label={m.common.myListings} onClick={() => setIsOpen(false)} />
+              <MobileLink href="/stores/create" label={m.common.createStore} onClick={() => setIsOpen(false)} />
               <MobileLink href="/favorites" label={m.common.favorites} onClick={() => setIsOpen(false)} />
               <MobileLink href="/profile" label={m.common.profile} onClick={() => setIsOpen(false)} />
               <Link

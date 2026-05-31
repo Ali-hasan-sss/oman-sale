@@ -30,6 +30,7 @@ export const createAdSchema = z.object({
   contactPhone: z.string().optional(),
   status: z.nativeEnum(AdStatus).default(AdStatus.ACTIVE),
   categoryId: z.string().uuid(),
+  storeId: z.string().uuid().optional(),
   imageUrls: z.array(imageUrlSchema).max(8).default([]),
   filterOptionIds: z.array(z.string().uuid()).default([])
 });

@@ -29,6 +29,11 @@ export function getPlanPrice(plan: PromotionPlan, days: number) {
   return Number(plan.monthPrice);
 }
 
+/** Cheapest first for the selected promotion duration. */
+export function sortPromotionPlansByPrice(plans: PromotionPlan[], days: number) {
+  return [...plans].sort((a, b) => getPlanPrice(a, days) - getPlanPrice(b, days));
+}
+
 export function formatPlanPrice(price: number, locale: 'ar' | 'en', freeLabel: string) {
   if (price === 0) return freeLabel;
   return locale === 'en' ? `OMR ${price.toLocaleString('en-US')}` : `${price.toLocaleString('en-US')} ر.ع`;

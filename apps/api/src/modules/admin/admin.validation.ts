@@ -20,5 +20,11 @@ export const updateAdminUserSchema = z.object({
   role: z.enum(['USER', 'ADMIN', 'MODERATOR']).optional()
 });
 
+export const listAdminReportsQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(20)
+});
+
 export type ListAdminUsersQuery = z.infer<typeof listAdminUsersQuerySchema>;
 export type UpdateAdminUserDto = z.infer<typeof updateAdminUserSchema>;
+export type ListAdminReportsQuery = z.infer<typeof listAdminReportsQuerySchema>;

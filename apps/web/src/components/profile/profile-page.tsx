@@ -1,6 +1,6 @@
 'use client';
 
-import { Camera, Globe, Lock, Mail, Phone, Save, Search, User, X } from 'lucide-react';
+import { Camera, Globe, Lock, Mail, Phone, Save, Search, Store, User, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChangeEvent, FormEvent, ReactNode, useEffect, useState } from 'react';
@@ -10,6 +10,7 @@ import { VerificationCodeInput } from '@/components/auth/verification-code-input
 import { ChatNavLink } from '@/components/chat/chat-nav-link';
 import { SiteFooter } from '@/components/home/site-footer';
 import { MobileNavMenu } from '@/components/navigation/mobile-nav-menu';
+import { AvatarWithBanBadge } from '@/components/ui/avatar-with-ban-badge';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { getUserAccessToken, saveUser, saveUserSession, type UserAuthSession, type UserAuthUser } from '@/lib/user-auth';
@@ -47,6 +48,13 @@ type ProfileMessages = {
   emailChanged: string;
   emailChangeError: string;
   emailVerifyError: string;
+  storeTitle: string;
+  storeSubtitle: string;
+  manageStore: string;
+  createStore: string;
+  storeActive: string;
+  storeTrial: string;
+  storeExpired: string;
 };
 
 const messages: Record<'ar' | 'en', ProfileMessages> = {
@@ -81,7 +89,14 @@ const messages: Record<'ar' | 'en', ProfileMessages> = {
     emailCodeSent: 'تم إرسال رمز التحقق إلى البريد الجديد.',
     emailChanged: 'تم تحديث البريد الإلكتروني بنجاح.',
     emailChangeError: 'تعذر إرسال رمز التحقق. تأكد من البريد وحاول مرة أخرى.',
-    emailVerifyError: 'تعذر تأكيد البريد. تحقق من الرمز وحاول مرة أخرى.'
+    emailVerifyError: 'تعذر تأكيد البريد. تحقق من الرمز وحاول مرة أخرى.',
+    storeTitle: 'متجري',
+    storeSubtitle: 'إدارة شعار المتجر والغلاف ومراقبة الاشتراك وعروض المتجر.',
+    manageStore: 'إدارة المتجر',
+    createStore: 'إنشاء متجر',
+    storeActive: 'متجر نشط',
+    storeTrial: 'تجربة مجانية',
+    storeExpired: 'اشتراك منتهٍ'
   },
   en: {
     title: 'My Profile',
@@ -114,7 +129,14 @@ const messages: Record<'ar' | 'en', ProfileMessages> = {
     emailCodeSent: 'We sent a verification code to your new email.',
     emailChanged: 'Email address updated successfully.',
     emailChangeError: 'Could not send the verification code. Check the email and try again.',
-    emailVerifyError: 'Could not verify the email. Check the code and try again.'
+    emailVerifyError: 'Could not verify the email. Check the code and try again.',
+    storeTitle: 'My store',
+    storeSubtitle: 'Manage your store branding, subscription and store listings.',
+    manageStore: 'Manage store',
+    createStore: 'Create store',
+    storeActive: 'Active store',
+    storeTrial: 'Free trial',
+    storeExpired: 'Subscription expired'
   }
 };
 
@@ -144,6 +166,12 @@ export function ProfilePage() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
   const [isSavingEmail, setIsSavingEmail] = useState(false);
+  const [ownerStore, setOwnerStore] = useState<{
+    id: string;
+    nameAr: string;
+    nameEn: string;
+    accessStatus: string;
+  } | null>(null);
 
   const inputClass = 'w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:ring-2 focus:ring-green-500';
 
@@ -166,6 +194,13 @@ export function ProfilePage() {
       .catch(() => {
         router.replace(localizedPath('/login'));
       });
+
+    api
+      .get<{ data: Array<{ id: string; nameAr: string; nameEn: string; accessStatus: string }> }>('/stores/me', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then((response) => setOwnerStore(response.data.data[0] ?? null))
+      .catch(() => setOwnerStore(null));
   }, []);
 
   useEffect(() => {
@@ -337,18 +372,58 @@ export function ProfilePage() {
               <h1 className="mb-3 text-4xl font-black">{profileMessages.title}</h1>
               <p className="max-w-2xl text-white/80">{profileMessages.subtitle}</p>
             </div>
-            <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-white/15 ring-4 ring-white/20">
-              {avatar ? <img src={avatar} alt={fullName} className="h-full w-full object-cover" /> : <User size={44} />}
+            <AvatarWithBanBadge
+              src={avatar}
+              alt={fullName}
+              size={96}
+              isBlocked={user?.isBlocked}
+              badgeLabel={user?.isBlocked ? m.profileExtra.accountBlocked : undefined}
+              fallback={<User size={44} />}
+            />
+          </div>
+        </section>
+
+        <section className="mb-8 rounded-3xl bg-white p-6 shadow-sm md:p-8">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-green-50 text-green-700">
+                <Store size={26} />
+              </div>
+              <div>
+                <h2 className="text-2xl font-black">{profileMessages.storeTitle}</h2>
+                <p className="mt-1 text-sm text-slate-500">{profileMessages.storeSubtitle}</p>
+                {ownerStore ? (
+                  <p className="mt-2 text-sm font-bold text-green-700">
+                    {locale === 'en' ? ownerStore.nameEn : ownerStore.nameAr} •{' '}
+                    {ownerStore.accessStatus === 'ACTIVE'
+                      ? profileMessages.storeActive
+                      : ownerStore.accessStatus === 'TRIAL'
+                        ? profileMessages.storeTrial
+                        : profileMessages.storeExpired}
+                  </p>
+                ) : null}
+              </div>
             </div>
+            <Link
+              href={localizedPath(ownerStore ? '/my-store' : '/stores/create')}
+              className="inline-flex items-center justify-center rounded-xl bg-green-600 px-6 py-3 font-bold text-white transition hover:bg-green-700"
+            >
+              {ownerStore ? profileMessages.manageStore : profileMessages.createStore}
+            </Link>
           </div>
         </section>
 
         <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
           <form onSubmit={saveProfile} className="rounded-3xl bg-white p-6 shadow-sm md:p-8">
             <div className="mb-8 flex flex-col gap-6 md:flex-row md:items-center">
-              <div className="relative flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-slate-500 ring-4 ring-green-50">
-                {avatar ? <img src={avatar} alt={fullName} className="h-full w-full object-cover" /> : <User size={42} />}
-              </div>
+              <AvatarWithBanBadge
+                src={avatar}
+                alt={fullName}
+                size={112}
+                isBlocked={user?.isBlocked}
+                badgeLabel={user?.isBlocked ? m.profileExtra.accountBlocked : undefined}
+                fallback={<User size={42} />}
+              />
               <div className="flex-1">
                 <h2 className="mb-2 text-2xl font-black">{profileMessages.personalInfo}</h2>
                 <p className="mb-4 text-sm text-slate-500">{profileMessages.avatarHint}</p>

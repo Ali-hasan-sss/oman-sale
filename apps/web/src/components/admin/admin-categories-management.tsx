@@ -10,15 +10,19 @@ import {
   Check,
   ChevronDown,
   ChevronLeft,
+  Dumbbell,
   Edit3,
   Gamepad2,
   GraduationCap,
+  Hammer,
   Heart,
   Home,
   Laptop,
   MapPin,
   Monitor,
   Palette,
+  PawPrint,
+  Plane,
   Plus,
   Search,
   Shirt,
@@ -38,37 +42,13 @@ import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { adminApi } from '@/lib/admin-auth';
+import { CategoryIcon, isCategoryEmojiIcon, isCategoryIconKey, type CategoryIconKey } from '@/lib/category-icons';
 import { buildCategoryTree, type CategoryTreeNode } from '@/lib/category-tree';
 import { useI18n } from '@/lib/i18n';
 
 type CategoryType = 'PRODUCT' | 'SERVICE' | 'JOB' | 'JOB_REQUEST' | 'LOGISTICS' | 'CONSTRUCTION';
 
-type IconKey =
-  | 'baby'
-  | 'bike'
-  | 'book'
-  | 'briefcase'
-  | 'building'
-  | 'car'
-  | 'gamepad'
-  | 'graduation'
-  | 'heart'
-  | 'home'
-  | 'laptop'
-  | 'map-pin'
-  | 'monitor'
-  | 'palette'
-  | 'search'
-  | 'shirt'
-  | 'smartphone'
-  | 'sofa'
-  | 'store'
-  | 'stethoscope'
-  | 'tag'
-  | 'truck'
-  | 'utensils'
-  | 'watch'
-  | 'wrench';
+type IconKey = CategoryIconKey;
 
 type ManagedCategory = {
   id: string;
@@ -76,7 +56,7 @@ type ManagedCategory = {
   nameAr: string;
   nameEn: string;
   slug: string;
-  icon?: IconKey | null;
+  icon?: string | null;
   type: CategoryType;
   parentId?: string | null;
   isActive: boolean;
@@ -103,7 +83,7 @@ type CategoryFormState = {
   nameAr: string;
   nameEn: string;
   slug: string;
-  icon: IconKey | '';
+  icon: string;
   type: CategoryType;
   parentId: string;
   isActive: boolean;
@@ -146,7 +126,11 @@ const iconOptions: Array<{ key: IconKey; label: string; icon: typeof Car }> = [
   { key: 'palette', label: 'Design', icon: Palette },
   { key: 'utensils', label: 'Food', icon: Utensils },
   { key: 'stethoscope', label: 'Health', icon: Stethoscope },
-  { key: 'watch', label: 'Accessories', icon: Watch }
+  { key: 'watch', label: 'Accessories', icon: Watch },
+  { key: 'paw', label: 'Pets', icon: PawPrint },
+  { key: 'plane', label: 'Travel', icon: Plane },
+  { key: 'hammer', label: 'Construction', icon: Hammer },
+  { key: 'dumbbell', label: 'Sports', icon: Dumbbell }
 ];
 
 const iconMap = Object.fromEntries(iconOptions.map((option) => [option.key, option.icon])) as Record<IconKey, typeof Car>;
@@ -279,6 +263,18 @@ export function AdminCategoriesManagement() {
     openFormModal();
   };
 
+  const expandCategoryAncestors = (category: ManagedCategory) => {
+    const next: Record<string, boolean> = {};
+    let currentParentId = category.parentId;
+
+    while (currentParentId) {
+      next[currentParentId] = true;
+      currentParentId = categories.find((item) => item.id === currentParentId)?.parentId ?? null;
+    }
+
+    setExpandedParents((current) => ({ ...current, ...next }));
+  };
+
   const startAddChild = (parent: ManagedCategory) => {
     setEditingId(undefined);
     setFormMode('create-child');
@@ -311,7 +307,7 @@ export function AdminCategoriesManagement() {
     setFormErrors({});
     setSlugStatus('idle');
     if (category.parentId) {
-      setExpandedParents((current) => ({ ...current, [category.parentId!]: true }));
+      expandCategoryAncestors(category);
     }
     openFormModal();
   };
@@ -488,13 +484,14 @@ export function AdminCategoriesManagement() {
             </div>
           ) : (
             categoryTree.map((parent) => (
-              <CategoryTreeGroup
+              <CategoryTreeBranch
                 key={parent.id}
-                parent={parent}
-                isExpanded={expandedParents[parent.id] !== false}
+                node={parent}
+                depth={0}
+                expandedNodes={expandedParents}
                 typeLabels={typeLabels}
-                onToggle={() => toggleParentExpanded(parent.id)}
-                onAddChild={() => startAddChild(parent)}
+                onToggle={(nodeId) => toggleParentExpanded(nodeId)}
+                onAddChild={startAddChild}
                 onEdit={startEdit}
                 onDelete={deleteCategory}
                 labels={{
@@ -573,6 +570,18 @@ export function AdminCategoriesManagement() {
                 onChange={(icon) => setForm((current) => ({ ...current, icon }))}
                 value={form.icon}
               />
+              <input
+                type="text"
+                maxLength={8}
+                value={isCategoryEmojiIcon(form.icon) ? form.icon : ''}
+                onChange={(event) => {
+                  const next = event.target.value.trim();
+                  setForm((current) => ({ ...current, icon: next }));
+                }}
+                placeholder={m.admin.emojiIconPlaceholder}
+                className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
+              />
+              <p className="mt-1 text-xs text-slate-500">{m.admin.emojiIconHint}</p>
             </Field>
 
             <Field label={m.admin.adType}>
@@ -747,12 +756,13 @@ function CategoryFormModal({ children, onClose, title }: { children: ReactNode; 
   );
 }
 
-type CategoryTreeGroupProps = {
-  parent: CategoryTreeNode<ManagedCategory>;
-  isExpanded: boolean;
+type CategoryTreeBranchProps = {
+  node: CategoryTreeNode<ManagedCategory>;
+  depth: number;
+  expandedNodes: Record<string, boolean>;
   typeLabels: Record<CategoryType, string>;
-  onToggle: () => void;
-  onAddChild: () => void;
+  onToggle: (nodeId: string) => void;
+  onAddChild: (category: ManagedCategory) => void;
   onEdit: (category: ManagedCategory) => void;
   onDelete: (categoryId: string) => void;
   labels: {
@@ -767,48 +777,56 @@ type CategoryTreeGroupProps = {
   };
 };
 
-function CategoryTreeGroup({
-  parent,
-  isExpanded,
+function CategoryTreeBranch({
+  node,
+  depth,
+  expandedNodes,
   typeLabels,
   onToggle,
   onAddChild,
   onEdit,
   onDelete,
   labels
-}: CategoryTreeGroupProps) {
+}: CategoryTreeBranchProps) {
+  const hasChildren = node.children.length > 0;
+  const isExpanded = expandedNodes[node.id] !== false;
+  const isRoot = depth === 0;
+
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+    <div className={isRoot ? 'overflow-hidden rounded-2xl border border-slate-200 bg-white' : undefined}>
       <CategoryTreeRow
-        category={parent}
-        depth={0}
+        category={node}
+        depth={depth}
         typeLabels={typeLabels}
         onEdit={onEdit}
         onDelete={onDelete}
-        onAddChild={onAddChild}
-        onToggle={onToggle}
+        onAddChild={() => onAddChild(node)}
+        onToggle={hasChildren ? () => onToggle(node.id) : undefined}
         isExpanded={isExpanded}
-        showExpandToggle={parent.children.length > 0}
+        showExpandToggle={hasChildren}
         labels={labels}
       />
 
       {isExpanded ? (
-        <div className="border-t border-slate-100 bg-slate-50/60">
-          {parent.children.length > 0 ? (
-            parent.children.map((child) => (
-              <CategoryTreeRow
+        <div className={isRoot ? 'border-t border-slate-100 bg-slate-50/60' : 'border-t border-slate-100/80 bg-slate-50/40'}>
+          {hasChildren ? (
+            node.children.map((child) => (
+              <CategoryTreeBranch
                 key={child.id}
-                category={child}
-                depth={1}
+                node={child}
+                depth={depth + 1}
+                expandedNodes={expandedNodes}
                 typeLabels={typeLabels}
+                onToggle={onToggle}
+                onAddChild={onAddChild}
                 onEdit={onEdit}
                 onDelete={onDelete}
                 labels={labels}
               />
             ))
-          ) : (
+          ) : isRoot ? (
             <p className="px-4 py-4 text-sm font-bold text-slate-400">{labels.noSubcategories}</p>
-          )}
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -821,7 +839,7 @@ type CategoryTreeRowProps = {
   typeLabels: Record<CategoryType, string>;
   onEdit: (category: ManagedCategory) => void;
   onDelete: (categoryId: string) => void;
-  labels: CategoryTreeGroupProps['labels'];
+  labels: CategoryTreeBranchProps['labels'];
   onAddChild?: () => void;
   onToggle?: () => void;
   isExpanded?: boolean;
@@ -840,16 +858,15 @@ function CategoryTreeRow({
   isExpanded,
   showExpandToggle
 }: CategoryTreeRowProps) {
-  const Icon = category.icon ? iconMap[category.icon] ?? Tag : Tag;
+  const IconPreview = category.icon && isCategoryIconKey(category.icon) ? iconMap[category.icon] : null;
 
   return (
     <div
-      className={`flex flex-col gap-4 border-b border-slate-100 px-4 py-4 last:border-b-0 lg:flex-row lg:items-center lg:justify-between ${
-        depth > 0 ? 'ps-10' : ''
-      }`}
+      className={`flex flex-col gap-4 border-b border-slate-100 px-4 py-4 last:border-b-0 lg:flex-row lg:items-center lg:justify-between`}
+      style={{ paddingInlineStart: depth > 0 ? `${16 + depth * 24}px` : undefined }}
     >
       <div className="flex min-w-0 flex-1 items-start gap-3">
-        {depth === 0 && showExpandToggle ? (
+        {showExpandToggle ? (
           <button
             type="button"
             onClick={onToggle}
@@ -863,7 +880,7 @@ function CategoryTreeRow({
         )}
 
         <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
-          <Icon size={20} />
+          {IconPreview ? <IconPreview size={20} /> : <CategoryIcon icon={category.icon} size={20} />}
         </span>
 
         <div className="min-w-0">
@@ -895,7 +912,7 @@ function CategoryTreeRow({
       </div>
 
       <div className="flex flex-wrap gap-2 lg:justify-end">
-        {depth === 0 && onAddChild ? (
+        {onAddChild ? (
           <button
             type="button"
             onClick={onAddChild}
@@ -942,11 +959,11 @@ function IconPicker({
   value
 }: {
   emptyLabel: string;
-  onChange: (icon: IconKey) => void;
-  value: IconKey | '';
+  onChange: (icon: string) => void;
+  value: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const selectedOption = value ? iconOptions.find((option) => option.key === value) : undefined;
+  const selectedOption = value && isCategoryIconKey(value) ? iconOptions.find((option) => option.key === value) : undefined;
   const SelectedIcon = selectedOption?.icon;
 
   return (
@@ -961,6 +978,8 @@ function IconPicker({
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
               <SelectedIcon size={18} />
             </span>
+          ) : isCategoryEmojiIcon(value) ? (
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-lg">{value}</span>
           ) : (
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-400">
               <Tag size={18} />

@@ -24,7 +24,6 @@ const getEnterOffset = (transition: ScreenTransitionKind, isRtl: boolean) => {
 };
 
 export function ScreenTransition({ screenKey, transition, isRtl, children }: ScreenTransitionProps) {
-  const opacity = useRef(new Animated.Value(1)).current;
   const translateX = useRef(new Animated.Value(0)).current;
   const prevKeyRef = useRef(screenKey);
 
@@ -35,28 +34,19 @@ export function ScreenTransition({ screenKey, transition, isRtl, children }: Scr
 
     const enterOffset = getEnterOffset(transition, isRtl);
     translateX.setValue(enterOffset);
-    opacity.setValue(transition === 'tab' ? 0.88 : 0.92);
 
-    Animated.parallel([
-      Animated.timing(translateX, {
-        toValue: 0,
-        duration: transition === 'tab' ? 220 : 280,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true
-      }),
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: transition === 'tab' ? 220 : 280,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true
-      })
-    ]).start();
+    Animated.timing(translateX, {
+      toValue: 0,
+      duration: transition === 'tab' ? 220 : 280,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true
+    }).start();
 
     prevKeyRef.current = screenKey;
-  }, [screenKey, transition, isRtl, opacity, translateX]);
+  }, [screenKey, transition, isRtl, translateX]);
 
   return (
-    <Animated.View style={[styles.container, { opacity, transform: [{ translateX }] }]}>
+    <Animated.View style={[styles.container, { transform: [{ translateX }] }]}>
       {children}
     </Animated.View>
   );

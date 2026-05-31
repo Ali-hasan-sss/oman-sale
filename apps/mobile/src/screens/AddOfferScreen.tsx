@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Keyboard,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,12 +12,19 @@ import {
 
 import { AppText } from '../components/AppText';
 import { AppTextInput } from '../components/AppTextInput';
+import { KeyboardAwareScrollView } from '../components/KeyboardAwareScrollView';
 import { ErrorNotice } from '../components/ErrorNotice';
 import { SuccessNotice } from '../components/SuccessNotice';
 import { FormFieldsSkeleton } from '../components/skeleton';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
-import { buildCategoryTree } from '../lib/category-tree';
+import { buildCategoryTree, flattenCategoryTreeWithPath } from '../lib/category-tree';
+import { getValidationFieldErrors, resolveApiErrorMessage } from '../lib/api-errors';
+import {
+  parseListingPrice,
+  sanitizePriceInput,
+  validateListingForm
+} from '../lib/listing-form-validation';
 import { omanCities } from '../lib/oman-cities';
 import type { CategoryOption } from '../services/listings.service';
 import {
@@ -24,8 +32,10 @@ import {
   formatPlanPrice,
   getPlanPrice,
   promoteAdRequest,
+  sortPromotionPlansByPrice,
   type PromotionPlan
 } from '../services/promotions.service';
+import { fetchMyStores, type OwnerStore } from '../services/stores.service';
 import { useAuthStore, useListingsStore } from '../stores';
 import { colors, radius, shadow } from '../theme';
 
@@ -34,7 +44,11 @@ const DURATION_OPTIONS = [
   { days: 7, labelKey: 'oneWeek' as const },
   { days: 14, labelKey: 'twoWeeks' as const },
   { days: 30, labelKey: 'oneMonth' as const }
-];
+] as const;
+
+type AddOfferScreenProps = {
+  onPublished?: () => void;
+};
 
 const getCategoryLabel = (category: CategoryOption, locale: 'ar' | 'en') =>
   (locale === 'ar' ? category.nameAr : category.nameEn) ?? category.name;
@@ -47,10 +61,6 @@ const alignChipScroll = (ref: React.RefObject<ScrollViewType | null>, isRtl: boo
       ref.current?.scrollTo({ x: 0, animated: false });
     }
   });
-};
-
-type AddOfferScreenProps = {
-  onPublished?: () => void;
 };
 
 export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
@@ -66,6 +76,8 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
 
   const categoryScrollRef = useRef<ScrollViewType>(null);
   const cityScrollRef = useRef<ScrollViewType>(null);
+  const scrollViewRef = useRef<ScrollViewType>(null);
+  const errorBannerRef = useRef<View>(null);
   const plansFetchStartedRef = useRef(false);
 
   const [categoryId, setCategoryId] = useState('');
@@ -79,30 +91,86 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
   const [duration, setDuration] = useState(7);
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
   const [plansError, setPlansError] = useState(false);
+  const [ownerStore, setOwnerStore] = useState<OwnerStore | null>(null);
+  const [publishSource, setPublishSource] = useState<'store' | 'personal'>('personal');
   const [publishSuccess, setPublishSuccess] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const validationMessages = useMemo(
+    () => ({
+      titleRequired: t.errors.fieldTitleRequired,
+      titleMin: t.errors.fieldTitleMin,
+      descriptionRequired: t.errors.fieldDescriptionRequired,
+      descriptionMin: t.errors.fieldDescriptionMin,
+      categoryRequired: t.errors.fieldCategoryRequired,
+      cityRequired: t.errors.fieldCityRequired,
+      priceRequired: t.errors.fieldPriceRequired,
+      priceInvalid: t.errors.fieldPriceInvalid
+    }),
+    [t.errors]
+  );
+
+  const scrollToErrors = useCallback(() => {
+    Keyboard.dismiss();
+
+    const runScroll = () => {
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    };
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(runScroll);
+    });
+    setTimeout(runScroll, 180);
+    setTimeout(runScroll, 360);
+  }, []);
+
+  useEffect(() => {
+    if (submitError) scrollToErrors();
+  }, [submitError, scrollToErrors]);
+
+  const clearFieldError = (field: string) => {
+    setFieldErrors((current) => {
+      if (!current[field]) return current;
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+  };
 
   const descriptionReady = description.trim().length >= DESCRIPTION_MIN_FOR_PLANS;
 
   const categoryOptions = useMemo(() => {
     const tree = buildCategoryTree(categories);
-    return tree.flatMap((parent) => {
-      const parentLabel = getCategoryLabel(parent, locale);
-      const entries = [{ id: parent.id, label: parentLabel, type: parent.type }];
-      parent.children.forEach((child) => {
-        const childLabel = getCategoryLabel(child, locale);
-        entries.push({
-          id: child.id,
-          label: locale === 'ar' ? `${parentLabel} · ${childLabel}` : `${parentLabel} · ${childLabel}`,
-          type: child.type
-        });
-      });
-      return entries;
-    });
+    return flattenCategoryTreeWithPath(tree, (category) => getCategoryLabel(category, locale));
   }, [categories, locale]);
 
-  const selectedCategory = categoryOptions.find((item) => item.id === categoryId);
+  const selectedCategory = categories.find((item) => item.id === categoryId);
+  const displayPlans = useMemo(
+    () => sortPromotionPlansByPrice(plans, duration),
+    [plans, duration]
+  );
   const selectedPlan = plans.find((plan) => plan.id === selectedPlanId);
+  const canPublishFromStore = Boolean(
+    ownerStore &&
+      ownerStore.isActive &&
+      (ownerStore.accessStatus === 'ACTIVE' || ownerStore.accessStatus === 'TRIAL')
+  );
+  const isStorePublish = canPublishFromStore && publishSource === 'store';
+
+  useEffect(() => {
+    if (!accessToken) return;
+    fetchMyStores()
+      .then((stores) => {
+        const activeStore = stores.find(
+          (store) =>
+            store.isActive && (store.accessStatus === 'ACTIVE' || store.accessStatus === 'TRIAL')
+        );
+        setOwnerStore(activeStore ?? stores[0] ?? null);
+        if (activeStore) setPublishSource('store');
+      })
+      .catch(() => setOwnerStore(null));
+  }, [accessToken]);
 
   useEffect(() => {
     loadCategories(locale, { refresh: useListingsStore.getState().hasLoadedCategories })
@@ -140,8 +208,9 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
 
     fetchPromotionPlans()
       .then((items) => {
+        const sorted = sortPromotionPlansByPrice(items, duration);
         setPlans(items);
-        setSelectedPlanId(items[0]?.id ?? '');
+        setSelectedPlanId(sorted[0]?.id ?? '');
       })
       .catch(() => {
         setPlans([]);
@@ -151,26 +220,43 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
   }, [descriptionReady, locale]);
 
   const submit = async () => {
+    const nextFieldErrors = validateListingForm(
+      { title, description, categoryId, city, price },
+      validationMessages
+    );
+
+    if (Object.keys(nextFieldErrors).length > 0) {
+      setFieldErrors(nextFieldErrors);
+      setSubmitError(t.errors.VALIDATION_FAILED);
+      return;
+    }
+
     if (!accessToken || !selectedCategory) return;
 
     setSubmitError('');
+    setFieldErrors({});
 
     const result = await createListing({
       title: title.trim(),
       description: description.trim(),
       type: selectedCategory.type,
-      price: Number(price.replaceAll(',', '')),
+      price: parseListingPrice(price),
       city,
       categoryId: selectedCategory.id,
-      imageUrls: []
+      imageUrls: [],
+      ...(isStorePublish && ownerStore ? { storeId: ownerStore.id } : {})
     });
 
     if (!result.ok) {
-      setSubmitError(t.addOffer.createError);
+      const apiFieldErrors = getValidationFieldErrors(result.apiError, t.errors);
+      if (Object.keys(apiFieldErrors).length > 0) {
+        setFieldErrors(apiFieldErrors);
+      }
+      setSubmitError(resolveApiErrorMessage(result.apiError, t.errors, t.addOffer.createError));
       return;
     }
 
-    if (selectedPlan) {
+    if (selectedPlan && !isStorePublish) {
       try {
         await promoteAdRequest({ adId: result.id, planId: selectedPlan.id, days: duration });
       } catch {
@@ -187,6 +273,7 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
     setTitle('');
     setDescription('');
     setPrice('');
+    setFieldErrors({});
     setPlans([]);
     setSelectedPlanId('');
     setSubmitError('');
@@ -203,46 +290,50 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
     city.length > 0 &&
     !isSubmitting;
 
+  const fieldErrorStyle = (fieldError?: string) => (fieldError ? styles.inputError : undefined);
+
   if (publishSuccess) {
     return (
-      <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: scrollBottomPadding }]}
-        keyboardShouldPersistTaps="handled"
-      >
+      <KeyboardAwareScrollView contentContainerStyle={[styles.content, { paddingBottom: scrollBottomPadding }]}>
         <SuccessNotice
           title={t.addOffer.successTitle}
           message={t.addOffer.success}
           actionLabel={t.addOffer.viewMyOffers}
           onAction={handleSuccessAction}
         />
-      </ScrollView>
+      </KeyboardAwareScrollView>
     );
   }
 
   return (
-    <ScrollView
+    <KeyboardAwareScrollView
+      ref={scrollViewRef}
       contentContainerStyle={[styles.content, { paddingBottom: scrollBottomPadding }]}
-      keyboardShouldPersistTaps="handled"
     >
+      <View ref={errorBannerRef} collapsable={false}>
+        {submitError ? <ErrorNotice message={submitError} onDismiss={() => setSubmitError('')} /> : null}
+      </View>
+
       <AppText style={[styles.title, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.title}</AppText>
       <AppText style={[styles.subtitle, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.subtitle}</AppText>
-
-      {submitError ? <ErrorNotice message={submitError} onDismiss={() => setSubmitError('')} /> : null}
 
       {showSkeleton ? (
         <FormFieldsSkeleton rows={6} />
       ) : (
         <>
-          <Field label={t.addOffer.titleField} isRtl={isRtl}>
+          <Field error={fieldErrors.title} label={t.addOffer.titleField} isRtl={isRtl}>
             <AppTextInput
               value={title}
-              onChangeText={setTitle}
-              style={[styles.input, isRtl ? styles.inputRtl : styles.inputLtr]}
+              onChangeText={(value) => {
+                setTitle(value);
+                clearFieldError('title');
+              }}
+              style={[styles.input, fieldErrorStyle(fieldErrors.title), isRtl ? styles.inputRtl : styles.inputLtr]}
               placeholderTextColor={colors.muted}
             />
           </Field>
 
-          <Field label={t.addOffer.category} isRtl={isRtl}>
+          <Field error={fieldErrors.categoryId} label={t.addOffer.category} isRtl={isRtl}>
             <ScrollView
               ref={categoryScrollRef}
               horizontal
@@ -256,7 +347,10 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
                   <Pressable
                     key={category.id}
                     style={[styles.chip, active && styles.chipActive]}
-                    onPress={() => setCategoryId(category.id)}
+                    onPress={() => {
+                      setCategoryId(category.id);
+                      clearFieldError('categoryId');
+                    }}
                   >
                     <AppText style={[styles.chipText, active && styles.chipTextActive, isRtl ? styles.chipRtl : styles.chipLtr]}>
                       {category.label}
@@ -267,7 +361,7 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
             </ScrollView>
           </Field>
 
-          <Field label={t.addOffer.city} isRtl={isRtl}>
+          <Field error={fieldErrors.city} label={t.addOffer.city} isRtl={isRtl}>
             <ScrollView
               ref={cityScrollRef}
               horizontal
@@ -281,8 +375,11 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
                 return (
                   <Pressable
                     key={cityOption.value}
-                    style={[styles.chip, active && styles.chipActive]}
-                    onPress={() => setCity(cityOption.value)}
+                    style={[styles.chip, active && styles.chipActive, fieldErrors.city ? styles.chipError : undefined]}
+                    onPress={() => {
+                      setCity(cityOption.value);
+                      clearFieldError('city');
+                    }}
                   >
                     <AppText style={[styles.chipText, active && styles.chipTextActive, isRtl ? styles.chipRtl : styles.chipLtr]}>
                       {label}
@@ -293,27 +390,74 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
             </ScrollView>
           </Field>
 
-          <Field label={t.addOffer.price} isRtl={isRtl}>
+          <Field error={fieldErrors.price} label={t.addOffer.price} isRtl={isRtl}>
             <AppTextInput
               value={price}
-              onChangeText={setPrice}
-              keyboardType="numeric"
-              style={[styles.input, isRtl ? styles.inputRtl : styles.inputLtr]}
+              onChangeText={(value) => {
+                setPrice(sanitizePriceInput(value));
+                clearFieldError('price');
+              }}
+              keyboardType="decimal-pad"
+              style={[styles.input, fieldErrorStyle(fieldErrors.price), isRtl ? styles.inputRtl : styles.inputLtr]}
               placeholderTextColor={colors.muted}
             />
           </Field>
 
-          <Field label={t.addOffer.description} isRtl={isRtl}>
+          <Field error={fieldErrors.description} label={t.addOffer.description} isRtl={isRtl}>
             <AppTextInput
               value={description}
-              onChangeText={setDescription}
+              onChangeText={(value) => {
+                setDescription(value);
+                clearFieldError('description');
+              }}
               multiline
-              style={[styles.input, styles.textarea, isRtl ? styles.inputRtl : styles.inputLtr]}
+              style={[
+                styles.input,
+                styles.textarea,
+                fieldErrorStyle(fieldErrors.description),
+                isRtl ? styles.inputRtl : styles.inputLtr
+              ]}
               placeholderTextColor={colors.muted}
             />
           </Field>
 
-          {descriptionReady ? (
+          {canPublishFromStore ? (
+            <View style={styles.promotionSection}>
+              <AppText style={[styles.promotionTitle, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.publishAs}</AppText>
+              <AppText style={[styles.promotionSubtitle, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.publishAsHint}</AppText>
+              <View style={styles.publishSourceRow}>
+                <Pressable
+                  style={[styles.publishSourceCard, publishSource === 'store' && styles.publishSourceCardActive]}
+                  onPress={() => {
+                    setPublishSource('store');
+                    setSelectedPlanId('');
+                  }}
+                >
+                  <AppText style={[styles.publishSourceTitle, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.publishFromStore}</AppText>
+                  <AppText style={[styles.publishSourceHint, isRtl ? styles.rtl : styles.ltr]}>
+                    {locale === 'en' ? ownerStore?.nameEn : ownerStore?.nameAr}
+                  </AppText>
+                </Pressable>
+                <Pressable
+                  style={[styles.publishSourceCard, publishSource === 'personal' && styles.publishSourceCardActive]}
+                  onPress={() => {
+                    setPublishSource('personal');
+                    setSelectedPlanId((current) => current || plans[0]?.id || '');
+                  }}
+                >
+                  <AppText style={[styles.publishSourceTitle, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.publishFromPersonal}</AppText>
+                  <AppText style={[styles.publishSourceHint, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.publishFromPersonalHint}</AppText>
+                </Pressable>
+              </View>
+            </View>
+          ) : null}
+
+          {isStorePublish ? (
+            <View style={styles.storePublishNote}>
+              <AppText style={[styles.promotionTitle, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.publishFromStore}</AppText>
+              <AppText style={[styles.promotionSubtitle, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.publishFromStoreHint}</AppText>
+            </View>
+          ) : descriptionReady ? (
             <View style={styles.promotionSection}>
               <AppText style={[styles.promotionTitle, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.adType}</AppText>
               <AppText style={[styles.promotionSubtitle, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.adTypeSubtitle}</AppText>
@@ -335,7 +479,7 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
                     style={isRtl ? styles.chipScrollRtl : styles.chipScrollLtr}
                     contentContainerStyle={[styles.planRow, isRtl && styles.chipRowRtl]}
                   >
-                    {plans.map((plan) => {
+                    {displayPlans.map((plan) => {
                       const active = plan.id === selectedPlanId;
                       const name = locale === 'en' ? plan.nameEn : plan.nameAr;
                       const planDescription = locale === 'en' ? plan.descriptionEn : plan.descriptionAr;
@@ -414,9 +558,9 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
                 </>
               )}
             </View>
-          ) : (
+          ) : !canPublishFromStore ? (
             <AppText style={[styles.promotionHint, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.promotionHint}</AppText>
-          )}
+          ) : null}
 
           <Pressable style={[styles.submit, !canSubmit && styles.submitDisabled]} onPress={submit} disabled={!canSubmit}>
             {isSubmitting ? (
@@ -427,15 +571,26 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
           </Pressable>
         </>
       )}
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 
-function Field({ label, children, isRtl }: { label: string; children: ReactNode; isRtl?: boolean }) {
+function Field({
+  error,
+  label,
+  children,
+  isRtl
+}: {
+  error?: string;
+  label: string;
+  children: ReactNode;
+  isRtl?: boolean;
+}) {
   return (
     <View style={styles.field}>
       <AppText style={[styles.label, isRtl ? styles.rtl : styles.ltr]}>{label}</AppText>
       {children}
+      {error ? <AppText style={[styles.fieldError, isRtl ? styles.rtl : styles.ltr]}>{error}</AppText> : null}
     </View>
   );
 }
@@ -481,6 +636,18 @@ const styles = StyleSheet.create({
   textarea: {
     minHeight: 120,
     textAlignVertical: 'top'
+  },
+  inputError: {
+    borderColor: colors.danger
+  },
+  fieldError: {
+    marginTop: 6,
+    color: colors.danger,
+    fontSize: 13,
+    fontWeight: '600'
+  },
+  chipError: {
+    borderColor: colors.danger
   },
   chipScrollLtr: {
     direction: 'ltr',
@@ -554,6 +721,38 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 4,
     marginBottom: 12
+  },
+  publishSourceRow: {
+    gap: 10
+  },
+  publishSourceCard: {
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.md,
+    padding: 12,
+    backgroundColor: '#fff'
+  },
+  publishSourceCardActive: {
+    borderColor: colors.brand,
+    backgroundColor: '#ecfdf5'
+  },
+  publishSourceTitle: {
+    fontWeight: '800',
+    color: colors.ink,
+    marginBottom: 4
+  },
+  publishSourceHint: {
+    color: colors.muted,
+    fontSize: 12,
+    lineHeight: 16
+  },
+  storePublishNote: {
+    backgroundColor: '#ecfdf5',
+    borderRadius: radius.lg,
+    padding: 14,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#bbf7d0'
   },
   promotionEmpty: {
     color: colors.muted,

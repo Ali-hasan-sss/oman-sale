@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 
 import { requireAuth } from '../../shared/middleware/auth';
+import { ensureActiveUser } from '../../shared/middleware/ensure-active-user';
 import { asyncHandler } from '../../shared/utils/async-handler';
 import { validateRequest } from '../../shared/validators/validate-request';
 import { chatController } from './chat.controller';
@@ -11,7 +12,7 @@ const conversationParams = z.object({ conversationId: z.string().uuid() });
 
 export const chatRoutes = Router();
 
-chatRoutes.use(requireAuth);
+chatRoutes.use(requireAuth, ensureActiveUser);
 chatRoutes.get(
   '/conversations',
   validateRequest({ query: listConversationsQuerySchema }),

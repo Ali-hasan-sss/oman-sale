@@ -4,6 +4,14 @@ import { prisma } from '../../shared/prisma/client';
 import type { ViewerContext } from '../../shared/utils/viewer-context';
 import type { AdminListAdsQuery, CreateAdDto, ListAdsQuery, ReportAdDto, UpdateAdDto } from './ads.validation';
 
+const storeSummarySelect = {
+  id: true,
+  nameAr: true,
+  nameEn: true,
+  slug: true,
+  logoUrl: true
+} satisfies Prisma.StoreSelect;
+
 type PublicAdListMode = 'all' | 'latest' | 'featured';
 
 const getTodayStart = () => {
@@ -20,7 +28,8 @@ export class AdsRepository {
         isActive: true,
         isSold: false,
         status: 'ACTIVE',
-        isApproved: true
+        isApproved: true,
+        OR: [{ storeId: null }, { store: { is: { deletedAt: null, isActive: true } } }]
       }),
       ...(query.type && { type: query.type }),
       ...(query.status && { status: query.status }),
@@ -51,7 +60,8 @@ export class AdsRepository {
     const include = {
       images: { where: { deletedAt: null }, orderBy: { sortOrder: 'asc' } },
       promotion: { include: { plan: true, dailyStats: { where: { date: today } } } },
-      category: true
+      category: true,
+      store: { select: storeSummarySelect }
     } satisfies Prisma.AdInclude;
     const where = this.buildWhere(query, true);
     const promotedWhere: Prisma.AdWhereInput = {
@@ -137,10 +147,11 @@ export class AdsRepository {
     return { items, total, page: query.page, limit: query.limit };
   }
 
-  async listForUser(userId: string, query: ListAdsQuery) {
+  async listForUser(userId: string, query: ListAdsQuery & { storeId?: string }) {
     const where: Prisma.AdWhereInput = {
       ...this.buildWhere(query, false),
-      userId
+      userId,
+      ...(query.storeId && { storeId: query.storeId })
     };
     const skip = (query.page - 1) * query.limit;
 
@@ -152,7 +163,8 @@ export class AdsRepository {
         include: {
           images: { where: { deletedAt: null }, orderBy: { sortOrder: 'asc' } },
           promotion: { include: { plan: true } },
-          category: true
+          category: true,
+          store: { select: storeSummarySelect }
         },
         orderBy: [{ createdAt: 'desc' }]
       }),
@@ -185,7 +197,8 @@ export class AdsRepository {
         images: { where: { deletedAt: null }, orderBy: { sortOrder: 'asc' } },
         category: true,
         user: true,
-        promotion: { include: { plan: true } }
+        promotion: { include: { plan: true } },
+        store: { select: storeSummarySelect }
       }
     });
   }
@@ -269,6 +282,7 @@ export class AdsRepository {
         approvedAt: new Date(),
         userId,
         categoryId: data.categoryId,
+        ...(data.storeId && { storeId: data.storeId }),
         images: {
           create: data.imageUrls.map((imageUrl, sortOrder) => ({ imageUrl, sortOrder }))
         },
@@ -403,7 +417,20 @@ export class AdsRepository {
 
   report(adId: string, userId: string, dto: ReportAdDto) {
     return prisma.report.create({
-      data: { adId, userId, reason: dto.reason }
+      data: { adId, userId, reason: dto.reason },
+      select: {
+        id: true,
+        reason: true,
+        createdAt: true,
+        adId: true
+      }
+    });
+  }
+
+  findReportByReporter(adId: string, userId: string) {
+    return prisma.report.findFirst({
+      where: { adId, userId, deletedAt: null },
+      select: { id: true }
     });
   }
 }

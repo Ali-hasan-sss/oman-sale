@@ -20,20 +20,29 @@ module.exports = () => {
       },
       android: {
         ...appJson.expo.android,
-        versionCode: Number(process.env.ANDROID_VERSION_CODE) || 1,
+        softwareKeyboardLayoutMode: 'resize',
+        versionCode: Number(process.env.ANDROID_VERSION_CODE) || 2,
         usesCleartextTraffic: false,
         permissions: ['INTERNET', 'ACCESS_NETWORK_STATE']
       },
       plugins: [
+        'expo-asset',
         'expo-font',
         'expo-av',
+        'expo-android-keyboard-fix',
         [
           'expo-build-properties',
           {
             android: {
               usesCleartextTraffic: false,
+              // Android 7.0+ (API 24), includes Android 12 (API 31).
+              minSdkVersion: 24,
               compileSdkVersion: 35,
-              targetSdkVersion: 35
+              // 34: broader sideload compatibility; use 35 for Play Store later.
+              targetSdkVersion: 34,
+              softwareKeyboardLayoutMode: 'resize',
+              // Helps native libs install on older devices (arm32/arm64/x86).
+              useLegacyPackaging: true
             }
           }
         ]

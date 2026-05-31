@@ -1,6 +1,6 @@
 'use client';
 
-import { BarChart3, ExternalLink, FolderTree, Globe, Image, LayoutList, Lock, LogOut, MapPin, Megaphone, Menu, Users, X } from 'lucide-react';
+import { BarChart3, Building2, ExternalLink, Flag, FolderTree, Globe, Image, LayoutList, Lock, LogOut, MapPin, Megaphone, Menu, Store, Users, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { FormEvent, PropsWithChildren, useEffect, useState } from 'react';
@@ -14,8 +14,11 @@ const navItems = [
   { key: 'home', href: '/admin', icon: BarChart3 },
   { key: 'users', href: '/admin/users', icon: Users },
   { key: 'categories', href: '/admin/categories', icon: FolderTree },
+  { key: 'reports', href: '/admin/reports', icon: Flag },
   { key: 'ads', href: '/admin/ads', icon: LayoutList },
   { key: 'promotions', href: '/admin/promotions', icon: Megaphone },
+  { key: 'storePlans', href: '/admin/store-plans', icon: Store },
+  { key: 'stores', href: '/admin/stores', icon: Building2 },
   { key: 'hero', href: '/admin/hero', icon: Image },
   { key: 'tourism', href: '/admin/tourism', icon: MapPin },
 ] as const;

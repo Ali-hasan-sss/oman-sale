@@ -1,8 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { Image, Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { useI18n } from '../i18n';
 import { colors } from '../theme';
+
+/** Matches `assets/nav-logo.png` (92×104 @1x). */
+const NAV_LOGO_WIDTH = 46;
+const NAV_LOGO_HEIGHT = 52;
 
 type AppHeaderProps = {
   onMenuPress: () => void;
@@ -25,7 +29,12 @@ export function AppHeader({ onMenuPress, showBack, onBackPress }: AppHeaderProps
         </Pressable>
       )}
       <View style={styles.brand}>
-        <Image source={require('../../assets/nav-logo.png')} style={styles.logo} resizeMode="contain" />
+        <Image
+          source={require('../../assets/nav-logo.png')}
+          style={styles.logo}
+          resizeMode="contain"
+          {...(Platform.OS === 'android' ? { resizeMethod: 'resize' as const } : {})}
+        />
       </View>
     </View>
   );
@@ -46,11 +55,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    width: 78
+    width: NAV_LOGO_WIDTH,
+    height: NAV_LOGO_HEIGHT
   },
   logo: {
-    width: 78,
-    height: 52
+    width: NAV_LOGO_WIDTH,
+    height: NAV_LOGO_HEIGHT
   },
   menuButton: {
     width: 44,

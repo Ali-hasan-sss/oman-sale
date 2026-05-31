@@ -1,11 +1,21 @@
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { BackHandler, PanResponder, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  BackHandler,
+  Keyboard,
+  type KeyboardEvent,
+  PanResponder,
+  Platform,
+  StatusBar as RNStatusBar,
+  StyleSheet,
+  View
+} from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenInsetsProvider } from '../context/screen-insets-context';
 
 import { AppHeader } from '../components/AppHeader';
+import { ChatThreadBar } from '../components/ChatThreadBar';
 import { ScreenTransition, type ScreenTransitionKind } from '../components/ScreenTransition';
 import { AuthGateModal } from '../components/AuthGateModal';
 import { BottomTabBar } from '../components/BottomTabBar';
@@ -15,6 +25,8 @@ import { SideDrawer } from '../components/SideDrawer';
 import { connectChatRealtime, disconnectChatRealtime, useAuthStore, useChatStore } from '../stores';
 import { useI18n } from '../i18n';
 import { AddOfferScreen } from '../screens/AddOfferScreen';
+import { AddStoreScreen } from '../screens/AddStoreScreen';
+import { MyStoreScreen } from '../screens/MyStoreScreen';
 import { AuthScreen } from '../screens/AuthScreen';
 import { ChatConversationScreen } from '../screens/ChatConversationScreen';
 import { ChatScreen } from '../screens/ChatScreen';
@@ -26,21 +38,23 @@ import { OffersScreen } from '../screens/OffersScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { ListingDetailScreen } from '../screens/ListingDetailScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
+import { StoreDetailScreen } from '../screens/StoreDetailScreen';
+import { StoresBrowseScreen } from '../screens/StoresBrowseScreen';
 import type { ScreenName } from '../types';
+import { CHAT_THREAD_BAR_BODY_HEIGHT } from '../constants/chat-layout';
 import { colors } from '../theme';
 
 const tabScreens: ScreenName[] = ['home', 'offers', 'myOffers', 'chat'];
-const protectedScreens: ScreenName[] = ['myOffers', 'chat', 'addOffer'];
+const protectedScreens: ScreenName[] = ['myOffers', 'chat', 'addOffer', 'addStore', 'myStore'];
 const edgeSwipeWidth = 40;
 const openSwipeThreshold = 56;
-/** Chat: exclude header, ad card, and composer from the drawer edge-swipe hit area */
-const chatEdgeSwipeTopInset = 230;
 const chatEdgeSwipeBottomInset = 100;
 
 type TabKey = (typeof tabScreens)[number];
 
 export function MainShell() {
   const { t, isRtl } = useI18n();
+  const safeInsets = useSafeAreaInsets();
   const user = useAuthStore((state) => state.user);
   const accessToken = useAuthStore((state) => state.accessToken);
   const logout = useAuthStore((state) => state.logout);
@@ -54,6 +68,7 @@ export function MainShell() {
   const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedStoreSlug, setSelectedStoreSlug] = useState<string | null>(null);
   const [navTransition, setNavTransition] = useState<ScreenTransitionKind>('tab');
   const drawerOpenRef = useRef(drawerOpen);
   const screenHistoryRef = useRef<ScreenName[]>(['home']);
@@ -112,6 +127,16 @@ export function MainShell() {
     }
   };
 
+  const openStoreDetail = (slug: string) => {
+    if (screen === 'storeDetail' && selectedStoreSlug !== slug) {
+      setNavTransition('push');
+    }
+    setSelectedStoreSlug(slug);
+    if (screen !== 'storeDetail') {
+      pushScreen('storeDetail');
+    }
+  };
+
   const goBack = () => {
     if (screenHistoryRef.current.length <= 1) return false;
     setNavTransition('pop');
@@ -122,6 +147,7 @@ export function MainShell() {
     if (target !== 'listingDetail') setSelectedListingId(null);
     if (target !== 'chatConversation') setSelectedConversationId(null);
     if (target !== 'categoryOffers') setSelectedCategoryId(null);
+    if (target !== 'storeDetail') setSelectedStoreSlug(null);
     if (tabScreens.includes(target)) setLastTab(target as TabKey);
     return true;
   };
@@ -184,19 +210,33 @@ export function MainShell() {
   const tabBarActiveScreen = tabScreens.includes(screen) ? screen : lastTab;
   const isChatConversation = screen === 'chatConversation';
   const hideTabBar = isChatConversation;
+  const hideAppHeader = isChatConversation;
+  const chatEdgeSwipeTopInset = safeInsets.top + CHAT_THREAD_BAR_BODY_HEIGHT;
+  const [tabBarKeyboardOffset, setTabBarKeyboardOffset] = useState(0);
   const isCategoryOffers = screen === 'categoryOffers';
-  const showHeaderBack = screen === 'listingDetail' || isCategoryOffers;
+  const showHeaderBack =
+    screen === 'listingDetail' ||
+    isCategoryOffers ||
+    screen === 'myStore' ||
+    screen === 'addStore' ||
+    screen === 'profile' ||
+    screen === 'settings' ||
+    screen === 'favorites' ||
+    screen === 'storesBrowse' ||
+    screen === 'storeDetail';
+
+  const homeScreenProps = {
+    onBrowseOffers: () => navigate('offers'),
+    onListingPress: openListingDetail,
+    onCategoryPress: openCategoryOffers,
+    onBrowseStores: () => pushScreen('storesBrowse'),
+    onStorePress: openStoreDetail
+  };
 
   const content = useMemo(() => {
     switch (screen) {
       case 'home':
-        return (
-          <HomeScreen
-            onBrowseOffers={() => navigate('offers')}
-            onListingPress={openListingDetail}
-            onCategoryPress={openCategoryOffers}
-          />
-        );
+        return <HomeScreen {...homeScreenProps} />;
       case 'categoryOffers':
         return selectedCategoryId ? (
           <CategoryOffersScreen
@@ -205,11 +245,15 @@ export function MainShell() {
             onListingPress={openListingDetail}
           />
         ) : (
-          <HomeScreen
-            onBrowseOffers={() => navigate('offers')}
-            onListingPress={openListingDetail}
-            onCategoryPress={openCategoryOffers}
-          />
+          <HomeScreen {...homeScreenProps} />
+        );
+      case 'storesBrowse':
+        return <StoresBrowseScreen onStorePress={openStoreDetail} />;
+      case 'storeDetail':
+        return selectedStoreSlug ? (
+          <StoreDetailScreen slug={selectedStoreSlug} onListingPress={openListingDetail} />
+        ) : (
+          <StoresBrowseScreen onStorePress={openStoreDetail} />
         );
       case 'offers':
         return <OffersScreen onListingPress={openListingDetail} />;
@@ -229,6 +273,15 @@ export function MainShell() {
         );
       case 'addOffer':
         return <AddOfferScreen onPublished={() => resetToTab('myOffers')} />;
+      case 'addStore':
+        return <AddStoreScreen onCreated={() => pushScreen('myStore')} onAlreadyHasStore={() => pushScreen('myStore')} />;
+      case 'myStore':
+        return (
+          <MyStoreScreen
+            onCreateStore={() => pushScreen('addStore')}
+            onOpenListing={openListingDetail}
+          />
+        );
       case 'login':
         return (
           <AuthScreen
@@ -254,7 +307,13 @@ export function MainShell() {
           />
         );
       case 'profile':
-        return <ProfileScreen onLogin={() => pushScreen('login')} />;
+        return (
+          <ProfileScreen
+            onLogin={() => pushScreen('login')}
+            onManageStore={() => pushScreen('myStore')}
+            onCreateStore={() => pushScreen('addStore')}
+          />
+        );
       case 'settings':
         return <SettingsScreen />;
       case 'favorites':
@@ -272,22 +331,12 @@ export function MainShell() {
             onOpenChat={openChatConversation}
           />
         ) : (
-          <HomeScreen
-            onBrowseOffers={() => navigate('offers')}
-            onListingPress={openListingDetail}
-            onCategoryPress={openCategoryOffers}
-          />
+          <HomeScreen {...homeScreenProps} />
         );
       default:
-        return (
-          <HomeScreen
-            onBrowseOffers={() => navigate('offers')}
-            onListingPress={openListingDetail}
-            onCategoryPress={openCategoryOffers}
-          />
-        );
+        return <HomeScreen {...homeScreenProps} />;
     }
-  }, [screen, user, selectedListingId, selectedConversationId, selectedCategoryId]);
+  }, [screen, user, selectedListingId, selectedConversationId, selectedCategoryId, selectedStoreSlug]);
 
   const handleLogoutConfirm = () => {
     setLogoutConfirmOpen(false);
@@ -295,40 +344,98 @@ export function MainShell() {
     resetToTab('home');
   };
 
+  useEffect(() => {
+    if (hideTabBar) {
+      setTabBarKeyboardOffset(0);
+      return;
+    }
+
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const onShow = (event: KeyboardEvent) => {
+      setTabBarKeyboardOffset(event.endCoordinates.height);
+    };
+    const onHide = () => setTabBarKeyboardOffset(0);
+
+    const showSub = Keyboard.addListener(showEvent, onShow);
+    const hideSub = Keyboard.addListener(hideEvent, onHide);
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+      setTabBarKeyboardOffset(0);
+    };
+  }, [hideTabBar]);
+
+  useEffect(() => {
+    if (!isChatConversation) return;
+    if (Platform.OS === 'android') {
+      RNStatusBar.setBackgroundColor(colors.surface);
+      RNStatusBar.setBarStyle('dark-content');
+    }
+    return () => {
+      if (Platform.OS === 'android') {
+        RNStatusBar.setBackgroundColor(colors.background);
+        RNStatusBar.setBarStyle('dark-content');
+      }
+    };
+  }, [isChatConversation]);
+
   return (
     <View style={styles.root}>
-      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-        <StatusBar style="dark" />
+      <SafeAreaView
+        style={styles.safe}
+        edges={isChatConversation ? ['left', 'right'] : ['top', 'left', 'right']}
+      >
+        <StatusBar
+          style="dark"
+          backgroundColor={isChatConversation ? colors.surface : colors.background}
+        />
         <NetworkStatusBar />
-        <AppHeader onMenuPress={() => setDrawerOpen(true)} showBack={showHeaderBack} onBackPress={goBack} />
+        {!hideAppHeader ? (
+          <AppHeader onMenuPress={() => setDrawerOpen(true)} showBack={showHeaderBack} onBackPress={goBack} />
+        ) : null}
 
         <ScreenInsetsProvider withTabBar={!hideTabBar}>
-          <View style={styles.body}>
-            <ScreenTransition
-              screenKey={`${screen}-${selectedListingId ?? ''}-${selectedConversationId ?? ''}-${selectedCategoryId ?? ''}`}
-              transition={navTransition}
-              isRtl={isRtl}
-            >
-              {content}
-            </ScreenTransition>
-          </View>
+          {isChatConversation ? (
+            <View style={styles.chatStage}>
+              <View style={styles.body}>
+                <ScreenTransition
+                  screenKey={`${screen}-${selectedListingId ?? ''}-${selectedConversationId ?? ''}-${selectedCategoryId ?? ''}-${selectedStoreSlug ?? ''}`}
+                  transition={navTransition}
+                  isRtl={isRtl}
+                >
+                  {content}
+                </ScreenTransition>
+              </View>
+              <ChatThreadBar onBack={goBack} />
+            </View>
+          ) : (
+            <View style={styles.body}>
+              <ScreenTransition
+                screenKey={`${screen}-${selectedListingId ?? ''}-${selectedConversationId ?? ''}-${selectedCategoryId ?? ''}-${selectedStoreSlug ?? ''}`}
+                transition={navTransition}
+                isRtl={isRtl}
+              >
+                {content}
+              </ScreenTransition>
+            </View>
+          )}
         </ScreenInsetsProvider>
 
         {!drawerOpen ? (
           <View
-            style={[styles.edgeSwipeZone, isChatConversation && styles.edgeSwipeZoneChat]}
-            pointerEvents="box-only"
-            {...edgePanResponder.panHandlers}
-          />
-        ) : null}
-
-        {!hideTabBar ? (
-          <BottomTabBar
-            activeScreen={tabBarActiveScreen}
-            onChange={(tab) => navigate(tab)}
-            onAddPress={() => navigate('addOffer')}
-            chatUnreadCount={chatUnreadCount}
-          />
+            style={[
+              styles.edgeSwipeZone,
+              isChatConversation && [styles.edgeSwipeZoneChat, { top: chatEdgeSwipeTopInset }]
+            ]}
+            pointerEvents="box-none"
+          >
+            <View
+              style={[styles.edgeSwipeHandle, isChatConversation && styles.edgeSwipeHandleChat]}
+              {...edgePanResponder.panHandlers}
+            />
+          </View>
         ) : null}
 
         <ConfirmDialog
@@ -359,12 +466,28 @@ export function MainShell() {
         />
       </SafeAreaView>
 
+      {!hideTabBar ? (
+        <View
+          style={[
+            styles.tabBarDock,
+            tabBarKeyboardOffset > 0 && { transform: [{ translateY: tabBarKeyboardOffset }] }
+          ]}
+        >
+          <BottomTabBar
+            activeScreen={tabBarActiveScreen}
+            onChange={(tab) => navigate(tab)}
+            onAddPress={() => navigate('addOffer')}
+            chatUnreadCount={chatUnreadCount}
+          />
+        </View>
+      ) : null}
+
       <SideDrawer
         visible={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         onLogoutRequest={() => setLogoutConfirmOpen(true)}
         onNavigate={(next) => {
-          if (next === 'profile' || next === 'settings' || next === 'favorites') {
+          if (next === 'profile' || next === 'settings' || next === 'favorites' || next === 'storesBrowse') {
             pushScreen(next);
             return;
           }
@@ -387,6 +510,18 @@ const styles = StyleSheet.create({
   body: {
     flex: 1
   },
+  chatStage: {
+    flex: 1,
+    position: 'relative'
+  },
+  tabBarDock: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 40,
+    elevation: 40
+  },
   edgeSwipeZone: {
     position: 'absolute',
     left: 0,
@@ -396,7 +531,15 @@ const styles = StyleSheet.create({
     zIndex: 5
   },
   edgeSwipeZoneChat: {
-    top: chatEdgeSwipeTopInset,
     bottom: chatEdgeSwipeBottomInset
+  },
+  edgeSwipeHandle: {
+    flex: 1,
+    width: '100%'
+  },
+  /** Chat: swipe handle only in the upper strip — composer/send stay touchable below */
+  edgeSwipeHandleChat: {
+    flex: 0,
+    height: 72
   }
 });

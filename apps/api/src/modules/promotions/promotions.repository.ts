@@ -51,6 +51,39 @@ export class PromotionsRepository {
     return prisma.promotionPlan.update({ where: { id }, data: { deletedAt: new Date(), isActive: false } });
   }
 
+  applyIncludedPromotion(input: { adId: string; planId: string; endsAt: Date }) {
+    const startsAt = new Date();
+
+    return prisma.$transaction(async (tx) => {
+      const promotion = await tx.adPromotion.upsert({
+        where: { adId: input.adId },
+        update: {
+          planId: input.planId,
+          startsAt,
+          endsAt: input.endsAt,
+          totalPrice: 0,
+          isActive: true,
+          deletedAt: null
+        },
+        create: {
+          adId: input.adId,
+          planId: input.planId,
+          startsAt,
+          endsAt: input.endsAt,
+          totalPrice: 0
+        },
+        include: { plan: true }
+      });
+
+      await tx.ad.update({
+        where: { id: input.adId },
+        data: { isActive: true, isSold: false }
+      });
+
+      return promotion;
+    });
+  }
+
   async promoteAd(dto: PromoteAdDto) {
     const plan = await prisma.promotionPlan.findUniqueOrThrow({ where: { id: dto.planId } });
     const startsAt = new Date();

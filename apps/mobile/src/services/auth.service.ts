@@ -1,6 +1,7 @@
 import { isAxiosError } from 'axios';
 
 import { API_ENDPOINTS, http, type ApiEnvelope } from '../lib/api';
+import { ApiErrorCodes, getApiErrorCode } from '../lib/api-errors';
 import type { AuthSession, Locale } from '../types';
 
 export const EMAIL_VERIFICATION_REQUIRED = 'Email verification required';
@@ -10,6 +11,11 @@ export function getApiErrorMessage(error: unknown, fallback: string) {
     return error.response?.data?.message ?? fallback;
   }
   return fallback;
+}
+
+export function isEmailVerificationRequiredError(error: unknown) {
+  if (getApiErrorCode(error) === ApiErrorCodes.EMAIL_VERIFICATION_REQUIRED) return true;
+  return isAxiosError<{ message?: string }>(error) && error.response?.data?.message === EMAIL_VERIFICATION_REQUIRED;
 }
 
 export async function loginRequest(email: string, password: string) {

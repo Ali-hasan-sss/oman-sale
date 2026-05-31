@@ -1,5 +1,6 @@
 import type { InternalAxiosRequestConfig } from 'axios';
 
+import { ApiErrorCodes, getApiErrorCode } from '../../lib/api-errors';
 import type { AuthSession } from '../../types';
 import { AUTH_PUBLIC_PATHS } from './endpoints';
 import { http } from './client';
@@ -10,6 +11,7 @@ export type ApiInterceptorDeps = {
   getAccessToken: () => string | undefined;
   refreshTokens: () => Promise<AuthTokens>;
   clearSession: () => Promise<void>;
+  markAccountRestricted?: (reason: 'blocked' | 'inactive') => Promise<void>;
 };
 
 type RetryConfig = InternalAxiosRequestConfig & {
@@ -46,6 +48,15 @@ export function setupApiInterceptors(next: ApiInterceptorDeps) {
     (response) => response,
     async (error) => {
       const originalRequest = error.config as RetryConfig | undefined;
+      const errorCode = getApiErrorCode(error);
+
+      if (error.response?.status === 403 && deps?.markAccountRestricted) {
+        if (errorCode === ApiErrorCodes.ACCOUNT_BLOCKED) {
+          await deps.markAccountRestricted('blocked');
+        } else if (errorCode === ApiErrorCodes.ACCOUNT_INACTIVE) {
+          await deps.markAccountRestricted('inactive');
+        }
+      }
 
       if (
         error.response?.status !== 401 ||

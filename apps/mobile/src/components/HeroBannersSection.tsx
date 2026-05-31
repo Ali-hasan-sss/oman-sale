@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     aspectRatio: BANNER_ASPECT,
-    backgroundColor: colors.background
+    backgroundColor: colors.brandSoft
   },
   card: {
     borderRadius: radius.lg,
@@ -332,10 +332,10 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.995 }]
   },
   image: {
-    backgroundColor: colors.background
+    backgroundColor: colors.brandSoft
   },
   imageMissing: {
-    backgroundColor: colors.line
+    backgroundColor: colors.brandSoft
   },
   textOverlay: {
     position: 'absolute',

@@ -8,14 +8,18 @@ export const categoryIconKeys = [
   'briefcase',
   'building',
   'car',
+  'dumbbell',
   'gamepad',
   'graduation',
+  'hammer',
   'heart',
   'home',
   'laptop',
   'map-pin',
   'monitor',
   'palette',
+  'paw',
+  'plane',
   'search',
   'shirt',
   'smartphone',
@@ -29,6 +33,23 @@ export const categoryIconKeys = [
   'wrench'
 ] as const;
 
+export type CategoryIconKey = (typeof categoryIconKeys)[number];
+
+export const isCategoryIconKey = (value?: string | null): value is CategoryIconKey =>
+  Boolean(value && categoryIconKeys.includes(value as CategoryIconKey));
+
+export const isCategoryEmojiIcon = (value?: string | null) =>
+  Boolean(value && !isCategoryIconKey(value) && /\p{Extended_Pictographic}/u.test(value));
+
+export const categoryIconSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(8)
+  .refine((value) => isCategoryIconKey(value) || isCategoryEmojiIcon(value), {
+    message: 'Icon must be a supported icon key or emoji'
+  });
+
 export const createCategorySchema = z.object({
   nameAr: z.string().trim().min(2).max(80),
   nameEn: z.string().trim().min(2).max(80),
@@ -39,9 +60,10 @@ export const createCategorySchema = z.object({
     .max(100)
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
     .optional(),
-  icon: z.enum(categoryIconKeys),
+  icon: categoryIconSchema,
   type: z.nativeEnum(CategoryType),
   parentId: z.string().uuid().nullable().optional(),
+  storeBaseMonthlyPrice: z.coerce.number().min(0).nullable().optional(),
   isActive: z.boolean().optional()
 });
 

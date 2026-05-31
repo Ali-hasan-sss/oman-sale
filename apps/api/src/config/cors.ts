@@ -50,6 +50,8 @@ export const corsOptions: CorsOptions = {
     'X-Viewer-Id',
     'X-Client-Source',
     'Accept',
-    'Origin'
+    'Origin',
+    'Cache-Control',
+    'Pragma'
   ]
 };

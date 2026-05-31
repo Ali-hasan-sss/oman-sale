@@ -20,6 +20,7 @@ export class CategoriesService {
 
   async create(dto: CreateCategoryDto) {
     await this.assertValidParent(dto.parentId ?? null);
+    this.assertStoreBasePrice(dto.parentId ?? null, dto.storeBaseMonthlyPrice);
     return categoriesRepository.create(dto);
   }
 
@@ -34,7 +35,21 @@ export class CategoriesService {
       await this.assertValidParent(dto.parentId, id);
     }
 
+    const nextParentId = dto.parentId !== undefined ? dto.parentId : category.parentId;
+    this.assertStoreBasePrice(nextParentId, dto.storeBaseMonthlyPrice);
+
+    if (nextParentId && dto.storeBaseMonthlyPrice !== undefined) {
+      dto = { ...dto, storeBaseMonthlyPrice: null };
+    }
+
     return categoriesRepository.update(id, dto);
+  }
+
+  private assertStoreBasePrice(parentId: string | null | undefined, storeBaseMonthlyPrice?: number | null) {
+    if (storeBaseMonthlyPrice === undefined) return;
+    if (parentId) {
+      throw new ApiError(400, 'Store base monthly price applies to main categories only');
+    }
   }
 
   private async assertValidParent(parentId: string | null, categoryId?: string) {
@@ -42,11 +57,12 @@ export class CategoriesService {
 
     const parent = await categoriesRepository.findById(parentId);
     if (!parent) throw new ApiError(400, 'Parent category not found');
-    if (parent.parentId) throw new ApiError(400, 'Subcategories can only be added under a main category');
 
     if (categoryId) {
-      const hasChildren = await categoriesRepository.hasChildren(categoryId);
-      if (hasChildren) throw new ApiError(400, 'A main category with subcategories cannot be moved under another category');
+      const createsCycle = await categoriesRepository.isUnderAncestor(categoryId, parentId);
+      if (createsCycle) {
+        throw new ApiError(400, 'Cannot move a category under one of its descendants');
+      }
     }
   }
 

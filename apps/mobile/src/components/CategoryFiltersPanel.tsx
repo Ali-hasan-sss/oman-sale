@@ -6,12 +6,13 @@ import { AppText } from './AppText';
 import { AppTextInput } from './AppTextInput';
 import { Skeleton } from './skeleton';
 import { omanCities } from '../lib/oman-cities';
+import type { SubcategoryFilterLevel } from '../lib/category-subcategory-filters';
 import type { CategoryFilter, CategoryOption } from '../services/listings.service';
 import { colors, radius, shadow } from '../theme';
 
 export type CategoryFiltersDraft = {
   search: string;
-  subcategoryId: string;
+  subcategoryPath: string[];
   city: string;
   minPrice: string;
   maxPrice: string;
@@ -39,11 +40,12 @@ type CategoryFiltersPanelProps = {
   locale: 'ar' | 'en';
   isRtl: boolean;
   messages: CategoryFiltersMessages;
-  subcategories: CategoryOption[];
+  subcategoryLevels: SubcategoryFilterLevel<CategoryOption>[];
   categoryFilters: CategoryFilter[];
   isLoadingFilters: boolean;
   draft: CategoryFiltersDraft;
   onDraftChange: (patch: Partial<CategoryFiltersDraft>) => void;
+  onSubcategorySelect: (levelIndex: number, categoryId: string) => void;
   onToggleFilterOption: (optionId: string) => void;
   onApply: () => void;
   onReset: () => void;
@@ -109,11 +111,12 @@ export function CategoryFiltersPanel({
   locale,
   isRtl,
   messages,
-  subcategories,
+  subcategoryLevels,
   categoryFilters,
   isLoadingFilters,
   draft,
   onDraftChange,
+  onSubcategorySelect,
   onToggleFilterOption,
   onApply,
   onReset,
@@ -155,27 +158,28 @@ export function CategoryFiltersPanel({
             </View>
           ) : (
             <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false} style={styles.filtersScroll}>
-              {subcategories.length > 0 ? (
-                <FilterSection title={messages.subcategories} defaultOpen isRtl={isRtl}>
+              {subcategoryLevels.map((level) => (
+                <FilterSection key={`${level.parentId}-${level.levelIndex}`} title={level.title} defaultOpen isRtl={isRtl}>
                   <FilterChip
-                    active={!draft.subcategoryId}
+                    active={!level.selectedId}
                     label={messages.all}
-                    onPress={() => onDraftChange({ subcategoryId: '' })}
+                    onPress={() => onSubcategorySelect(level.levelIndex, '')}
                   />
-                  {subcategories.map((category) => (
+                  {level.options.map((category) => (
                     <FilterChip
                       key={category.id}
-                      active={draft.subcategoryId === category.id}
+                      active={level.selectedId === category.id}
                       label={getCategoryLabel(category, locale)}
                       onPress={() =>
-                        onDraftChange({
-                          subcategoryId: draft.subcategoryId === category.id ? '' : category.id
-                        })
+                        onSubcategorySelect(
+                          level.levelIndex,
+                          level.selectedId === category.id ? '' : category.id
+                        )
                       }
                     />
                   ))}
                 </FilterSection>
-              ) : null}
+              ))}
 
               {categoryFilters.map((filter) => (
                 <FilterSection key={filter.id} title={filter.title} isRtl={isRtl}>

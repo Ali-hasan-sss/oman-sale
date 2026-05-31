@@ -9,6 +9,7 @@ import { HeaderAuthAction } from '@/components/auth/user-menu';
 import { ChatNavLink } from '@/components/chat/chat-nav-link';
 import { SiteFooter } from '@/components/home/site-footer';
 import { MobileNavMenu } from '@/components/navigation/mobile-nav-menu';
+import { AvatarWithBanBadge } from '@/components/ui/avatar-with-ban-badge';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { getStoredUser, getUserAccessToken } from '@/lib/user-auth';
@@ -24,6 +25,7 @@ type ListingUser = {
   email: string;
   phone?: string | null;
   avatar?: string | null;
+  isBlocked?: boolean;
   createdAt?: string;
 };
 
@@ -47,6 +49,13 @@ type ListingDetails = {
     nameEn?: string;
   } | null;
   user?: ListingUser | null;
+  store?: {
+    id: string;
+    nameAr: string;
+    nameEn: string;
+    slug: string;
+    logoUrl?: string | null;
+  } | null;
 };
 
 const fallbackImage = '/logo.png';
@@ -60,6 +69,7 @@ const labels = {
     report: 'الإبلاغ عن هذا الإعلان',
     similar: 'إعلانات مشابهة',
     sellerInfo: 'معلومات البائع',
+    storeListing: 'عرض متجر',
     memberSince: 'عضو منذ',
     showPhone: 'إظهار رقم الهاتف',
     sendMessage: 'أرسل رسالة',
@@ -71,7 +81,16 @@ const labels = {
     cannotMessageSelf: 'لا يمكنك إنشاء محادثة مع نفسك.',
     chatError: 'تعذر إنشاء المحادثة. حاول مرة أخرى.',
     soldBadge: 'مباع',
-    inactiveNotice: 'هذا الإعلان غير متاح حالياً.'
+    inactiveNotice: 'هذا الإعلان غير متاح حالياً.',
+    reportTitle: 'الإبلاغ عن الإعلان',
+    reportPlaceholder: 'اكتب سبب البلاغ بالتفصيل...',
+    reportSubmit: 'إرسال البلاغ',
+    reportCancel: 'إلغاء',
+    reportSuccess: 'تم إرسال البلاغ. شكراً لمساعدتنا.',
+    reportError: 'تعذر إرسال البلاغ. حاول مرة أخرى.',
+    reportLoginRequired: 'يجب تسجيل الدخول للإبلاغ عن الإعلان.',
+    reportAlreadySent: 'لقد أبلغت عن هذا الإعلان مسبقاً.',
+    reportOwnListing: 'لا يمكنك الإبلاغ عن إعلانك.'
   },
   en: {
     loading: 'Loading listing...',
@@ -81,6 +100,7 @@ const labels = {
     report: 'Report this listing',
     similar: 'Similar listings',
     sellerInfo: 'Seller information',
+    storeListing: 'Store listing',
     memberSince: 'Member since',
     showPhone: 'Show phone number',
     sendMessage: 'Send message',
@@ -92,7 +112,16 @@ const labels = {
     cannotMessageSelf: 'You cannot start a conversation with yourself.',
     chatError: 'Could not start the conversation. Try again.',
     soldBadge: 'Sold',
-    inactiveNotice: 'This listing is not available right now.'
+    inactiveNotice: 'This listing is not available right now.',
+    reportTitle: 'Report this listing',
+    reportPlaceholder: 'Describe the reason for your report...',
+    reportSubmit: 'Submit report',
+    reportCancel: 'Cancel',
+    reportSuccess: 'Your report was sent. Thank you.',
+    reportError: 'Could not send the report. Try again.',
+    reportLoginRequired: 'Sign in to report this listing.',
+    reportAlreadySent: 'You have already reported this listing.',
+    reportOwnListing: 'You cannot report your own listing.'
   }
 };
 
@@ -109,6 +138,11 @@ export function ListingDetailsPage({ id }: { id: string }) {
   const [isOpeningChat, setIsOpeningChat] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportMessage, setReportMessage] = useState('');
+  const [reportError, setReportError] = useState('');
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
   useEffect(() => {
     setIsLoading(true);
@@ -146,6 +180,57 @@ export function ListingDetailsPage({ id }: { id: string }) {
       return;
     }
     navigator.clipboard?.writeText(window.location.href).catch(() => undefined);
+  };
+
+  const openReportModal = () => {
+    const token = getUserAccessToken();
+    if (!token) {
+      router.push(localizedPath('/login'));
+      return;
+    }
+
+    const currentUser = getStoredUser();
+    if (currentUser?.id && listing?.user?.id && currentUser.id === listing.user.id) {
+      setReportError(text.reportOwnListing);
+      return;
+    }
+
+    setReportReason('');
+    setReportError('');
+    setReportMessage('');
+    setReportOpen(true);
+  };
+
+  const submitReport = async () => {
+    const token = getUserAccessToken();
+    if (!token || !listing) return;
+
+    const reason = reportReason.trim();
+    if (reason.length < 5) {
+      setReportError(text.reportError);
+      return;
+    }
+
+    setIsSubmittingReport(true);
+    setReportError('');
+
+    try {
+      await api.post(
+        `/ads/${listing.id}/reports`,
+        { reason },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setReportMessage(text.reportSuccess);
+      setReportReason('');
+      window.setTimeout(() => setReportOpen(false), 1200);
+    } catch (error: unknown) {
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      if (status === 409) setReportError(text.reportAlreadySent);
+      else if (status === 400) setReportError(text.reportOwnListing);
+      else setReportError(text.reportError);
+    } finally {
+      setIsSubmittingReport(false);
+    }
   };
 
   const openConversation = async () => {
@@ -277,7 +362,14 @@ export function ListingDetailsPage({ id }: { id: string }) {
                   <div className="whitespace-pre-line leading-relaxed text-gray-700">{listing.description}</div>
                 </div>
                 <div className="mt-6 border-t border-gray-200 pt-6">
-                  <button className="flex items-center gap-2 text-red-600 hover:text-red-700" type="button">
+                  {reportError && !reportOpen ? (
+                    <p className="mb-3 text-sm font-bold text-red-600">{reportError}</p>
+                  ) : null}
+                  <button
+                    className="flex items-center gap-2 text-red-600 hover:text-red-700"
+                    type="button"
+                    onClick={openReportModal}
+                  >
                     <Flag size={18} />
                     <span className="text-sm">{text.report}</span>
                   </button>
@@ -303,14 +395,29 @@ export function ListingDetailsPage({ id }: { id: string }) {
                 <h3 className="mb-4 text-xl font-bold">{text.sellerInfo}</h3>
                 <div className="mb-6">
                   <div className="mb-4 flex items-center gap-3">
-                    <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-green-600 to-teal-600 text-xl font-bold text-white">
-                      {listing.user?.avatar ? <img src={listing.user.avatar} alt={listing.user.fullName} className="h-full w-full object-cover" /> : <User size={26} />}
-                    </div>
+                    <AvatarWithBanBadge
+                      src={listing.store?.logoUrl ?? listing.user?.avatar}
+                      alt={listing.store ? (locale === 'en' ? listing.store.nameEn : listing.store.nameAr) : listing.user?.fullName ?? ''}
+                      size={56}
+                      isBlocked={listing.user?.isBlocked}
+                      badgeLabel={listing.user?.isBlocked ? m.profileExtra.accountBlocked : undefined}
+                      fallback={<User size={26} />}
+                    />
                     <div>
-                      <h4 className="font-bold">{listing.user?.fullName ?? '-'}</h4>
-                      <p className="text-sm text-gray-500">
-                        {text.memberSince} {listing.user?.createdAt ? new Date(listing.user.createdAt).getFullYear() : '-'}
-                      </p>
+                      <h4 className="font-bold">
+                        {listing.store
+                          ? locale === 'en'
+                            ? listing.store.nameEn
+                            : listing.store.nameAr
+                          : listing.user?.fullName ?? '-'}
+                      </h4>
+                      {listing.store ? (
+                        <p className="text-sm font-bold text-green-700">{text.storeListing}</p>
+                      ) : (
+                        <p className="text-sm text-gray-500">
+                          {text.memberSince} {listing.user?.createdAt ? new Date(listing.user.createdAt).getFullYear() : '-'}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -358,6 +465,43 @@ export function ListingDetailsPage({ id }: { id: string }) {
           </div>
         )}
       </main>
+
+      {reportOpen ? (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+            <h2 className="mb-4 text-xl font-black text-slate-900">{text.reportTitle}</h2>
+            {reportMessage ? (
+              <p className="mb-4 rounded-xl bg-green-50 px-4 py-3 text-sm font-bold text-green-700">{reportMessage}</p>
+            ) : null}
+            {reportError ? (
+              <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{reportError}</p>
+            ) : null}
+            <textarea
+              value={reportReason}
+              onChange={(event) => setReportReason(event.target.value)}
+              placeholder={text.reportPlaceholder}
+              className="min-h-32 w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-red-500"
+            />
+            <div className="mt-4 flex gap-3">
+              <button
+                type="button"
+                disabled={isSubmittingReport}
+                onClick={submitReport}
+                className="flex-1 rounded-xl bg-red-600 px-4 py-3 font-bold text-white transition hover:bg-red-700 disabled:opacity-60"
+              >
+                {text.reportSubmit}
+              </button>
+              <button
+                type="button"
+                onClick={() => setReportOpen(false)}
+                className="rounded-xl border border-slate-200 px-4 py-3 font-bold text-slate-700"
+              >
+                {text.reportCancel}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <SiteFooter />
     </div>

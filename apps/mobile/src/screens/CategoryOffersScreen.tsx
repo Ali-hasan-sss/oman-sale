@@ -22,6 +22,11 @@ import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
 import { hasMorePages } from '../lib/pagination';
 import {
+  buildSubcategoryFilterLevels,
+  getEffectiveCategoryId,
+  updateSubcategoryPath
+} from '../lib/category-subcategory-filters';
+import {
   fetchCategoryFilters,
   fetchFilteredListings,
   type CategoryFilter
@@ -48,12 +53,15 @@ type CategoryOffersScreenProps = {
 
 const emptyDraft = (): CategoryFiltersDraft => ({
   search: '',
-  subcategoryId: '',
+  subcategoryPath: [],
   city: '',
   minPrice: '',
   maxPrice: '',
   filterOptionIds: []
 });
+
+const getCategoryLabel = (category: { name?: string; nameAr?: string; nameEn?: string }, locale: 'ar' | 'en') =>
+  (locale === 'ar' ? category.nameAr : category.nameEn) ?? category.name ?? '';
 
 const parsePrice = (value: string) => {
   const trimmed = value.trim();
@@ -62,10 +70,10 @@ const parsePrice = (value: string) => {
   return Number.isFinite(numeric) && numeric >= 0 ? numeric : undefined;
 };
 
-const countActiveFilters = (applied: AppliedFilters, rootCategoryId: string) => {
+const countActiveFilters = (applied: AppliedFilters, rootCategoryId: string, subcategoryPath: string[]) => {
   let count = 0;
   if (applied.search.trim()) count += 1;
-  if (applied.categoryId && applied.categoryId !== rootCategoryId) count += 1;
+  if (getEffectiveCategoryId(rootCategoryId, subcategoryPath) !== rootCategoryId) count += subcategoryPath.filter(Boolean).length;
   if (applied.city) count += 1;
   if (applied.minPrice !== undefined) count += 1;
   if (applied.maxPrice !== undefined) count += 1;
@@ -105,12 +113,21 @@ export function CategoryOffersScreen({ categoryId, onListingPress }: CategoryOff
     [categories, categoryId]
   );
 
-  const subcategories = useMemo(
+  const subcategoryLevels = useMemo(
     () =>
-      categories
-        .filter((category) => category.parentId === categoryId)
-        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
-    [categories, categoryId]
+      buildSubcategoryFilterLevels(
+        categories,
+        categoryId,
+        draft.subcategoryPath,
+        (category) => getCategoryLabel(category, locale),
+        t.categoryOffers.subcategories
+      ),
+    [categories, categoryId, draft.subcategoryPath, locale, t.categoryOffers.subcategories]
+  );
+
+  const effectiveCategoryId = useMemo(
+    () => getEffectiveCategoryId(categoryId, draft.subcategoryPath),
+    [categoryId, draft.subcategoryPath]
   );
 
   const categoryTitle = useMemo(() => {
@@ -137,11 +154,24 @@ export function CategoryOffersScreen({ categoryId, onListingPress }: CategoryOff
     });
   }, [listings, sort]);
 
-  const activeFilterCount = countActiveFilters(applied, categoryId);
+  const activeFilterCount = countActiveFilters(applied, categoryId, draft.subcategoryPath);
 
   useEffect(() => {
     loadCategories(locale, { refresh: useListingsStore.getState().hasLoadedCategories }).catch(() => undefined);
   }, [locale, loadCategories]);
+
+  useEffect(() => {
+    const nextDraft = emptyDraft();
+    setDraft(nextDraft);
+    setApplied({
+      search: '',
+      categoryId,
+      city: '',
+      filterOptionIds: []
+    });
+    setPage(1);
+    setHasLoadedOnce(false);
+  }, [categoryId]);
 
   useEffect(() => {
     requestAnimationFrame(() => {
@@ -157,7 +187,7 @@ export function CategoryOffersScreen({ categoryId, onListingPress }: CategoryOff
     let cancelled = false;
     setIsLoadingFilters(true);
 
-    fetchCategoryFilters(categoryId, locale)
+    fetchCategoryFilters(effectiveCategoryId, locale)
       .then((items) => {
         if (!cancelled) setCategoryFilters(items);
       })
@@ -171,7 +201,7 @@ export function CategoryOffersScreen({ categoryId, onListingPress }: CategoryOff
     return () => {
       cancelled = true;
     };
-  }, [categoryId, locale]);
+  }, [effectiveCategoryId, locale]);
 
   useEffect(() => {
     let cancelled = false;
@@ -186,7 +216,7 @@ export function CategoryOffersScreen({ categoryId, onListingPress }: CategoryOff
       page: 1,
       limit: PAGE_SIZE,
       q: applied.search.trim() || undefined,
-      categoryId: applied.categoryId || categoryId,
+      categoryId: effectiveCategoryId,
       city: applied.city || undefined,
       minPrice: applied.minPrice,
       maxPrice: applied.maxPrice,
@@ -217,14 +247,14 @@ export function CategoryOffersScreen({ categoryId, onListingPress }: CategoryOff
     return () => {
       cancelled = true;
     };
-  }, [applied, categoryId]);
+  }, [applied, categoryId, effectiveCategoryId]);
 
   const applyDraft = () => {
     const minPrice = parsePrice(draft.minPrice);
     const maxPrice = parsePrice(draft.maxPrice);
     setApplied({
       search: draft.search.trim(),
-      categoryId: draft.subcategoryId || categoryId,
+      categoryId: effectiveCategoryId,
       city: draft.city,
       minPrice,
       maxPrice,
@@ -246,6 +276,15 @@ export function CategoryOffersScreen({ categoryId, onListingPress }: CategoryOff
     setPage(1);
   };
 
+  const handleSubcategorySelect = (levelIndex: number, subcategoryId: string) => {
+    const nextPath = updateSubcategoryPath(draft.subcategoryPath, levelIndex, subcategoryId);
+    const nextCategoryId = getEffectiveCategoryId(categoryId, nextPath);
+
+    setDraft((current) => ({ ...current, subcategoryPath: nextPath, filterOptionIds: [] }));
+    setApplied((current) => ({ ...current, categoryId: nextCategoryId, filterOptionIds: [] }));
+    setPage(1);
+  };
+
   const toggleFilterOption = (optionId: string) => {
     const nextOptionIds = draft.filterOptionIds.includes(optionId)
       ? draft.filterOptionIds.filter((id) => id !== optionId)
@@ -261,7 +300,7 @@ export function CategoryOffersScreen({ categoryId, onListingPress }: CategoryOff
       page: 1,
       limit: PAGE_SIZE,
       q: applied.search.trim() || undefined,
-      categoryId: applied.categoryId || categoryId,
+      categoryId: effectiveCategoryId,
       city: applied.city || undefined,
       minPrice: applied.minPrice,
       maxPrice: applied.maxPrice,
@@ -279,7 +318,7 @@ export function CategoryOffersScreen({ categoryId, onListingPress }: CategoryOff
         setHasMore(false);
       })
       .finally(() => setIsRefreshing(false));
-  }, [applied, categoryId]);
+  }, [applied, categoryId, effectiveCategoryId]);
 
   const handleLoadMore = useCallback(() => {
     if (!hasMore || isLoadingMore || isLoading) return;
@@ -290,7 +329,7 @@ export function CategoryOffersScreen({ categoryId, onListingPress }: CategoryOff
       page: nextPage,
       limit: PAGE_SIZE,
       q: applied.search.trim() || undefined,
-      categoryId: applied.categoryId || categoryId,
+      categoryId: effectiveCategoryId,
       city: applied.city || undefined,
       minPrice: applied.minPrice,
       maxPrice: applied.maxPrice,
@@ -327,11 +366,12 @@ export function CategoryOffersScreen({ categoryId, onListingPress }: CategoryOff
         locale={locale}
         isRtl={isRtl}
         messages={t.categoryOffers}
-        subcategories={subcategories}
+        subcategoryLevels={subcategoryLevels}
         categoryFilters={categoryFilters}
         isLoadingFilters={isLoadingFilters}
         draft={draft}
         onDraftChange={(patch) => setDraft((current) => ({ ...current, ...patch }))}
+        onSubcategorySelect={handleSubcategorySelect}
         onToggleFilterOption={toggleFilterOption}
         onApply={applyDraft}
         onReset={resetFilters}

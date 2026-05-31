@@ -6,8 +6,6 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,6 +14,8 @@ import {
 
 import { AppText } from '../components/AppText';
 import { AppTextInput } from '../components/AppTextInput';
+import { AvatarWithBanBadge } from '../components/AvatarWithBanBadge';
+import { KeyboardAwareScrollView } from '../components/KeyboardAwareScrollView';
 import { ProfileSkeleton } from '../components/skeleton';
 import { VerificationCodeInput } from '../components/VerificationCodeInput';
 import { useScreenInsets } from '../hooks/use-screen-insets';
@@ -27,12 +27,15 @@ import {
   updateProfileRequest,
   verifyEmailChangeRequest
 } from '../services/user.service';
+import { fetchMyStores, type OwnerStore } from '../services/stores.service';
 import { useAuthStore } from '../stores';
 import { colors, radius, shadow } from '../theme';
 import type { User } from '../types';
 
 type ProfileScreenProps = {
   onLogin: () => void;
+  onManageStore: () => void;
+  onCreateStore: () => void;
 };
 
 const HERO_GRADIENT: [string, string] = [colors.brand, '#0b5f42'];
@@ -45,7 +48,9 @@ const isSameUser = (a: User | undefined, b: User) =>
       a.email === b.email &&
       (a.phone ?? '') === (b.phone ?? '') &&
       (a.bio ?? '') === (b.bio ?? '') &&
-      (a.avatar ?? '') === (b.avatar ?? '')
+      (a.avatar ?? '') === (b.avatar ?? '') &&
+      Boolean(a.isBlocked) === Boolean(b.isBlocked) &&
+      Boolean(a.isActive) === Boolean(b.isActive)
   );
 
 function FieldLabel({ children, isRtl }: { children: string; isRtl: boolean }) {
@@ -73,7 +78,7 @@ function SectionCard({ children, icon }: { children: ReactNode; icon: keyof type
   );
 }
 
-export function ProfileScreen({ onLogin }: ProfileScreenProps) {
+export function ProfileScreen({ onLogin, onManageStore, onCreateStore }: ProfileScreenProps) {
   const { locale, t, isRtl } = useI18n();
   const { scrollBottomPadding } = useScreenInsets();
   const scrollContentStyle = [styles.scrollContent, { paddingBottom: scrollBottomPadding }];
@@ -104,6 +109,7 @@ export function ProfileScreen({ onLogin }: ProfileScreenProps) {
   const [passwordError, setPasswordError] = useState('');
   const [emailMessage, setEmailMessage] = useState('');
   const [emailError, setEmailError] = useState('');
+  const [ownerStore, setOwnerStore] = useState<OwnerStore | null>(null);
 
   const textAlign = isRtl ? styles.rtl : styles.ltr;
   const inputAlign = isRtl ? styles.inputRtl : styles.inputLtr;
@@ -165,6 +171,16 @@ export function ProfileScreen({ onLogin }: ProfileScreenProps) {
       cancelled = true;
     };
   }, [user?.id, accessToken, applyUser, setSession]);
+
+  useEffect(() => {
+    if (!accessToken) {
+      setOwnerStore(null);
+      return;
+    }
+    fetchMyStores()
+      .then((stores) => setOwnerStore(stores[0] ?? null))
+      .catch(() => setOwnerStore(null));
+  }, [accessToken, user?.id]);
 
   const pickAvatar = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -298,16 +314,11 @@ export function ProfileScreen({ onLogin }: ProfileScreenProps) {
   const avatarInitial = (fullName || user.fullName || '?').slice(0, 1).toUpperCase();
 
   return (
-    <KeyboardAvoidingView
+    <KeyboardAwareScrollView
       style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
+      contentContainerStyle={scrollContentStyle}
+      showsVerticalScrollIndicator={false}
     >
-      <ScrollView
-        contentContainerStyle={scrollContentStyle}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
         <LinearGradient colors={HERO_GRADIENT} style={styles.hero}>
           <AppText style={[styles.heroKicker, textAlign]}>Oman Sale</AppText>
           <AppText style={[styles.heroTitle, textAlign]}>{t.profile.title}</AppText>
@@ -315,18 +326,26 @@ export function ProfileScreen({ onLogin }: ProfileScreenProps) {
         </LinearGradient>
 
         <View style={styles.card}>
+          <AppText style={[styles.cardTitle, textAlign]}>{t.profile.storeTitle}</AppText>
+          <AppText style={[styles.avatarHint, textAlign]}>{t.profile.storeSubtitle}</AppText>
+          <Pressable style={styles.primaryButton} onPress={ownerStore ? onManageStore : onCreateStore}>
+            <AppText style={styles.primaryButtonText}>
+              {ownerStore ? t.profile.manageStore : t.profile.createStore}
+            </AppText>
+          </Pressable>
+        </View>
+
+        <View style={styles.card}>
           <AppText style={[styles.cardTitle, textAlign]}>{t.profile.personalInfo}</AppText>
 
           <View style={[styles.avatarRow, isRtl && styles.avatarRowRtl]}>
-            <View style={styles.avatarWrap}>
-              {avatar ? (
-                <Image source={{ uri: avatar }} style={styles.avatarImage} />
-              ) : (
-                <View style={styles.avatarFallback}>
-                  <AppText style={styles.avatarInitial}>{avatarInitial}</AppText>
-                </View>
-              )}
-            </View>
+            <AvatarWithBanBadge
+              uri={avatar}
+              fallbackLabel={avatarInitial}
+              size={96}
+              isBlocked={user?.isBlocked}
+              badgeLabel={user?.isBlocked ? t.profile.accountBlocked : undefined}
+            />
 
             <View style={styles.avatarActions}>
               <AppText style={[styles.avatarHint, textAlign]}>{t.profile.avatarHint}</AppText>
@@ -491,8 +510,7 @@ export function ProfileScreen({ onLogin }: ProfileScreenProps) {
             </Pressable>
           )}
         </SectionCard>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }
 
