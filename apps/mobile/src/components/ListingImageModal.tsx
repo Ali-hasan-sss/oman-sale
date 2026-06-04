@@ -54,6 +54,18 @@ export function ListingImageModal({
     setActiveIndex(index);
   };
 
+  const goPrev = () => {
+    const nextIndex = activeIndex > 0 ? activeIndex - 1 : images.length - 1;
+    setActiveIndex(nextIndex);
+    listRef.current?.scrollToIndex({ index: nextIndex, animated: true });
+  };
+
+  const goNext = () => {
+    const nextIndex = activeIndex < images.length - 1 ? activeIndex + 1 : 0;
+    setActiveIndex(nextIndex);
+    listRef.current?.scrollToIndex({ index: nextIndex, animated: true });
+  };
+
   if (images.length === 0) return null;
 
   return (
@@ -92,6 +104,17 @@ export function ListingImageModal({
           )}
           onScrollToIndexFailed={() => undefined}
         />
+
+        {images.length > 1 ? (
+          <>
+            <Pressable style={[styles.navButton, styles.navButtonPrev]} onPress={goPrev} accessibilityRole="button">
+              <Ionicons name="chevron-back" size={28} color="#fff" />
+            </Pressable>
+            <Pressable style={[styles.navButton, styles.navButtonNext]} onPress={goNext} accessibilityRole="button">
+              <Ionicons name="chevron-forward" size={28} color="#fff" />
+            </Pressable>
+          </>
+        ) : null}
 
         {images.length > 1 ? (
           <View style={[styles.dots, { paddingBottom: insets.bottom + 16 }]}>
@@ -172,5 +195,22 @@ const styles = StyleSheet.create({
   dotActive: {
     width: 20,
     backgroundColor: colors.brand
+  },
+  navButton: {
+    position: 'absolute',
+    top: '50%',
+    marginTop: -24,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.45)'
+  },
+  navButtonPrev: {
+    left: 12
+  },
+  navButtonNext: {
+    right: 12
   }
 });

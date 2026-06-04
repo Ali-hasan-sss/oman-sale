@@ -25,14 +25,14 @@ export function MobileNavMenu({ variant = 'light' }: MobileNavMenuProps) {
       : 'rounded-lg border border-gray-300 px-3 py-2 text-sm transition hover:bg-gray-50';
 
   return (
-    <div className="flex items-center gap-2 lg:hidden">
+    <div className="flex items-center gap-2 md:hidden">
       <HeaderAuthAction loginClassName={loginClass} />
       <button aria-label="Open navigation" className={buttonClass} onClick={() => setIsOpen(true)} type="button">
         <Menu size={22} />
       </button>
 
       {isOpen ? (
-        <div className="fixed inset-0 z-[90] lg:hidden">
+        <div className="fixed inset-0 z-[90] md:hidden">
           <button className="absolute inset-0 bg-black/40" onClick={() => setIsOpen(false)} type="button" aria-label="Close navigation" />
           <aside
             className={`absolute top-0 h-full w-80 max-w-[85vw] bg-white p-5 shadow-2xl ${

@@ -17,6 +17,7 @@ import { ListingCard } from '../components/ListingCard';
 import { StoreDetailSkeleton } from '../components/skeleton';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
+import { getCityLabel } from '../lib/oman-cities';
 import { fetchPublicStoreAds, fetchPublicStoreBySlug, type PublicStore } from '../services/stores.service';
 import type { Listing } from '../types';
 import { colors, radius, shadow } from '../theme';
@@ -127,7 +128,8 @@ export function StoreDetailScreen({ slug, onListingPress }: StoreDetailScreenPro
 
   const storeName = locale === 'en' ? store.nameEn : store.nameAr;
   const storeBio = locale === 'en' ? store.bioEn : store.bioAr;
-  const categoryName = locale === 'en' ? store.rootCategory?.nameEn : store.rootCategory?.nameAr;
+  const typeName = locale === 'en' ? store.storeType?.nameEn : store.storeType?.nameAr;
+  const cityLabel = getCityLabel(store.city ?? '', locale);
 
   return (
     <ScrollView
@@ -162,10 +164,20 @@ export function StoreDetailScreen({ slug, onListingPress }: StoreDetailScreenPro
           )}
         </View>
         <AppText style={[styles.storeName, textAlign]}>{storeName}</AppText>
-        {categoryName ? <AppText style={[styles.category, textAlign]}>{categoryName}</AppText> : null}
+        {typeName ? (
+          <View style={styles.typeBadge}>
+            <AppText style={styles.typeBadgeText}>{typeName}</AppText>
+          </View>
+        ) : null}
         {storeBio ? <AppText style={[styles.bio, textAlign]}>{storeBio}</AppText> : null}
 
         <View style={styles.metaRow}>
+          {cityLabel ? (
+            <View style={styles.cityBadge}>
+              <Ionicons name="location-outline" size={16} color={colors.brandDark} />
+              <AppText style={styles.cityText}>{cityLabel}</AppText>
+            </View>
+          ) : null}
           {store.phone ? (
             <Pressable style={styles.phoneButton} onPress={() => Linking.openURL(`tel:${store.phone}`)}>
               <Ionicons name="call-outline" size={18} color={colors.brandDark} />
@@ -291,6 +303,19 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginBottom: 8
   },
+  typeBadge: {
+    alignSelf: 'flex-start',
+    marginBottom: 8,
+    borderRadius: radius.pill,
+    backgroundColor: '#ecfdf5',
+    paddingHorizontal: 10,
+    paddingVertical: 5
+  },
+  typeBadgeText: {
+    color: '#047857',
+    fontWeight: '800',
+    fontSize: 12
+  },
   bio: {
     color: colors.muted,
     lineHeight: 22,
@@ -301,6 +326,23 @@ const styles = StyleSheet.create({
     width: '100%',
     gap: 10,
     marginBottom: 8
+  },
+  cityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.md,
+    paddingVertical: 8,
+    paddingHorizontal: 12
+  },
+  cityText: {
+    fontWeight: '700',
+    color: colors.ink,
+    fontSize: 13
   },
   phoneButton: {
     flexDirection: 'row',

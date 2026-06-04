@@ -1,19 +1,17 @@
 'use client';
 
-import { Globe, Search, Store } from 'lucide-react';
-import Link from 'next/link';
+import { Store } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 
-import { HeaderAuthAction } from '@/components/auth/user-menu';
-import { ChatNavLink } from '@/components/chat/chat-nav-link';
 import { SiteFooter } from '@/components/home/site-footer';
-import { MobileNavMenu } from '@/components/navigation/mobile-nav-menu';
+import { SiteHeaderSearch, UserSiteHeader } from '@/components/navigation/user-site-header';
 import { StorePlanCard } from '@/components/stores/store-plan-card';
 import { api } from '@/lib/api';
 import { resolveApiErrorMessage } from '@/lib/api-errors';
 import { buildCategoryTree } from '@/lib/category-tree';
 import { useI18n } from '@/lib/i18n';
+import { omanCities } from '@/lib/oman-cities';
 import { getUserAccessToken } from '@/lib/user-auth';
 
 type RootCategory = {
@@ -53,6 +51,10 @@ const labels = {
     bioEn: 'نبذة عن المتجر (إنجليزي)',
     category: 'الفئة الرئيسية *',
     selectCategory: 'اختر الفئة الرئيسية',
+    storeType: 'نوع المتجر *',
+    selectStoreType: 'اختر نوع المتجر',
+    city: 'المحافظة / المنطقة *',
+    selectCity: 'اختر المحافظة',
     phone: 'رقم التواصل *',
     nationalId: 'رقم الهوية / جواز السفر *',
     nationalIdHint: 'البطاقة الشخصية العمانية أو جواز السفر',
@@ -89,6 +91,10 @@ const labels = {
     bioEn: 'Store bio (English)',
     category: 'Main category *',
     selectCategory: 'Select main category',
+    storeType: 'Store type *',
+    selectStoreType: 'Select store type',
+    city: 'Governorate / region *',
+    selectCity: 'Select governorate',
     phone: 'Contact phone *',
     nationalId: 'National ID / Passport *',
     nationalIdHint: 'Omani civil ID or passport number',
@@ -120,12 +126,15 @@ const labels = {
 
 export function CreateStorePage() {
   const router = useRouter();
-  const { dir, locale, localizedPath, m, toggleLocale } = useI18n();
+  const { dir, locale, localizedPath, m } = useI18n();
   const text = labels[locale];
 
   const [categories, setCategories] = useState<RootCategory[]>([]);
+  const [storeTypes, setStoreTypes] = useState<Array<{ id: string; nameAr: string; nameEn: string }>>([]);
   const [plans, setPlans] = useState<StorePlan[]>([]);
   const [rootCategoryId, setRootCategoryId] = useState('');
+  const [storeTypeId, setStoreTypeId] = useState('');
+  const [city, setCity] = useState('');
   const [planId, setPlanId] = useState('');
   const [billingPeriod, setBillingPeriod] = useState<'MONTHLY' | 'YEARLY'>('MONTHLY');
   const [nameAr, setNameAr] = useState('');
@@ -159,6 +168,11 @@ export function CreateStorePage() {
     api
       .get<{ data: RootCategory[] }>('/categories', { params: { locale, includeInactive: false } })
       .then((response) => setCategories(response.data.data))
+      .catch(() => setError(text.loadError));
+
+    api
+      .get<{ data: Array<{ id: string; nameAr: string; nameEn: string }> }>('/store-types')
+      .then((response) => setStoreTypes(response.data.data))
       .catch(() => setError(text.loadError))
       .finally(() => setIsLoading(false));
 
@@ -196,7 +210,7 @@ export function CreateStorePage() {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!planId || !rootCategoryId) return;
+    if (!planId || !rootCategoryId || !storeTypeId || !city) return;
 
     setError('');
     setIsSubmitting(true);
@@ -213,6 +227,8 @@ export function CreateStorePage() {
           nationalId: nationalId.trim(),
           commercialRegistrationNumber: commercialRegistrationNumber.trim(),
           rootCategoryId,
+          storeTypeId,
+          city,
           planId,
           billingPeriod
         },
@@ -247,28 +263,11 @@ export function CreateStorePage() {
 
   return (
     <div className="min-h-screen bg-gray-50" dir={dir}>
-      <header className="sticky top-0 z-50 bg-white shadow-sm">
-        <div className="mx-auto max-w-7xl px-4 py-4">
-          <div className="mb-4 flex items-center justify-between gap-4">
-            <Link className="flex items-center gap-3" href={localizedPath('/')}>
-              <img src="/logo.png" alt="Oman Sale" className="h-14 w-auto" />
-            </Link>
-            <MobileNavMenu />
-            <div className="hidden items-center gap-4 lg:flex">
-              <button className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2" onClick={toggleLocale} type="button">
-                <Globe size={18} />
-                <span className="text-sm">{m.common.languageSwitch}</span>
-              </button>
-              <ChatNavLink className="rounded-lg border border-gray-300 px-4 py-2" />
-              <HeaderAuthAction loginClassName="rounded-lg bg-green-600 px-4 py-2 text-white" />
-            </div>
-          </div>
-          <div className="relative hidden max-w-xl lg:block">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4" placeholder={m.home.searchPlaceholder} />
-          </div>
+      <UserSiteHeader>
+        <div className="hidden max-w-xl md:block">
+          <SiteHeaderSearch />
         </div>
-      </header>
+      </UserSiteHeader>
 
       <main className="mx-auto max-w-3xl px-4 py-10">
         {hasExistingStore ? (
@@ -301,6 +300,30 @@ export function CreateStorePage() {
                   {rootCategories.map((category) => (
                     <option key={category.id} value={category.id}>
                       {locale === 'en' ? category.nameEn || category.name : category.nameAr || category.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-sm font-bold">{text.storeType}</span>
+                <select className={inputClass} value={storeTypeId} onChange={(e) => setStoreTypeId(e.target.value)} required>
+                  <option value="">{text.selectStoreType}</option>
+                  {storeTypes.map((storeType) => (
+                    <option key={storeType.id} value={storeType.id}>
+                      {locale === 'en' ? storeType.nameEn : storeType.nameAr}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-sm font-bold">{text.city}</span>
+                <select className={inputClass} value={city} onChange={(e) => setCity(e.target.value)} required>
+                  <option value="">{text.selectCity}</option>
+                  {omanCities.map((cityOption) => (
+                    <option key={cityOption.value} value={cityOption.value}>
+                      {locale === 'en' ? cityOption.en : cityOption.ar}
                     </option>
                   ))}
                 </select>
@@ -388,7 +411,7 @@ export function CreateStorePage() {
 
               <button
                 type="submit"
-                disabled={isSubmitting || !planId || !rootCategoryId || plans.length === 0 || isLoadingPlans}
+                disabled={isSubmitting || !planId || !rootCategoryId || !storeTypeId || !city || plans.length === 0 || isLoadingPlans}
                 className="w-full rounded-lg bg-green-600 px-6 py-3 font-bold text-white transition hover:bg-green-700 disabled:opacity-60"
               >
                 {isSubmitting ? text.submitting : isTrialEligible ? text.submitTrial : isFreePlan ? text.submitFree : text.submit}

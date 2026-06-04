@@ -1,19 +1,19 @@
 'use client';
 
-import { ChevronDown, Filter, Globe, MapPin, Search, SlidersHorizontal } from 'lucide-react';
+import { ChevronDown, Filter, MapPin, SlidersHorizontal } from 'lucide-react';
 import Link from 'next/link';
 import { ReactNode, useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-import { HeaderAuthAction } from '@/components/auth/user-menu';
-import { ChatNavLink } from '@/components/chat/chat-nav-link';
 import { SiteFooter } from '@/components/home/site-footer';
-import { MobileNavMenu } from '@/components/navigation/mobile-nav-menu';
+import { SiteHeaderSearch, UserSiteHeader } from '@/components/navigation/user-site-header';
 import { api } from '@/lib/api';
 import {
   buildSubcategoryFilterLevels,
   getEffectiveCategoryId,
   updateSubcategoryPath
 } from '@/lib/category-subcategory-filters';
+import { buildCategoryTree } from '@/lib/category-tree';
 import { useI18n } from '@/lib/i18n';
 import { getUserAccessToken } from '@/lib/user-auth';
 import { FavoriteButton } from './favorite-button';
@@ -139,8 +139,12 @@ const listingsPageMessages = {
 const fallbackImage = '/logo.png';
 
 export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}) {
-  const { dir, locale, localizedPath, m, toggleLocale } = useI18n();
+  const { dir, locale, localizedPath } = useI18n();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlSearch = (searchParams.get('q') ?? '').trim();
   const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [listings, setListings] = useState<Listing[]>([]);
   const [categoryFilters, setCategoryFilters] = useState<CategoryFilter[]>([]);
   const [selectedSubcategoryPath, setSelectedSubcategoryPath] = useState<string[]>([]);
@@ -151,7 +155,6 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
   const [appliedCity, setAppliedCity] = useState('');
   const [appliedMinPrice, setAppliedMinPrice] = useState('');
   const [appliedMaxPrice, setAppliedMaxPrice] = useState('');
-  const [search, setSearch] = useState('');
   const [city, setCity] = useState('');
   const [minPrice, setMinPrice] = useState(priceFloor);
   const [maxPrice, setMaxPrice] = useState(priceCeiling);
@@ -166,6 +169,7 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
     ? categories.find((category) => category.slug === decodedCategorySlug)
     : undefined;
   const isCategoryPage = Boolean(decodedCategorySlug);
+  const rootCategories = useMemo(() => buildCategoryTree(categories), [categories]);
   const subcategoryLevels = activeCategory
     ? buildSubcategoryFilterLevels(
         categories,
@@ -180,10 +184,12 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
     : appliedCategoryId;
 
   useEffect(() => {
+    setIsLoadingCategories(true);
     api
       .get<{ data: Category[] }>('/categories', { params: { locale } })
       .then((response) => setCategories(response.data.data))
-      .catch(() => setCategories([]));
+      .catch(() => setCategories([]))
+      .finally(() => setIsLoadingCategories(false));
   }, [locale]);
 
   useEffect(() => {
@@ -202,6 +208,11 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
     setSelectedSubcategoryPath([]);
     setSelectedFilterOptionIds([]);
   }, [activeCategory?.id]);
+
+  useEffect(() => {
+    setAppliedSearch(urlSearch);
+    setPage(1);
+  }, [urlSearch]);
 
   useEffect(() => {
     setSelectedFilterOptionIds([]);
@@ -285,6 +296,7 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
 
   const resetFilters = () => {
     setSelectedSubcategoryPath([]);
+    setSelectedCategoryId('');
     setAppliedCategoryId('');
     setCity('');
     setAppliedCity('');
@@ -292,15 +304,36 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
     setMaxPrice(priceCeiling);
     setAppliedMinPrice('');
     setAppliedMaxPrice('');
-    setSearch('');
-    setAppliedSearch('');
+    setSelectedFilterOptionIds([]);
+    setPage(1);
+
+    if (isCategoryPage && decodedCategorySlug) {
+      router.push(localizedPath(`/category/${decodedCategorySlug}`));
+    } else {
+      router.push(localizedPath('/all-listings'));
+    }
+  };
+
+  const selectRootCategory = (categoryId: string) => {
+    setSelectedCategoryId(categoryId);
+    setAppliedCategoryId(categoryId);
+    setSelectedFilterOptionIds([]);
+    setPage(1);
+  };
+
+  const clearRootCategory = () => {
+    setSelectedCategoryId('');
+    setAppliedCategoryId('');
     setSelectedFilterOptionIds([]);
     setPage(1);
   };
 
   const applyFilters = () => {
-    setAppliedSearch(search);
-    setAppliedCategoryId(getEffectiveCategoryId(activeCategory?.id ?? '', selectedSubcategoryPath));
+    setAppliedCategoryId(
+      isCategoryPage
+        ? getEffectiveCategoryId(activeCategory?.id ?? '', selectedSubcategoryPath)
+        : selectedCategoryId
+    );
     setAppliedCity(city);
     setAppliedMinPrice(minPrice > priceFloor ? String(minPrice) : '');
     setAppliedMaxPrice(maxPrice < priceCeiling ? String(maxPrice) : '');
@@ -403,41 +436,9 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
 
   return (
     <div className="min-h-screen bg-gray-50" dir={dir}>
-      <header className="sticky top-0 z-50 bg-white shadow-sm">
-        <div className="mx-auto max-w-7xl px-4 py-4">
-          <div className="mb-4 flex items-center justify-between gap-4">
-            <Link href={localizedPath('/')} className="flex items-center gap-3">
-              <img src="/logo.png" alt="Oman Sale" className="h-14 w-auto" />
-            </Link>
-            <MobileNavMenu />
-            <div className="hidden items-center gap-4 lg:flex">
-              <button onClick={toggleLocale} className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 transition hover:bg-gray-50">
-                <Globe size={18} />
-                <span className="text-sm">{m.common.languageSwitch}</span>
-              </button>
-              <ChatNavLink className="rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-50" />
-              <HeaderLink href="/all-listings" label={m.common.allListings} />
-              <HeaderLink href="/my-listings" label={m.common.myListings} />
-              <Link href={localizedPath('/add-listing')} className="rounded-lg bg-green-600 px-4 py-2 text-white transition hover:bg-green-700">
-                {m.common.addListing}
-              </Link>
-              <HeaderAuthAction loginClassName="rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-50" />
-            </div>
-          </div>
-          <div className="relative">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-            <input
-              value={search}
-              onChange={(event) => {
-                setSearch(event.target.value);
-              }}
-              type="text"
-              placeholder={m.home.searchPlaceholder}
-              className="w-full rounded-lg border border-gray-300 py-3 pl-4 pr-12 outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
-        </div>
-      </header>
+      <UserSiteHeader>
+        <SiteHeaderSearch />
+      </UserSiteHeader>
 
       <main className="mx-auto max-w-7xl px-4 py-8">
         <div className="mb-8">
@@ -531,26 +532,32 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
           </div>
         ) : (
           <>
-            <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
+            <div className="filter-chips-scroll mb-6 flex gap-2 overflow-x-auto pb-2">
               <button
-                onClick={() => {
-                  setSelectedCategoryId('');
-                }}
-                className={`whitespace-nowrap rounded-full px-4 py-2 transition ${!selectedCategoryId ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                onClick={clearRootCategory}
+                className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 transition ${!appliedCategoryId ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
               >
                 {pageMessages.all}
               </button>
-              {categories.slice(0, 10).map((category) => (
-                <button
-                  key={category.id}
-                  onClick={() => {
-                    setSelectedCategoryId(category.id);
-                  }}
-                  className={`whitespace-nowrap rounded-full px-4 py-2 transition ${selectedCategoryId === category.id ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                >
-                  {category.name}
-                </button>
-              ))}
+              {isLoadingCategories
+                ? Array.from({ length: 8 }).map((_, index) => (
+                    <div
+                      key={index}
+                      className="h-9 shrink-0 animate-pulse rounded-full bg-slate-200"
+                      style={{ width: 72 + (index % 3) * 16 }}
+                    />
+                  ))
+                : rootCategories.map((category) => (
+                  <button
+                    key={category.id}
+                    onClick={() =>
+                      appliedCategoryId === category.id ? clearRootCategory() : selectRootCategory(category.id)
+                    }
+                    className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 transition ${appliedCategoryId === category.id ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                  >
+                    {category.name}
+                  </button>
+                ))}
             </div>
 
             <div className="mb-8 rounded-lg bg-white p-4 shadow-sm">
@@ -599,14 +606,6 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
       <SiteFooter />
     </div>
   );
-
-  function HeaderLink({ href, label }: { href: string; label: string }) {
-    return (
-      <Link href={localizedPath(href)} className="rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-50">
-        {label}
-      </Link>
-    );
-  }
 }
 
 function ListingCard({

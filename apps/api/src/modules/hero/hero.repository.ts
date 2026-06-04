@@ -4,9 +4,13 @@ import { prisma } from '../../shared/prisma/client';
 import { heroSlideAdminSelect } from './hero-slide.mapper';
 
 export class HeroRepository {
+  private platformWhere(platform: HeroSlidePlatform): Prisma.HeroSlideWhereInput {
+    return { OR: [{ platform }, { platform: 'ALL' }] };
+  }
+
   listActive(platform: HeroSlidePlatform = 'WEB') {
     return prisma.heroSlide.findMany({
-      where: { isActive: true, platform },
+      where: { isActive: true, ...this.platformWhere(platform) },
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
       select: heroSlideAdminSelect
     });
@@ -14,7 +18,7 @@ export class HeroRepository {
 
   listAll(platform?: HeroSlidePlatform) {
     return prisma.heroSlide.findMany({
-      where: platform ? { platform } : undefined,
+      where: platform ? this.platformWhere(platform) : undefined,
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
       select: heroSlideAdminSelect
     });
@@ -43,8 +47,13 @@ export class HeroRepository {
   }
 
   listActiveBanners() {
+    const now = new Date();
     return prisma.heroBanner.findMany({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        OR: [{ startsAt: null }, { startsAt: { lte: now } }],
+        AND: [{ OR: [{ endsAt: null }, { endsAt: { gte: now } }] }]
+      },
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }]
     });
   }

@@ -1,16 +1,15 @@
 'use client';
 
-import { Globe, MapPin, Phone, Store } from 'lucide-react';
+import { MapPin, Phone, Store } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 
-import { HeaderAuthAction } from '@/components/auth/user-menu';
-import { ChatNavLink } from '@/components/chat/chat-nav-link';
 import { SiteFooter } from '@/components/home/site-footer';
-import { MobileNavMenu } from '@/components/navigation/mobile-nav-menu';
+import { UserSiteHeader } from '@/components/navigation/user-site-header';
 import { FavoriteButton } from '@/components/listings/favorite-button';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
+import { getCityLabel } from '@/lib/oman-cities';
 
 type PublicStore = {
   id: string;
@@ -22,8 +21,10 @@ type PublicStore = {
   logoUrl?: string | null;
   coverUrl?: string | null;
   phone?: string | null;
+  city?: string | null;
   listingsCount: number;
   rootCategory?: { id: string; nameAr: string; nameEn: string; slug: string };
+  storeType?: { id: string; nameAr: string; nameEn: string; slug: string; icon?: string | null } | null;
   owner?: { id: string; fullName: string; avatar?: string | null } | null;
 };
 
@@ -49,7 +50,7 @@ type ListingsResponse = {
 const fallbackImage = '/logo.png';
 
 export function StorePublicPage({ slug }: { slug: string }) {
-  const { dir, locale, localizedPath, m, toggleLocale } = useI18n();
+  const { dir, locale, localizedPath, m } = useI18n();
   const text = m.storePublic;
 
   const [store, setStore] = useState<PublicStore | null>(null);
@@ -105,36 +106,17 @@ export function StorePublicPage({ slug }: { slug: string }) {
 
   const storeName = store ? (locale === 'en' ? store.nameEn : store.nameAr) : '';
   const storeBio = store ? (locale === 'en' ? store.bioEn : store.bioAr) : '';
-  const categoryName = store
+  const typeName = store
     ? locale === 'en'
-      ? store.rootCategory?.nameEn
-      : store.rootCategory?.nameAr
+      ? store.storeType?.nameEn
+      : store.storeType?.nameAr
     : '';
+  const cityLabel = store ? getCityLabel(store.city, locale) : '';
   const hasMore = listings.length < total;
 
   return (
     <div className="min-h-screen bg-gray-50" dir={dir}>
-      <header className="sticky top-0 z-50 bg-white shadow-sm">
-        <div className="mx-auto max-w-7xl px-4 py-4">
-          <div className="flex items-center justify-between gap-4">
-            <Link href={localizedPath('/')} className="flex items-center gap-3">
-              <img src="/logo.png" alt="Oman Sale" className="h-14 w-auto" />
-            </Link>
-            <MobileNavMenu />
-            <div className="hidden items-center gap-4 lg:flex">
-              <button type="button" onClick={toggleLocale} className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2">
-                <Globe size={18} />
-                <span className="text-sm">{m.common.languageSwitch}</span>
-              </button>
-              <ChatNavLink className="rounded-lg border border-gray-300 px-4 py-2" />
-              <Link href={localizedPath('/stores')} className="rounded-lg border border-gray-300 px-4 py-2">
-                {m.storesBrowse.title}
-              </Link>
-              <HeaderAuthAction loginClassName="rounded-lg border border-gray-300 px-4 py-2" />
-            </div>
-          </div>
-        </div>
-      </header>
+      <UserSiteHeader />
 
       {isLoadingStore ? (
         <div className="py-24 text-center font-bold text-gray-500">{text.loading}</div>
@@ -172,9 +154,19 @@ export function StorePublicPage({ slug }: { slug: string }) {
                     {text.backToStores}
                   </Link>
                   <h1 className="text-3xl font-black text-gray-900">{storeName}</h1>
-                  {categoryName ? <p className="mt-1 text-sm font-bold text-green-700">{categoryName}</p> : null}
+                  {typeName ? (
+                    <span className="mt-2 inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-sm font-bold text-emerald-700 ring-1 ring-emerald-100">
+                      {typeName}
+                    </span>
+                  ) : null}
                   {storeBio ? <p className="mt-4 max-w-3xl whitespace-pre-wrap leading-relaxed text-gray-600">{storeBio}</p> : null}
                   <div className="mt-5 flex flex-wrap gap-4 text-sm text-gray-700">
+                    {cityLabel ? (
+                      <span className="inline-flex items-center gap-2 font-bold">
+                        <MapPin size={18} className="text-green-600" />
+                        {cityLabel}
+                      </span>
+                    ) : null}
                     {store.phone ? (
                       <a href={`tel:${store.phone}`} className="inline-flex items-center gap-2 font-bold" dir="ltr">
                         <Phone size={18} className="text-green-600" />

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -13,12 +13,11 @@ import {
 import { AppText } from '../components/AppText';
 import { AppTextInput } from '../components/AppTextInput';
 import { EmptyState } from '../components/EmptyState';
-import { StoreBrowseGridSkeleton } from '../components/skeleton';
+import { FilterChipsSkeleton, StoreBrowseGridSkeleton } from '../components/skeleton';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
-import { buildCategoryTree } from '../lib/category-tree';
-import { fetchCategories } from '../services/listings.service';
-import { fetchPublicStores, type PublicStore } from '../services/stores.service';
+import { getCityLabel, omanCities } from '../lib/oman-cities';
+import { fetchPublicStores, fetchStoreTypes, type PublicStore, type StoreType } from '../services/stores.service';
 import { colors, radius, shadow } from '../theme';
 
 const fallbackLogo = require('../../assets/nav-logo.png');
@@ -33,26 +32,29 @@ export function StoresBrowseScreen({ onStorePress }: StoresBrowseScreenProps) {
   const { scrollBottomPadding } = useScreenInsets();
   const text = t.storesBrowse;
 
-  const [categories, setCategories] = useState<Array<{ id: string; name: string; nameAr?: string; nameEn?: string; parentId?: string | null }>>([]);
+  const [storeTypes, setStoreTypes] = useState<StoreType[]>([]);
   const [stores, setStores] = useState<PublicStore[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [query, setQuery] = useState('');
   const [searchInput, setSearchInput] = useState('');
-  const [rootCategoryId, setRootCategoryId] = useState('');
+  const [storeTypeId, setStoreTypeId] = useState('');
+  const [city, setCity] = useState('');
+  const [isLoadingStoreTypes, setIsLoadingStoreTypes] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
-  const rootCategories = useMemo(() => buildCategoryTree(categories), [categories]);
   const hasMore = stores.length < total && stores.length > 0;
 
   useEffect(() => {
-    fetchCategories(locale)
-      .then((items) => setCategories(Array.isArray(items) ? items : []))
-      .catch(() => setCategories([]));
-  }, [locale]);
+    setIsLoadingStoreTypes(true);
+    fetchStoreTypes()
+      .then((items) => setStoreTypes(Array.isArray(items) ? items : []))
+      .catch(() => setStoreTypes([]))
+      .finally(() => setIsLoadingStoreTypes(false));
+  }, []);
 
   const loadStores = useCallback(
     async (options?: { page?: number; refresh?: boolean }) => {
@@ -68,7 +70,8 @@ export function StoresBrowseScreen({ onStorePress }: StoresBrowseScreenProps) {
       try {
         const response = await fetchPublicStores({
           q: query.trim() || undefined,
-          rootCategoryId: rootCategoryId || undefined,
+          storeTypeId: storeTypeId || undefined,
+          city: city || undefined,
           page: nextPage,
           limit: PAGE_SIZE
         });
@@ -84,7 +87,7 @@ export function StoresBrowseScreen({ onStorePress }: StoresBrowseScreenProps) {
         setIsRefreshing(false);
       }
     },
-    [query, rootCategoryId]
+    [query, storeTypeId, city]
   );
 
   useEffect(() => {
@@ -104,7 +107,8 @@ export function StoresBrowseScreen({ onStorePress }: StoresBrowseScreenProps) {
     loadStores({ page: page + 1 }).catch(() => undefined);
   };
 
-  const showSkeleton = isLoading && !hasLoadedOnce;
+  const showSkeleton = isLoading && page === 1 && !hasLoadedOnce;
+  const showStoreGridSkeleton = isLoading && page === 1 && hasLoadedOnce;
   const textAlign = isRtl ? styles.rtl : styles.ltr;
   const inputAlign = isRtl ? styles.inputRtl : styles.inputLtr;
 
@@ -131,34 +135,61 @@ export function StoresBrowseScreen({ onStorePress }: StoresBrowseScreenProps) {
         </Pressable>
       </View>
 
+      {isLoadingStoreTypes ? (
+        <FilterChipsSkeleton count={6} />
+      ) : (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator
+          indicatorStyle="black"
+          style={isRtl ? styles.chipsRtl : undefined}
+          contentContainerStyle={[styles.chips, isRtl && styles.chipsContentRtl]}
+        >
+          <FilterChip
+            label={text.allStoreTypes}
+            active={!storeTypeId}
+            onPress={() => setStoreTypeId('')}
+          />
+          {storeTypes.map((storeType) => (
+            <FilterChip
+              key={storeType.id}
+              label={locale === 'en' ? storeType.nameEn : storeType.nameAr}
+              active={storeTypeId === storeType.id}
+              onPress={() => setStoreTypeId(storeTypeId === storeType.id ? '' : storeType.id)}
+            />
+          ))}
+        </ScrollView>
+      )}
+
       <ScrollView
         horizontal
-        showsHorizontalScrollIndicator={false}
+        showsHorizontalScrollIndicator
+        indicatorStyle="black"
         style={isRtl ? styles.chipsRtl : undefined}
         contentContainerStyle={[styles.chips, isRtl && styles.chipsContentRtl]}
       >
         <FilterChip
-          label={text.allCategories}
-          active={!rootCategoryId}
-          onPress={() => setRootCategoryId('')}
+          label={text.allCities}
+          active={!city}
+          onPress={() => setCity('')}
         />
-        {rootCategories.map((category) => (
+        {omanCities.map((cityOption) => (
           <FilterChip
-            key={category.id}
-            label={locale === 'en' ? category.nameEn || category.name : category.nameAr || category.name}
-            active={rootCategoryId === category.id}
-            onPress={() => setRootCategoryId(rootCategoryId === category.id ? '' : category.id)}
+            key={cityOption.value}
+            label={locale === 'en' ? cityOption.en : cityOption.ar}
+            active={city === cityOption.value}
+            onPress={() => setCity(city === cityOption.value ? '' : cityOption.value)}
           />
         ))}
       </ScrollView>
 
-      {showSkeleton ? <StoreBrowseGridSkeleton count={4} /> : null}
+      {showSkeleton || showStoreGridSkeleton ? <StoreBrowseGridSkeleton count={4} /> : null}
     </View>
   );
 
   return (
     <FlatList
-      data={showSkeleton ? [] : stores}
+      data={showSkeleton || showStoreGridSkeleton ? [] : stores}
       keyExtractor={(item) => item.id}
       numColumns={2}
       columnWrapperStyle={styles.columnWrap}
@@ -169,7 +200,7 @@ export function StoresBrowseScreen({ onStorePress }: StoresBrowseScreenProps) {
       }
       ListHeaderComponent={listHeader}
       ListEmptyComponent={
-        !showSkeleton ? <EmptyState message={text.empty} /> : null
+        !showSkeleton && !showStoreGridSkeleton ? <EmptyState message={text.empty} /> : null
       }
       renderItem={({ item }) => (
         <StoreBrowseCard store={item} locale={locale} listingsLabel={text.listings} onPress={() => onStorePress(item.slug)} />
@@ -195,7 +226,8 @@ function StoreBrowseCard({
   onPress: () => void;
 }) {
   const name = locale === 'en' ? store.nameEn : store.nameAr;
-  const categoryName = locale === 'en' ? store.rootCategory?.nameEn : store.rootCategory?.nameAr;
+  const typeName = locale === 'en' ? store.storeType?.nameEn : store.storeType?.nameAr;
+  const cityLabel = getCityLabel(store.city ?? '', locale);
 
   return (
     <Pressable style={({ pressed }) => [styles.card, pressed && styles.cardPressed]} onPress={onPress}>
@@ -218,13 +250,16 @@ function StoreBrowseCard({
       <AppText style={styles.cardTitle} numberOfLines={2}>
         {name}
       </AppText>
-      {categoryName ? (
-        <AppText style={styles.cardCategory} numberOfLines={1}>
-          {categoryName}
-        </AppText>
+      {typeName ? (
+        <View style={styles.typeBadge}>
+          <AppText style={styles.typeBadgeText} numberOfLines={1}>
+            {typeName}
+          </AppText>
+        </View>
       ) : null}
       <AppText style={styles.cardMeta}>
         {store.listingsCount ?? 0} {listingsLabel}
+        {cityLabel ? ` · ${cityLabel}` : ''}
       </AppText>
     </Pressable>
   );
@@ -390,6 +425,20 @@ const styles = StyleSheet.create({
     color: colors.brandDark,
     fontSize: 11,
     fontWeight: '700'
+  },
+  typeBadge: {
+    alignSelf: 'flex-start',
+    marginTop: 6,
+    marginHorizontal: 12,
+    borderRadius: radius.pill,
+    backgroundColor: '#ecfdf5',
+    paddingHorizontal: 8,
+    paddingVertical: 4
+  },
+  typeBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#047857'
   },
   cardMeta: {
     paddingHorizontal: 12,

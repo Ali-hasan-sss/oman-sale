@@ -1,12 +1,10 @@
 'use client';
 
-import { ChevronLeft, ChevronRight, Globe, Search, Store } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
-import { HeaderAuthAction } from '@/components/auth/user-menu';
-import { ChatNavLink } from '@/components/chat/chat-nav-link';
-import { MobileNavMenu } from '@/components/navigation/mobile-nav-menu';
+import { SiteHeaderSearch, UserSiteHeader } from '@/components/navigation/user-site-header';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 
@@ -33,7 +31,7 @@ const resolveHeroHref = (link: string, localizedPath: (path: string) => string) 
 };
 
 export function HeroSection() {
-  const { locale, localizedPath, m, toggleLocale } = useI18n();
+  const { locale, localizedPath, m } = useI18n();
   const [slides, setSlides] = useState<HeroSlide[]>([]);
   const [activeSlide, setActiveSlide] = useState(0);
 
@@ -115,60 +113,11 @@ export function HeroSection() {
         </div>
       ))}
 
-      <header className="relative z-20 shrink-0">
-        <div className="mx-auto max-w-7xl px-4 py-3 sm:py-4">
-          <div className="mb-3 flex items-center justify-between gap-3 sm:mb-4 sm:gap-4">
-            <Link href={localizedPath('/')} className="flex items-center gap-2 sm:gap-3">
-              <span className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-white/95 shadow-lg sm:h-16 sm:w-16">
-                <img src="/logo.png" alt="Oman Sale" className="h-full w-full object-contain p-1.5" />
-              </span>
-              <span className="hidden text-xl font-black text-white drop-shadow md:block md:text-2xl">
-                Oman Sale
-              </span>
-            </Link>
-
-            <MobileNavMenu variant="hero" />
-            <nav className="hidden items-center gap-3 lg:flex">
-              <button
-                onClick={toggleLocale}
-                className="flex items-center gap-2 rounded-lg border border-white/70 bg-white/90 px-3 py-2 text-sm shadow-lg transition hover:bg-white"
-              >
-                <Globe size={18} />
-                <span>{m.common.languageSwitch}</span>
-              </button>
-              <ChatNavLink className="rounded-lg border border-white/70 bg-white/90 px-4 py-2 shadow-lg transition hover:bg-white" />
-              <Link className="rounded-lg border border-white/70 bg-white/90 px-4 py-2 shadow-lg transition hover:bg-white" href={localizedPath('/stores')}>
-                {m.common.browseStores}
-              </Link>
-              <Link className="rounded-lg border border-white/70 bg-white/90 px-4 py-2 shadow-lg transition hover:bg-white" href={localizedPath('/all-listings')}>
-                {m.common.allListings}
-              </Link>
-              <Link className="rounded-lg border border-white/70 bg-white/90 px-4 py-2 shadow-lg transition hover:bg-white" href={localizedPath('/my-listings')}>
-                {m.common.myListings}
-              </Link>
-              <Link className="rounded-lg border border-white/70 bg-white/90 px-4 py-2 shadow-lg transition hover:bg-white" href={localizedPath('/stores/create')}>
-                <span className="inline-flex items-center gap-2">
-                  <Store size={16} />
-                  {m.common.createStore}
-                </span>
-              </Link>
-              <Link className="rounded-lg bg-brand-600 px-4 py-2 text-white shadow-lg transition hover:bg-brand-700" href={localizedPath('/add-listing')}>
-                {m.common.addListing}
-              </Link>
-              <HeaderAuthAction loginClassName="rounded-lg border border-white/70 bg-white/90 px-4 py-2 shadow-lg transition hover:bg-white" />
-            </nav>
-          </div>
-
-          <div className="relative mx-auto max-w-3xl">
-            <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-            <input
-              type="search"
-              placeholder={m.home.searchPlaceholder}
-              className="w-full rounded-xl border border-white/60 bg-white/95 py-3 pl-4 pr-12 text-sm shadow-lg outline-none backdrop-blur-sm transition focus:ring-2 focus:ring-brand-500 sm:py-4 sm:text-base"
-            />
-          </div>
+      <UserSiteHeader variant="hero" sticky={false}>
+        <div className="mx-auto max-w-3xl">
+          <SiteHeaderSearch variant="hero" />
         </div>
-      </header>
+      </UserSiteHeader>
 
       <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center px-4 pb-16 text-center">
         <div className="max-w-3xl">

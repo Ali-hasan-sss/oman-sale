@@ -1,7 +1,9 @@
 import { AdCondition, AdStatus, AdType } from '@prisma/client';
 import { z } from 'zod';
 
-export const omanCities = ['مسقط', 'صلالة', 'صحار', 'نزوى', 'صور', 'البريمي', 'الرستاق', 'السيب', 'الخوير', 'القرم'] as const;
+import { omanCities } from '../../shared/constants/oman-cities';
+
+export { omanCities };
 
 const imageUrlSchema = z
   .string()

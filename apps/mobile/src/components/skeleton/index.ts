@@ -13,6 +13,8 @@ export {
   ListingListSkeleton,
   ProfileSkeleton,
   StoreBrowseGridSkeleton,
+  FilterChipsSkeleton,
   StoreCirclesSkeleton,
-  StoreDetailSkeleton
+  StoreDetailSkeleton,
+  MyStoreScreenSkeleton
 } from './layouts';

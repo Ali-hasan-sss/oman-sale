@@ -1,16 +1,13 @@
 'use client';
 
 import { isAxiosError } from 'axios';
-import { Globe } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
 
-import { HeaderAuthAction } from '@/components/auth/user-menu';
 import { VerificationCodeInput } from '@/components/auth/verification-code-input';
-import { ChatNavLink } from '@/components/chat/chat-nav-link';
 import { SiteFooter } from '@/components/home/site-footer';
-import { MobileNavMenu } from '@/components/navigation/mobile-nav-menu';
+import { UserSiteHeader } from '@/components/navigation/user-site-header';
 import { api } from '@/lib/api';
 import { ApiErrorCodes, getApiErrorCode, resolveApiErrorMessage } from '@/lib/api-errors';
 import { getAuthMessages, useI18n } from '@/lib/i18n';
@@ -37,7 +34,7 @@ const buildErrorMessages = (errors: {
 
 export function UserAuthPage({ mode }: UserAuthPageProps) {
   const router = useRouter();
-  const { dir, locale, localizedPath, m, toggleLocale } = useI18n();
+  const { dir, locale, localizedPath, m } = useI18n();
   const setSession = useAuthStore((state) => state.setSession);
   const authMessages = getAuthMessages(locale);
   const isRegister = mode === 'register';
@@ -130,35 +127,7 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
 
   return (
     <div id="top" className="min-h-screen bg-gray-50" dir={dir}>
-      <header className="sticky top-0 z-50 bg-white shadow-sm">
-        <div className="mx-auto max-w-7xl px-4 py-4">
-          <div className="mb-4 flex items-center justify-between gap-4">
-            <Link className="flex items-center gap-3" href={localizedPath('/')}>
-              <img src="/logo.png" alt="Oman Sale" className="h-14 w-auto" />
-            </Link>
-
-            <MobileNavMenu />
-            <div className="hidden items-center gap-4 lg:flex">
-              <button
-                className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 transition hover:bg-gray-50"
-                onClick={toggleLocale}
-                type="button"
-              >
-                <Globe size={18} />
-                <span className="text-sm">{m.common.languageSwitch}</span>
-              </button>
-              <ChatNavLink className="rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-50" />
-              <HeaderLink href="/all-listings" label={m.common.allListings} />
-              <HeaderLink href="/my-listings" label={m.common.myListings} />
-              <Link className="rounded-lg bg-green-600 px-4 py-2 text-white transition hover:bg-green-700" href={localizedPath('/add-listing')}>
-                {m.common.addListing}
-              </Link>
-              <HeaderAuthAction loginClassName="rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-50" />
-            </div>
-          </div>
-
-        </div>
-      </header>
+      <UserSiteHeader />
 
       <main className="flex min-h-[80vh] items-center justify-center px-4 py-8">
         <div className="w-full max-w-md">
@@ -311,12 +280,4 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
       <SiteFooter />
     </div>
   );
-
-  function HeaderLink({ href, label }: { href: string; label: string }) {
-    return (
-      <Link className="rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-50" href={localizedPath(href)}>
-        {label}
-      </Link>
-    );
-  }
 }

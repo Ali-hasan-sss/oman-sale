@@ -4,6 +4,8 @@ import { prisma } from '../../shared/prisma/client';
 import { createSlug } from '../../shared/utils/slug';
 import type { CreateStoreDto, ListStoresQuery, SubscribeStoreDto, UpdateStoreDto } from './stores.validation';
 
+const storeTypeSelect = { id: true, nameAr: true, nameEn: true, slug: true, icon: true } as const;
+
 export class StoresRepository {
   listPublic(query: ListStoresQuery) {
     const now = new Date();
@@ -19,6 +21,8 @@ export class StoresRepository {
         }
       },
       ...(query.rootCategoryId && { rootCategoryId: query.rootCategoryId }),
+      ...(query.storeTypeId && { storeTypeId: query.storeTypeId }),
+      ...(query.city && { city: query.city }),
       ...(query.q && {
         OR: [
           { nameAr: { contains: query.q, mode: 'insensitive' } },
@@ -45,7 +49,9 @@ export class StoresRepository {
           logoUrl: true,
           coverUrl: true,
           phone: true,
+          city: true,
           rootCategory: { select: { id: true, nameAr: true, nameEn: true, slug: true } },
+          storeType: { select: storeTypeSelect },
           _count: { select: { ads: { where: { deletedAt: null, isActive: true } } } }
         },
         orderBy: { createdAt: 'desc' }
@@ -60,6 +66,7 @@ export class StoresRepository {
       include: {
         user: { select: { id: true, fullName: true, avatar: true, isBlocked: true } },
         rootCategory: { select: { id: true, nameAr: true, nameEn: true, slug: true } },
+        storeType: { select: storeTypeSelect },
         subscriptions: {
           where: { deletedAt: null },
           orderBy: { createdAt: 'desc' },
@@ -76,6 +83,7 @@ export class StoresRepository {
       include: {
         user: { select: { id: true, fullName: true, email: true, phone: true, avatar: true } },
         rootCategory: { select: { id: true, nameAr: true, nameEn: true, slug: true, parentId: true } },
+        storeType: { select: storeTypeSelect },
         subscriptions: {
           where: { deletedAt: null },
           orderBy: { createdAt: 'desc' },
@@ -90,6 +98,7 @@ export class StoresRepository {
       where: { userId, deletedAt: null },
       include: {
         rootCategory: { select: { id: true, nameAr: true, nameEn: true, slug: true } },
+        storeType: { select: storeTypeSelect },
         subscriptions: {
           where: { deletedAt: null },
           orderBy: { createdAt: 'desc' },
@@ -160,10 +169,12 @@ export class StoresRepository {
           logoUrl: dto.logoUrl,
           coverUrl: dto.coverUrl,
           phone: dto.phone,
+          city: dto.city,
           nationalId: dto.nationalId,
           commercialRegistrationNumber: dto.commercialRegistrationNumber,
           workingHours: dto.workingHours as Prisma.InputJsonValue | undefined,
           rootCategoryId: dto.rootCategoryId,
+          storeTypeId: dto.storeTypeId,
           isActive: false
         }
       });
@@ -308,6 +319,8 @@ export class StoresRepository {
     const where: Prisma.StoreWhereInput = {
       deletedAt: null,
       ...(query.rootCategoryId && { rootCategoryId: query.rootCategoryId }),
+      ...(query.storeTypeId && { storeTypeId: query.storeTypeId }),
+      ...(query.city && { city: query.city }),
       ...(query.isActive !== undefined && { isActive: query.isActive }),
       ...(query.q && {
         OR: [
@@ -330,6 +343,7 @@ export class StoresRepository {
         include: {
           user: { select: { id: true, fullName: true, email: true, phone: true, avatar: true } },
           rootCategory: { select: { id: true, nameAr: true, nameEn: true, slug: true } },
+          storeType: { select: storeTypeSelect },
           subscriptions: {
             where: { deletedAt: null },
             orderBy: { createdAt: 'desc' },

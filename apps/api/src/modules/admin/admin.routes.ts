@@ -12,6 +12,12 @@ import {
   listAdminCategoriesQuerySchema,
   updateCategorySchema
 } from '../categories/categories.validation';
+import { bannerRequestsController } from '../banner-requests/banner-requests.controller';
+import {
+  listBannerRequestsQuerySchema,
+  rejectBannerRequestSchema,
+  updateBannerPricingSchema
+} from '../banner-requests/banner-requests.validation';
 import { heroController } from '../hero/hero.controller';
 import {
   createHeroBannerSchema,
@@ -22,6 +28,11 @@ import {
 } from '../hero/hero.validation';
 import { tourismController } from '../tourism/tourism.controller';
 import { tourismDestinationSchema, updateTourismDestinationSchema } from '../tourism/tourism.validation';
+import { storeTypesController } from '../store-types/store-types.controller';
+import {
+  createStoreTypeSchema,
+  updateStoreTypeSchema
+} from '../store-types/store-types.validation';
 import { storesController } from '../stores/stores.controller';
 import {
   adminAssignStorePlanSchema,
@@ -195,6 +206,33 @@ adminRoutes.delete(
   validateRequest({ params: idParams }),
   asyncHandler(heroController.deleteBanner)
 );
+adminRoutes.get(
+  '/banner-pricing',
+  asyncHandler(bannerRequestsController.getPricing)
+);
+adminRoutes.patch(
+  '/banner-pricing',
+  authorize(UserRole.ADMIN),
+  validateRequest({ body: updateBannerPricingSchema }),
+  asyncHandler(bannerRequestsController.updatePricing)
+);
+adminRoutes.get(
+  '/banner-requests',
+  validateRequest({ query: listBannerRequestsQuerySchema }),
+  asyncHandler(bannerRequestsController.listForAdmin)
+);
+adminRoutes.post(
+  '/banner-requests/:id/approve',
+  authorize(UserRole.ADMIN),
+  validateRequest({ params: idParams }),
+  asyncHandler(bannerRequestsController.approve)
+);
+adminRoutes.post(
+  '/banner-requests/:id/reject',
+  authorize(UserRole.ADMIN),
+  validateRequest({ params: idParams, body: rejectBannerRequestSchema }),
+  asyncHandler(bannerRequestsController.reject)
+);
 adminRoutes.get('/tourism-destinations', asyncHandler(tourismController.list));
 adminRoutes.get('/tourism-destinations/:idOrSlug', asyncHandler(tourismController.get));
 adminRoutes.post(
@@ -214,6 +252,30 @@ adminRoutes.delete(
   authorize(UserRole.ADMIN),
   validateRequest({ params: idParams }),
   asyncHandler(tourismController.delete)
+);
+adminRoutes.get('/store-types', asyncHandler(storeTypesController.listForAdmin));
+adminRoutes.get(
+  '/store-types/:id',
+  validateRequest({ params: idParams }),
+  asyncHandler(storeTypesController.getById)
+);
+adminRoutes.post(
+  '/store-types',
+  authorize(UserRole.ADMIN),
+  validateRequest({ body: createStoreTypeSchema }),
+  asyncHandler(storeTypesController.create)
+);
+adminRoutes.patch(
+  '/store-types/:id',
+  authorize(UserRole.ADMIN),
+  validateRequest({ params: idParams, body: updateStoreTypeSchema }),
+  asyncHandler(storeTypesController.update)
+);
+adminRoutes.delete(
+  '/store-types/:id',
+  authorize(UserRole.ADMIN),
+  validateRequest({ params: idParams }),
+  asyncHandler(storeTypesController.delete)
 );
 adminRoutes.get(
   '/stores',

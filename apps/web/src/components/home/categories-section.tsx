@@ -9,6 +9,8 @@ import {
   Building2,
   Car,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Gamepad2,
   GraduationCap,
   Heart,
@@ -30,7 +32,8 @@ import {
   Wrench
 } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import { api } from '@/lib/api';
 import { CategoryIcon, categoryIconMap, isCategoryIconKey } from '@/lib/category-icons';
@@ -145,130 +148,348 @@ const mapCategoryToDisplay = (category: ApiCategory, index: number): DisplayCate
   };
 };
 
-type CategoryGridCardProps = {
-  category: DisplayCategory;
-  childrenCategories: CategoryTreeNode<ApiCategory>[];
-  isExpanded: boolean;
-  onToggleChildren: () => void;
-  localizedPath: (path: string) => string;
-  adCountLabel: string;
-  expandLabel: string;
-  mapCategoryToDisplay: (category: ApiCategory, index: number) => DisplayCategory;
-  parentIndex: number;
-};
-
-function NestedSubcategoryLinks({
-  nodes,
-  localizedPath,
-  adCountLabel,
-  mapCategoryToDisplay,
-  parentIndex,
-  depth = 0
-}: {
+type CategorySubmenuColumnProps = {
   nodes: CategoryTreeNode<ApiCategory>[];
   localizedPath: (path: string) => string;
   adCountLabel: string;
   mapCategoryToDisplay: (category: ApiCategory, index: number) => DisplayCategory;
   parentIndex: number;
-  depth?: number;
-}) {
+  openPath: string[];
+  depth: number;
+  dir: 'rtl' | 'ltr';
+  onToggleSubmenu: (depth: number, nodeId: string) => void;
+  onNavigate: () => void;
+};
+
+function getColumnParentIndex(
+  parentIndex: number,
+  columns: CategoryTreeNode<ApiCategory>[][],
+  openPath: string[],
+  depth: number
+): number {
+  let index = parentIndex;
+
+  for (let level = 0; level < depth; level += 1) {
+    const selectedIndex = columns[level]!.findIndex((node) => node.id === openPath[level]);
+    if (selectedIndex >= 0) {
+      index += selectedIndex + 1;
+    }
+  }
+
+  return index;
+}
+
+function getSubmenuColumns(
+  rootNodes: CategoryTreeNode<ApiCategory>[],
+  openPath: string[]
+): CategoryTreeNode<ApiCategory>[][] {
+  const columns: CategoryTreeNode<ApiCategory>[][] = [rootNodes];
+  let currentNodes = rootNodes;
+
+  for (const nodeId of openPath) {
+    const selected = currentNodes.find((node) => node.id === nodeId);
+    if (!selected || selected.children.length === 0) break;
+    columns.push(selected.children);
+    currentNodes = selected.children;
+  }
+
+  return columns;
+}
+
+function CategorySubmenuColumn({
+  nodes,
+  localizedPath,
+  adCountLabel,
+  mapCategoryToDisplay,
+  parentIndex,
+  openPath,
+  depth,
+  dir,
+  onToggleSubmenu,
+  onNavigate
+}: CategorySubmenuColumnProps) {
+  const SubmenuArrow = dir === 'rtl' ? ChevronLeft : ChevronRight;
+
   return (
-    <>
+    <div className="w-max min-w-[240px] shrink-0 rounded-xl border border-slate-200 bg-white py-1 shadow-xl">
       {nodes.map((node, index) => {
         const display = mapCategoryToDisplay(node, parentIndex + index + 1);
+        const hasChildren = node.children.length > 0;
+        const isSubmenuOpen = openPath[depth] === node.id;
 
         return (
-          <div key={node.id} style={{ marginInlineStart: depth * 12 }}>
+          <div
+            key={node.id}
+            className={`flex items-center gap-1 px-1 ${isSubmenuOpen ? 'bg-brand-50' : ''}`}
+          >
             <Link
               href={localizedPath(display.href)}
-              className="block rounded-xl bg-white/70 px-3 py-2 text-sm font-bold text-ink-900 transition hover:bg-white"
+              onClick={onNavigate}
+              className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-2 text-sm font-bold text-ink-900 transition hover:bg-slate-50"
             >
-              <span className="line-clamp-1">{display.name}</span>
-              <span className="mt-0.5 block text-xs font-medium text-slate-500">
-                {display.count} {adCountLabel}
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-brand-600">
+                <CategoryIcon icon={display.iconKey} size={18} />
+              </span>
+              <span className="min-w-0 flex-1 text-start">
+                <span>{display.name}</span>
+                <span className="mt-0.5 block text-xs font-medium text-slate-500">
+                  {display.count} {adCountLabel}
+                </span>
               </span>
             </Link>
-            {node.children.length > 0 ? (
-              <div className="mt-1.5 space-y-1.5">
-                <NestedSubcategoryLinks
-                  nodes={node.children}
-                  localizedPath={localizedPath}
-                  adCountLabel={adCountLabel}
-                  mapCategoryToDisplay={mapCategoryToDisplay}
-                  parentIndex={parentIndex + index + 1}
-                  depth={depth + 1}
-                />
-              </div>
+            {hasChildren ? (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onToggleSubmenu(depth, node.id);
+                }}
+                aria-expanded={isSubmenuOpen}
+                aria-label={display.name}
+                className={`shrink-0 rounded-lg p-2 transition hover:bg-slate-100 ${isSubmenuOpen ? 'bg-brand-100 text-brand-700' : 'text-slate-500'}`}
+              >
+                <SubmenuArrow size={16} />
+              </button>
             ) : null}
           </div>
         );
       })}
-    </>
+    </div>
   );
 }
+
+type CategoryTreeMenuProps = {
+  nodes: CategoryTreeNode<ApiCategory>[];
+  localizedPath: (path: string) => string;
+  adCountLabel: string;
+  mapCategoryToDisplay: (category: ApiCategory, index: number) => DisplayCategory;
+  parentIndex: number;
+  openPath: string[];
+  dir: 'rtl' | 'ltr';
+  onToggleSubmenu: (depth: number, nodeId: string) => void;
+  onNavigate: () => void;
+  menuRef: React.Ref<HTMLDivElement>;
+  menuPosition: { top: number; left: number } | null;
+};
+
+function CategoryTreeMenu({
+  nodes,
+  localizedPath,
+  adCountLabel,
+  mapCategoryToDisplay,
+  parentIndex,
+  openPath,
+  dir,
+  onToggleSubmenu,
+  onNavigate,
+  menuRef,
+  menuPosition
+}: CategoryTreeMenuProps) {
+  const columns = getSubmenuColumns(nodes, openPath);
+
+  return (
+    <div
+      ref={menuRef}
+      style={{
+        position: 'fixed',
+        top: menuPosition?.top ?? -9999,
+        left: menuPosition?.left ?? -9999,
+        visibility: menuPosition ? 'visible' : 'hidden'
+      }}
+      className="z-[100] flex items-start gap-1"
+    >
+      {columns.map((columnNodes, depth) => (
+          <CategorySubmenuColumn
+            key={depth}
+            nodes={columnNodes}
+            localizedPath={localizedPath}
+            adCountLabel={adCountLabel}
+            mapCategoryToDisplay={mapCategoryToDisplay}
+            parentIndex={getColumnParentIndex(parentIndex, columns, openPath, depth)}
+            openPath={openPath}
+            depth={depth}
+            dir={dir}
+            onToggleSubmenu={onToggleSubmenu}
+            onNavigate={onNavigate}
+          />
+        ))}
+    </div>
+  );
+}
+
+type CategoryGridCardProps = {
+  category: DisplayCategory;
+  childrenCategories: CategoryTreeNode<ApiCategory>[];
+  isMenuOpen: boolean;
+  onToggleMenu: () => void;
+  onCloseMenu: () => void;
+  localizedPath: (path: string) => string;
+  adCountLabel: string;
+  expandLabel: string;
+  mapCategoryToDisplay: (category: ApiCategory, index: number) => DisplayCategory;
+  parentIndex: number;
+  dir: 'rtl' | 'ltr';
+};
 
 function CategoryGridCard({
   category,
   childrenCategories,
-  isExpanded,
-  onToggleChildren,
+  isMenuOpen,
+  onToggleMenu,
+  onCloseMenu,
   localizedPath,
   adCountLabel,
   expandLabel,
   mapCategoryToDisplay,
-  parentIndex
+  parentIndex,
+  dir
 }: CategoryGridCardProps) {
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [openPath, setOpenPath] = useState<string[]>([]);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+  const [mounted, setMounted] = useState(false);
   const hasChildren = childrenCategories.length > 0;
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const updateMenuPosition = () => {
+    const trigger = triggerRef.current;
+    const menu = menuRef.current;
+    if (!trigger || !menu) return;
+
+    const triggerRect = trigger.getBoundingClientRect();
+    const menuRect = menu.getBoundingClientRect();
+    const gap = 6;
+    const edgePadding = 8;
+
+    let left = dir === 'rtl' ? triggerRect.right - menuRect.width : triggerRect.left;
+    left = Math.max(edgePadding, Math.min(left, window.innerWidth - menuRect.width - edgePadding));
+
+    let top = triggerRect.bottom + gap;
+    if (top + menuRect.height > window.innerHeight - edgePadding) {
+      top = triggerRect.top - gap - menuRect.height;
+    }
+    top = Math.max(edgePadding, top);
+
+    setMenuPosition((current) => {
+      if (current?.top === top && current.left === left) {
+        return current;
+      }
+
+      return { top, left };
+    });
+  };
+
+  useLayoutEffect(() => {
+    if (!isMenuOpen) {
+      setMenuPosition((current) => (current === null ? current : null));
+      return;
+    }
+
+    updateMenuPosition();
+  }, [isMenuOpen, openPath, dir]);
+
+  useEffect(() => {
+    if (!isMenuOpen) {
+      setOpenPath((current) => (current.length === 0 ? current : []));
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (triggerRef.current?.contains(target) || menuRef.current?.contains(target)) return;
+      onCloseMenu();
+    };
+
+    const handleReposition = () => updateMenuPosition();
+
+    document.addEventListener('mousedown', handlePointerDown);
+    window.addEventListener('resize', handleReposition);
+    window.addEventListener('scroll', handleReposition, true);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      window.removeEventListener('resize', handleReposition);
+      window.removeEventListener('scroll', handleReposition, true);
+    };
+  }, [isMenuOpen, onCloseMenu, dir]);
+
+  const toggleSubmenu = (depth: number, nodeId: string) => {
+    setOpenPath((current) => {
+      if (current[depth] === nodeId) {
+        return current.slice(0, depth);
+      }
+
+      return [...current.slice(0, depth), nodeId];
+    });
+  };
+
+  const menu =
+    isMenuOpen && mounted ? (
+      <CategoryTreeMenu
+        nodes={childrenCategories}
+        localizedPath={localizedPath}
+        adCountLabel={adCountLabel}
+        mapCategoryToDisplay={mapCategoryToDisplay}
+        parentIndex={parentIndex}
+        openPath={openPath}
+        dir={dir}
+        onToggleSubmenu={toggleSubmenu}
+        onNavigate={onCloseMenu}
+        menuRef={menuRef}
+        menuPosition={menuPosition}
+      />
+    ) : null;
+
   return (
-    <div
-      className={`${colorClasses[category.color]} flex h-full flex-col overflow-hidden rounded-2xl shadow-sm transition-shadow hover:shadow-lg`}
-    >
-      <Link
-        href={localizedPath(category.href)}
-        className="group flex flex-1 flex-col items-center p-6 text-center transition-transform hover:-translate-y-0.5"
+    <div className={`relative h-full ${isMenuOpen ? 'z-40' : ''}`}>
+      <div
+        className={`${colorClasses[category.color]} flex h-full flex-col overflow-hidden rounded-2xl shadow-sm transition-shadow hover:shadow-lg`}
       >
-        <CategoryIcon icon={category.iconKey} size={40} />
-        <h3 className="mt-4 font-bold text-ink-900">{category.name}</h3>
-        <p className="mt-1 text-sm text-slate-500">
-          {category.count} {adCountLabel}
-        </p>
-      </Link>
+        <Link
+          href={localizedPath(category.href)}
+          className="group flex flex-1 flex-col items-center p-6 text-center transition-transform hover:-translate-y-0.5"
+        >
+          <CategoryIcon icon={category.iconKey} size={40} />
+          <h3 className="mt-4 font-bold text-ink-900">{category.name}</h3>
+          <p className="mt-1 text-sm text-slate-500">
+            {category.count} {adCountLabel}
+          </p>
+        </Link>
 
-      {hasChildren ? (
-        <>
-          <button
-            type="button"
-            onClick={onToggleChildren}
-            aria-expanded={isExpanded}
-            aria-label={expandLabel}
-            className="flex w-full items-center justify-center border-t border-black/5 py-2 text-current transition hover:bg-black/5"
-          >
-            <ChevronDown size={20} className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
-          </button>
-
-          {isExpanded ? (
-            <div className="space-y-1.5 border-t border-black/5 px-3 pb-3 pt-2">
-              <NestedSubcategoryLinks
-                nodes={childrenCategories}
-                localizedPath={localizedPath}
-                adCountLabel={adCountLabel}
-                mapCategoryToDisplay={mapCategoryToDisplay}
-                parentIndex={parentIndex}
+        {hasChildren ? (
+          <>
+            <button
+              ref={triggerRef}
+              type="button"
+              onClick={onToggleMenu}
+              aria-expanded={isMenuOpen}
+              aria-haspopup="menu"
+              aria-label={expandLabel}
+              className="flex w-full items-center justify-center border-t border-black/5 py-2 text-current transition hover:bg-black/5"
+            >
+              <ChevronDown
+                size={20}
+                className={`transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`}
               />
-            </div>
-          ) : null}
-        </>
-      ) : null}
+            </button>
+            {mounted && menu ? createPortal(menu, document.body) : null}
+          </>
+        ) : null}
+      </div>
     </div>
   );
 }
 
 export function CategoriesSection() {
-  const { locale, localizedPath, m } = useI18n();
+  const { locale, dir, localizedPath, m } = useI18n();
   const [apiCategories, setApiCategories] = useState<ApiCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [expandedParents, setExpandedParents] = useState<Record<string, boolean>>({});
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   useEffect(() => {
     setIsLoading(true);
@@ -281,9 +502,11 @@ export function CategoriesSection() {
 
   const categoryTree = useMemo(() => buildCategoryTree(apiCategories), [apiCategories]);
 
-  const toggleChildren = (parentId: string) => {
-    setExpandedParents((current) => ({ ...current, [parentId]: !current[parentId] }));
+  const toggleMenu = (parentId: string) => {
+    setOpenMenuId((current) => (current === parentId ? null : parentId));
   };
+
+  const closeMenu = () => setOpenMenuId(null);
 
   const loadingText = locale === 'ar' ? 'جاري تحميل البيانات...' : 'Loading data...';
   const emptyText = locale === 'ar' ? 'لا توجد فئات متاحة حاليًا' : 'No categories are available right now';
@@ -305,7 +528,7 @@ export function CategoriesSection() {
           {emptyText}
         </div>
       ) : (
-        <div className="mb-8 grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-6">
+        <div className="relative mb-8 grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-6">
           {categoryTree.map((parent: CategoryTreeNode<ApiCategory>, parentIndex) => {
             const parentDisplay = mapCategoryToDisplay(parent, parentIndex);
 
@@ -314,13 +537,15 @@ export function CategoriesSection() {
                 key={parent.id}
                 category={parentDisplay}
                 childrenCategories={parent.children}
-                isExpanded={Boolean(expandedParents[parent.id])}
-                onToggleChildren={() => toggleChildren(parent.id)}
+                isMenuOpen={openMenuId === parent.id}
+                onToggleMenu={() => toggleMenu(parent.id)}
+                onCloseMenu={closeMenu}
                 localizedPath={localizedPath}
                 adCountLabel={m.home.adCount}
                 expandLabel={expandLabel}
                 mapCategoryToDisplay={mapCategoryToDisplay}
                 parentIndex={parentIndex}
+                dir={dir}
               />
             );
           })}

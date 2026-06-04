@@ -6,12 +6,12 @@ export const listHeroSlidesQuerySchema = z.object({
 });
 
 export const listAdminHeroSlidesQuerySchema = z.object({
-  platform: z.enum(['WEB', 'MOBILE']).optional()
+  platform: z.enum(['WEB', 'MOBILE', 'ALL']).optional()
 });
 
 export const createHeroSlideSchema = z.object({
   sortOrder: z.coerce.number().int().min(0).optional(),
-  platform: z.enum(['WEB', 'MOBILE']).default('WEB'),
+  platform: z.enum(['WEB', 'MOBILE', 'ALL']).default('WEB'),
   imageUrl: z.string().min(1).max(2000),
   titleAr: z.string().min(1).max(200),
   titleEn: z.string().min(1).max(200),
@@ -25,7 +25,7 @@ export const createHeroSlideSchema = z.object({
 
 export const updateHeroSlideSchema = z.object({
   sortOrder: z.coerce.number().int().min(0).optional(),
-  platform: z.enum(['WEB', 'MOBILE']).optional(),
+  platform: z.enum(['WEB', 'MOBILE', 'ALL']).optional(),
   imageUrl: z.string().min(1).max(2000).optional(),
   titleAr: z.string().min(1).max(200).optional(),
   titleEn: z.string().min(1).max(200).optional(),

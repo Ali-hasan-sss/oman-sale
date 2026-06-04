@@ -28,6 +28,8 @@ export type CreateStorePayload = {
   nationalId: string;
   commercialRegistrationNumber: string;
   rootCategoryId: string;
+  storeTypeId: string;
+  city: string;
   planId: string;
   billingPeriod: StoreBillingPeriod;
   logoUrl?: string;
@@ -51,9 +53,19 @@ export type PublicStore = {
   logoUrl?: string | null;
   coverUrl?: string | null;
   phone?: string | null;
+  city?: string | null;
   listingsCount?: number;
   rootCategory?: { id: string; nameAr: string; nameEn: string; slug: string };
+  storeType?: { id: string; nameAr: string; nameEn: string; slug: string; icon?: string | null } | null;
   owner?: { id: string; fullName: string; avatar?: string | null } | null;
+};
+
+export type StoreType = {
+  id: string;
+  slug: string;
+  nameAr: string;
+  nameEn: string;
+  icon?: string | null;
 };
 
 export type PublicStoresResponse = {
@@ -99,6 +111,8 @@ export async function fetchMyStores() {
 export async function fetchPublicStores(params?: {
   q?: string;
   rootCategoryId?: string;
+  storeTypeId?: string;
+  city?: string;
   page?: number;
   limit?: number;
 }) {
@@ -153,6 +167,11 @@ export async function renewStoreSubscriptionRequest(
     payload,
     { params: { locale } }
   );
+  return response.data.data;
+}
+
+export async function fetchStoreTypes() {
+  const response = await http.get<ApiEnvelope<StoreType[]>>(API_ENDPOINTS.stores.storeTypes);
   return response.data.data;
 }
 

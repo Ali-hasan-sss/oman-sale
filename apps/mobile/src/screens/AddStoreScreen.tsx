@@ -10,8 +10,9 @@ import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
 import { buildCategoryTree } from '../lib/category-tree';
 import { resolveApiErrorMessage } from '../lib/api-errors';
+import { getCityLabel, omanCities } from '../lib/oman-cities';
 import { fetchCategories } from '../services/listings.service';
-import { createStoreRequest, fetchMyStores, fetchStorePlans, type StorePlan } from '../services/stores.service';
+import { createStoreRequest, fetchMyStores, fetchStorePlans, fetchStoreTypes, type StorePlan } from '../services/stores.service';
 import { useAuthStore } from '../stores';
 import { colors, radius } from '../theme';
 
@@ -30,8 +31,11 @@ export function AddStoreScreen({ onCreated, onAlreadyHasStore }: AddStoreScreenP
   const accessToken = useAuthStore((state) => state.accessToken);
 
   const [categories, setCategories] = useState<Array<{ id: string; name: string; nameAr?: string; nameEn?: string; parentId?: string | null }>>([]);
+  const [storeTypes, setStoreTypes] = useState<Array<{ id: string; nameAr: string; nameEn: string }>>([]);
   const [plans, setPlans] = useState<StorePlan[]>([]);
   const [rootCategoryId, setRootCategoryId] = useState('');
+  const [storeTypeId, setStoreTypeId] = useState('');
+  const [city, setCity] = useState('');
   const [planId, setPlanId] = useState('');
   const [billingPeriod, setBillingPeriod] = useState<'MONTHLY' | 'YEARLY'>('MONTHLY');
   const [nameAr, setNameAr] = useState('');
@@ -56,6 +60,10 @@ export function AddStoreScreen({ onCreated, onAlreadyHasStore }: AddStoreScreenP
   useEffect(() => {
     fetchCategories(locale)
       .then((items) => setCategories(Array.isArray(items) ? items : []))
+      .catch(() => setError(t.store.loadError));
+
+    fetchStoreTypes()
+      .then((items) => setStoreTypes(Array.isArray(items) ? items : []))
       .catch(() => setError(t.store.loadError))
       .finally(() => setIsLoading(false));
   }, [locale, t.store.loadError]);
@@ -87,7 +95,7 @@ export function AddStoreScreen({ onCreated, onAlreadyHasStore }: AddStoreScreenP
   }, [rootCategoryId, t.store.loadError]);
 
   const submit = async () => {
-    if (!accessToken || !planId || !rootCategoryId) return;
+    if (!accessToken || !planId || !rootCategoryId || !storeTypeId || !city) return;
     setError('');
     setIsSubmitting(true);
     try {
@@ -101,6 +109,8 @@ export function AddStoreScreen({ onCreated, onAlreadyHasStore }: AddStoreScreenP
           nationalId: nationalId.trim(),
           commercialRegistrationNumber: commercialRegistrationNumber.trim(),
           rootCategoryId,
+          storeTypeId,
+          city,
           planId,
           billingPeriod
         },
@@ -178,6 +188,32 @@ export function AddStoreScreen({ onCreated, onAlreadyHasStore }: AddStoreScreenP
         })}
       </ScrollView>
 
+      <FieldLabel isRtl={isRtl}>{t.store.storeType}</FieldLabel>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+        {storeTypes.map((storeType) => {
+          const active = storeType.id === storeTypeId;
+          const label = locale === 'en' ? storeType.nameEn : storeType.nameAr;
+          return (
+            <Pressable key={storeType.id} style={[styles.chip, active && styles.chipActive]} onPress={() => setStoreTypeId(storeType.id)}>
+              <AppText style={[styles.chipText, active && styles.chipTextActive]}>{label}</AppText>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+
+      <FieldLabel isRtl={isRtl}>{t.store.city}</FieldLabel>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+        {omanCities.map((cityOption) => {
+          const active = cityOption.value === city;
+          const label = locale === 'en' ? cityOption.en : cityOption.ar;
+          return (
+            <Pressable key={cityOption.value} style={[styles.chip, active && styles.chipActive]} onPress={() => setCity(cityOption.value)}>
+              <AppText style={[styles.chipText, active && styles.chipTextActive]}>{label}</AppText>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+
       {plans.length > 0 ? (
         <>
           <FieldLabel isRtl={isRtl}>{t.store.plan}</FieldLabel>
@@ -212,7 +248,7 @@ export function AddStoreScreen({ onCreated, onAlreadyHasStore }: AddStoreScreenP
         label={finalPrice <= 0 ? t.store.submitFree : t.store.submitPaid}
         onPress={submit}
         loading={isSubmitting}
-        disabled={!planId || plans.length === 0}
+        disabled={!planId || !rootCategoryId || !storeTypeId || !city || plans.length === 0}
         style={styles.submit}
       />
     </ScrollView>

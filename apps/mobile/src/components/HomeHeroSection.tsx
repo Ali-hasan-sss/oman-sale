@@ -134,9 +134,8 @@ export function HomeHeroSection({ onBrowseOffers }: HomeHeroSectionProps) {
     fetchHeroSlides(locale, 'mobile')
       .then((items) => {
         if (!cancelled) {
-          const filtered = items.filter((item) => item.platform !== 'WEB');
-          setCachedHeroSlides(locale, filtered);
-          setSlides(filtered);
+          setCachedHeroSlides(locale, items);
+          setSlides(items);
           setActiveIndex(0);
           loopIndexRef.current = 0;
         }

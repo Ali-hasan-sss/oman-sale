@@ -88,6 +88,12 @@ async function main() {
   const { seedCategories } = require('./seed-categories.cjs');
   await seedCategories(prisma);
 
+  const { seedStoreTypes } = require('./seed-store-types.cjs');
+  await seedStoreTypes(prisma);
+
+  const { seedListings } = require('./seed-listings.cjs');
+  await seedListings(prisma);
+
   await prisma.promotionPlan.updateMany({
     where: { name: { in: ['Bronze', 'Silver', 'Gold', 'Platinum'] } },
     data: { isActive: false, deletedAt: new Date() }

@@ -1,14 +1,12 @@
 'use client';
 
-import { Globe, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
-import { HeaderAuthAction } from '@/components/auth/user-menu';
-import { ChatNavLink } from '@/components/chat/chat-nav-link';
 import { SiteFooter } from '@/components/home/site-footer';
-import { MobileNavMenu } from '@/components/navigation/mobile-nav-menu';
+import { UserSiteHeader } from '@/components/navigation/user-site-header';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { getRealtimeSocket } from '@/lib/realtime';
@@ -48,6 +46,13 @@ type Conversation = {
   messages: ConversationMessage[];
 };
 
+type ConversationsResponse = {
+  items: Conversation[];
+  total: number;
+  page: number;
+  limit: number;
+};
+
 const fallbackImage = 'https://images.unsplash.com/photo-1521791136064-7986c2920216?w=400&h=300&fit=crop';
 
 const labels = {
@@ -73,7 +78,7 @@ const labels = {
 
 export function ChatsPage() {
   const router = useRouter();
-  const { dir, locale, localizedPath, m, toggleLocale } = useI18n();
+  const { dir, locale, localizedPath } = useI18n();
   const text = labels[locale];
   const hydrateFromStorage = useAuthStore((state) => state.hydrateFromStorage);
   const connectRealtime = useChatRealtimeStore((state) => state.connect);
@@ -97,8 +102,14 @@ export function ChatsPage() {
     }
 
     api
-      .get<{ data: Conversation[] }>('/chat/conversations', { headers: { Authorization: `Bearer ${token}` } })
-      .then((response) => setConversations(response.data.data))
+      .get<{ data: ConversationsResponse }>('/chat/conversations', {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { page: 1, limit: 50 }
+      })
+      .then((response) => {
+        const items = response.data.data?.items;
+        setConversations(Array.isArray(items) ? items : []);
+      })
       .catch(() => setConversations([]))
       .finally(() => setIsLoading(false));
   }, []);
@@ -155,29 +166,7 @@ export function ChatsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50" dir={dir}>
-      <header className="sticky top-0 z-50 bg-white shadow-sm">
-        <div className="mx-auto max-w-7xl px-4 py-4">
-          <div className="mb-4 flex items-center justify-between gap-4">
-            <Link className="flex items-center gap-3" href={localizedPath('/')}>
-              <img src="/logo.png" alt="Oman Sale" className="h-14 w-auto" />
-            </Link>
-            <MobileNavMenu />
-            <div className="hidden items-center gap-4 lg:flex">
-              <button className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 transition hover:bg-gray-50" onClick={toggleLocale} type="button">
-                <Globe size={18} />
-                <span className="text-sm">{m.common.languageSwitch}</span>
-              </button>
-              <ChatNavLink className="rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-50" />
-              <HeaderLink href="/all-listings" label={m.common.allListings} />
-              <HeaderLink href="/my-listings" label={m.common.myListings} />
-              <Link className="rounded-lg bg-green-600 px-4 py-2 text-white transition hover:bg-green-700" href={localizedPath('/add-listing')}>
-                {m.common.addListing}
-              </Link>
-              <HeaderAuthAction loginClassName="rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-50" />
-            </div>
-          </div>
-        </div>
-      </header>
+      <UserSiteHeader />
 
       <main className="mx-auto max-w-7xl px-4 py-8" dir={dir}>
         <div className="mb-8">
@@ -224,14 +213,6 @@ export function ChatsPage() {
       <SiteFooter />
     </div>
   );
-
-  function HeaderLink({ href, label }: { href: string; label: string }) {
-    return (
-      <Link className="rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-50" href={localizedPath(href)}>
-        {label}
-      </Link>
-    );
-  }
 }
 
 function ChatConversationsSkeleton() {

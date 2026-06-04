@@ -7,6 +7,7 @@ import { createSlug } from '../../shared/utils/slug';
 import { categoriesRepository } from '../categories/categories.repository';
 import { computeStorePlanFinalPrice } from '../store-plans/store-plan-pricing.utils';
 import { storePlansRepository } from '../store-plans/store-plans.repository';
+import { storeTypesRepository } from '../store-types/store-types.repository';
 import { checkoutStoreSubscription } from './store-checkout.service';
 import {
   applyStoreListingPromotion,
@@ -36,7 +37,9 @@ export class StoresService {
       logoUrl: string | null;
       coverUrl: string | null;
       phone: string | null;
+      city?: string | null;
       rootCategory: { id: string; nameAr: string; nameEn: string; slug: string };
+      storeType?: { id: string; nameAr: string; nameEn: string; slug: string; icon: string | null } | null;
       _count?: { ads: number };
     }
   >(store: T) {
@@ -50,7 +53,9 @@ export class StoresService {
       logoUrl: store.logoUrl,
       coverUrl: store.coverUrl,
       phone: store.phone,
+      city: store.city,
       rootCategory: store.rootCategory,
+      storeType: store.storeType ?? null,
       listingsCount: store._count?.ads ?? 0
     };
   }
@@ -120,6 +125,12 @@ export class StoresService {
     if (!category) throw new ApiError(404, 'Category not found');
     if (category.parentId) throw new ApiError(400, 'Store must belong to a main category');
     return category;
+  }
+
+  private async assertStoreType(storeTypeId: string) {
+    const storeType = await storeTypesRepository.findById(storeTypeId);
+    if (!storeType || !storeType.isActive) throw new ApiError(404, 'Store type not found');
+    return storeType;
   }
 
   private async resolvePricing(planId: string, rootCategoryId: string, billingPeriod: StoreBillingPeriod) {
@@ -211,6 +222,7 @@ export class StoresService {
   async create(userId: string, dto: CreateStoreDto, locale: 'ar' | 'en' = 'ar') {
     await this.assertCanCreateStore(userId);
     await this.assertRootCategory(dto.rootCategoryId);
+    await this.assertStoreType(dto.storeTypeId);
     const resolved = await this.resolvePricing(dto.planId, dto.rootCategoryId, dto.billingPeriod);
 
     const { store, subscription } = await storesRepository.create(userId, dto, {
@@ -268,6 +280,10 @@ export class StoresService {
       const nextSlug = createSlug(dto.slug);
       const existing = await storesRepository.slugTaken(nextSlug, id);
       if (existing) throw new ApiError(409, 'Store slug already exists');
+    }
+
+    if (dto.storeTypeId) {
+      await this.assertStoreType(dto.storeTypeId);
     }
 
     return storesRepository.update(id, dto);

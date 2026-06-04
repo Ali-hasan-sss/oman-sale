@@ -1,19 +1,19 @@
 'use client';
 
-import { Calendar, Eye, Flag, Globe, Mail, MapPin, Phone, Search, Share2, User } from 'lucide-react';
+import { Calendar, Eye, Flag, Mail, MapPin, Phone, Share2, User } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-import { HeaderAuthAction } from '@/components/auth/user-menu';
-import { ChatNavLink } from '@/components/chat/chat-nav-link';
 import { SiteFooter } from '@/components/home/site-footer';
-import { MobileNavMenu } from '@/components/navigation/mobile-nav-menu';
+import { SiteHeaderSearch, UserSiteHeader } from '@/components/navigation/user-site-header';
 import { AvatarWithBanBadge } from '@/components/ui/avatar-with-ban-badge';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { getStoredUser, getUserAccessToken } from '@/lib/user-auth';
 import { FavoriteButton } from './favorite-button';
+import { ListingDetailSkeleton } from './listing-detail-skeleton';
+import { ListingImageGalleryModal } from './listing-image-gallery-modal';
 
 type ListingImage = {
   imageUrl: string;
@@ -90,7 +90,8 @@ const labels = {
     reportError: 'تعذر إرسال البلاغ. حاول مرة أخرى.',
     reportLoginRequired: 'يجب تسجيل الدخول للإبلاغ عن الإعلان.',
     reportAlreadySent: 'لقد أبلغت عن هذا الإعلان مسبقاً.',
-    reportOwnListing: 'لا يمكنك الإبلاغ عن إعلانك.'
+    reportOwnListing: 'لا يمكنك الإبلاغ عن إعلانك.',
+    imageOf: 'صورة'
   },
   en: {
     loading: 'Loading listing...',
@@ -121,13 +122,14 @@ const labels = {
     reportError: 'Could not send the report. Try again.',
     reportLoginRequired: 'Sign in to report this listing.',
     reportAlreadySent: 'You have already reported this listing.',
-    reportOwnListing: 'You cannot report your own listing.'
+    reportOwnListing: 'You cannot report your own listing.',
+    imageOf: 'Image'
   }
 };
 
 export function ListingDetailsPage({ id }: { id: string }) {
   const router = useRouter();
-  const { dir, locale, localizedPath, m, toggleLocale } = useI18n();
+  const { dir, locale, localizedPath, m } = useI18n();
   const text = labels[locale];
   const [listing, setListing] = useState<ListingDetails | null>(null);
   const [similar, setSimilar] = useState<ListingDetails[]>([]);
@@ -143,6 +145,7 @@ export function ListingDetailsPage({ id }: { id: string }) {
   const [reportMessage, setReportMessage] = useState('');
   const [reportError, setReportError] = useState('');
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState(false);
 
   useEffect(() => {
     setIsLoading(true);
@@ -266,41 +269,13 @@ export function ListingDetailsPage({ id }: { id: string }) {
 
   return (
     <div className="min-h-screen bg-gray-50" dir={dir}>
-      <header className="sticky top-0 z-50 bg-white shadow-sm">
-        <div className="mx-auto max-w-7xl px-4 py-4">
-          <div className="mb-4 flex items-center justify-between gap-4">
-            <Link className="flex items-center gap-3" href={localizedPath('/')}>
-              <img src="/logo.png" alt="Oman Sale" className="h-14 w-auto" />
-            </Link>
-            <MobileNavMenu />
-            <div className="hidden items-center gap-4 lg:flex">
-              <button className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 transition hover:bg-gray-50" onClick={toggleLocale} type="button">
-                <Globe size={18} />
-                <span className="text-sm">{m.common.languageSwitch}</span>
-              </button>
-              <ChatNavLink className="rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-50" />
-              <HeaderLink href="/all-listings" label={m.common.allListings} />
-              <HeaderLink href="/my-listings" label={m.common.myListings} />
-              <Link className="rounded-lg bg-green-600 px-4 py-2 text-white transition hover:bg-green-700" href={localizedPath('/add-listing')}>
-                {m.common.addListing}
-              </Link>
-              <HeaderAuthAction loginClassName="rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-50" />
-            </div>
-          </div>
-          <div className="relative">
-            <Search className={`absolute top-1/2 -translate-y-1/2 text-gray-400 ${dir === 'rtl' ? 'right-3' : 'left-3'}`} size={20} />
-            <input
-              type="text"
-              placeholder={m.home.searchPlaceholder}
-              className={`w-full rounded-lg border border-gray-300 py-3 outline-none focus:ring-2 focus:ring-green-500 ${dir === 'rtl' ? 'pl-4 pr-12' : 'pl-12 pr-4'}`}
-            />
-          </div>
-        </div>
-      </header>
+      <UserSiteHeader>
+        <SiteHeaderSearch />
+      </UserSiteHeader>
 
       <main className="mx-auto max-w-7xl px-4 py-8">
         {isLoading ? (
-          <div className="rounded-2xl bg-white p-10 text-center font-bold text-gray-500 shadow-sm">{text.loading}</div>
+          <ListingDetailSkeleton />
         ) : error || !listing ? (
           <div className="rounded-2xl bg-white p-10 text-center font-bold text-red-600 shadow-sm">{error || text.notFound}</div>
         ) : (
@@ -308,7 +283,14 @@ export function ListingDetailsPage({ id }: { id: string }) {
             <div className="lg:col-span-2">
               <div className="mb-6 overflow-hidden rounded-2xl bg-white shadow-sm">
                 <div className="relative h-96 bg-gray-100">
-                  <img src={selectedImage} alt={listing.title} className={`h-full w-full ${hasImages ? 'object-cover' : 'object-contain p-10'}`} />
+                  <button
+                    type="button"
+                    onClick={() => hasImages && setGalleryOpen(true)}
+                    className={`h-full w-full ${hasImages ? 'cursor-zoom-in' : 'cursor-default'}`}
+                    aria-label={hasImages ? text.imageOf : undefined}
+                  >
+                    <img src={selectedImage} alt={listing.title} className={`h-full w-full ${hasImages ? 'object-cover' : 'object-contain p-10'}`} />
+                  </button>
                   <div className="absolute right-4 top-4 flex gap-2">
                     <FavoriteButton
                       adId={id}
@@ -327,7 +309,10 @@ export function ListingDetailsPage({ id }: { id: string }) {
                     {images.slice(0, 8).map((image, index) => (
                       <button
                         key={`${image}-${index}`}
-                        onClick={() => setActiveImage(index)}
+                        onClick={() => {
+                          setActiveImage(index);
+                          setGalleryOpen(true);
+                        }}
                         className={`aspect-video overflow-hidden rounded-lg border-2 transition ${activeImage === index ? 'border-green-600' : 'border-transparent'}`}
                         type="button"
                       >
@@ -394,32 +379,44 @@ export function ListingDetailsPage({ id }: { id: string }) {
               <div className="sticky top-4 rounded-2xl bg-white p-6 shadow-sm">
                 <h3 className="mb-4 text-xl font-bold">{text.sellerInfo}</h3>
                 <div className="mb-6">
-                  <div className="mb-4 flex items-center gap-3">
-                    <AvatarWithBanBadge
-                      src={listing.store?.logoUrl ?? listing.user?.avatar}
-                      alt={listing.store ? (locale === 'en' ? listing.store.nameEn : listing.store.nameAr) : listing.user?.fullName ?? ''}
-                      size={56}
-                      isBlocked={listing.user?.isBlocked}
-                      badgeLabel={listing.user?.isBlocked ? m.profileExtra.accountBlocked : undefined}
-                      fallback={<User size={26} />}
-                    />
-                    <div>
-                      <h4 className="font-bold">
-                        {listing.store
-                          ? locale === 'en'
-                            ? listing.store.nameEn
-                            : listing.store.nameAr
-                          : listing.user?.fullName ?? '-'}
-                      </h4>
-                      {listing.store ? (
+                  {listing.store ? (
+                    <Link
+                      href={localizedPath(`/stores/${listing.store.slug}`)}
+                      className="mb-4 flex items-center gap-3 rounded-xl p-2 transition hover:bg-gray-50"
+                    >
+                      <AvatarWithBanBadge
+                        src={listing.store.logoUrl ?? listing.user?.avatar}
+                        alt={locale === 'en' ? listing.store.nameEn : listing.store.nameAr}
+                        size={56}
+                        isBlocked={listing.user?.isBlocked}
+                        badgeLabel={listing.user?.isBlocked ? m.profileExtra.accountBlocked : undefined}
+                        fallback={<User size={26} />}
+                      />
+                      <div>
+                        <h4 className="font-bold">
+                          {locale === 'en' ? listing.store.nameEn : listing.store.nameAr}
+                        </h4>
                         <p className="text-sm font-bold text-green-700">{text.storeListing}</p>
-                      ) : (
+                      </div>
+                    </Link>
+                  ) : (
+                    <div className="mb-4 flex items-center gap-3">
+                      <AvatarWithBanBadge
+                        src={listing.user?.avatar}
+                        alt={listing.user?.fullName ?? ''}
+                        size={56}
+                        isBlocked={listing.user?.isBlocked}
+                        badgeLabel={listing.user?.isBlocked ? m.profileExtra.accountBlocked : undefined}
+                        fallback={<User size={26} />}
+                      />
+                      <div>
+                        <h4 className="font-bold">{listing.user?.fullName ?? '-'}</h4>
                         <p className="text-sm text-gray-500">
                           {text.memberSince} {listing.user?.createdAt ? new Date(listing.user.createdAt).getFullYear() : '-'}
                         </p>
-                      )}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 <div className="mb-6 space-y-3">
@@ -466,6 +463,20 @@ export function ListingDetailsPage({ id }: { id: string }) {
         )}
       </main>
 
+      {galleryOpen && hasImages ? (
+        <ListingImageGalleryModal
+          images={images}
+          initialIndex={activeImage}
+          title={listing?.title}
+          imageLabel={text.imageOf}
+          dir={dir}
+          onClose={(finalIndex) => {
+            if (finalIndex !== undefined) setActiveImage(finalIndex);
+            setGalleryOpen(false);
+          }}
+        />
+      ) : null}
+
       {reportOpen ? (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
@@ -506,14 +517,6 @@ export function ListingDetailsPage({ id }: { id: string }) {
       <SiteFooter />
     </div>
   );
-
-  function HeaderLink({ href, label }: { href: string; label: string }) {
-    return (
-      <Link className="rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-50" href={localizedPath(href)}>
-        {label}
-      </Link>
-    );
-  }
 }
 
 function SimilarCard({ item }: { item: ListingDetails }) {

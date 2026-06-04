@@ -126,7 +126,7 @@ export type HeroBanner = {
 export type HeroSlide = {
   id: string;
   sortOrder: number;
-  platform?: 'WEB' | 'MOBILE';
+  platform?: 'WEB' | 'MOBILE' | 'ALL';
   imageUrl: string;
   title: string;
   subtitle: string;

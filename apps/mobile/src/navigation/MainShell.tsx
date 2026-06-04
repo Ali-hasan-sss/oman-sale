@@ -329,6 +329,7 @@ export function MainShell() {
             }}
             onOpenListing={openListingDetail}
             onOpenChat={openChatConversation}
+            onOpenStore={openStoreDetail}
           />
         ) : (
           <HomeScreen {...homeScreenProps} />

@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+import { Megaphone } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '@/lib/api';
@@ -53,6 +55,11 @@ export function HeroBannersSection() {
     locale === 'en'
       ? 'Discover highlighted deals and announcements selected for you.'
       : 'اكتشف عروضاً وإعلانات مختارة بعناية لتناسب اهتماماتك.';
+  const advertiseLabel = locale === 'en' ? 'Advertise in this banner' : 'أعلن في هذا البنر';
+  const advertiseHint =
+    locale === 'en'
+      ? 'Submit your banner ad, pay by duration, and publish after admin approval.'
+      : 'ارسل إعلانك، ادفع حسب المدة، ويُنشر بعد موافقة الإدارة.';
 
   const loopBanners = useMemo(() => buildLoopBanners(banners), [banners]);
   const hasLoop = banners.length > 1;
@@ -150,7 +157,24 @@ export function HeroBannersSection() {
     startAutoPlay();
   };
 
-  if (banners.length === 0) return null;
+  if (banners.length === 0) {
+    return (
+      <section className="bg-slate-50 px-4 pt-12 md:pt-16">
+        <div className="mx-auto max-w-[1010px] text-center">
+          <h2 className="text-2xl font-black text-slate-900 md:text-3xl">{title}</h2>
+          <p className="mt-2 text-sm text-slate-500 md:text-base">{subtitle}</p>
+          <Link
+            href={localizedPath('/banner-ad')}
+            className="mt-6 inline-flex items-center gap-2 rounded-full bg-brand-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-brand-700"
+          >
+            <Megaphone size={18} />
+            <span>{advertiseLabel}</span>
+          </Link>
+          <p className="mt-3 text-xs text-slate-500">{advertiseHint}</p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="bg-slate-50 px-4 pt-12 md:pt-16">
@@ -213,6 +237,17 @@ export function HeroBannersSection() {
             ))}
           </div>
         ) : null}
+      </div>
+
+      <div className="mx-auto mt-6 max-w-[1010px] text-center">
+        <Link
+          href={localizedPath('/banner-ad')}
+          className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white px-6 py-3 text-sm font-bold text-brand-700 shadow-sm transition hover:bg-brand-50"
+        >
+          <Megaphone size={18} />
+          <span>{advertiseLabel}</span>
+        </Link>
+        <p className="mt-2 text-xs text-slate-500">{advertiseHint}</p>
       </div>
     </section>
   );

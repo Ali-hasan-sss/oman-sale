@@ -61,6 +61,7 @@ export const API_ENDPOINTS = {
   stores: {
     root: '/stores',
     plans: '/stores/plans',
+    storeTypes: '/store-types',
     confirmPayment: '/stores/payments/thawani/confirm',
     mine: '/stores/me',
     byId: (id: string) => `/stores/${id}`,

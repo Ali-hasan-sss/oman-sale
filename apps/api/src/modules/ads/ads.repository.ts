@@ -21,7 +21,44 @@ const getTodayStart = () => {
 };
 
 export class AdsRepository {
-  private buildWhere(query: ListAdsQuery, publicOnly: boolean): Prisma.AdWhereInput {
+  private categoryDescendantsCache: Map<string, string[]> | null = null;
+
+  private async getCategoryDescendantIds(categoryId: string) {
+    if (!this.categoryDescendantsCache) {
+      const categories = await prisma.category.findMany({
+        where: { deletedAt: null },
+        select: { id: true, parentId: true }
+      });
+
+      const childrenByParent = new Map<string, string[]>();
+      for (const category of categories) {
+        if (!category.parentId) continue;
+        const siblings = childrenByParent.get(category.parentId) ?? [];
+        siblings.push(category.id);
+        childrenByParent.set(category.parentId, siblings);
+      }
+
+      const collectDescendants = (id: string): string[] => {
+        const ids = [id];
+        for (const childId of childrenByParent.get(id) ?? []) {
+          ids.push(...collectDescendants(childId));
+        }
+        return ids;
+      };
+
+      this.categoryDescendantsCache = new Map(categories.map((category) => [category.id, collectDescendants(category.id)]));
+    }
+
+    return this.categoryDescendantsCache.get(categoryId) ?? [categoryId];
+  }
+
+  private async buildCategoryFilter(categoryId?: string): Promise<Prisma.AdWhereInput> {
+    if (!categoryId) return {};
+    const categoryIds = await this.getCategoryDescendantIds(categoryId);
+    return { categoryId: { in: categoryIds } };
+  }
+
+  private buildWhere(query: ListAdsQuery, publicOnly: boolean, categoryFilter: Prisma.AdWhereInput = {}): Prisma.AdWhereInput {
     return {
       deletedAt: null,
       ...(publicOnly && {
@@ -33,7 +70,7 @@ export class AdsRepository {
       }),
       ...(query.type && { type: query.type }),
       ...(query.status && { status: query.status }),
-      ...(query.categoryId && { categoryId: query.categoryId }),
+      ...(query.categoryId && categoryFilter),
       ...(query.city && { city: query.city }),
       ...((query.minPrice !== undefined || query.maxPrice !== undefined) && {
         price: {
@@ -63,7 +100,8 @@ export class AdsRepository {
       category: true,
       store: { select: storeSummarySelect }
     } satisfies Prisma.AdInclude;
-    const where = this.buildWhere(query, true);
+    const categoryFilter = await this.buildCategoryFilter(query.categoryId);
+    const where = this.buildWhere(query, true, categoryFilter);
     const promotedWhere: Prisma.AdWhereInput = {
       ...where,
       promotion: {
@@ -119,8 +157,9 @@ export class AdsRepository {
   }
 
   async listForAdmin(query: AdminListAdsQuery) {
+    const categoryFilter = await this.buildCategoryFilter(query.categoryId);
     const where: Prisma.AdWhereInput = {
-      ...this.buildWhere(query, false),
+      ...this.buildWhere(query, false, categoryFilter),
       ...(query.includeDeleted ? { deletedAt: query.deletedOnly ? { not: null } : undefined } : { deletedAt: null }),
       ...(query.userId && { userId: query.userId }),
       ...(query.isApproved !== undefined && { isApproved: query.isApproved })
@@ -148,8 +187,9 @@ export class AdsRepository {
   }
 
   async listForUser(userId: string, query: ListAdsQuery & { storeId?: string }) {
+    const categoryFilter = await this.buildCategoryFilter(query.categoryId);
     const where: Prisma.AdWhereInput = {
-      ...this.buildWhere(query, false),
+      ...this.buildWhere(query, false, categoryFilter),
       userId,
       ...(query.storeId && { storeId: query.storeId })
     };

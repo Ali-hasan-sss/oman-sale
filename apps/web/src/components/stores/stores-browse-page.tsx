@@ -1,23 +1,23 @@
 'use client';
 
-import { Globe, Phone, Search, Store } from 'lucide-react';
+import { Phone, Store } from 'lucide-react';
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 
-import { HeaderAuthAction } from '@/components/auth/user-menu';
-import { ChatNavLink } from '@/components/chat/chat-nav-link';
 import { SiteFooter } from '@/components/home/site-footer';
-import { MobileNavMenu } from '@/components/navigation/mobile-nav-menu';
+import { FilterChipsSkeleton, StoreCardsSkeleton } from '@/components/stores/store-card-skeleton';
+import { UserSiteHeader, SiteHeaderSearch } from '@/components/navigation/user-site-header';
 import { api } from '@/lib/api';
-import { buildCategoryTree } from '@/lib/category-tree';
 import { useI18n } from '@/lib/i18n';
+import { getCityLabel, omanCities } from '@/lib/oman-cities';
 
-type RootCategory = {
+type StoreType = {
   id: string;
-  name: string;
-  nameAr?: string;
-  nameEn?: string;
-  parentId?: string | null;
+  nameAr: string;
+  nameEn: string;
+  slug: string;
+  icon?: string | null;
 };
 
 type PublicStore = {
@@ -30,8 +30,10 @@ type PublicStore = {
   logoUrl?: string | null;
   coverUrl?: string | null;
   phone?: string | null;
+  city?: string | null;
   listingsCount: number;
   rootCategory?: { id: string; nameAr: string; nameEn: string; slug: string };
+  storeType?: StoreType | null;
 };
 
 type StoresResponse = {
@@ -44,26 +46,33 @@ type StoresResponse = {
 const fallbackImage = '/logo.png';
 
 export function StoresBrowsePage() {
-  const { dir, locale, localizedPath, m, toggleLocale } = useI18n();
+  const { dir, locale, localizedPath, m } = useI18n();
+  const searchParams = useSearchParams();
   const text = m.storesBrowse;
 
-  const [categories, setCategories] = useState<RootCategory[]>([]);
+  const [storeTypes, setStoreTypes] = useState<StoreType[]>([]);
   const [stores, setStores] = useState<PublicStore[]>([]);
   const [total, setTotal] = useState(0);
-  const [query, setQuery] = useState('');
-  const [searchInput, setSearchInput] = useState('');
-  const [rootCategoryId, setRootCategoryId] = useState('');
+  const query = (searchParams.get('q') ?? '').trim();
+  const [storeTypeId, setStoreTypeId] = useState('');
+  const [city, setCity] = useState('');
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingStoreTypes, setIsLoadingStoreTypes] = useState(true);
   const [error, setError] = useState('');
 
-  const rootCategories = useMemo(() => buildCategoryTree(categories), [categories]);
+  useEffect(() => {
+    const typeFromUrl = searchParams.get('storeTypeId') ?? '';
+    setStoreTypeId(typeFromUrl);
+  }, [searchParams]);
 
   useEffect(() => {
+    setIsLoadingStoreTypes(true);
     api
-      .get<{ data: RootCategory[] }>('/categories', { params: { locale, includeInactive: false } })
-      .then((response) => setCategories(response.data.data))
-      .catch(() => setCategories([]));
+      .get<{ data: StoreType[] }>('/store-types')
+      .then((response) => setStoreTypes(response.data.data))
+      .catch(() => setStoreTypes([]))
+      .finally(() => setIsLoadingStoreTypes(false));
   }, [locale]);
 
   const loadStores = useCallback(async () => {
@@ -73,7 +82,8 @@ export function StoresBrowsePage() {
       const response = await api.get<{ data: StoresResponse }>('/stores', {
         params: {
           q: query.trim() || undefined,
-          rootCategoryId: rootCategoryId || undefined,
+          storeTypeId: storeTypeId || undefined,
+          city: city || undefined,
           page,
           limit: 12
         }
@@ -86,7 +96,7 @@ export function StoresBrowsePage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, query, rootCategoryId, text.loadError]);
+  }, [page, query, storeTypeId, city, text.loadError]);
 
   useEffect(() => {
     loadStores();
@@ -94,63 +104,17 @@ export function StoresBrowsePage() {
 
   useEffect(() => {
     setPage(1);
-  }, [query, rootCategoryId]);
+  }, [query, storeTypeId, city]);
 
   const hasMore = stores.length < total;
 
-  const submitSearch = () => {
-    setQuery(searchInput.trim());
-  };
+  const showStoreSkeleton = isLoading && page === 1;
 
   return (
     <div className="min-h-screen bg-gray-50" dir={dir}>
-      <header className="sticky top-0 z-50 bg-white shadow-sm">
-        <div className="mx-auto max-w-7xl px-4 py-4">
-          <div className="mb-4 flex items-center justify-between gap-4">
-            <Link href={localizedPath('/')} className="flex items-center gap-3">
-              <img src="/logo.png" alt="Oman Sale" className="h-14 w-auto" />
-            </Link>
-            <MobileNavMenu />
-            <div className="hidden items-center gap-4 lg:flex">
-              <button
-                type="button"
-                onClick={toggleLocale}
-                className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 transition hover:bg-gray-50"
-              >
-                <Globe size={18} />
-                <span className="text-sm">{m.common.languageSwitch}</span>
-              </button>
-              <ChatNavLink className="rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-50" />
-              <HeaderLink href="/stores" label={text.title} />
-              <HeaderLink href="/all-listings" label={m.common.allListings} />
-              <Link href={localizedPath('/add-listing')} className="rounded-lg bg-green-600 px-4 py-2 text-white transition hover:bg-green-700">
-                {m.common.addListing}
-              </Link>
-              <HeaderAuthAction loginClassName="rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-50" />
-            </div>
-          </div>
-          <div className="relative">
-            <Search className={`absolute top-1/2 -translate-y-1/2 text-gray-400 ${dir === 'rtl' ? 'right-3' : 'left-3'}`} size={20} />
-            <input
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') submitSearch();
-              }}
-              type="search"
-              placeholder={text.searchPlaceholder}
-              className={`w-full rounded-lg border border-gray-300 py-3 outline-none focus:ring-2 focus:ring-green-500 ${dir === 'rtl' ? 'pl-4 pr-12' : 'pl-12 pr-4'}`}
-            />
-            <button
-              type="button"
-              onClick={submitSearch}
-              className={`absolute top-1/2 -translate-y-1/2 rounded-lg bg-green-600 px-3 py-1.5 text-sm font-bold text-white ${dir === 'rtl' ? 'left-2' : 'right-2'}`}
-            >
-              {text.search}
-            </button>
-          </div>
-        </div>
-      </header>
+      <UserSiteHeader>
+        <SiteHeaderSearch />
+      </UserSiteHeader>
 
       <main className="mx-auto max-w-7xl px-4 py-8">
         <div className="mb-8">
@@ -161,25 +125,48 @@ export function StoresBrowsePage() {
           </p>
         </div>
 
-        <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
-          <FilterChip active={!rootCategoryId} onClick={() => setRootCategoryId('')}>
-            {text.allCategories}
-          </FilterChip>
-          {rootCategories.map((category) => (
-            <FilterChip
-              key={category.id}
-              active={rootCategoryId === category.id}
-              onClick={() => setRootCategoryId(rootCategoryId === category.id ? '' : category.id)}
-            >
-              {locale === 'en' ? category.nameEn || category.name : category.nameAr || category.name}
+        <div className="mb-4">
+          {isLoadingStoreTypes ? (
+            <FilterChipsSkeleton count={7} />
+          ) : (
+            <div className="filter-chips-scroll flex gap-2 overflow-x-auto pb-2">
+              <FilterChip active={!storeTypeId} onClick={() => setStoreTypeId('')}>
+                {text.allStoreTypes}
+              </FilterChip>
+              {storeTypes.map((storeType) => (
+                <FilterChip
+                  key={storeType.id}
+                  active={storeTypeId === storeType.id}
+                  onClick={() => setStoreTypeId(storeTypeId === storeType.id ? '' : storeType.id)}
+                >
+                  {locale === 'en' ? storeType.nameEn : storeType.nameAr}
+                </FilterChip>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="mb-6">
+          <div className="filter-chips-scroll flex gap-2 overflow-x-auto pb-2">
+            <FilterChip active={!city} onClick={() => setCity('')}>
+              {text.allCities}
             </FilterChip>
-          ))}
+            {omanCities.map((cityOption) => (
+              <FilterChip
+                key={cityOption.value}
+                active={city === cityOption.value}
+                onClick={() => setCity(city === cityOption.value ? '' : cityOption.value)}
+              >
+                {locale === 'en' ? cityOption.en : cityOption.ar}
+              </FilterChip>
+            ))}
+          </div>
         </div>
 
         {error ? <p className="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</p> : null}
 
-        {isLoading && stores.length === 0 ? (
-          <p className="py-16 text-center font-bold text-gray-500">{text.loading}</p>
+        {showStoreSkeleton ? (
+          <StoreCardsSkeleton count={8} />
         ) : stores.length === 0 ? (
           <p className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-16 text-center text-gray-500">{text.empty}</p>
         ) : (
@@ -222,8 +209,8 @@ function StoreCard({
 }) {
   const name = locale === 'en' ? store.nameEn : store.nameAr;
   const bio = locale === 'en' ? store.bioEn : store.bioAr;
-  const categoryName =
-    locale === 'en' ? store.rootCategory?.nameEn : store.rootCategory?.nameAr;
+  const typeName = locale === 'en' ? store.storeType?.nameEn : store.storeType?.nameAr;
+  const cityLabel = getCityLabel(store.city, locale);
 
   return (
     <Link
@@ -247,13 +234,18 @@ function StoreCard({
       </div>
       <div className="p-4">
         <h2 className="mb-1 line-clamp-1 text-lg font-black text-gray-900">{name}</h2>
-        {categoryName ? <p className="mb-2 text-xs font-bold text-green-700">{categoryName}</p> : null}
+        {typeName ? (
+          <span className="mb-2 inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100">
+            {typeName}
+          </span>
+        ) : null}
         {bio ? <p className="mb-3 line-clamp-2 text-sm text-gray-600">{bio}</p> : null}
         <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
           <span className="inline-flex items-center gap-1 font-bold">
             <Store size={14} />
             {store.listingsCount} {text.listings}
           </span>
+          {cityLabel ? <span className="font-bold text-gray-600">{cityLabel}</span> : null}
           {store.phone ? (
             <span className="inline-flex items-center gap-1" dir="ltr">
               <Phone size={14} />
@@ -271,20 +263,11 @@ function FilterChip({ active, onClick, children }: { active: boolean; onClick: (
     <button
       type="button"
       onClick={onClick}
-      className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-bold transition ${
+      className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-bold transition ${
         active ? 'bg-green-600 text-white' : 'bg-white text-gray-700 shadow-sm hover:bg-gray-100'
       }`}
     >
       {children}
     </button>
-  );
-}
-
-function HeaderLink({ href, label }: { href: string; label: string }) {
-  const { localizedPath } = useI18n();
-  return (
-    <Link href={localizedPath(href)} className="rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-50">
-      {label}
-    </Link>
   );
 }

@@ -1,6 +1,8 @@
 import { StoreBillingPeriod } from '@prisma/client';
 import { z } from 'zod';
 
+import { omanCities } from '../../shared/constants/oman-cities';
+
 const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
 const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
 
@@ -33,6 +35,8 @@ export const createStoreSchema = z.object({
   commercialRegistrationNumber: z.string().trim().min(3).max(30),
   workingHours: storeWorkingHoursSchema,
   rootCategoryId: z.string().uuid(),
+  storeTypeId: z.string().uuid(),
+  city: z.enum(omanCities),
   slug: z
     .string()
     .trim()
@@ -48,7 +52,9 @@ export const updateStoreSchema = createStoreSchema
   .omit({ planId: true, billingPeriod: true, rootCategoryId: true })
   .partial()
   .extend({
-    isActive: z.boolean().optional()
+    isActive: z.boolean().optional(),
+    storeTypeId: z.string().uuid().optional(),
+    city: z.enum(omanCities).optional()
   });
 
 export const subscribeStoreSchema = z.object({
@@ -58,6 +64,8 @@ export const subscribeStoreSchema = z.object({
 
 export const listStoresQuerySchema = z.object({
   rootCategoryId: z.string().uuid().optional(),
+  storeTypeId: z.string().uuid().optional(),
+  city: z.enum(omanCities).optional(),
   q: z.string().trim().optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(50).default(20)
@@ -66,6 +74,8 @@ export const listStoresQuerySchema = z.object({
 export const listAdminStoresQuerySchema = z.object({
   q: z.string().trim().optional(),
   rootCategoryId: z.string().uuid().optional(),
+  storeTypeId: z.string().uuid().optional(),
+  city: z.enum(omanCities).optional(),
   isActive: z
     .preprocess((value) => {
       if (value === 'true') return true;

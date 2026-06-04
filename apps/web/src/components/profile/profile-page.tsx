@@ -1,15 +1,13 @@
 'use client';
 
-import { Camera, Globe, Lock, Mail, Phone, Save, Search, Store, User, X } from 'lucide-react';
+import { Camera, Lock, Mail, Phone, Save, Store, User, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChangeEvent, FormEvent, ReactNode, useEffect, useState } from 'react';
 
-import { HeaderAuthAction } from '@/components/auth/user-menu';
 import { VerificationCodeInput } from '@/components/auth/verification-code-input';
-import { ChatNavLink } from '@/components/chat/chat-nav-link';
 import { SiteFooter } from '@/components/home/site-footer';
-import { MobileNavMenu } from '@/components/navigation/mobile-nav-menu';
+import { SiteHeaderSearch, UserSiteHeader } from '@/components/navigation/user-site-header';
 import { AvatarWithBanBadge } from '@/components/ui/avatar-with-ban-badge';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
@@ -142,7 +140,7 @@ const messages: Record<'ar' | 'en', ProfileMessages> = {
 
 export function ProfilePage() {
   const router = useRouter();
-  const { dir, locale, localizedPath, m, toggleLocale } = useI18n();
+  const { dir, locale, localizedPath, m } = useI18n();
   const profileMessages = messages[locale];
   const user = useAuthStore((state) => state.user);
   const setSession = useAuthStore((state) => state.setSession);
@@ -321,48 +319,9 @@ export function ProfilePage() {
 
   return (
     <div id="top" className="min-h-screen bg-gray-50" dir={dir}>
-      <header className="sticky top-0 z-50 bg-white shadow-sm">
-        <div className="mx-auto max-w-7xl px-4 py-4">
-          <div className="mb-4 flex items-center justify-between gap-4">
-            <Link className="flex items-center gap-3" href={localizedPath('/')}>
-              <img src="/logo.png" alt="Oman Sale" className="h-14 w-auto" />
-            </Link>
-
-            <MobileNavMenu />
-            <div className="hidden items-center gap-4 lg:flex">
-              <button
-                className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 transition hover:bg-gray-50"
-                onClick={toggleLocale}
-                type="button"
-              >
-                <Globe size={18} />
-                <span className="text-sm">{m.common.languageSwitch}</span>
-              </button>
-              <ChatNavLink className="rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-50" />
-              <HeaderLink href="/all-listings" label={m.common.allListings} />
-              <HeaderLink href="/my-listings" label={m.common.myListings} />
-              <Link className="rounded-lg bg-green-600 px-4 py-2 text-white transition hover:bg-green-700" href={localizedPath('/add-listing')}>
-                {m.common.addListing}
-              </Link>
-              <HeaderAuthAction loginClassName="rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-50" />
-            </div>
-          </div>
-
-          <div className="relative">
-            <Search
-              className={`absolute top-1/2 -translate-y-1/2 text-gray-400 ${dir === 'rtl' ? 'right-3' : 'left-3'}`}
-              size={20}
-            />
-            <input
-              type="text"
-              placeholder={m.home.searchPlaceholder}
-              className={`w-full rounded-lg border border-gray-300 py-3 outline-none focus:ring-2 focus:ring-green-500 ${
-                dir === 'rtl' ? 'pl-4 pr-12' : 'pl-12 pr-4'
-              }`}
-            />
-          </div>
-        </div>
-      </header>
+      <UserSiteHeader>
+        <SiteHeaderSearch />
+      </UserSiteHeader>
 
       <main className="mx-auto max-w-6xl px-4 py-10">
         <section className="mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-green-700 to-slate-900 p-8 text-white shadow-lg">
@@ -586,14 +545,6 @@ export function ProfilePage() {
       <SiteFooter />
     </div>
   );
-
-  function HeaderLink({ href, label }: { href: string; label: string }) {
-    return (
-      <Link className="rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-50" href={localizedPath(href)}>
-        {label}
-      </Link>
-    );
-  }
 }
 
 function Field({ children, label }: { children: ReactNode; label: string }) {

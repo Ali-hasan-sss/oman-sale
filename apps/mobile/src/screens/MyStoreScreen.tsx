@@ -15,6 +15,7 @@ import { AppTextInput } from '../components/AppTextInput';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { ErrorNotice } from '../components/ErrorNotice';
 import { KeyboardAwareScrollView } from '../components/KeyboardAwareScrollView';
+import { MyStoreScreenSkeleton } from '../components/skeleton';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
 import {
@@ -238,9 +239,9 @@ export function MyStoreScreen({ onCreateStore, onOpenListing }: MyStoreScreenPro
 
   if (isLoading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator color={colors.brand} />
-      </View>
+      <KeyboardAwareScrollView contentContainerStyle={[styles.content, { paddingBottom: scrollBottomPadding }]}>
+        <MyStoreScreenSkeleton />
+      </KeyboardAwareScrollView>
     );
   }
 
@@ -274,7 +275,7 @@ export function MyStoreScreen({ onCreateStore, onOpenListing }: MyStoreScreenPro
             <Ionicons name="image-outline" size={28} color={colors.muted} />
           </View>
         ) : null}
-        <Pressable style={styles.coverBtn} onPress={() => pickImage('cover')}>
+        <Pressable style={[styles.coverBtn, isRtl ? styles.coverBtnRtlEnd : styles.coverBtnLtrEnd]} onPress={() => pickImage('cover')}>
           <AppText style={styles.coverBtnText}>{text.changeCover}</AppText>
         </Pressable>
       </View>
@@ -507,7 +508,20 @@ const styles = StyleSheet.create({
   coverWrap: { height: 160, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: '#eef2f7', ...shadow },
   cover: { width: '100%', height: '100%' },
   coverPlaceholder: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
-  coverBtn: { position: 'absolute', bottom: 12, right: 12, backgroundColor: '#fff', borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 8 },
+  coverBtn: {
+    position: 'absolute',
+    bottom: 12,
+    backgroundColor: '#fff',
+    borderRadius: radius.md,
+    paddingHorizontal: 12,
+    paddingVertical: 8
+  },
+  coverBtnRtlEnd: {
+    left: 12
+  },
+  coverBtnLtrEnd: {
+    right: 12
+  },
   coverBtnText: { fontWeight: '700', color: colors.brandDark, fontSize: 12 },
   logoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: -28, paddingHorizontal: 8 },
   logoWrap: {

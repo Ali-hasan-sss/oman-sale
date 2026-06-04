@@ -41,6 +41,7 @@ type ListingDetailScreenProps = {
   onLoginRequired: () => void;
   onOpenListing: (id: string) => void;
   onOpenChat: (conversationId: string) => void;
+  onOpenStore?: (slug: string) => void;
 };
 
 function isDemoId(id: string) {
@@ -62,7 +63,8 @@ export function ListingDetailScreen({
   onBack,
   onLoginRequired,
   onOpenListing,
-  onOpenChat
+  onOpenChat,
+  onOpenStore
 }: ListingDetailScreenProps) {
   const { locale, t, isRtl } = useI18n();
   const { scrollBottomPadding } = useScreenInsets();
@@ -375,33 +377,58 @@ export function ListingDetailScreen({
           <AppText style={[styles.sectionTitle, contentRtl ? styles.textRtl : styles.textLtr]}>
             {text.sellerInfo}
           </AppText>
-          <View style={[styles.sellerRow, isRtl && styles.sellerRowRtl]}>
-            <AvatarWithBanBadge
-              uri={listing.store?.logoUrl ?? listing.user?.avatar}
-              fallbackLabel={
-                listing.store
-                  ? locale === 'en'
-                    ? listing.store.nameEn
-                    : listing.store.nameAr
-                  : listing.user?.fullName
-              }
-              size={56}
-              isBlocked={listing.user?.isBlocked}
-              badgeLabel={listing.user?.isBlocked ? t.profile.accountBlocked : undefined}
-            />
-            <View style={styles.sellerBody}>
-              <AppText style={[styles.sellerName, contentRtl ? styles.textRtl : styles.textLtr]}>
-                {listing.store
-                  ? locale === 'en'
-                    ? listing.store.nameEn
-                    : listing.store.nameAr
-                  : listing.user?.fullName ?? '-'}
-              </AppText>
-              <AppText style={[styles.sellerMeta, contentRtl ? styles.textRtl : styles.textLtr]}>
-                {listing.store ? text.storeListing : `${text.memberSince} ${memberYear}`}
-              </AppText>
+          {listing.store && onOpenStore ? (
+            <Pressable
+              style={[styles.sellerRow, isRtl && styles.sellerRowRtl, styles.sellerRowLink]}
+              onPress={() => onOpenStore(listing.store!.slug)}
+            >
+              <AvatarWithBanBadge
+                uri={listing.store.logoUrl ?? listing.user?.avatar}
+                fallbackLabel={
+                  locale === 'en' ? listing.store.nameEn : listing.store.nameAr
+                }
+                size={56}
+                isBlocked={listing.user?.isBlocked}
+                badgeLabel={listing.user?.isBlocked ? t.profile.accountBlocked : undefined}
+              />
+              <View style={styles.sellerBody}>
+                <AppText style={[styles.sellerName, contentRtl ? styles.textRtl : styles.textLtr]}>
+                  {locale === 'en' ? listing.store.nameEn : listing.store.nameAr}
+                </AppText>
+                <AppText style={[styles.sellerMeta, styles.sellerStoreMeta, contentRtl ? styles.textRtl : styles.textLtr]}>
+                  {text.storeListing}
+                </AppText>
+              </View>
+            </Pressable>
+          ) : (
+            <View style={[styles.sellerRow, isRtl && styles.sellerRowRtl]}>
+              <AvatarWithBanBadge
+                uri={listing.store?.logoUrl ?? listing.user?.avatar}
+                fallbackLabel={
+                  listing.store
+                    ? locale === 'en'
+                      ? listing.store.nameEn
+                      : listing.store.nameAr
+                    : listing.user?.fullName
+                }
+                size={56}
+                isBlocked={listing.user?.isBlocked}
+                badgeLabel={listing.user?.isBlocked ? t.profile.accountBlocked : undefined}
+              />
+              <View style={styles.sellerBody}>
+                <AppText style={[styles.sellerName, contentRtl ? styles.textRtl : styles.textLtr]}>
+                  {listing.store
+                    ? locale === 'en'
+                      ? listing.store.nameEn
+                      : listing.store.nameAr
+                    : listing.user?.fullName ?? '-'}
+                </AppText>
+                <AppText style={[styles.sellerMeta, contentRtl ? styles.textRtl : styles.textLtr]}>
+                  {listing.store ? text.storeListing : `${text.memberSince} ${memberYear}`}
+                </AppText>
+              </View>
             </View>
-          </View>
+          )}
 
           <Pressable style={styles.primaryBtn} onPress={() => setShowPhone(true)}>
             <Ionicons name="call-outline" size={20} color="#fff" />
@@ -807,6 +834,15 @@ const styles = StyleSheet.create({
   },
   sellerRowRtl: {
     flexDirection: 'row-reverse'
+  },
+  sellerRowLink: {
+    borderRadius: radius.md,
+    padding: 4,
+    marginHorizontal: -4
+  },
+  sellerStoreMeta: {
+    color: colors.brandDark,
+    fontWeight: '700'
   },
   avatar: {
     width: 56,

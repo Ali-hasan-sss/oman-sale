@@ -7,6 +7,7 @@ import { createPortal } from 'react-dom';
 
 import { adminApi } from '@/lib/admin-auth';
 import { useI18n } from '@/lib/i18n';
+import { getCityLabel, omanCities } from '@/lib/oman-cities';
 
 type RootCategory = {
   id: string;
@@ -40,6 +41,7 @@ type AdminStore = {
   logoUrl?: string | null;
   coverUrl?: string | null;
   phone?: string | null;
+  city?: string | null;
   nationalId?: string;
   commercialRegistrationNumber?: string;
   isActive: boolean;
@@ -82,6 +84,7 @@ export function AdminStoresManagement() {
   const [categories, setCategories] = useState<RootCategory[]>([]);
   const [query, setQuery] = useState('');
   const [rootCategoryId, setRootCategoryId] = useState('');
+  const [city, setCity] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -114,6 +117,7 @@ export function AdminStoresManagement() {
         params: {
           q: query.trim() || undefined,
           rootCategoryId: rootCategoryId || undefined,
+          city: city || undefined,
           isActive: statusFilter === 'active' ? true : statusFilter === 'inactive' ? false : undefined,
           page: 1,
           limit: 30
@@ -137,7 +141,7 @@ export function AdminStoresManagement() {
 
   useEffect(() => {
     loadStores();
-  }, [rootCategoryId, statusFilter, locale]);
+  }, [rootCategoryId, city, statusFilter, locale]);
 
   const activeSubscription = (store: AdminStore) => {
     const now = Date.now();
@@ -309,7 +313,7 @@ export function AdminStoresManagement() {
             </p>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
             <div className="relative md:col-span-2">
               <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input
@@ -327,6 +331,14 @@ export function AdminStoresManagement() {
               {rootCategories.map((category) => (
                 <option key={category.id} value={category.id}>
                   {locale === 'en' ? category.nameEn || category.name : category.nameAr || category.name}
+                </option>
+              ))}
+            </select>
+            <select value={city} onChange={(event) => setCity(event.target.value)} className={inputClass}>
+              <option value="">{text.allCities}</option>
+              {omanCities.map((cityOption) => (
+                <option key={cityOption.value} value={cityOption.value}>
+                  {locale === 'en' ? cityOption.en : cityOption.ar}
                 </option>
               ))}
             </select>
@@ -618,6 +630,7 @@ export function AdminStoresManagement() {
                   <DetailField label={text.nationalId} value={storeDetail.nationalId} />
                   <DetailField label={text.commercialRegistration} value={storeDetail.commercialRegistrationNumber} />
                   <DetailField label={text.storePhone} value={storeDetail.phone} />
+                  <DetailField label={text.city} value={getCityLabel(storeDetail.city, locale)} />
                   <DetailField
                     label={text.createdAt}
                     value={new Date(storeDetail.createdAt).toLocaleDateString(locale === 'ar' ? 'ar-OM' : 'en-GB')}

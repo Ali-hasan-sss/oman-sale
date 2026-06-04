@@ -1,15 +1,13 @@
 'use client';
 
-import { Calendar, CheckCircle2, Clock, Eye, Globe, Pen, Search, Trash2, TrendingUp, X } from 'lucide-react';
+import { Calendar, CheckCircle2, Clock, Eye, Pen, Trash2, TrendingUp, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
 
-import { HeaderAuthAction } from '@/components/auth/user-menu';
-import { ChatNavLink } from '@/components/chat/chat-nav-link';
 import { ConfirmationDialog } from '@/components/confirmation-dialog';
 import { SiteFooter } from '@/components/home/site-footer';
-import { MobileNavMenu } from '@/components/navigation/mobile-nav-menu';
+import { SiteHeaderSearch, UserSiteHeader } from '@/components/navigation/user-site-header';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { getUserAccessToken } from '@/lib/user-auth';
@@ -176,7 +174,7 @@ const labels = {
 
 export function MyListingsPage() {
   const router = useRouter();
-  const { dir, locale, localizedPath, m, toggleLocale } = useI18n();
+  const { dir, locale, localizedPath } = useI18n();
   const text = labels[locale];
   const hydrateFromStorage = useAuthStore((state) => state.hydrateFromStorage);
   const [listings, setListings] = useState<MyListing[]>([]);
@@ -264,37 +262,9 @@ export function MyListingsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50" dir={dir}>
-      <header className="sticky top-0 z-50 bg-white shadow-sm">
-        <div className="mx-auto max-w-7xl px-4 py-4">
-          <div className="mb-4 flex items-center justify-between gap-4">
-            <Link className="flex items-center gap-3" href={localizedPath('/')}>
-              <img src="/logo.png" alt="Oman Sale" className="h-14 w-auto" />
-            </Link>
-            <MobileNavMenu />
-            <div className="hidden items-center gap-4 lg:flex">
-              <button className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 transition hover:bg-gray-50" onClick={toggleLocale} type="button">
-                <Globe size={18} />
-                <span className="text-sm">{m.common.languageSwitch}</span>
-              </button>
-              <ChatNavLink className="rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-50" />
-              <HeaderLink href="/all-listings" label={m.common.allListings} />
-              <HeaderLink href="/my-listings" label={m.common.myListings} />
-              <Link className="rounded-lg bg-green-600 px-4 py-2 text-white transition hover:bg-green-700" href={localizedPath('/add-listing')}>
-                {m.common.addListing}
-              </Link>
-              <HeaderAuthAction loginClassName="rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-50" />
-            </div>
-          </div>
-          <div className="relative">
-            <Search className={`absolute top-1/2 -translate-y-1/2 text-gray-400 ${dir === 'rtl' ? 'right-3' : 'left-3'}`} size={20} />
-            <input
-              type="text"
-              placeholder={m.home.searchPlaceholder}
-              className={`w-full rounded-lg border border-gray-300 py-3 outline-none focus:ring-2 focus:ring-green-500 ${dir === 'rtl' ? 'pl-4 pr-12' : 'pl-12 pr-4'}`}
-            />
-          </div>
-        </div>
-      </header>
+      <UserSiteHeader>
+        <SiteHeaderSearch />
+      </UserSiteHeader>
 
       <main className="mx-auto max-w-7xl px-4 py-8" dir={dir}>
         <div className="mb-8">
@@ -365,14 +335,6 @@ export function MyListingsPage() {
       <SiteFooter />
     </div>
   );
-
-  function HeaderLink({ href, label }: { href: string; label: string }) {
-    return (
-      <Link className="rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-50" href={localizedPath(href)}>
-        {label}
-      </Link>
-    );
-  }
 }
 
 function ListingCard({

@@ -83,6 +83,16 @@ enum ViewSource {
 enum HeroSlidePlatform {
   WEB
   MOBILE
+  ALL
+}
+
+enum BannerRequestStatus {
+  PENDING_PAYMENT
+  PENDING_APPROVAL
+  REJECTED
+  ACTIVE
+  EXPIRED
+  CANCELLED
 }
 
 enum AuthCodePurpose {
@@ -136,6 +146,7 @@ model User {
   refreshTokens    RefreshToken[]
   authCodes        AuthVerificationCode[]
   stores           Store[]
+  bannerRequests   BannerRequest[]
 
   @@index([role])
   @@index([isActive, isBlocked])
@@ -374,6 +385,8 @@ model Payment {
   promotion     AdPromotion?    @relation(fields: [promotionId], references: [id])
   storeSubscriptionId String?   @unique
   storeSubscription   StoreSubscription? @relation(fields: [storeSubscriptionId], references: [id])
+  bannerRequestId     String?   @unique
+  bannerRequest       BannerRequest? @relation(fields: [bannerRequestId], references: [id])
 
   @@index([status])
   @@index([provider])
@@ -584,17 +597,57 @@ model HeroSlide {
 }
 
 model HeroBanner {
-  id        String   @id @default(uuid())
-  sortOrder Int      @default(0)
-  imageUrl  String
-  textAr    String?
-  textEn    String?
-  linkUrl   String
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String         @id @default(uuid())
+  sortOrder       Int            @default(0)
+  imageUrl        String
+  textAr          String?
+  textEn          String?
+  linkUrl         String
+  isActive        Boolean        @default(true)
+  startsAt        DateTime?
+  endsAt          DateTime?
+  bannerRequestId String?        @unique
+  bannerRequest   BannerRequest? @relation(fields: [bannerRequestId], references: [id])
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
   @@index([isActive, sortOrder])
+  @@index([startsAt, endsAt])
+}
+
+model BannerPricing {
+  id          String   @id @default(uuid())
+  pricePerDay Decimal  @db.Decimal(12, 3)
+  minDays     Int      @default(1)
+  maxDays     Int      @default(90)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model BannerRequest {
+  id              String              @id @default(uuid())
+  userId          String
+  user            User                @relation(fields: [userId], references: [id])
+  imageUrl        String
+  linkUrl         String
+  textAr          String?
+  textEn          String?
+  durationDays    Int
+  totalPrice      Decimal             @db.Decimal(12, 3)
+  status          BannerRequestStatus @default(PENDING_PAYMENT)
+  rejectionReason String?
+  startsAt        DateTime?
+  endsAt          DateTime?
+  approvedAt      DateTime?
+  heroBanner      HeroBanner?
+  payment         Payment?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model TourismDestination {
@@ -676,6 +729,24 @@ model StorePlanPricing {
   @@index([deletedAt])
 }
 
+model StoreType {
+  id        String    @id @default(uuid())
+  slug      String    @unique
+  nameAr    String
+  nameEn    String
+  icon      String?
+  sortOrder Int       @default(0)
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  stores Store[]
+
+  @@index([isActive, sortOrder])
+  @@index([deletedAt])
+}
+
 model Store {
   id             String   @id @default(uuid())
   slug           String   @unique
@@ -686,6 +757,7 @@ model Store {
   logoUrl        String?
   coverUrl       String?
   phone          String?
+  city           String?
   nationalId     String
   commercialRegistrationNumber String
   workingHours   Json?
@@ -698,11 +770,15 @@ model Store {
   user           User     @relation(fields: [userId], references: [id])
   rootCategoryId String
   rootCategory   Category @relation(fields: [rootCategoryId], references: [id])
+  storeTypeId    String?
+  storeType      StoreType? @relation(fields: [storeTypeId], references: [id])
   subscriptions  StoreSubscription[]
   ads            Ad[]
 
   @@index([userId])
   @@index([rootCategoryId])
+  @@index([storeTypeId])
+  @@index([city])
   @@index([isActive])
   @@index([deletedAt])
 }

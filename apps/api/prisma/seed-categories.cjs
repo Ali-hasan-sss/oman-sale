@@ -1307,4 +1307,4 @@ function getCategoryDefinitions() {
   ];
 }
 
-module.exports = { seedCategories };
+module.exports = { seedCategories, getCategoryDefinitions };

@@ -49,3 +49,33 @@ body {
   height: 0;
   width: 0;
 }
+
+.filter-chips-scroll {
+  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-width: thin;
+}
+
+.filter-chips-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+
+.filter-chips-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.filter-chips-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+.filter-chips-scroll::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.filter-chips-scroll::-webkit-scrollbar-button:single-button,
+.filter-chips-scroll::-webkit-scrollbar-button:horizontal:decrement,
+.filter-chips-scroll::-webkit-scrollbar-button:horizontal:increment {
+  display: none;
+  width: 0;
+  height: 0;
+}

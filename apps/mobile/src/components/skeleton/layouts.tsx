@@ -97,6 +97,21 @@ export function StoreBrowseGridSkeleton({ count = 4 }: { count?: number }) {
   );
 }
 
+export function FilterChipsSkeleton({ count = 6 }: { count?: number }) {
+  return (
+    <View style={styles.filterChipsRow}>
+      {Array.from({ length: count }).map((_, index) => (
+        <Skeleton
+          key={index}
+          width={index === 0 ? 88 : 72 + (index % 3) * 16}
+          height={36}
+          borderRadius={radius.pill}
+        />
+      ))}
+    </View>
+  );
+}
+
 export function StoreDetailSkeleton() {
   return (
     <View>
@@ -109,6 +124,55 @@ export function StoreDetailSkeleton() {
         <Skeleton width="45%" height={14} style={styles.gapMd} />
       </View>
       <ListingListSkeleton count={3} />
+    </View>
+  );
+}
+
+export function MyStoreScreenSkeleton() {
+  return (
+    <View style={styles.myStorePage}>
+      <Skeleton width="55%" height={28} borderRadius={radius.sm} />
+      <Skeleton width="88%" height={14} style={styles.gapSm} />
+
+      <Skeleton width="100%" height={160} borderRadius={radius.lg} style={styles.gapMd} />
+
+      <View style={styles.myStoreLogoRow}>
+        <Skeleton width={72} height={72} borderRadius={radius.lg} />
+        <Skeleton width={120} height={40} borderRadius={radius.md} />
+      </View>
+
+      <Skeleton width="65%" height={22} style={styles.gapMd} />
+      <FormFieldsSkeleton rows={2} />
+      <Skeleton width="100%" height={48} borderRadius={radius.md} style={styles.gapMd} />
+
+      <View style={styles.myStoreCard}>
+        <Skeleton width="45%" height={18} />
+        <Skeleton width="28%" height={24} borderRadius={radius.pill} style={styles.gapSm} />
+        <Skeleton width="80%" height={13} style={styles.gapSm} />
+        <Skeleton width="70%" height={13} style={styles.gapSm} />
+        <Skeleton width="75%" height={13} style={styles.gapSm} />
+        <Skeleton width="100%" height={48} borderRadius={radius.md} style={styles.gapMd} />
+      </View>
+
+      <View style={styles.myStoreCard}>
+        <Skeleton width="50%" height={18} />
+        <Skeleton width="100%" height={72} borderRadius={radius.md} style={styles.gapSm} />
+      </View>
+
+      <View style={styles.myStoreCard}>
+        <Skeleton width="40%" height={18} />
+        <View style={styles.gapSm} />
+        {Array.from({ length: 3 }).map((_, index) => (
+          <View key={index} style={styles.myStoreListingRow}>
+            <Skeleton width={88} height={72} borderRadius={radius.md} />
+            <View style={styles.myStoreListingText}>
+              <Skeleton width="90%" height={14} />
+              <Skeleton width="55%" height={12} style={styles.gapSm} />
+              <Skeleton width="40%" height={14} style={styles.gapSm} />
+            </View>
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
@@ -402,8 +466,43 @@ const styles = StyleSheet.create({
     width: '47%',
     flexGrow: 1
   },
+  filterChipsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 4,
+    paddingEnd: 4
+  },
   storeDetailBody: {
     padding: 16,
     alignItems: 'center'
+  },
+  myStorePage: {
+    gap: 4
+  },
+  myStoreLogoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: -28,
+    paddingHorizontal: 8
+  },
+  myStoreCard: {
+    marginTop: 12,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.line,
+    gap: 4
+  },
+  myStoreListingRow: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingTop: 10,
+    marginTop: 4
+  },
+  myStoreListingText: {
+    flex: 1,
+    justifyContent: 'center'
   }
 });
