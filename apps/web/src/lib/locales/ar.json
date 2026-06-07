@@ -566,5 +566,35 @@
     "owner": "المالك",
     "noListings": "لا توجد عروض نشطة في هذا المتجر بعد.",
     "loadMore": "تحميل المزيد"
+  },
+  "assistant": {
+    "title": "مساعد Oman Sale",
+    "openAssistant": "فتح المساعد",
+    "closeChat": "إغلاق المحادثة",
+    "clearChat": "مسح المحادثة",
+    "expand": "توسيع",
+    "collapse": "تصغير",
+    "placeholder": "اكتب رسالتك...",
+    "send": "إرسال",
+    "typing": "أفكر...",
+    "welcome": "مرحباً! 👋 أنا مساعد Oman Sale — كيف يمكنني مساعدتك؟",
+    "welcomeHint": "يمكنني البحث عن العروض والمتاجر، شرح خطط الاشتراك وأسعار التمييز، والإجابة عن أي ميزة في المنصة.",
+    "viewStore": "عرض المتجر",
+    "viewAllStores": "رؤية كافة المتاجر",
+    "errorGeneric": "تعذر الاتصال بالمساعد. حاول مرة أخرى.",
+    "errorDailyLimitAuth": "وصلت إلى الحد اليومي (30 رسالة). يمكنك المحاولة مرة أخرى غداً.",
+    "errorDailyLimitGuest": "وصلت إلى الحد اليومي للزوار. سجّل الدخول للحصول على 30 رسالة يومياً.",
+    "errorConversationTooLong": "المحادثة طويلة جداً. امسح المحادثة من أيقونة 🗑️ ثم تابع.",
+    "errorRateLimited": "طلبات كثيرة في وقت قصير. انتظر قليلاً ثم حاول مرة أخرى.",
+    "quickReplies": [
+      { "label": "خطط وأسعار", "message": "ما هي خطط المتاجر وأسعار تمييز العروض؟", "intent": "pricing_overview", "primary": false },
+      { "label": "معارض سيارات", "message": "أريد معارض سيارات", "intent": "search_car_showrooms", "primary": false },
+      { "label": "عروض مميزة", "message": "اعرض لي العروض المميزة", "intent": "featured_listings", "primary": false },
+      { "label": "كيف أنشئ متجر؟", "message": "كيف أنشئ متجر على Oman Sale؟", "intent": "create_store", "primary": false },
+      { "label": "تمييز إعلان", "message": "كيف أضيف عرضاً مميزاً لإعلاني؟", "intent": "promote_listing", "primary": false },
+      { "label": "نشر إعلان", "message": "كيف أنشر إعلاناً جديداً؟", "intent": "post_ad", "primary": false },
+      { "label": "استعرض المتاجر", "message": "أريد استكشاف المتاجر", "intent": "browse_stores", "primary": false },
+      { "label": "تواصل معنا", "message": "كيف أتواصل مع الدعم؟", "intent": "contact", "primary": true }
+    ]
   }
 }

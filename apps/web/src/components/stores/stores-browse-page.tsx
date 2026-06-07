@@ -63,7 +63,9 @@ export function StoresBrowsePage() {
 
   useEffect(() => {
     const typeFromUrl = searchParams.get('storeTypeId') ?? '';
+    const cityFromUrl = searchParams.get('city') ?? '';
     setStoreTypeId(typeFromUrl);
+    setCity(cityFromUrl);
   }, [searchParams]);
 
   useEffect(() => {

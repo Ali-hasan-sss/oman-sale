@@ -339,6 +339,18 @@ const dictionary = {
       privacy: 'الخصوصية والأمان',
       help: 'المساعدة والدعم'
     },
+    globalSearch: {
+      title: 'البحث',
+      hint: 'ابحث عن عروض أو متاجر أو فئات في Oman Sale.',
+      placeholder: 'ابحث عن عروض، متاجر، أو فئات...',
+      search: 'بحث',
+      queryLabel: 'نتائج البحث عن',
+      categories: 'الفئات',
+      listings: 'العروض',
+      stores: 'المتاجر',
+      empty: 'لا توجد نتائج مطابقة.',
+      viewAll: 'عرض الكل'
+    },
     storesBrowse: {
       title: 'استعرض المتاجر',
       subtitle: 'اكتشف المتاجر النشطة على Oman Sale واستكشف عروضها حسب الفئة.',
@@ -698,6 +710,18 @@ const dictionary = {
       notifications: 'Notifications',
       privacy: 'Privacy and security',
       help: 'Help and support'
+    },
+    globalSearch: {
+      title: 'Search',
+      hint: 'Find listings, stores, or categories on Oman Sale.',
+      placeholder: 'Search listings, stores, or categories...',
+      search: 'Search',
+      queryLabel: 'Results for',
+      categories: 'Categories',
+      listings: 'Listings',
+      stores: 'Stores',
+      empty: 'No matching results.',
+      viewAll: 'View all'
     },
     storesBrowse: {
       title: 'Browse stores',

@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
+  Dimensions,
   Image,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -22,6 +24,16 @@ import { colors, radius, shadow } from '../theme';
 
 const fallbackLogo = require('../../assets/nav-logo.png');
 const PAGE_SIZE = 12;
+const CONTENT_PADDING = 16;
+const CARD_GAP = 12;
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const STORE_CARD_WIDTH = (SCREEN_WIDTH - CONTENT_PADDING * 2 - CARD_GAP) / 2;
+
+type ChipItem = {
+  key: string;
+  value: string;
+  label: string;
+};
 
 type StoresBrowseScreenProps = {
   onStorePress: (slug: string) => void;
@@ -94,6 +106,30 @@ export function StoresBrowseScreen({ onStorePress }: StoresBrowseScreenProps) {
     loadStores({ page: 1 }).catch(() => undefined);
   }, [loadStores]);
 
+  const storeTypeChips = useMemo(
+    (): ChipItem[] => [
+      { key: 'all', value: '', label: text.allStoreTypes },
+      ...storeTypes.map((storeType) => ({
+        key: storeType.id,
+        value: storeType.id,
+        label: locale === 'en' ? storeType.nameEn : storeType.nameAr
+      }))
+    ],
+    [locale, storeTypes, text.allStoreTypes]
+  );
+
+  const cityChips = useMemo(
+    (): ChipItem[] => [
+      { key: 'all', value: '', label: text.allCities },
+      ...omanCities.map((cityOption) => ({
+        key: cityOption.value,
+        value: cityOption.value,
+        label: locale === 'en' ? cityOption.en : cityOption.ar
+      }))
+    ],
+    [locale, text.allCities]
+  );
+
   const submitSearch = () => {
     setQuery(searchInput.trim());
   };
@@ -107,13 +143,31 @@ export function StoresBrowseScreen({ onStorePress }: StoresBrowseScreenProps) {
     loadStores({ page: page + 1 }).catch(() => undefined);
   };
 
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    if (layoutMeasurement.height + contentOffset.y >= contentSize.height - 240) {
+      handleLoadMore();
+    }
+  };
+
   const showSkeleton = isLoading && page === 1 && !hasLoadedOnce;
   const showStoreGridSkeleton = isLoading && page === 1 && hasLoadedOnce;
   const textAlign = isRtl ? styles.rtl : styles.ltr;
   const inputAlign = isRtl ? styles.inputRtl : styles.inputLtr;
 
-  const listHeader = (
-    <View>
+  return (
+    <ScrollView
+      style={styles.page}
+      contentContainerStyle={[styles.content, { paddingBottom: scrollBottomPadding }]}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      nestedScrollEnabled
+      refreshControl={
+        <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} colors={[colors.brand]} tintColor={colors.brand} />
+      }
+      onScroll={handleScroll}
+      scrollEventThrottle={200}
+    >
       <AppText style={[styles.title, textAlign]}>{text.title}</AppText>
       <AppText style={[styles.subtitle, textAlign]}>{text.subtitle}</AppText>
       <AppText style={[styles.meta, textAlign]}>
@@ -136,81 +190,85 @@ export function StoresBrowseScreen({ onStorePress }: StoresBrowseScreenProps) {
       </View>
 
       {isLoadingStoreTypes ? (
-        <FilterChipsSkeleton count={6} />
+        <FilterChipsSkeleton count={6} isRtl={isRtl} />
       ) : (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator
-          indicatorStyle="black"
-          style={isRtl ? styles.chipsRtl : undefined}
-          contentContainerStyle={[styles.chips, isRtl && styles.chipsContentRtl]}
-        >
-          <FilterChip
-            label={text.allStoreTypes}
-            active={!storeTypeId}
-            onPress={() => setStoreTypeId('')}
-          />
-          {storeTypes.map((storeType) => (
-            <FilterChip
-              key={storeType.id}
-              label={locale === 'en' ? storeType.nameEn : storeType.nameAr}
-              active={storeTypeId === storeType.id}
-              onPress={() => setStoreTypeId(storeTypeId === storeType.id ? '' : storeType.id)}
-            />
-          ))}
-        </ScrollView>
+        <ChipRow chips={storeTypeChips} isRtl={isRtl} selectedValue={storeTypeId} onSelect={setStoreTypeId} />
       )}
 
+      <ChipRow chips={cityChips} isRtl={isRtl} selectedValue={city} onSelect={setCity} />
+
+      {showSkeleton || showStoreGridSkeleton ? (
+        <StoreBrowseGridSkeleton count={4} />
+      ) : stores.length === 0 ? (
+        <EmptyState message={text.empty} />
+      ) : (
+        <View style={styles.grid}>
+          {stores.map((store) => (
+            <StoreBrowseCard
+              key={store.id}
+              store={store}
+              locale={locale}
+              listingsLabel={text.listings}
+              onPress={() => onStorePress(store.slug)}
+            />
+          ))}
+        </View>
+      )}
+
+      {isLoadingMore ? <ActivityIndicator color={colors.brand} style={styles.footerLoader} /> : null}
+    </ScrollView>
+  );
+}
+
+function ChipRow({
+  chips,
+  isRtl,
+  selectedValue,
+  onSelect
+}: {
+  chips: ChipItem[];
+  isRtl: boolean;
+  selectedValue: string;
+  onSelect: (value: string) => void;
+}) {
+  const scrollRef = useRef<ScrollView>(null);
+  const orderedChips = isRtl ? [...chips].reverse() : chips;
+  const chipsKey = orderedChips.map((chip) => chip.key).join('|');
+
+  const alignScroll = useCallback(() => {
+    if (isRtl) {
+      scrollRef.current?.scrollToEnd({ animated: false });
+      return;
+    }
+    scrollRef.current?.scrollTo({ x: 0, animated: false });
+  }, [isRtl]);
+
+  useEffect(() => {
+    requestAnimationFrame(alignScroll);
+  }, [alignScroll, chipsKey]);
+
+  return (
+    <View style={styles.chipsScrollWrap}>
       <ScrollView
+        ref={scrollRef}
         horizontal
-        showsHorizontalScrollIndicator
-        indicatorStyle="black"
-        style={isRtl ? styles.chipsRtl : undefined}
-        contentContainerStyle={[styles.chips, isRtl && styles.chipsContentRtl]}
+        nestedScrollEnabled
+        showsHorizontalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        style={styles.chipsScroll}
+        contentContainerStyle={styles.chipsRow}
+        onLayout={alignScroll}
       >
-        <FilterChip
-          label={text.allCities}
-          active={!city}
-          onPress={() => setCity('')}
-        />
-        {omanCities.map((cityOption) => (
+        {orderedChips.map((chip) => (
           <FilterChip
-            key={cityOption.value}
-            label={locale === 'en' ? cityOption.en : cityOption.ar}
-            active={city === cityOption.value}
-            onPress={() => setCity(city === cityOption.value ? '' : cityOption.value)}
+            key={chip.key}
+            label={chip.label}
+            active={selectedValue === chip.value}
+            onPress={() => onSelect(selectedValue === chip.value ? '' : chip.value)}
           />
         ))}
       </ScrollView>
-
-      {showSkeleton || showStoreGridSkeleton ? <StoreBrowseGridSkeleton count={4} /> : null}
     </View>
-  );
-
-  return (
-    <FlatList
-      data={showSkeleton || showStoreGridSkeleton ? [] : stores}
-      keyExtractor={(item) => item.id}
-      numColumns={2}
-      columnWrapperStyle={styles.columnWrap}
-      contentContainerStyle={[styles.content, { paddingBottom: scrollBottomPadding }]}
-      keyboardShouldPersistTaps="handled"
-      refreshControl={
-        <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} colors={[colors.brand]} tintColor={colors.brand} />
-      }
-      ListHeaderComponent={listHeader}
-      ListEmptyComponent={
-        !showSkeleton && !showStoreGridSkeleton ? <EmptyState message={text.empty} /> : null
-      }
-      renderItem={({ item }) => (
-        <StoreBrowseCard store={item} locale={locale} listingsLabel={text.listings} onPress={() => onStorePress(item.slug)} />
-      )}
-      onEndReached={handleLoadMore}
-      onEndReachedThreshold={0.35}
-      ListFooterComponent={
-        isLoadingMore ? <ActivityIndicator color={colors.brand} style={styles.footerLoader} /> : null
-      }
-    />
   );
 }
 
@@ -267,10 +325,7 @@ function StoreBrowseCard({
 
 function FilterChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
   return (
-    <Pressable
-      onPress={onPress}
-      style={[styles.chip, active && styles.chipActive]}
-    >
+    <Pressable onPress={onPress} style={[styles.chip, active && styles.chipActive]}>
       <AppText style={[styles.chipText, active && styles.chipTextActive]} numberOfLines={1}>
         {label}
       </AppText>
@@ -279,8 +334,12 @@ function FilterChip({ label, active, onPress }: { label: string; active: boolean
 }
 
 const styles = StyleSheet.create({
+  page: {
+    flex: 1,
+    width: '100%'
+  },
   content: {
-    padding: 16,
+    padding: CONTENT_PADDING,
     gap: 12
   },
   title: {
@@ -325,16 +384,19 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 14
   },
-  chips: {
+  chipsScrollWrap: {
+    width: '100%',
+    maxWidth: SCREEN_WIDTH - CONTENT_PADDING * 2,
+    overflow: 'hidden'
+  },
+  chipsScroll: {
+    flexGrow: 0
+  },
+  chipsRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
     paddingBottom: 14
-  },
-  chipsRtl: {
-    direction: 'rtl'
-  },
-  chipsContentRtl: {
-    flexDirection: 'row-reverse'
   },
   chip: {
     borderWidth: 1,
@@ -357,11 +419,14 @@ const styles = StyleSheet.create({
   chipTextActive: {
     color: '#fff'
   },
-  columnWrap: {
-    gap: 12
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: CARD_GAP,
+    width: '100%'
   },
   card: {
-    flex: 1,
+    width: STORE_CARD_WIDTH,
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     overflow: 'hidden',
@@ -418,13 +483,6 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontSize: 14,
     lineHeight: 18
-  },
-  cardCategory: {
-    paddingHorizontal: 12,
-    marginTop: 4,
-    color: colors.brandDark,
-    fontSize: 11,
-    fontWeight: '700'
   },
   typeBadge: {
     alignSelf: 'flex-start',

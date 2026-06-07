@@ -17,7 +17,8 @@ export type ScreenName =
   | 'chatConversation'
   | 'categoryOffers'
   | 'storesBrowse'
-  | 'storeDetail';
+  | 'storeDetail'
+  | 'search';
 
 export type User = {
   id: string;

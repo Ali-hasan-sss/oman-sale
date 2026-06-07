@@ -21,6 +21,7 @@ import { storeTypesRoutes } from './modules/store-types/store-types.routes';
 import { storePlansRoutes } from './modules/store-plans/store-plans.routes';
 import { storesRoutes } from './modules/stores/stores.routes';
 import { searchRoutes } from './modules/search/search.routes';
+import { assistantRoutes } from './modules/assistant/assistant.routes';
 import { tourismRoutes } from './modules/tourism/tourism.routes';
 import { usersRoutes } from './modules/users/users.routes';
 import { errorHandler } from './shared/middleware/error-handler';
@@ -70,6 +71,7 @@ app.use('/api/v1/store-types', storeTypesRoutes);
 app.use('/api/v1/store-plans', storePlansRoutes);
 app.use('/api/v1/stores', storesRoutes);
 app.use('/api/v1/search', searchRoutes);
+app.use('/api/v1/assistant', assistantRoutes);
 app.use('/api/v1/tourism', tourismRoutes);
 
 app.use(notFoundHandler);

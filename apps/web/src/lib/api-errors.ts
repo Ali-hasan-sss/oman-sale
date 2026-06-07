@@ -6,7 +6,8 @@ export const ApiErrorCodes = {
   EMAIL_VERIFICATION_REQUIRED: 'EMAIL_VERIFICATION_REQUIRED',
   STORE_LISTING_LIMIT_REACHED: 'STORE_LISTING_LIMIT_REACHED',
   STORE_LIMIT_REACHED: 'STORE_LIMIT_REACHED',
-  VALIDATION_FAILED: 'VALIDATION_FAILED'
+  VALIDATION_FAILED: 'VALIDATION_FAILED',
+  ASSISTANT_DAILY_LIMIT_REACHED: 'ASSISTANT_DAILY_LIMIT_REACHED'
 } as const;
 
 export type ApiErrorCode = (typeof ApiErrorCodes)[keyof typeof ApiErrorCodes];
@@ -95,6 +96,12 @@ export function getApiErrorCode(error: unknown): string | undefined {
     return typeof code === 'string' ? code : undefined;
   }
   return undefined;
+}
+
+export function isAssistantMessagesTooLongError(error: unknown) {
+  return extractZodIssues(error).some(
+    (issue) => issue.path[0] === 'messages' && (issue.code === 'too_big' || issue.code === 'too_small')
+  );
 }
 
 export function isAccountBlockedError(error: unknown) {

@@ -7,13 +7,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-/** Wait for window resize on Android before deciding manual lift is needed. */
-const ANDROID_RESIZE_PROBE_MS = 100;
-const ANDROID_RESIZE_REPROBE_MS = 220;
-
 /**
- * Bottom margin for chat composer when the OS does not shrink the window (common in EAS Android builds).
- * iOS always uses manual lift; Android uses lift only if adjustResize did not reduce window height.
+ * Bottom margin for the chat composer on iOS when the keyboard is open.
+ *
+ * Android uses adjustResize + expo-android-keyboard-fix — the window already shrinks,
+ * so any manual marginBottom stacks on top and doubles the lift.
  */
 export function useComposerKeyboardLift() {
   const [lift, setLift] = useState(0);
@@ -21,64 +19,65 @@ export function useComposerKeyboardLift() {
   const { height: windowHeight } = useWindowDimensions();
   const windowHeightRef = useRef(windowHeight);
   const baselineHeightRef = useRef(windowHeight);
-  const probeTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const keyboardOpenRef = useRef(false);
+  const kbHeightRef = useRef(0);
 
   useEffect(() => {
     windowHeightRef.current = windowHeight;
-    if (lift === 0) {
-      baselineHeightRef.current = windowHeight;
-    }
-  }, [windowHeight, lift]);
+  }, [windowHeight]);
 
   useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    if (Platform.OS === 'android') return;
 
-    const clearProbes = () => {
-      probeTimeoutsRef.current.forEach(clearTimeout);
-      probeTimeoutsRef.current = [];
-    };
+    if (!keyboardOpenRef.current) {
+      baselineHeightRef.current = windowHeight;
+      return;
+    }
 
-    const applyAndroidLift = (kbHeight: number) => {
-      const baseline = baselineHeightRef.current;
-      const shrunk = baseline - windowHeightRef.current;
-      const windowResized = shrunk > kbHeight * 0.2;
-      setLift(windowResized ? 0 : Math.max(0, kbHeight - safeBottom));
-    };
+    const kbHeight = kbHeightRef.current;
+    if (kbHeight <= 0) return;
+
+    const shrunk = baselineHeightRef.current - windowHeight;
+    const osHandledKeyboard = shrunk > 48 || shrunk > kbHeight * 0.12;
+    setLift(osHandledKeyboard ? 0 : Math.max(0, kbHeight - safeBottom));
+  }, [windowHeight, safeBottom]);
+
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      setLift(0);
+      return;
+    }
 
     const onShow = (event: KeyboardEvent) => {
       const kbHeight = event.endCoordinates.height;
-      clearProbes();
-
-      if (Platform.OS === 'ios') {
-        setLift(Math.max(0, kbHeight - safeBottom));
-        return;
-      }
-
-      const scheduleProbe = (delay: number) => {
-        const id = setTimeout(() => applyAndroidLift(kbHeight), delay);
-        probeTimeoutsRef.current.push(id);
-      };
-      scheduleProbe(ANDROID_RESIZE_PROBE_MS);
-      scheduleProbe(ANDROID_RESIZE_REPROBE_MS);
+      kbHeightRef.current = kbHeight;
+      baselineHeightRef.current = windowHeightRef.current;
+      keyboardOpenRef.current = true;
+      setLift(Math.max(0, kbHeight - safeBottom));
     };
 
     const onHide = () => {
-      clearProbes();
+      keyboardOpenRef.current = false;
+      kbHeightRef.current = 0;
       setLift(0);
       baselineHeightRef.current = windowHeightRef.current;
     };
 
-    const showSub = Keyboard.addListener(showEvent, onShow);
-    const hideSub = Keyboard.addListener(hideEvent, onHide);
+    const showSub = Keyboard.addListener('keyboardWillShow', onShow);
+    const hideSub = Keyboard.addListener('keyboardWillHide', onHide);
 
     return () => {
-      clearProbes();
       showSub.remove();
       hideSub.remove();
+      keyboardOpenRef.current = false;
+      kbHeightRef.current = 0;
       setLift(0);
     };
   }, [safeBottom]);
+
+  if (Platform.OS === 'android') {
+    return 0;
+  }
 
   return lift;
 }

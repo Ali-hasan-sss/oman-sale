@@ -52,7 +52,12 @@ const envSchema = z.object({
   THAWANI_SANDBOX: z.preprocess((value) => value !== 'false', z.boolean()).default(true),
   THAWANI_SKIP_CHECKOUT: z.preprocess((value) => value === 'true', z.boolean()).default(false),
   /** Max stores a user may own. Increase later to allow multiple stores per account. */
-  STORES_MAX_PER_USER: z.coerce.number().int().positive().default(1)
+  STORES_MAX_PER_USER: z.coerce.number().int().positive().default(1),
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_MODEL: z.string().default('gpt-4o-mini'),
+  ASSISTANT_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30),
+  ASSISTANT_DAILY_LIMIT_AUTH: z.coerce.number().int().positive().default(30),
+  ASSISTANT_DAILY_LIMIT_GUEST: z.coerce.number().int().positive().default(10)
 });
 
 export const env = envSchema.parse(process.env);

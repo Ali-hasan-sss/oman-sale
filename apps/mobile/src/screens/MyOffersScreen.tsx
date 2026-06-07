@@ -41,7 +41,7 @@ export function MyOffersScreen({ onListingPress }: MyOffersScreenProps) {
 
   return (
     <ScrollView
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingBottom: scrollBottomPadding }]}
       refreshControl={
         <RefreshControl
           refreshing={isRefreshing}

@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Dimensions, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Skeleton } from './Skeleton';
 import { colors, radius } from '../../theme';
@@ -97,17 +97,29 @@ export function StoreBrowseGridSkeleton({ count = 4 }: { count?: number }) {
   );
 }
 
-export function FilterChipsSkeleton({ count = 6 }: { count?: number }) {
+const FILTER_CHIP_ROW_WIDTH = Dimensions.get('window').width - 16 * 2;
+
+export function FilterChipsSkeleton({ count = 6, isRtl = false }: { count?: number; isRtl?: boolean }) {
+  const items = isRtl ? Array.from({ length: count }, (_, index) => count - 1 - index) : Array.from({ length: count }, (_, index) => index);
+
   return (
-    <View style={styles.filterChipsRow}>
-      {Array.from({ length: count }).map((_, index) => (
-        <Skeleton
-          key={index}
-          width={index === 0 ? 88 : 72 + (index % 3) * 16}
-          height={36}
-          borderRadius={radius.pill}
-        />
-      ))}
+    <View style={styles.filterChipsScrollWrap}>
+      <ScrollView
+        horizontal
+        scrollEnabled={false}
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterChipsScroll}
+        contentContainerStyle={styles.filterChipsRow}
+      >
+        {items.map((index) => (
+          <Skeleton
+            key={index}
+            width={index === 0 ? 88 : 72 + (index % 3) * 16}
+            height={36}
+            borderRadius={radius.pill}
+          />
+        ))}
+      </ScrollView>
     </View>
   );
 }
@@ -460,17 +472,25 @@ const styles = StyleSheet.create({
   storeBrowseGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12
+    gap: 12,
+    width: '100%'
   },
   storeBrowseCard: {
-    width: '47%',
-    flexGrow: 1
+    width: (Dimensions.get('window').width - 16 * 2 - 12) / 2
+  },
+  filterChipsScrollWrap: {
+    width: '100%',
+    maxWidth: FILTER_CHIP_ROW_WIDTH,
+    overflow: 'hidden'
+  },
+  filterChipsScroll: {
+    flexGrow: 0
   },
   filterChipsRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
-    paddingVertical: 4,
-    paddingEnd: 4
+    paddingVertical: 4
   },
   storeDetailBody: {
     padding: 16,

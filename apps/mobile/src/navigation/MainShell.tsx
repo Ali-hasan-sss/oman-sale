@@ -31,6 +31,7 @@ import { AuthScreen } from '../screens/AuthScreen';
 import { ChatConversationScreen } from '../screens/ChatConversationScreen';
 import { ChatScreen } from '../screens/ChatScreen';
 import { FavoritesScreen } from '../screens/FavoritesScreen';
+import { GlobalSearchScreen } from '../screens/GlobalSearchScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { MyOffersScreen } from '../screens/MyOffersScreen';
 import { CategoryOffersScreen } from '../screens/CategoryOffersScreen';
@@ -223,7 +224,10 @@ export function MainShell() {
     screen === 'settings' ||
     screen === 'favorites' ||
     screen === 'storesBrowse' ||
-    screen === 'storeDetail';
+    screen === 'storeDetail' ||
+    screen === 'search';
+
+  const showHeaderSearch = !showHeaderBack;
 
   const homeScreenProps = {
     onBrowseOffers: () => navigate('offers'),
@@ -318,6 +322,16 @@ export function MainShell() {
         return <SettingsScreen />;
       case 'favorites':
         return <FavoritesScreen onListingPress={openListingDetail} />;
+      case 'search':
+        return (
+          <GlobalSearchScreen
+            onListingPress={openListingDetail}
+            onStorePress={openStoreDetail}
+            onCategoryPress={openCategoryOffers}
+            onBrowseOffers={() => pushScreen('offers')}
+            onBrowseStores={() => pushScreen('storesBrowse')}
+          />
+        );
       case 'listingDetail':
         return selectedListingId ? (
           <ListingDetailScreen
@@ -394,7 +408,12 @@ export function MainShell() {
         />
         <NetworkStatusBar />
         {!hideAppHeader ? (
-          <AppHeader onMenuPress={() => setDrawerOpen(true)} showBack={showHeaderBack} onBackPress={goBack} />
+          <AppHeader
+            onMenuPress={() => setDrawerOpen(true)}
+            showBack={showHeaderBack}
+            onBackPress={goBack}
+            onSearchPress={showHeaderSearch ? () => pushScreen('search') : undefined}
+          />
         ) : null}
 
         <ScreenInsetsProvider withTabBar={!hideTabBar}>
@@ -502,14 +521,20 @@ export function MainShell() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    width: '100%',
+    overflow: 'hidden',
     backgroundColor: colors.background
   },
   safe: {
     flex: 1,
+    width: '100%',
+    overflow: 'hidden',
     backgroundColor: colors.background
   },
   body: {
-    flex: 1
+    flex: 1,
+    width: '100%',
+    overflow: 'hidden'
   },
   chatStage: {
     flex: 1,

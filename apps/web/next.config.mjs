@@ -7,6 +7,15 @@ const contactPhone = process.env.NEXT_PUBLIC_CONTACT_PHONE ?? '+968 2456 7890';
 
 const nextConfig = {
   transpilePackages: ['@oman-sale/ui'],
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        pathname: '/**'
+      }
+    ]
+  },
   // Ensure NEXT_PUBLIC_* is embedded in the client bundle (no proxy)
   env: {
     NEXT_PUBLIC_API_URL: apiBaseUrl,

@@ -359,7 +359,7 @@ export function ChatConversationScreen({
         ref={listRef}
         data={messages}
         keyExtractor={(item) => item.id}
-        style={[styles.messagesList, composerLift > 0 && { marginBottom: composerLift }]}
+        style={styles.messagesList}
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={[
@@ -428,7 +428,11 @@ export function ChatConversationScreen({
       {error ? <AppText style={styles.sendError}>{error}</AppText> : null}
 
       <View
-        style={[styles.composerDock, { marginBottom: composerLift, paddingBottom: composerBottomPad }]}
+        style={[
+          styles.composerDock,
+          Platform.OS === 'ios' && composerLift > 0 ? { marginBottom: composerLift } : null,
+          { paddingBottom: composerBottomPad }
+        ]}
       >
         <View style={[styles.composer, isRtl && styles.composerRtl]}>
           <TextInput

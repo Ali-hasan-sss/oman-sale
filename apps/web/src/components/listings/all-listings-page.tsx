@@ -212,7 +212,28 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
   useEffect(() => {
     setAppliedSearch(urlSearch);
     setPage(1);
-  }, [urlSearch]);
+
+    const urlMin = searchParams.get('minPrice');
+    const urlMax = searchParams.get('maxPrice');
+    const urlCity = (searchParams.get('city') ?? '').trim();
+
+    if (urlMin && !Number.isNaN(Number(urlMin))) {
+      const min = Number(urlMin);
+      setMinPrice(min);
+      setAppliedMinPrice(String(min));
+    }
+
+    if (urlMax && !Number.isNaN(Number(urlMax))) {
+      const max = Number(urlMax);
+      setMaxPrice(max);
+      setAppliedMaxPrice(String(max));
+    }
+
+    if (urlCity) {
+      setCity(urlCity);
+      setAppliedCity(urlCity);
+    }
+  }, [urlSearch, searchParams]);
 
   useEffect(() => {
     setSelectedFilterOptionIds([]);

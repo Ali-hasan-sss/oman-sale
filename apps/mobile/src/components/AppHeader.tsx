@@ -12,22 +12,32 @@ type AppHeaderProps = {
   onMenuPress: () => void;
   showBack?: boolean;
   onBackPress?: () => void;
+  onSearchPress?: () => void;
 };
 
-export function AppHeader({ onMenuPress, showBack, onBackPress }: AppHeaderProps) {
+export function AppHeader({ onMenuPress, showBack, onBackPress, onSearchPress }: AppHeaderProps) {
   const { isRtl } = useI18n();
 
   return (
     <View style={styles.header}>
-      {showBack ? (
-        <Pressable style={styles.menuButton} onPress={onBackPress}>
-          <Ionicons name={isRtl ? 'arrow-forward' : 'arrow-back'} size={24} color={colors.ink} />
-        </Pressable>
-      ) : (
-        <Pressable style={styles.menuButton} onPress={onMenuPress}>
-          <Ionicons name="menu" size={24} color={colors.ink} />
-        </Pressable>
-      )}
+      <View style={styles.headerStart}>
+        {showBack ? (
+          <Pressable style={styles.iconButton} onPress={onBackPress}>
+            <Ionicons name={isRtl ? 'arrow-forward' : 'arrow-back'} size={24} color={colors.ink} />
+          </Pressable>
+        ) : (
+          <>
+            <Pressable style={styles.iconButton} onPress={onMenuPress}>
+              <Ionicons name="menu" size={24} color={colors.ink} />
+            </Pressable>
+            {onSearchPress ? (
+              <Pressable style={styles.iconButton} onPress={onSearchPress} accessibilityRole="button">
+                <Ionicons name="search" size={22} color={colors.ink} />
+              </Pressable>
+            ) : null}
+          </>
+        )}
+      </View>
       <View style={styles.brand}>
         <Image
           source={require('../../assets/nav-logo.png')}
@@ -51,6 +61,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.line
   },
+  headerStart: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8
+  },
   brand: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
@@ -62,7 +77,7 @@ const styles = StyleSheet.create({
     width: NAV_LOGO_WIDTH,
     height: NAV_LOGO_HEIGHT
   },
-  menuButton: {
+  iconButton: {
     width: 44,
     height: 44,
     borderRadius: 14,

@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { FlatList, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { HeroBannersSection } from '../components/HeroBannersSection';
 import { HomeCategoriesSection } from '../components/HomeCategoriesSection';
@@ -26,23 +26,18 @@ export function HomeScreen({ onBrowseOffers, onListingPress, onCategoryPress, on
   const { scrollBottomPadding } = useScreenInsets();
   const listings = useListingsStore((state) => state.latest);
   const isLoading = useListingsStore((state) => state.isLoadingLatest);
-  const isLoadingMore = useListingsStore((state) => state.isLoadingMoreLatest);
   const isRefreshing = useListingsStore((state) => state.isRefreshingLatest);
   const hasLoadedLatest = useListingsStore((state) => state.hasLoadedLatest);
   const loadLatest = useListingsStore((state) => state.loadLatest);
-  const loadMoreLatest = useListingsStore((state) => state.loadMoreLatest);
 
   useEffect(() => {
-    loadLatest({ refresh: useListingsStore.getState().hasLoadedLatest }).catch(() => undefined);
+    const { hasLoadedLatest } = useListingsStore.getState();
+    loadLatest({ refresh: hasLoadedLatest }).catch(() => undefined);
   }, [locale, loadLatest]);
 
   const handleRefresh = useCallback(() => {
     loadLatest({ refresh: true }).catch(() => undefined);
   }, [loadLatest]);
-
-  const handleLoadMore = useCallback(() => {
-    loadMoreLatest().catch(() => undefined);
-  }, [loadMoreLatest]);
 
   const showLatestSkeleton = isLoading && !hasLoadedLatest;
 
@@ -87,13 +82,6 @@ export function HomeScreen({ onBrowseOffers, onListingPress, onCategoryPress, on
                 onPress={() => onListingPress(item.id)}
               />
             )}
-            onEndReached={handleLoadMore}
-            onEndReachedThreshold={0.4}
-            ListFooterComponent={
-              isLoadingMore ? (
-                <ActivityIndicator color={colors.brand} style={styles.latestMoreLoader} />
-              ) : null
-            }
           />
         )}
       </View>
@@ -106,10 +94,6 @@ const styles = StyleSheet.create({
   section: {
     paddingHorizontal: 16,
     marginBottom: 10
-  },
-  latestMoreLoader: {
-    marginVertical: 24,
-    marginHorizontal: 12
   },
   latestScrollRtl: {
     direction: 'rtl'

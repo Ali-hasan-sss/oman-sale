@@ -563,5 +563,35 @@
     "owner": "Owner",
     "noListings": "This store has no active listings yet.",
     "loadMore": "Load more"
+  },
+  "assistant": {
+    "title": "Oman Sale Assistant",
+    "openAssistant": "Open assistant",
+    "closeChat": "Close chat",
+    "clearChat": "Clear conversation",
+    "expand": "Expand chat",
+    "collapse": "Collapse chat",
+    "placeholder": "Type a message...",
+    "send": "Send message",
+    "typing": "Thinking",
+    "welcome": "Hi! 👋 I'm your Oman Sale assistant — how can I help?",
+    "welcomeHint": "I can search listings and stores, explain subscription and promotion pricing, and answer questions about any platform feature.",
+    "viewStore": "View store",
+    "viewAllStores": "View all stores",
+    "errorGeneric": "Could not reach the assistant. Please try again.",
+    "errorDailyLimitAuth": "You reached today's limit (30 messages). Try again tomorrow.",
+    "errorDailyLimitGuest": "You reached the guest daily limit. Sign in for 30 messages per day.",
+    "errorConversationTooLong": "This conversation is too long. Clear the chat with 🗑️ and continue.",
+    "errorRateLimited": "Too many requests. Please wait a moment and try again.",
+    "quickReplies": [
+      { "label": "Plans & pricing", "message": "What are your store plans and listing promotion prices?", "intent": "pricing_overview", "primary": false },
+      { "label": "Car showrooms", "message": "I want car showrooms", "intent": "search_car_showrooms", "primary": false },
+      { "label": "Featured listings", "message": "Show me featured listings", "intent": "featured_listings", "primary": false },
+      { "label": "Create a store", "message": "How do I create a store on Oman Sale?", "intent": "create_store", "primary": false },
+      { "label": "Promote listing", "message": "How do I make my listing featured?", "intent": "promote_listing", "primary": false },
+      { "label": "Post a listing", "message": "How do I post a new listing?", "intent": "post_ad", "primary": false },
+      { "label": "Browse stores", "message": "I want to explore stores", "intent": "browse_stores", "primary": false },
+      { "label": "Contact support", "message": "How can I contact support?", "intent": "contact", "primary": true }
+    ]
   }
 }
