@@ -10,13 +10,18 @@ import { SiteHeaderSearch, UserSiteHeader } from '@/components/navigation/user-s
 import { AvatarWithBanBadge } from '@/components/ui/avatar-with-ban-badge';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
+import { getListingLocationLabel } from '@/lib/oman-locations';
 import { getStoredUser, getUserAccessToken } from '@/lib/user-auth';
+import { getListingGalleryMedia, isListingVideo } from '@/lib/listing-media';
+import { resolveMediaUrl } from '@/lib/media-url';
 import { FavoriteButton } from './favorite-button';
 import { ListingDetailSkeleton } from './listing-detail-skeleton';
-import { ListingImageGalleryModal } from './listing-image-gallery-modal';
+import { ListingMediaCover } from './listing-media-cover';
+import { ListingMediaGalleryModal } from './listing-media-gallery-modal';
 
 type ListingImage = {
   imageUrl: string;
+  mediaType?: 'IMAGE' | 'VIDEO';
 };
 
 type ListingUser = {
@@ -36,6 +41,7 @@ type ListingDetails = {
   price?: string | number | null;
   currency: string;
   city?: string | null;
+  wilayah?: string | null;
   area?: string | null;
   contactPhone?: string | null;
   views: number;
@@ -171,9 +177,10 @@ export function ListingDetailsPage({ id }: { id: string }) {
       .catch(() => setIsFavorited(false));
   }, [id]);
 
-  const hasImages = Boolean(listing?.images.length);
-  const images = hasImages && listing ? listing.images.map((image) => image.imageUrl) : [fallbackImage];
-  const selectedImage = images[activeImage] ?? images[0] ?? fallbackImage;
+  const galleryItems = listing ? getListingGalleryMedia(listing.images) : [];
+  const hasMedia = galleryItems.length > 0;
+  const activeItem = galleryItems[activeImage] ?? galleryItems[0];
+  const selectedMediaUrl = activeItem ? resolveMediaUrl(activeItem.imageUrl) : fallbackImage;
   const categoryName = listing ? getCategoryName(listing, locale) : '';
   const phone = listing?.contactPhone || listing?.user?.phone || '';
 
@@ -285,11 +292,24 @@ export function ListingDetailsPage({ id }: { id: string }) {
                 <div className="relative h-96 bg-gray-100">
                   <button
                     type="button"
-                    onClick={() => hasImages && setGalleryOpen(true)}
-                    className={`h-full w-full ${hasImages ? 'cursor-zoom-in' : 'cursor-default'}`}
-                    aria-label={hasImages ? text.imageOf : undefined}
+                    onClick={() => hasMedia && setGalleryOpen(true)}
+                    className={`h-full w-full ${hasMedia ? 'cursor-zoom-in' : 'cursor-default'}`}
+                    aria-label={hasMedia ? text.imageOf : undefined}
                   >
-                    <img src={selectedImage} alt={listing.title} className={`h-full w-full ${hasImages ? 'object-cover' : 'object-contain p-10'}`} />
+                    {activeItem && isListingVideo(activeItem) ? (
+                      <video
+                        src={selectedMediaUrl}
+                        controls
+                        playsInline
+                        className="h-full w-full bg-black object-contain"
+                      />
+                    ) : (
+                      <img
+                        src={selectedMediaUrl}
+                        alt={listing.title}
+                        className={`h-full w-full ${hasMedia ? 'object-cover' : 'object-contain p-10'}`}
+                      />
+                    )}
                   </button>
                   <div className="absolute right-4 top-4 flex gap-2">
                     <FavoriteButton
@@ -304,11 +324,11 @@ export function ListingDetailsPage({ id }: { id: string }) {
                     </button>
                   </div>
                 </div>
-                {images.length > 1 ? (
+                {galleryItems.length > 1 ? (
                   <div className="grid grid-cols-4 gap-2 p-4">
-                    {images.slice(0, 8).map((image, index) => (
+                    {galleryItems.slice(0, 8).map((item, index) => (
                       <button
-                        key={`${image}-${index}`}
+                        key={`${item.imageUrl}-${index}`}
                         onClick={() => {
                           setActiveImage(index);
                           setGalleryOpen(true);
@@ -316,7 +336,11 @@ export function ListingDetailsPage({ id }: { id: string }) {
                         className={`aspect-video overflow-hidden rounded-lg border-2 transition ${activeImage === index ? 'border-green-600' : 'border-transparent'}`}
                         type="button"
                       >
-                        <img src={image} alt="" className="h-full w-full object-cover" />
+                        {isListingVideo(item) ? (
+                          <div className="flex h-full w-full items-center justify-center bg-slate-800 text-xs font-bold text-white">VIDEO</div>
+                        ) : (
+                          <img src={resolveMediaUrl(item.imageUrl)} alt="" className="h-full w-full object-cover" />
+                        )}
                       </button>
                     ))}
                   </div>
@@ -333,7 +357,7 @@ export function ListingDetailsPage({ id }: { id: string }) {
                     <h1 className="mb-3 text-3xl font-bold">{listing.title}</h1>
                     {listing.isActive === false ? <p className="mb-3 text-sm font-bold text-red-600">{text.inactiveNotice}</p> : null}
                     <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                      <Meta icon={<MapPin size={16} />} label={listing.area || listing.city || '-'} />
+                      <Meta icon={<MapPin size={16} />} label={getListingLocationLabel(listing.city, listing.wilayah, listing.area, locale) || '-'} />
                       <Meta icon={<Calendar size={16} />} label={formatDate(listing.createdAt, locale)} />
                       <Meta icon={<Eye size={16} />} label={`${listing.views} ${text.views}`} />
                     </div>
@@ -463,12 +487,12 @@ export function ListingDetailsPage({ id }: { id: string }) {
         )}
       </main>
 
-      {galleryOpen && hasImages ? (
-        <ListingImageGalleryModal
-          images={images}
+      {galleryOpen && hasMedia ? (
+        <ListingMediaGalleryModal
+          items={galleryItems}
           initialIndex={activeImage}
           title={listing?.title}
-          imageLabel={text.imageOf}
+          mediaLabel={text.imageOf}
           dir={dir}
           onClose={(finalIndex) => {
             if (finalIndex !== undefined) setActiveImage(finalIndex);
@@ -521,15 +545,20 @@ export function ListingDetailsPage({ id }: { id: string }) {
 
 function SimilarCard({ item }: { item: ListingDetails }) {
   const { locale, localizedPath } = useI18n();
-  const image = item.images[0]?.imageUrl;
 
   return (
     <Link className="cursor-pointer overflow-hidden rounded-lg border border-gray-200 transition hover:shadow-md" href={localizedPath(`/listing/${item.id}`)}>
-      <img src={image || fallbackImage} alt={item.title} className={`h-32 w-full ${image ? 'object-cover' : 'object-contain p-6'}`} />
+      <ListingMediaCover
+        items={item.images}
+        alt={item.title}
+        fallbackSrc={fallbackImage}
+        className="h-32 w-full"
+        imageClassName="h-32 w-full"
+      />
       <div className="p-3">
         <h3 className="mb-2 line-clamp-1 text-sm font-bold">{item.title}</h3>
         <p className="mb-1 font-bold text-green-600">{formatPrice(item.price, item.currency, locale)}</p>
-        <p className="text-xs text-gray-500">{item.area || item.city || '-'}</p>
+        <p className="text-xs text-gray-500">{getListingLocationLabel(item.city, item.wilayah, item.area, locale) || '-'}</p>
       </div>
     </Link>
   );

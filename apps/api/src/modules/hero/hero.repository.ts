@@ -85,4 +85,39 @@ export class HeroRepository {
       .aggregate({ _max: { sortOrder: true } })
       .then((result) => (result._max.sortOrder ?? -1) + 1);
   }
+
+  listActiveHeaderButtons() {
+    return prisma.headerNavButton.findMany({
+      where: { isActive: true },
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }]
+    });
+  }
+
+  listAllHeaderButtons() {
+    return prisma.headerNavButton.findMany({
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }]
+    });
+  }
+
+  findHeaderButtonById(id: string) {
+    return prisma.headerNavButton.findUnique({ where: { id } });
+  }
+
+  createHeaderButton(data: Prisma.HeaderNavButtonCreateInput) {
+    return prisma.headerNavButton.create({ data });
+  }
+
+  updateHeaderButton(id: string, data: Prisma.HeaderNavButtonUpdateInput) {
+    return prisma.headerNavButton.update({ where: { id }, data });
+  }
+
+  deleteHeaderButton(id: string) {
+    return prisma.headerNavButton.delete({ where: { id } });
+  }
+
+  getNextHeaderButtonSortOrder() {
+    return prisma.headerNavButton
+      .aggregate({ _max: { sortOrder: true } })
+      .then((result) => (result._max.sortOrder ?? -1) + 1);
+  }
 }

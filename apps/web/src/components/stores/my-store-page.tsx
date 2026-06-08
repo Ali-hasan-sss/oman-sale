@@ -6,10 +6,13 @@ import { useRouter } from 'next/navigation';
 import { ChangeEvent, FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
 
 import { SiteFooter } from '@/components/home/site-footer';
+import { ListingMediaCover } from '@/components/listings/listing-media-cover';
 import { SiteHeaderSearch, UserSiteHeader } from '@/components/navigation/user-site-header';
 import { StorePlanCard, type StorePlanCardData } from '@/components/stores/store-plan-card';
 import { MyStorePageSkeleton } from '@/components/stores/my-store-page-skeleton';
 import { api } from '@/lib/api';
+import { registerMediaPreviewUrl, resolveMediaUrl } from '@/lib/media-url';
+import { uploadMediaFile } from '@/lib/media-upload';
 import { useI18n } from '@/lib/i18n';
 import { getUserAccessToken } from '@/lib/user-auth';
 
@@ -105,6 +108,7 @@ const labels = {
     trialBadge: 'تجربة مجانية',
     trialDays: 'يوم',
     selectPlan: 'اختيار الخطة',
+    vatShort: 'ضريبة القيمة المضافة',
     storeListings: 'عروض المتجر',
     noListings: 'لا توجد عروض منشورة من المتجر بعد.',
     addListing: 'إضافة عرض من المتجر',
@@ -163,6 +167,7 @@ const labels = {
     trialBadge: 'Free trial',
     trialDays: 'days',
     selectPlan: 'Select plan',
+    vatShort: 'VAT',
     storeListings: 'Store listings',
     noListings: 'No store listings yet.',
     addListing: 'Add store listing',
@@ -303,17 +308,19 @@ export function MyStorePage() {
     }
   }, [activeSubscription?.billingPeriod]);
 
-  const uploadImage = (event: ChangeEvent<HTMLInputElement>, target: 'logo' | 'cover') => {
+  const uploadImage = async (event: ChangeEvent<HTMLInputElement>, target: 'logo' | 'cover') => {
     const file = event.target.files?.[0];
+    event.target.value = '';
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        if (target === 'logo') setLogoUrl(reader.result);
-        else setCoverUrl(reader.result);
-      }
-    };
-    reader.readAsDataURL(file);
+
+    try {
+      const result = await uploadMediaFile(file, 'stores');
+      registerMediaPreviewUrl(result.key, result.url);
+      if (target === 'logo') setLogoUrl(result.key);
+      else setCoverUrl(result.key);
+    } catch {
+      setError(text.saveError);
+    }
   };
 
   const saveStore = async (event: FormEvent) => {
@@ -442,7 +449,7 @@ export function MyStorePage() {
             <form onSubmit={saveStore} className="space-y-6">
               <div className="overflow-hidden rounded-3xl bg-white shadow-sm">
                 <div className="relative h-48 bg-slate-100">
-                  <img src={coverUrl || fallbackImage} alt={storeName} className={`h-full w-full ${coverUrl ? 'object-cover' : 'object-contain p-8'}`} />
+                  <img src={coverUrl ? resolveMediaUrl(coverUrl) : fallbackImage} alt={storeName} className={`h-full w-full ${coverUrl ? 'object-cover' : 'object-contain p-8'}`} />
                   <label className="absolute bottom-4 end-4 inline-flex cursor-pointer items-center gap-2 rounded-xl bg-white/95 px-4 py-2 text-sm font-bold shadow">
                     <Upload size={16} />
                     {text.changeCover}
@@ -457,7 +464,7 @@ export function MyStorePage() {
                 <div className="p-6 md:p-8">
                   <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end">
                     <div className="relative -mt-16 h-28 w-28 overflow-hidden rounded-2xl border-4 border-white bg-white shadow">
-                      <img src={logoUrl || fallbackImage} alt={storeName} className={`h-full w-full ${logoUrl ? 'object-cover' : 'object-contain p-3'}`} />
+                      <img src={logoUrl ? resolveMediaUrl(logoUrl) : fallbackImage} alt={storeName} className={`h-full w-full ${logoUrl ? 'object-cover' : 'object-contain p-3'}`} />
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-green-600 px-4 py-2 text-sm font-bold text-white">
@@ -509,7 +516,6 @@ export function MyStorePage() {
                 ) : (
                   <div className="space-y-4">
                     {listings.map((listing) => {
-                      const image = listing.images?.[0]?.imageUrl;
                       const categoryName =
                         (locale === 'en' ? listing.category?.nameEn : listing.category?.nameAr) ?? listing.category?.name ?? '';
                       return (
@@ -518,7 +524,13 @@ export function MyStorePage() {
                           href={localizedPath(`/listing/${listing.id}`)}
                           className="flex gap-4 rounded-2xl border border-gray-100 p-4 transition hover:border-green-200 hover:bg-green-50/40"
                         >
-                          <img src={image || fallbackImage} alt={listing.title} className="h-24 w-28 rounded-xl object-cover" />
+                          <ListingMediaCover
+                            items={listing.images}
+                            alt={listing.title}
+                            fallbackSrc={fallbackImage}
+                            className="h-24 w-28 shrink-0 rounded-xl"
+                            imageClassName="h-24 w-28 rounded-xl"
+                          />
                           <div>
                             <h3 className="font-bold">{listing.title}</h3>
                             <p className="text-sm text-gray-500">{categoryName}</p>
@@ -628,7 +640,8 @@ export function MyStorePage() {
                                 maxListings: text.maxListings,
                                 trialBadge: text.trialBadge,
                                 trialDays: text.trialDays,
-                                selectPlan: text.selectPlan
+                                selectPlan: text.selectPlan,
+                                vatShort: text.vatShort
                               }}
                               onSelectPlan={setSelectedUpgradePlanId}
                               onSelectBilling={(planId, period) => {

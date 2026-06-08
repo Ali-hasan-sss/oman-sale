@@ -5,8 +5,10 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
 import { FavoriteButton } from '@/components/listings/favorite-button';
+import { ListingMediaCover } from '@/components/listings/listing-media-cover';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
+import { getListingLocationLabel } from '@/lib/oman-locations';
 import { getUserAccessToken } from '@/lib/user-auth';
 
 type Listing = {
@@ -15,6 +17,7 @@ type Listing = {
   price?: string | number | null;
   currency: string;
   city?: string | null;
+  wilayah?: string | null;
   area?: string | null;
   category?: {
     name?: string;
@@ -87,7 +90,6 @@ export function LatestListingsSection() {
           {visibleListings.map((listing) => {
             const category =
               (locale === 'en' ? listing.category?.nameEn : listing.category?.nameAr) ?? listing.category?.name ?? '';
-            const image = listing.images?.[0]?.imageUrl;
             const isFeatured = Boolean(listing.promotion);
 
             return (
@@ -97,10 +99,12 @@ export function LatestListingsSection() {
                 className="group overflow-hidden rounded-2xl bg-white shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg"
               >
                 <div className="relative h-56 overflow-hidden">
-                  <img
-                    src={image ?? placeholderImage}
+                  <ListingMediaCover
+                    items={listing.images}
                     alt={listing.title}
-                    className={`h-full w-full transition-transform duration-500 group-hover:scale-105 ${image ? 'object-cover' : 'object-contain p-8'}`}
+                    fallbackSrc={placeholderImage}
+                    className="h-full w-full transition-transform duration-500 group-hover:scale-105"
+                    imageClassName="h-full w-full"
                   />
                   <FavoriteButton
                     adId={listing.id}
@@ -132,7 +136,7 @@ export function LatestListingsSection() {
                   <p className="mb-3 text-xl font-black text-brand-600">{formatPrice(listing.price, listing.currency)}</p>
                   <div className="flex items-center gap-1 text-sm text-slate-500">
                     <MapPin size={16} className="text-slate-400" />
-                    <span>{listing.area || listing.city || '-'}</span>
+                    <span>{getListingLocationLabel(listing.city, listing.wilayah, listing.area, locale) || '-'}</span>
                   </div>
                 </div>
               </Link>

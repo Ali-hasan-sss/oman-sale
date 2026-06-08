@@ -20,6 +20,7 @@ import {
   resetPasswordRequest,
   verifyEmailRequest
 } from '../services/auth.service';
+import { fetchCurrentUser } from '../services/user.service';
 import type { AuthSession, Locale, User } from '../types';
 
 type AuthTokens = AuthSession['tokens'];
@@ -60,6 +61,21 @@ type AuthState = {
   markAccountRestricted: (reason: 'blocked' | 'inactive') => Promise<void>;
 };
 
+async function refreshCurrentUser() {
+  const { accessToken, refreshToken } = useAuthStore.getState();
+  if (!accessToken || !refreshToken) return;
+
+  try {
+    const freshUser = await fetchCurrentUser();
+    await useAuthStore.getState().setSession({
+      user: freshUser,
+      tokens: { accessToken, refreshToken }
+    });
+  } catch {
+    // Keep cached session when profile refresh fails.
+  }
+}
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   accessToken: undefined,
   refreshToken: undefined,
@@ -77,6 +93,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         user: session.user,
         isHydrated: true
       });
+
+      if (session.accessToken && session.refreshToken) {
+        await refreshCurrentUser();
+      }
     } catch {
       set({ isHydrated: true });
     }
@@ -111,6 +131,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const session = await loginRequest(email, password);
       await get().setSession(session);
+      await refreshCurrentUser();
       return { ok: true };
     } catch (error) {
       if (isEmailVerificationRequiredError(error)) {
@@ -144,6 +165,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const session = await verifyEmailRequest(email, code);
       await get().setSession(session);
+      await refreshCurrentUser();
       return { ok: true };
     } catch (error) {
       const message = getApiErrorMessage(error, 'verify');

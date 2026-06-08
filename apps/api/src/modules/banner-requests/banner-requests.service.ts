@@ -1,6 +1,7 @@
 import { BannerRequestStatus } from '@prisma/client';
 
 import { ApiError } from '../../shared/utils/api-error';
+import { resolveMediaUrl } from '../../shared/utils/media-reference';
 import { checkoutBannerRequest, confirmThawaniBannerPayment } from './banner-checkout.service';
 import { bannerRequestsRepository } from './banner-requests.repository';
 import type {
@@ -14,7 +15,7 @@ const mapRequest = (request: NonNullable<Awaited<ReturnType<typeof bannerRequest
   id: request.id,
   userId: request.userId,
   user: request.user,
-  imageUrl: request.imageUrl,
+  imageUrl: resolveMediaUrl(request.imageUrl),
   linkUrl: request.linkUrl,
   textAr: request.textAr,
   textEn: request.textEn,

@@ -6,18 +6,20 @@ import { sendAuthCodeEmail } from '../../shared/email/mailer';
 import { ApiError } from '../../shared/utils/api-error';
 import { hashPassword, verifyPassword } from '../../shared/utils/password';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../../shared/utils/tokens';
+import { resolveUserMedia } from '../../shared/utils/resolve-entity-media';
 import { authRepository } from './auth.repository';
 import type { AuthTokens, AuthUserResponse } from './auth.types';
 import type { ChangePasswordDto, EmailCodeDto, ForgotPasswordDto, LoginDto, RefreshTokenDto, RegisterDto, ResendVerificationDto, ResetPasswordDto } from './auth.validation';
 
-const sanitizeUser = (user: AuthUserResponse): AuthUserResponse => ({
-  id: user.id,
-  fullName: user.fullName,
-  email: user.email,
-  phone: user.phone,
-  role: user.role,
-  avatar: user.avatar
-});
+const sanitizeUser = (user: AuthUserResponse): AuthUserResponse =>
+  resolveUserMedia({
+    id: user.id,
+    fullName: user.fullName,
+    email: user.email,
+    phone: user.phone,
+    role: user.role,
+    avatar: user.avatar
+  });
 
 export class AuthService {
   async register(dto: RegisterDto): Promise<{ email: string; pendingVerification: true }> {

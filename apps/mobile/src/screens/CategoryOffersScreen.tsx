@@ -41,6 +41,7 @@ type AppliedFilters = {
   search: string;
   categoryId: string;
   city: string;
+  wilayah: string;
   minPrice?: number;
   maxPrice?: number;
   filterOptionIds: string[];
@@ -55,6 +56,7 @@ const emptyDraft = (): CategoryFiltersDraft => ({
   search: '',
   subcategoryPath: [],
   city: '',
+  wilayah: '',
   minPrice: '',
   maxPrice: '',
   filterOptionIds: []
@@ -75,6 +77,7 @@ const countActiveFilters = (applied: AppliedFilters, rootCategoryId: string, sub
   if (applied.search.trim()) count += 1;
   if (getEffectiveCategoryId(rootCategoryId, subcategoryPath) !== rootCategoryId) count += subcategoryPath.filter(Boolean).length;
   if (applied.city) count += 1;
+  if (applied.wilayah) count += 1;
   if (applied.minPrice !== undefined) count += 1;
   if (applied.maxPrice !== undefined) count += 1;
   count += applied.filterOptionIds.length;
@@ -105,6 +108,7 @@ export function CategoryOffersScreen({ categoryId, onListingPress }: CategoryOff
     search: '',
     categoryId,
     city: '',
+    wilayah: '',
     filterOptionIds: []
   });
 
@@ -218,6 +222,7 @@ export function CategoryOffersScreen({ categoryId, onListingPress }: CategoryOff
       q: applied.search.trim() || undefined,
       categoryId: effectiveCategoryId,
       city: applied.city || undefined,
+      wilayah: applied.city && applied.wilayah ? applied.wilayah : undefined,
       minPrice: applied.minPrice,
       maxPrice: applied.maxPrice,
       filterOptionIds: applied.filterOptionIds
@@ -256,6 +261,7 @@ export function CategoryOffersScreen({ categoryId, onListingPress }: CategoryOff
       search: draft.search.trim(),
       categoryId: effectiveCategoryId,
       city: draft.city,
+      wilayah: draft.city && draft.wilayah ? draft.wilayah : '',
       minPrice,
       maxPrice,
       filterOptionIds: [...draft.filterOptionIds]
@@ -302,6 +308,7 @@ export function CategoryOffersScreen({ categoryId, onListingPress }: CategoryOff
       q: applied.search.trim() || undefined,
       categoryId: effectiveCategoryId,
       city: applied.city || undefined,
+      wilayah: applied.city && applied.wilayah ? applied.wilayah : undefined,
       minPrice: applied.minPrice,
       maxPrice: applied.maxPrice,
       filterOptionIds: applied.filterOptionIds
@@ -331,6 +338,7 @@ export function CategoryOffersScreen({ categoryId, onListingPress }: CategoryOff
       q: applied.search.trim() || undefined,
       categoryId: effectiveCategoryId,
       city: applied.city || undefined,
+      wilayah: applied.city && applied.wilayah ? applied.wilayah : undefined,
       minPrice: applied.minPrice,
       maxPrice: applied.maxPrice,
       filterOptionIds: applied.filterOptionIds

@@ -1,8 +1,10 @@
 import { BannerRequestStatus } from '@prisma/client';
 import { z } from 'zod';
 
+import { imageReferenceSchema } from '../../shared/utils/media-reference';
+
 export const createBannerRequestSchema = z.object({
-  imageUrl: z.string().trim().url(),
+  imageUrl: imageReferenceSchema,
   linkUrl: z.string().trim().min(1).max(500),
   textAr: z.string().trim().max(200).optional(),
   textEn: z.string().trim().max(200).optional(),

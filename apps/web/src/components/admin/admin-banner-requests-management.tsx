@@ -4,6 +4,7 @@ import { Check, ImageIcon, X } from 'lucide-react';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 
 import { adminApi } from '@/lib/admin-auth';
+import { resolveMediaUrl } from '@/lib/media-url';
 import { useI18n } from '@/lib/i18n';
 
 type BannerPricing = {
@@ -225,7 +226,7 @@ export function AdminBannerRequestsManagement() {
           {requests.map((request) => (
             <article key={request.id} className="rounded-2xl border border-slate-200 p-4">
               <div className="grid gap-4 lg:grid-cols-[240px_1fr_auto]">
-                <img src={request.imageUrl} alt="" className="aspect-[990/250] w-full rounded-xl object-cover ring-1 ring-slate-200" />
+                <img src={resolveMediaUrl(request.imageUrl)} alt="" className="aspect-[990/250] w-full rounded-xl object-cover ring-1 ring-slate-200" />
                 <div className="space-y-2 text-sm">
                   <p>
                     <span className="font-bold">{isAr ? 'المستخدم:' : 'User:'}</span> {request.user.fullName} ({request.user.email})

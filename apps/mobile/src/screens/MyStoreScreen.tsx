@@ -18,6 +18,7 @@ import { KeyboardAwareScrollView } from '../components/KeyboardAwareScrollView';
 import { MyStoreScreenSkeleton } from '../components/skeleton';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
+import { formatPlanVatBreakdown } from '../lib/plan-pricing';
 import {
   activateStorePaidRequest,
   deleteStoreRequest,
@@ -211,10 +212,13 @@ export function MyStoreScreen({ onCreateStore, onOpenListing }: MyStoreScreenPro
     }
   };
 
-  const getPlanPrice = (plan: StorePlan, period: 'MONTHLY' | 'YEARLY') => {
+  const getPlanPriceDisplay = (plan: StorePlan, period: 'MONTHLY' | 'YEARLY') => {
     const row = plan.pricing.find((pricing) => pricing.billingPeriod === period);
-    const value = Number(row?.finalPrice ?? row?.price ?? 0);
-    return value <= 0 ? text.free : `${value.toFixed(3)} OMR`;
+    const basePrice = Number(row?.finalPrice ?? row?.price ?? 0);
+    return formatPlanVatBreakdown(basePrice, locale, {
+      free: t.common.pricing.free,
+      vatShort: t.common.pricing.vatShort
+    });
   };
 
   const deleteStore = async () => {
@@ -400,9 +404,21 @@ export function MyStoreScreen({ onCreateStore, onOpenListing }: MyStoreScreenPro
                               <AppText style={[styles.billingChipLabel, active && styles.billingChipLabelActive]}>
                                 {period === 'MONTHLY' ? text.monthly : text.yearly}
                               </AppText>
-                              <AppText style={[styles.billingChipPrice, active && styles.billingChipLabelActive]}>
-                                {getPlanPrice(plan, period)}
-                              </AppText>
+                              {(() => {
+                                const pricing = getPlanPriceDisplay(plan, period);
+                                return (
+                                  <>
+                                    <AppText style={[styles.billingChipPrice, active && styles.billingChipLabelActive]}>
+                                      {pricing.main}
+                                    </AppText>
+                                    {pricing.sub ? (
+                                      <AppText style={[styles.billingChipVat, active && styles.billingChipLabelActive]}>
+                                        {pricing.sub}
+                                      </AppText>
+                                    ) : null}
+                                  </>
+                                );
+                              })()}
                               <AppText style={[styles.billingChipMeta, active && styles.billingChipLabelActive]}>
                                 {row.maxListings} {text.maxListings}
                               </AppText>
@@ -613,6 +629,7 @@ const styles = StyleSheet.create({
   billingChipActive: { borderColor: colors.brand, backgroundColor: '#ecfdf5' },
   billingChipLabel: { fontSize: 11, fontWeight: '700', color: colors.muted, textTransform: 'uppercase' },
   billingChipPrice: { fontSize: 15, fontWeight: '800', color: colors.ink },
+  billingChipVat: { fontSize: 11, color: colors.muted, marginTop: 2 },
   billingChipMeta: { fontSize: 12, color: colors.muted },
   billingChipLabelActive: { color: colors.brandDark },
   darkButton: {

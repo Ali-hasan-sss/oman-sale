@@ -5,6 +5,7 @@ import Link from 'next/link';
 
 import type { AssistantListingCard } from '@/hooks/use-assistant-chat';
 import { useI18n } from '@/lib/i18n';
+import { getListingLocationLabel } from '@/lib/oman-locations';
 
 type AssistantListingCarouselProps = {
   listings: AssistantListingCard[];
@@ -51,7 +52,7 @@ export function AssistantListingCarousel({ listings }: AssistantListingCarouselP
             <ul className="mt-2 flex-1 space-y-1 text-[11px] leading-snug text-[#6B6B6B]">
               <li className="flex gap-1.5">
                 <span className="shrink-0 text-[#B0B0B0]">•</span>
-                <span>{listing.city}{listing.area ? ` · ${listing.area}` : ''}</span>
+                <span>{getListingLocationLabel(listing.city, listing.wilayah, listing.area, locale) || '-'}</span>
               </li>
               {listing.categoryName ? (
                 <li className="flex gap-1.5">

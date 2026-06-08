@@ -21,6 +21,7 @@ function mapListing(ad: {
   price: unknown;
   currency: string;
   city: string | null;
+  wilayah?: string | null;
   area?: string | null;
   images?: Array<{ imageUrl: string }>;
   promotion?: { plan?: { badgeLabel?: string | null } | null } | null;
@@ -39,6 +40,7 @@ function mapListing(ad: {
     price: Number.isFinite(price) ? price : null,
     currency: ad.currency,
     city: ad.city ?? '',
+    wilayah: ad.wilayah,
     area: ad.area,
     imageUrl: ad.images?.[0]?.imageUrl ?? null,
     isFeatured: Boolean(ad.promotion),

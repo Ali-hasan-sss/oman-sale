@@ -10,9 +10,12 @@ import { SiteFooter } from '@/components/home/site-footer';
 import { SiteHeaderSearch, UserSiteHeader } from '@/components/navigation/user-site-header';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
+import { PlanPriceWithVat } from '@/components/pricing/plan-price-with-vat';
+import { getListingLocationLabel, getWilayahsForGovernorate, omanGovernorates } from '@/lib/oman-locations';
 import { getUserAccessToken } from '@/lib/user-auth';
 import { useAuthStore } from '@/store/auth-store';
 import { ListingCardsSkeleton } from './listing-card-skeleton';
+import { ListingMediaCover } from './listing-media-cover';
 
 type ListingImage = {
   imageUrl: string;
@@ -25,6 +28,7 @@ type MyListing = {
   price?: string | number | null;
   currency: string;
   city?: string | null;
+  wilayah?: string | null;
   area?: string | null;
   contactPhone?: string | null;
   views: number;
@@ -66,19 +70,6 @@ type PromotionPlan = {
 
 const fallbackImage = 'https://images.unsplash.com/photo-1521791136064-7986c2920216?w=600&h=400&fit=crop';
 
-const omanCities = [
-  { value: 'مسقط', ar: 'مسقط', en: 'Muscat' },
-  { value: 'صلالة', ar: 'صلالة', en: 'Salalah' },
-  { value: 'صحار', ar: 'صحار', en: 'Sohar' },
-  { value: 'نزوى', ar: 'نزوى', en: 'Nizwa' },
-  { value: 'صور', ar: 'صور', en: 'Sur' },
-  { value: 'البريمي', ar: 'البريمي', en: 'Al Buraimi' },
-  { value: 'الرستاق', ar: 'الرستاق', en: 'Rustaq' },
-  { value: 'السيب', ar: 'السيب', en: 'Seeb' },
-  { value: 'الخوير', ar: 'الخوير', en: 'Al Khuwair' },
-  { value: 'القرم', ar: 'القرم', en: 'Qurum' }
-] as const;
-
 const labels = {
   ar: {
     title: 'إعلاناتي',
@@ -101,9 +92,10 @@ const labels = {
     adTitle: 'عنوان الإعلان',
     description: 'الوصف',
     price: 'السعر',
-    city: 'المدينة',
-    selectCity: 'اختر المدينة',
-    area: 'المنطقة',
+    city: 'المحافظة',
+    selectCity: 'اختر المحافظة',
+    wilayah: 'الولاية / المنطقة',
+    selectWilayah: 'اختر الولاية',
     contactPhone: 'رقم التواصل',
     save: 'حفظ التعديلات',
     saving: 'جاري الحفظ...',
@@ -114,6 +106,8 @@ const labels = {
     twoWeeks: 'أسبوعان',
     oneMonth: 'شهر',
     promoteNow: 'ترقية الآن',
+    vatShort: 'ضريبة القيمة المضافة',
+    free: 'مجاني',
     confirmDeleteTitle: 'تأكيد حذف الإعلان',
     confirmDeleteDescription: 'سيتم حذف الإعلان من حسابك ولن يظهر للمستخدمين بعد ذلك. هل تريد المتابعة؟',
     confirmDeleteAction: 'حذف الإعلان',
@@ -146,9 +140,10 @@ const labels = {
     adTitle: 'Listing title',
     description: 'Description',
     price: 'Price',
-    city: 'City',
-    selectCity: 'Select city',
-    area: 'Area',
+    city: 'Governorate',
+    selectCity: 'Select governorate',
+    wilayah: 'Wilayah',
+    selectWilayah: 'Select wilayah',
     contactPhone: 'Contact phone',
     save: 'Save changes',
     saving: 'Saving...',
@@ -159,6 +154,8 @@ const labels = {
     twoWeeks: 'Two weeks',
     oneMonth: 'One month',
     promoteNow: 'Promote now',
+    vatShort: 'VAT',
+    free: 'Free',
     confirmDeleteTitle: 'Confirm listing deletion',
     confirmDeleteDescription: 'This listing will be removed from your account and will no longer be visible to users. Do you want to continue?',
     confirmDeleteAction: 'Delete listing',
@@ -354,8 +351,7 @@ function ListingCard({
 }) {
   const { locale, localizedPath } = useI18n();
   const categoryName = (locale === 'en' ? listing.category?.nameEn : listing.category?.nameAr) || listing.category?.name || '';
-  const area = listing.area || listing.city || '-';
-  const image = listing.images[0]?.imageUrl;
+  const area = getListingLocationLabel(listing.city, listing.wilayah, listing.area, locale) || '-';
   const promotionLabel =
     listing.promotion?.plan?.badgeLabel ||
     (locale === 'en' ? listing.promotion?.plan?.nameEn : listing.promotion?.plan?.nameAr) ||
@@ -366,10 +362,12 @@ function ListingCard({
     <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
       <div className="flex flex-col gap-6 p-6 md:flex-row">
         <div className="h-48 w-full flex-shrink-0 md:w-64">
-          <img
-            src={image || fallbackImage}
+          <ListingMediaCover
+            items={listing.images}
             alt={listing.title}
-            className={`h-full w-full rounded-lg ${image ? 'object-cover' : 'object-contain p-8'}`}
+            fallbackSrc={fallbackImage}
+            className="h-full w-full rounded-lg"
+            imageClassName="h-full w-full rounded-lg"
           />
         </div>
         <div className="flex-1">
@@ -441,9 +439,10 @@ function EditListingModal({
   const [description, setDescription] = useState(listing.description);
   const [price, setPrice] = useState(listing.price?.toString() ?? '');
   const [city, setCity] = useState(listing.city ?? '');
+  const [wilayah, setWilayah] = useState(listing.wilayah ?? '');
   const [isSaving, setIsSaving] = useState(false);
   const inputClass = 'w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:ring-2 focus:ring-green-500';
-  const hasCustomCity = city && !omanCities.some((cityOption) => cityOption.value === city);
+  const wilayahOptions = useMemo(() => (city ? getWilayahsForGovernorate(city) : []), [city]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -455,7 +454,8 @@ function EditListingModal({
           title,
           description,
           price: price ? Number(price) : undefined,
-          city: city || undefined
+          city: city || undefined,
+          wilayah: wilayah || undefined
         },
         { headers: authHeaders }
       );
@@ -473,12 +473,33 @@ function EditListingModal({
         <div className="grid gap-4 md:grid-cols-2">
           <Field label={text.price}><input value={price} onChange={(event) => setPrice(event.target.value)} type="number" min="0" className={inputClass} /></Field>
           <Field label={text.city}>
-            <select value={city} onChange={(event) => setCity(event.target.value)} className={inputClass}>
+            <select
+              value={city}
+              onChange={(event) => {
+                setCity(event.target.value);
+                setWilayah('');
+              }}
+              className={inputClass}
+            >
               <option value="">{text.selectCity}</option>
-              {hasCustomCity ? <option value={city}>{city}</option> : null}
-              {omanCities.map((cityOption) => (
-                <option key={cityOption.value} value={cityOption.value}>
-                  {locale === 'en' ? cityOption.en : cityOption.ar}
+              {omanGovernorates.map((governorate) => (
+                <option key={governorate.value} value={governorate.value}>
+                  {locale === 'en' ? governorate.en : governorate.ar}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label={text.wilayah}>
+            <select
+              value={wilayah}
+              onChange={(event) => setWilayah(event.target.value)}
+              disabled={!city}
+              className={inputClass}
+            >
+              <option value="">{text.selectWilayah}</option>
+              {wilayahOptions.map((wilayahOption) => (
+                <option key={wilayahOption.value} value={wilayahOption.value}>
+                  {locale === 'en' ? wilayahOption.en : wilayahOption.ar}
                 </option>
               ))}
             </select>
@@ -542,6 +563,7 @@ function PromoteListingModal({
           <div className="grid gap-3">
             {plans.map((plan) => {
               const active = plan.id === planId;
+              const planBasePrice = getPlanPrice(plan, days);
               return (
                 <button
                   key={plan.id}
@@ -554,6 +576,15 @@ function PromoteListingModal({
                     <span className="h-4 w-4 rounded-full" style={{ backgroundColor: plan.color || '#16a34a' }} />
                   </div>
                   <p className="text-sm text-gray-500">{locale === 'en' ? plan.descriptionEn : plan.descriptionAr}</p>
+                  <div className="mt-2">
+                    <PlanPriceWithVat
+                      basePrice={planBasePrice}
+                      locale={locale}
+                      freeLabel={text.free}
+                      vatShort={text.vatShort}
+                      mainClassName="text-lg font-black text-green-600"
+                    />
+                  </div>
                 </button>
               );
             })}
@@ -568,7 +599,15 @@ function PromoteListingModal({
         </Field>
         <div className="rounded-2xl bg-slate-50 p-4 text-center">
           <p className="text-sm text-gray-500">{listing.title}</p>
-          <p className="mt-1 text-2xl font-black text-green-600">{formatPrice(selectedPrice, 'OMR')}</p>
+          <div className="mt-1">
+            <PlanPriceWithVat
+              basePrice={selectedPrice}
+              locale={locale}
+              freeLabel={text.free}
+              vatShort={text.vatShort}
+              mainClassName="text-2xl font-black text-green-600"
+            />
+          </div>
         </div>
         <div className="flex justify-end gap-2">
           <button type="button" onClick={onClose} className="rounded-xl border border-gray-300 px-5 py-2 font-bold transition hover:bg-gray-50">{text.cancel}</button>

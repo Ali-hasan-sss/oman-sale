@@ -1,17 +1,12 @@
 import { z } from 'zod';
 
-const avatarSchema = z
-  .string()
-  .max(1_500_000)
-  .refine((value) => value.startsWith('data:image/') || /^https?:\/\//.test(value), {
-    message: 'Avatar must be an image URL or data image'
-  });
+import { imageReferenceSchema } from '../../shared/utils/media-reference';
 
 export const updateProfileSchema = z.object({
   fullName: z.string().min(2).optional(),
   phone: z.union([z.string().min(6), z.literal('')]).optional(),
   bio: z.string().max(500).optional(),
-  avatar: avatarSchema.nullable().optional()
+  avatar: imageReferenceSchema.nullable().optional()
 });
 
 export const changePasswordSchema = z.object({

@@ -3,8 +3,10 @@
 import { Edit3, ImageIcon, Plus, Trash2, X } from 'lucide-react';
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 
+import { ImageUploader } from '@/components/media/image-uploader';
 import { adminApi } from '@/lib/admin-auth';
 import { useI18n } from '@/lib/i18n';
+import { resolveMediaUrl } from '@/lib/media-url';
 
 type HeroBannerRecord = {
   id: string;
@@ -97,6 +99,10 @@ export function AdminHeroBannersManagement() {
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    if (!form.imageUrl) {
+      setError(m.admin.bannerImageUploadError);
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -159,19 +165,25 @@ export function AdminHeroBannersManagement() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <label className="block md:col-span-2">
-              <span className="mb-1 block text-sm font-bold text-slate-700">{m.admin.bannerImageUrl}</span>
-              <input
-                required
+            <div className="md:col-span-2">
+              <ImageUploader
+                folder="banners"
+                useAdminAuth
                 value={form.imageUrl}
-                onChange={(event) => updateField('imageUrl', event.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-                placeholder="https://..."
+                onChange={(value) => updateField('imageUrl', value)}
+                labels={{
+                  title: m.admin.bannerImageUploadTitle,
+                  hint: m.admin.bannerImageUploadHint,
+                  remove: m.admin.removeImage,
+                  uploading: m.admin.bannerImageUploading,
+                  compressing: m.admin.bannerImageCompressing,
+                  uploadError: m.admin.bannerImageUploadError
+                }}
               />
-            </label>
+            </div>
             {form.imageUrl ? (
               <div className="md:col-span-2 overflow-hidden rounded-2xl border border-slate-200">
-                <img src={form.imageUrl} alt="" className="aspect-[990/250] w-full object-cover" />
+                <img src={resolveMediaUrl(form.imageUrl)} alt="" className="aspect-[990/250] w-full object-cover" />
               </div>
             ) : null}
             <label className="block">
@@ -254,7 +266,7 @@ export function AdminHeroBannersManagement() {
             <article key={banner.id} className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:flex-row">
               <div className="h-24 w-full shrink-0 overflow-hidden rounded-xl bg-slate-100 md:w-56">
                 {banner.imageUrl ? (
-                  <img src={banner.imageUrl} alt="" className="h-full w-full object-cover" />
+                  <img src={resolveMediaUrl(banner.imageUrl)} alt="" className="h-full w-full object-cover" />
                 ) : (
                   <div className="flex h-full items-center justify-center text-slate-400">
                     <ImageIcon size={28} />

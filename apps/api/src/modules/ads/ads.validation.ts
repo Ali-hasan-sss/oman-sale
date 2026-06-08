@@ -1,16 +1,38 @@
 import { AdCondition, AdStatus, AdType } from '@prisma/client';
 import { z } from 'zod';
 
-import { omanCities } from '../../shared/constants/oman-cities';
+import {
+  isWilayahInGovernorate,
+  omanGovernorateValues,
+  omanWilayahValues
+} from '../../shared/constants/oman-locations';
+import { imageReferenceSchema, videoReferenceSchema } from '../../shared/utils/media-reference';
 
-export { omanCities };
+const governorateSchema = z.enum(omanGovernorateValues as [string, ...string[]]);
+const wilayahSchema = z.enum(omanWilayahValues as [string, ...string[]]);
 
-const imageUrlSchema = z
-  .string()
-  .max(1_500_000)
-  .refine((value) => value.startsWith('data:image/') || /^https?:\/\//.test(value), {
-    message: 'Image must be a URL or data image'
-  });
+function validateAdLocation(
+  value: { city?: string; wilayah?: string },
+  ctx: z.RefinementCtx,
+  requireBoth = false
+) {
+  if (requireBoth) {
+    if (!value.city) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Governorate is required', path: ['city'] });
+    }
+    if (!value.wilayah) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Wilayah is required', path: ['wilayah'] });
+    }
+  }
+
+  if (value.city && value.wilayah && !isWilayahInGovernorate(value.city, value.wilayah)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Wilayah does not belong to the selected governorate',
+      path: ['wilayah']
+    });
+  }
+}
 
 const queryBooleanSchema = z.preprocess((value) => {
   if (value === 'true') return true;
@@ -18,33 +40,59 @@ const queryBooleanSchema = z.preprocess((value) => {
   return value;
 }, z.boolean());
 
-export const createAdSchema = z.object({
-  title: z.string().min(3),
-  description: z.string().min(10),
-  type: z.nativeEnum(AdType),
-  condition: z.nativeEnum(AdCondition).optional(),
-  price: z.number().nonnegative().optional(),
-  currency: z.string().default('OMR'),
-  city: z.enum(omanCities),
-  area: z.string().optional(),
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
-  contactPhone: z.string().optional(),
-  status: z.nativeEnum(AdStatus).default(AdStatus.ACTIVE),
-  categoryId: z.string().uuid(),
-  storeId: z.string().uuid().optional(),
-  imageUrls: z.array(imageUrlSchema).max(8).default([]),
-  filterOptionIds: z.array(z.string().uuid()).default([])
-});
+export const createAdSchema = z
+  .object({
+    title: z.string().min(3),
+    description: z.string().min(10),
+    type: z.nativeEnum(AdType),
+    condition: z.nativeEnum(AdCondition).optional(),
+    price: z.number().nonnegative().optional(),
+    currency: z.string().default('OMR'),
+    city: governorateSchema,
+    wilayah: wilayahSchema,
+    area: z.string().optional(),
+    latitude: z.number().optional(),
+    longitude: z.number().optional(),
+    contactPhone: z.string().optional(),
+    status: z.nativeEnum(AdStatus).default(AdStatus.ACTIVE),
+    categoryId: z.string().uuid(),
+    storeId: z.string().uuid().optional(),
+    videoUrl: videoReferenceSchema.optional().nullable(),
+    imageUrls: z.array(imageReferenceSchema).max(8).default([]),
+    filterOptionIds: z.array(z.string().uuid()).default([])
+  })
+  .superRefine((value, ctx) => validateAdLocation(value, ctx, true));
 
-export const updateAdSchema = createAdSchema.partial();
+export const updateAdSchema = z
+  .object({
+    title: z.string().min(3).optional(),
+    description: z.string().min(10).optional(),
+    type: z.nativeEnum(AdType).optional(),
+    condition: z.nativeEnum(AdCondition).optional(),
+    price: z.number().nonnegative().optional(),
+    currency: z.string().optional(),
+    city: governorateSchema.optional(),
+    wilayah: wilayahSchema.optional(),
+    area: z.string().optional(),
+    latitude: z.number().optional(),
+    longitude: z.number().optional(),
+    contactPhone: z.string().optional(),
+    status: z.nativeEnum(AdStatus).optional(),
+    categoryId: z.string().uuid().optional(),
+    storeId: z.string().uuid().optional(),
+    videoUrl: videoReferenceSchema.optional().nullable(),
+    imageUrls: z.array(imageReferenceSchema).max(8).optional(),
+    filterOptionIds: z.array(z.string().uuid()).optional()
+  })
+  .superRefine((value, ctx) => validateAdLocation(value, ctx));
 
-export const listAdsQuerySchema = z.object({
+const listAdsQueryBaseSchema = z.object({
   q: z.string().optional(),
   type: z.nativeEnum(AdType).optional(),
   status: z.nativeEnum(AdStatus).optional(),
   categoryId: z.string().uuid().optional(),
-  city: z.enum(omanCities).optional(),
+  city: governorateSchema.optional(),
+  wilayah: wilayahSchema.optional(),
   minPrice: z.coerce.number().nonnegative().optional(),
   maxPrice: z.coerce.number().nonnegative().optional(),
   filterOptionIds: z
@@ -58,12 +106,18 @@ export const listAdsQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(100).default(20)
 });
 
-export const adminListAdsQuerySchema = listAdsQuerySchema.extend({
-  userId: z.string().uuid().optional(),
-  isApproved: queryBooleanSchema.optional(),
-  includeDeleted: queryBooleanSchema.optional(),
-  deletedOnly: queryBooleanSchema.optional()
-});
+export const listAdsQuerySchema = listAdsQueryBaseSchema.superRefine((value, ctx) =>
+  validateAdLocation(value, ctx)
+);
+
+export const adminListAdsQuerySchema = listAdsQueryBaseSchema
+  .extend({
+    userId: z.string().uuid().optional(),
+    isApproved: queryBooleanSchema.optional(),
+    includeDeleted: queryBooleanSchema.optional(),
+    deletedOnly: queryBooleanSchema.optional()
+  })
+  .superRefine((value, ctx) => validateAdLocation(value, ctx));
 
 export const reportAdSchema = z.object({
   reason: z.string().min(5).max(500)

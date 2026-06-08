@@ -11,7 +11,9 @@ import { UserSiteHeader } from '@/components/navigation/user-site-header';
 import { api } from '@/lib/api';
 import { ApiErrorCodes, getApiErrorCode, resolveApiErrorMessage } from '@/lib/api-errors';
 import { getAuthMessages, useI18n } from '@/lib/i18n';
+import { syncCurrentUser } from '@/lib/sync-current-user';
 import { saveUserSession, type UserAuthSession } from '@/lib/user-auth';
+import { notifyAuthChanged } from '@/components/auth/user-menu';
 import { useAuthStore } from '@/store/auth-store';
 
 type AuthMode = 'login' | 'register';
@@ -77,7 +79,9 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
         accessToken: session.tokens.accessToken,
         user: session.user
       });
-      router.push(localizedPath(isRegister ? '/' : '/my-listings'));
+      notifyAuthChanged();
+      await syncCurrentUser(session.tokens.accessToken);
+      router.push(localizedPath('/'));
     } catch (error) {
       if (
         !isRegister &&
@@ -117,6 +121,8 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
       });
       saveUserSession(response.data.data);
       setSession({ accessToken: response.data.data.tokens.accessToken, user: response.data.data.user });
+      notifyAuthChanged();
+      await syncCurrentUser(response.data.data.tokens.accessToken);
       router.push(localizedPath('/'));
     } catch {
       setError(authMessages.verifyError);

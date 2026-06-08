@@ -22,6 +22,7 @@ export type AssistantListingCard = {
   price: number | null;
   currency: string;
   city: string;
+  wilayah?: string | null;
   area?: string | null;
   imageUrl?: string | null;
   isFeatured: boolean;

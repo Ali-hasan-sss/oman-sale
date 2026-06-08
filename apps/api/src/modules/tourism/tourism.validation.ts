@@ -1,11 +1,13 @@
 import { z } from 'zod';
 
+import { imageReferenceSchema } from '../../shared/utils/media-reference';
+
 const stringArraySchema = z.array(z.string().min(1)).min(1);
 
 export const tourismDestinationSchema = z.object({
   slug: z.string().min(2).max(120).regex(/^[a-z0-9-]+$/),
   sortOrder: z.coerce.number().int().min(0).optional(),
-  imageUrl: z.string().min(1).max(2000),
+  imageUrl: imageReferenceSchema,
   titleAr: z.string().min(1).max(200),
   titleEn: z.string().min(1).max(200),
   rating: z.string().min(1).max(20).default('4.9'),

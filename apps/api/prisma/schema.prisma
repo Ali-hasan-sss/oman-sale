@@ -118,6 +118,11 @@ enum StoreSubscriptionStatus {
   CANCELLED
 }
 
+enum StoreBusinessType {
+  COMMERCIAL
+  HOME
+}
+
 model User {
   id               String    @id @default(uuid())
   fullName         String
@@ -268,6 +273,7 @@ model Ad {
   price        Decimal?     @db.Decimal(12, 3)
   currency     String       @default("OMR")
   city         String?
+  wilayah      String?
   area         String?
   latitude     Float?
   longitude    Float?
@@ -311,6 +317,7 @@ model Ad {
   @@index([storeId])
   @@index([type])
   @@index([city, area])
+  @@index([wilayah])
   @@index([expiresAt])
   @@index([deletedAt])
 }
@@ -350,10 +357,16 @@ model AdFilterValue {
   @@index([deletedAt])
 }
 
+enum AdMediaType {
+  IMAGE
+  VIDEO
+}
+
 model AdImage {
-  id        String   @id @default(uuid())
+  id        String      @id @default(uuid())
   imageUrl  String
-  sortOrder Int      @default(0)
+  mediaType AdMediaType @default(IMAGE)
+  sortOrder Int         @default(0)
   createdAt DateTime @default(now())
   deletedAt DateTime?
 
@@ -577,6 +590,19 @@ model Notification {
   @@index([deletedAt])
 }
 
+model HeaderNavButton {
+  id        String   @id @default(uuid())
+  sortOrder Int      @default(0)
+  labelAr   String
+  labelEn   String
+  linkUrl   String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
 model HeroSlide {
   id            String            @id @default(uuid())
   sortOrder     Int               @default(0)
@@ -758,8 +784,10 @@ model Store {
   coverUrl       String?
   phone          String?
   city           String?
+  wilayah        String?
+  businessType   StoreBusinessType @default(COMMERCIAL)
   nationalId     String
-  commercialRegistrationNumber String
+  commercialRegistrationNumber String?
   workingHours   Json?
   isActive       Boolean  @default(false)
   createdAt      DateTime @default(now())
@@ -779,6 +807,7 @@ model Store {
   @@index([rootCategoryId])
   @@index([storeTypeId])
   @@index([city])
+  @@index([wilayah])
   @@index([isActive])
   @@index([deletedAt])
 }

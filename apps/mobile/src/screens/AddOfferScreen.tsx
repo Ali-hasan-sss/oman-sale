@@ -25,11 +25,11 @@ import {
   sanitizePriceInput,
   validateListingForm
 } from '../lib/listing-form-validation';
-import { omanCities } from '../lib/oman-cities';
+import { getWilayahsForGovernorate, omanGovernorates } from '../lib/oman-locations';
 import type { CategoryOption } from '../services/listings.service';
+import { formatPlanVatBreakdown } from '../lib/plan-pricing';
 import {
   fetchPromotionPlans,
-  formatPlanPrice,
   getPlanPrice,
   promoteAdRequest,
   sortPromotionPlansByPrice,
@@ -84,7 +84,8 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
-  const [city, setCity] = useState<string>(omanCities[0]!.value);
+  const [city, setCity] = useState('');
+  const [wilayah, setWilayah] = useState('');
 
   const [plans, setPlans] = useState<PromotionPlan[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState('');
@@ -105,6 +106,7 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
       descriptionMin: t.errors.fieldDescriptionMin,
       categoryRequired: t.errors.fieldCategoryRequired,
       cityRequired: t.errors.fieldCityRequired,
+      wilayahRequired: t.errors.fieldWilayahRequired,
       priceRequired: t.errors.fieldPriceRequired,
       priceInvalid: t.errors.fieldPriceInvalid
     }),
@@ -221,7 +223,7 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
 
   const submit = async () => {
     const nextFieldErrors = validateListingForm(
-      { title, description, categoryId, city, price },
+      { title, description, categoryId, city, wilayah, price },
       validationMessages
     );
 
@@ -242,6 +244,7 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
       type: selectedCategory.type,
       price: parseListingPrice(price),
       city,
+      wilayah,
       categoryId: selectedCategory.id,
       imageUrls: [],
       ...(isStorePublish && ownerStore ? { storeId: ownerStore.id } : {})
@@ -369,16 +372,18 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
               style={isRtl ? styles.chipScrollRtl : styles.chipScrollLtr}
               contentContainerStyle={[styles.chipRow, isRtl && styles.chipRowRtl]}
             >
-              {omanCities.map((cityOption) => {
-                const active = cityOption.value === city;
-                const label = locale === 'en' ? cityOption.en : cityOption.ar;
+              {omanGovernorates.map((governorate) => {
+                const active = governorate.value === city;
+                const label = locale === 'en' ? governorate.en : governorate.ar;
                 return (
                   <Pressable
-                    key={cityOption.value}
+                    key={governorate.value}
                     style={[styles.chip, active && styles.chipActive, fieldErrors.city ? styles.chipError : undefined]}
                     onPress={() => {
-                      setCity(cityOption.value);
+                      setCity(governorate.value);
+                      setWilayah('');
                       clearFieldError('city');
+                      clearFieldError('wilayah');
                     }}
                   >
                     <AppText style={[styles.chipText, active && styles.chipTextActive, isRtl ? styles.chipRtl : styles.chipLtr]}>
@@ -389,6 +394,36 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
               })}
             </ScrollView>
           </Field>
+
+          {city ? (
+            <Field error={fieldErrors.wilayah} label={t.addOffer.wilayah} isRtl={isRtl}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={isRtl ? styles.chipScrollRtl : styles.chipScrollLtr}
+                contentContainerStyle={[styles.chipRow, isRtl && styles.chipRowRtl]}
+              >
+                {getWilayahsForGovernorate(city).map((wilayahOption) => {
+                  const active = wilayahOption.value === wilayah;
+                  const label = locale === 'en' ? wilayahOption.en : wilayahOption.ar;
+                  return (
+                    <Pressable
+                      key={wilayahOption.value}
+                      style={[styles.chip, active && styles.chipActive, fieldErrors.wilayah ? styles.chipError : undefined]}
+                      onPress={() => {
+                        setWilayah(wilayahOption.value);
+                        clearFieldError('wilayah');
+                      }}
+                    >
+                      <AppText style={[styles.chipText, active && styles.chipTextActive, isRtl ? styles.chipRtl : styles.chipLtr]}>
+                        {label}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </Field>
+          ) : null}
 
           <Field error={fieldErrors.price} label={t.addOffer.price} isRtl={isRtl}>
             <AppTextInput
@@ -483,7 +518,10 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
                       const active = plan.id === selectedPlanId;
                       const name = locale === 'en' ? plan.nameEn : plan.nameAr;
                       const planDescription = locale === 'en' ? plan.descriptionEn : plan.descriptionAr;
-                      const planPrice = formatPlanPrice(getPlanPrice(plan, duration), locale, t.addOffer.free);
+                      const planPricing = formatPlanVatBreakdown(getPlanPrice(plan, duration), locale, {
+                        free: t.common.pricing.free,
+                        vatShort: t.common.pricing.vatShort
+                      });
 
                       return (
                         <Pressable
@@ -513,7 +551,10 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
                           <AppText style={[styles.planDescription, isRtl ? styles.rtl : styles.ltr]} numberOfLines={2}>
                             {planDescription}
                           </AppText>
-                          <AppText style={[styles.planPrice, active && styles.planPriceActive]}>{planPrice}</AppText>
+                          <AppText style={[styles.planPrice, active && styles.planPriceActive]}>{planPricing.main}</AppText>
+                          {planPricing.sub ? (
+                            <AppText style={[styles.planVat, active && styles.planVatActive]}>{planPricing.sub}</AppText>
+                          ) : null}
                         </Pressable>
                       );
                     })}
@@ -526,9 +567,12 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
                         {DURATION_OPTIONS.map((option) => {
                           const active = duration === option.days;
                           const label = t.addOffer[option.labelKey];
-                          const optionPrice = selectedPlan
-                            ? formatPlanPrice(getPlanPrice(selectedPlan, option.days), locale, t.addOffer.free)
-                            : '';
+                          const optionPricing = selectedPlan
+                            ? formatPlanVatBreakdown(getPlanPrice(selectedPlan, option.days), locale, {
+                                free: t.common.pricing.free,
+                                vatShort: t.common.pricing.vatShort
+                              })
+                            : null;
 
                           return (
                             <Pressable
@@ -544,10 +588,17 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
                               <AppText style={[styles.durationChipLabel, active && styles.durationChipLabelActive]}>
                                 {label}
                               </AppText>
-                              {optionPrice ? (
-                                <AppText style={[styles.durationChipPrice, active && styles.durationChipPriceActive]}>
-                                  {optionPrice}
-                                </AppText>
+                              {optionPricing ? (
+                                <>
+                                  <AppText style={[styles.durationChipPrice, active && styles.durationChipPriceActive]}>
+                                    {optionPricing.main}
+                                  </AppText>
+                                  {optionPricing.sub ? (
+                                    <AppText style={[styles.durationChipVat, active && styles.durationChipPriceActive]}>
+                                      {optionPricing.sub}
+                                    </AppText>
+                                  ) : null}
+                                </>
                               ) : null}
                             </Pressable>
                           );
@@ -841,6 +892,14 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: colors.brandDark
   },
+  planVat: {
+    marginTop: 4,
+    fontSize: 11,
+    color: colors.muted
+  },
+  planVatActive: {
+    color: colors.brandDark
+  },
   durationBlock: {
     marginTop: 14
   },
@@ -899,6 +958,12 @@ const styles = StyleSheet.create({
   },
   durationChipPriceActive: {
     color: colors.brandDark
+  },
+  durationChipVat: {
+    marginTop: 2,
+    fontSize: 10,
+    color: colors.muted,
+    textAlign: 'center'
   },
   submit: {
     marginTop: 8,

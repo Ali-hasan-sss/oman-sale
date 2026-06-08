@@ -3,8 +3,10 @@
 import { Edit3, Plus, Trash2, X } from 'lucide-react';
 import { FormEvent, useEffect, useRef, useState } from 'react';
 
+import { ImageUploader } from '@/components/media/image-uploader';
 import { adminApi } from '@/lib/admin-auth';
 import { useI18n } from '@/lib/i18n';
+import { resolveMediaUrl } from '@/lib/media-url';
 
 type TourismDestination = {
   id: string;
@@ -169,7 +171,22 @@ export function AdminTourismManagement() {
             <div className="grid gap-4 md:grid-cols-2">
               <Input label="Slug" value={form.slug} onChange={(slug) => setForm({ ...form, slug })} />
               <Input label={m.admin.sortOrder} type="number" value={String(form.sortOrder)} onChange={(sortOrder) => setForm({ ...form, sortOrder: Number(sortOrder) })} />
-              <Input label={m.admin.heroImageUrl} value={form.imageUrl} onChange={(imageUrl) => setForm({ ...form, imageUrl })} wide />
+              <div className="md:col-span-2">
+                <ImageUploader
+                  folder="tourism"
+                  useAdminAuth
+                  value={form.imageUrl}
+                  onChange={(imageUrl) => setForm({ ...form, imageUrl })}
+                  labels={{
+                    title: m.admin.tourismImageUploadTitle,
+                    hint: m.admin.tourismImageUploadHint,
+                    remove: m.admin.removeImage,
+                    uploading: m.admin.tourismImageUploading,
+                    compressing: m.admin.tourismImageCompressing,
+                    uploadError: m.admin.tourismImageUploadError
+                  }}
+                />
+              </div>
               <Input label={m.admin.nameAr} value={form.titleAr} onChange={(titleAr) => setForm({ ...form, titleAr })} />
               <Input label={m.admin.nameEn} value={form.titleEn} onChange={(titleEn) => setForm({ ...form, titleEn })} />
               <Input label={m.admin.rating} value={form.rating} onChange={(rating) => setForm({ ...form, rating })} />
@@ -200,7 +217,7 @@ export function AdminTourismManagement() {
           <div className="grid gap-4">
             {items.map((item) => (
               <article key={item.id} className="flex flex-col gap-4 rounded-2xl border border-slate-200 p-4 md:flex-row">
-                <img src={item.imageUrl} alt={item.titleAr} className="h-28 w-full rounded-xl object-cover md:w-44" />
+                <img src={resolveMediaUrl(item.imageUrl)} alt={item.titleAr} className="h-28 w-full rounded-xl object-cover md:w-44" />
                 <div className="min-w-0 flex-1">
                   <h3 className="font-black text-slate-900">{locale === 'en' ? item.titleEn : item.titleAr}</h3>
                   <p className="mt-1 text-xs text-slate-500" dir="ltr">/{item.slug}</p>

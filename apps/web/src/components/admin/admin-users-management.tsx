@@ -4,6 +4,7 @@ import { Eye, Power, PowerOff, Search, ShieldCheck, ShieldOff, UserCheck, UserX 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
+import { AdminEntityAvatar } from '@/components/admin/admin-entity-avatar';
 import { adminApi } from '@/lib/admin-auth';
 import { useI18n } from '@/lib/i18n';
 
@@ -12,6 +13,7 @@ type ManagedUser = {
   fullName: string;
   email: string;
   phone?: string | null;
+  avatar?: string | null;
   role: 'USER' | 'ADMIN' | 'MODERATOR';
   isVerified: boolean;
   isActive: boolean;
@@ -142,9 +144,14 @@ export function AdminUsersManagement() {
                 users.map((user) => (
                   <tr key={user.id} className="border-b border-slate-100">
                     <td className="px-4 py-4">
-                      <div className="font-bold text-slate-900">{user.fullName}</div>
-                      <div className="text-slate-500">{user.email}</div>
-                      {user.phone ? <div className="text-xs text-slate-400">{user.phone}</div> : null}
+                      <div className="flex items-center gap-3">
+                        <AdminEntityAvatar src={user.avatar} name={user.fullName} className="h-11 w-11 rounded-xl" />
+                        <div className="min-w-0">
+                          <div className="font-bold text-slate-900">{user.fullName}</div>
+                          <div className="text-slate-500">{user.email}</div>
+                          {user.phone ? <div className="text-xs text-slate-400">{user.phone}</div> : null}
+                        </div>
+                      </div>
                     </td>
                     <td className="px-4 py-4">
                       <RoleBadge role={user.role} labels={m.admin} />

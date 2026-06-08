@@ -19,6 +19,7 @@ import { ChatThreadSkeleton } from '../components/skeleton';
 import { CHAT_THREAD_BAR_BODY_HEIGHT } from '../constants/chat-layout';
 import { formatChatTime, formatPrice } from '../data';
 import { useI18n } from '../i18n';
+import { getListingLocationLabel } from '../lib/oman-locations';
 import { getRealtimeSocket } from '../lib/realtime/socket';
 import {
   fetchConversationById,
@@ -336,7 +337,7 @@ export function ChatConversationScreen({
               </AppText>
               <AppText style={[styles.adMeta, isRtl && styles.textRtl]}>
                 {formatPrice(conversation.ad.price, conversation.ad.currency, locale)} •{' '}
-                {conversation.ad.area || conversation.ad.city || '-'}
+                {getListingLocationLabel(conversation.ad.city, conversation.ad.wilayah, conversation.ad.area, locale) || '-'}
               </AppText>
             </View>
             <Ionicons name={isRtl ? 'chevron-back' : 'chevron-forward'} size={18} color={colors.muted} />

@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
+import { resolveMediaUrl } from '@/lib/media-url';
 
 type HeroBanner = {
   id: string;
@@ -206,7 +207,7 @@ export function HeroBannersSection() {
                   className="relative block w-full shrink-0 grow-0"
                 >
                   <img
-                    src={banner.imageUrl}
+                    src={resolveMediaUrl(banner.imageUrl)}
                     alt={banner.text ?? 'Advertisement'}
                     className="aspect-[990/250] w-full cursor-pointer object-cover"
                     loading={index === loopIndex ? 'eager' : 'lazy'}

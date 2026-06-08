@@ -10,7 +10,7 @@ import { FilterChipsSkeleton, StoreCardsSkeleton } from '@/components/stores/sto
 import { UserSiteHeader, SiteHeaderSearch } from '@/components/navigation/user-site-header';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
-import { getCityLabel, omanCities } from '@/lib/oman-cities';
+import { getStoreLocationLabel, getWilayahsForGovernorate, omanGovernorates } from '@/lib/oman-locations';
 
 type StoreType = {
   id: string;
@@ -31,6 +31,7 @@ type PublicStore = {
   coverUrl?: string | null;
   phone?: string | null;
   city?: string | null;
+  wilayah?: string | null;
   listingsCount: number;
   rootCategory?: { id: string; nameAr: string; nameEn: string; slug: string };
   storeType?: StoreType | null;
@@ -56,6 +57,7 @@ export function StoresBrowsePage() {
   const query = (searchParams.get('q') ?? '').trim();
   const [storeTypeId, setStoreTypeId] = useState('');
   const [city, setCity] = useState('');
+  const [wilayah, setWilayah] = useState('');
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingStoreTypes, setIsLoadingStoreTypes] = useState(true);
@@ -64,8 +66,10 @@ export function StoresBrowsePage() {
   useEffect(() => {
     const typeFromUrl = searchParams.get('storeTypeId') ?? '';
     const cityFromUrl = searchParams.get('city') ?? '';
+    const wilayahFromUrl = searchParams.get('wilayah') ?? '';
     setStoreTypeId(typeFromUrl);
     setCity(cityFromUrl);
+    setWilayah(wilayahFromUrl);
   }, [searchParams]);
 
   useEffect(() => {
@@ -86,6 +90,7 @@ export function StoresBrowsePage() {
           q: query.trim() || undefined,
           storeTypeId: storeTypeId || undefined,
           city: city || undefined,
+          wilayah: city && wilayah ? wilayah : undefined,
           page,
           limit: 12
         }
@@ -98,7 +103,7 @@ export function StoresBrowsePage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, query, storeTypeId, city, text.loadError]);
+  }, [page, query, storeTypeId, city, wilayah, text.loadError]);
 
   useEffect(() => {
     loadStores();
@@ -106,7 +111,9 @@ export function StoresBrowsePage() {
 
   useEffect(() => {
     setPage(1);
-  }, [query, storeTypeId, city]);
+  }, [query, storeTypeId, city, wilayah]);
+
+  const wilayahOptions = city ? getWilayahsForGovernorate(city) : [];
 
   const hasMore = stores.length < total;
 
@@ -148,22 +155,58 @@ export function StoresBrowsePage() {
           )}
         </div>
 
-        <div className="mb-6">
+        <div className="mb-4">
           <div className="filter-chips-scroll flex gap-2 overflow-x-auto pb-2">
-            <FilterChip active={!city} onClick={() => setCity('')}>
+            <FilterChip
+              active={!city}
+              onClick={() => {
+                setCity('');
+                setWilayah('');
+              }}
+            >
               {text.allCities}
             </FilterChip>
-            {omanCities.map((cityOption) => (
+            {omanGovernorates.map((governorate) => (
               <FilterChip
-                key={cityOption.value}
-                active={city === cityOption.value}
-                onClick={() => setCity(city === cityOption.value ? '' : cityOption.value)}
+                key={governorate.value}
+                active={city === governorate.value}
+                onClick={() => {
+                  if (city === governorate.value) {
+                    setCity('');
+                    setWilayah('');
+                  } else {
+                    setCity(governorate.value);
+                    setWilayah('');
+                  }
+                }}
               >
-                {locale === 'en' ? cityOption.en : cityOption.ar}
+                {locale === 'en' ? governorate.en : governorate.ar}
               </FilterChip>
             ))}
           </div>
         </div>
+
+        {city && wilayahOptions.length > 0 ? (
+          <div className="mb-6">
+            <p className="mb-2 text-sm font-bold text-gray-600">{text.allWilayahs}</p>
+            <div className="filter-chips-scroll flex gap-2 overflow-x-auto pb-2">
+              <FilterChip active={!wilayah} onClick={() => setWilayah('')}>
+                {text.allWilayahsInGovernorate}
+              </FilterChip>
+              {wilayahOptions.map((wilayahOption) => (
+                <FilterChip
+                  key={wilayahOption.value}
+                  active={wilayah === wilayahOption.value}
+                  onClick={() => setWilayah(wilayah === wilayahOption.value ? '' : wilayahOption.value)}
+                >
+                  {locale === 'en' ? wilayahOption.en : wilayahOption.ar}
+                </FilterChip>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="mb-6" />
+        )}
 
         {error ? <p className="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</p> : null}
 
@@ -212,7 +255,7 @@ function StoreCard({
   const name = locale === 'en' ? store.nameEn : store.nameAr;
   const bio = locale === 'en' ? store.bioEn : store.bioAr;
   const typeName = locale === 'en' ? store.storeType?.nameEn : store.storeType?.nameAr;
-  const cityLabel = getCityLabel(store.city, locale);
+  const cityLabel = getStoreLocationLabel(store.city, store.wilayah, locale);
 
   return (
     <Link

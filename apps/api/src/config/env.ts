@@ -57,7 +57,15 @@ const envSchema = z.object({
   OPENAI_MODEL: z.string().default('gpt-4o-mini'),
   ASSISTANT_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30),
   ASSISTANT_DAILY_LIMIT_AUTH: z.coerce.number().int().positive().default(30),
-  ASSISTANT_DAILY_LIMIT_GUEST: z.coerce.number().int().positive().default(10)
+  ASSISTANT_DAILY_LIMIT_GUEST: z.coerce.number().int().positive().default(10),
+  AWS_ACCESS_KEY_ID: z.string().optional(),
+  AWS_SECRET_ACCESS_KEY: z.string().optional(),
+  AWS_REGION: z.string().optional(),
+  AWS_S3_BUCKET: z.string().optional(),
+  AWS_S3_PREFIX: z.string().default('oman-sale'),
+  MEDIA_PUBLIC_BASE_URL: z.string().url().optional(),
+  /** private = serve via API proxy (default, works with blocked public S3). public = direct S3 URLs. */
+  MEDIA_S3_ACCESS: z.enum(['private', 'public']).default('private')
 });
 
 export const env = envSchema.parse(process.env);

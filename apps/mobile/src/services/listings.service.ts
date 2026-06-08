@@ -34,6 +34,7 @@ export type ListingsFilterParams = {
   q?: string;
   categoryId?: string;
   city?: string;
+  wilayah?: string;
   minPrice?: number;
   maxPrice?: number;
   filterOptionIds?: string[];
@@ -56,6 +57,7 @@ export async function fetchFilteredListings({
   q,
   categoryId,
   city,
+  wilayah,
   minPrice,
   maxPrice,
   filterOptionIds
@@ -67,6 +69,7 @@ export async function fetchFilteredListings({
       q: q || undefined,
       categoryId: categoryId || undefined,
       city: city || undefined,
+      wilayah: city && wilayah ? wilayah : undefined,
       minPrice: minPrice !== undefined ? minPrice : undefined,
       maxPrice: maxPrice !== undefined ? maxPrice : undefined,
       filterOptionIds: filterOptionIds?.length ? filterOptionIds.join(',') : undefined
@@ -132,6 +135,7 @@ export async function createListingRequest(payload: {
   type: string;
   price: number;
   city: string;
+  wilayah: string;
   categoryId: string;
   imageUrls: string[];
   storeId?: string;

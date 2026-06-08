@@ -5,7 +5,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'reac
 import { AppText } from './AppText';
 import { AppTextInput } from './AppTextInput';
 import { Skeleton } from './skeleton';
-import { omanCities } from '../lib/oman-cities';
+import { getWilayahsForGovernorate, omanGovernorates } from '../lib/oman-locations';
 import type { SubcategoryFilterLevel } from '../lib/category-subcategory-filters';
 import type { CategoryFilter, CategoryOption } from '../services/listings.service';
 import { colors, radius, shadow } from '../theme';
@@ -14,6 +14,7 @@ export type CategoryFiltersDraft = {
   search: string;
   subcategoryPath: string[];
   city: string;
+  wilayah: string;
   minPrice: string;
   maxPrice: string;
   filterOptionIds: string[];
@@ -25,6 +26,8 @@ type CategoryFiltersMessages = {
   subcategories: string;
   all: string;
   selectCity: string;
+  selectWilayah: string;
+  allWilayahsInGovernorate: string;
   priceRange: string;
   minPrice: string;
   maxPrice: string;
@@ -195,19 +198,47 @@ export function CategoryFiltersPanel({
               ))}
 
               <FilterSection title={messages.selectCity} isRtl={isRtl}>
-                {omanCities.map((cityOption) => (
+                <FilterChip
+                  active={!draft.city}
+                  label={messages.all}
+                  onPress={() => onDraftChange({ city: '', wilayah: '' })}
+                />
+                {omanGovernorates.map((governorate) => (
                   <FilterChip
-                    key={cityOption.value}
-                    active={draft.city === cityOption.value}
-                    label={locale === 'en' ? cityOption.en : cityOption.ar}
+                    key={governorate.value}
+                    active={draft.city === governorate.value}
+                    label={locale === 'en' ? governorate.en : governorate.ar}
                     onPress={() =>
                       onDraftChange({
-                        city: draft.city === cityOption.value ? '' : cityOption.value
+                        city: draft.city === governorate.value ? '' : governorate.value,
+                        wilayah: ''
                       })
                     }
                   />
                 ))}
               </FilterSection>
+
+              {draft.city && getWilayahsForGovernorate(draft.city).length > 0 ? (
+                <FilterSection title={messages.selectWilayah} isRtl={isRtl}>
+                  <FilterChip
+                    active={!draft.wilayah}
+                    label={messages.allWilayahsInGovernorate}
+                    onPress={() => onDraftChange({ wilayah: '' })}
+                  />
+                  {getWilayahsForGovernorate(draft.city).map((wilayahOption) => (
+                    <FilterChip
+                      key={wilayahOption.value}
+                      active={draft.wilayah === wilayahOption.value}
+                      label={locale === 'en' ? wilayahOption.en : wilayahOption.ar}
+                      onPress={() =>
+                        onDraftChange({
+                          wilayah: draft.wilayah === wilayahOption.value ? '' : wilayahOption.value
+                        })
+                      }
+                    />
+                  ))}
+                </FilterSection>
+              ) : null}
 
               <FilterSection title={messages.priceRange} isRtl={isRtl}>
                 <View style={[styles.priceRow, isRtl && styles.priceRowRtl]}>

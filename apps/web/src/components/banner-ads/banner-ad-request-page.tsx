@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { SiteFooter } from '@/components/home/site-footer';
+import { ImageUploader } from '@/components/media/image-uploader';
 import { UserSiteHeader } from '@/components/navigation/user-site-header';
 import { api } from '@/lib/api';
 import { resolveApiErrorMessage } from '@/lib/api-errors';
@@ -21,7 +22,12 @@ const labels = {
   ar: {
     title: 'إعلان في بنر الصفحة الرئيسية',
     subtitle: 'ارفع إعلانك ليظهر في بنر العروض المميزة بعد الدفع وموافقة الإدارة',
-    imageUrl: 'رابط صورة الإعلان *',
+    imageTitle: 'صورة الإعلان *',
+    imageHint: 'مقاس عريض مفضل (990×250) — يُضغط تلقائياً',
+    imageUploading: 'جاري رفع الصورة...',
+    imageCompressing: 'جاري ضغط الصورة...',
+    imageUploadError: 'تعذر رفع صورة الإعلان.',
+    removeImage: 'إزالة الصورة',
     linkUrl: 'رابط الإعلان عند النقر *',
     textAr: 'نص الإعلان (عربي)',
     textEn: 'نص الإعلان (إنجليزي)',
@@ -40,7 +46,12 @@ const labels = {
   en: {
     title: 'Homepage banner advertisement',
     subtitle: 'Submit your ad to appear in the featured offers banner after payment and admin approval',
-    imageUrl: 'Ad image URL *',
+    imageTitle: 'Ad image *',
+    imageHint: 'Wide format recommended (990×250) — auto-compressed',
+    imageUploading: 'Uploading image...',
+    imageCompressing: 'Compressing image...',
+    imageUploadError: 'Could not upload ad image.',
+    removeImage: 'Remove image',
     linkUrl: 'Ad click-through link *',
     textAr: 'Ad text (Arabic)',
     textEn: 'Ad text (English)',
@@ -103,6 +114,11 @@ export function BannerAdRequestPage() {
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError('');
+    if (!imageUrl) {
+      setError(text.imageUploadError);
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -154,11 +170,19 @@ export function BannerAdRequestPage() {
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-100 md:p-8">
             <div>
-              <label className="mb-2 block text-sm font-bold text-slate-700">{text.imageUrl}</label>
-              <input value={imageUrl} onChange={(event) => setImageUrl(event.target.value)} className={inputClass} required type="url" />
-              {imageUrl ? (
-                <img src={imageUrl} alt={text.preview} className="mt-3 aspect-[990/250] w-full rounded-xl object-cover ring-1 ring-slate-200" />
-              ) : null}
+              <ImageUploader
+                folder="banners"
+                value={imageUrl}
+                onChange={setImageUrl}
+                labels={{
+                  title: text.imageTitle,
+                  hint: text.imageHint,
+                  remove: text.removeImage,
+                  uploading: text.imageUploading,
+                  compressing: text.imageCompressing,
+                  uploadError: text.imageUploadError
+                }}
+              />
             </div>
 
             <div>

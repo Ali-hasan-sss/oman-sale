@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from './AppText';
 import { ListingCoverImage } from './ListingCoverImage';
 import { formatPrice, getCategoryName } from '../data';
+import { getListingLocationLabel } from '../lib/oman-locations';
 import type { Listing, Locale } from '../types';
 import { colors, radius, shadow } from '../theme';
 
@@ -58,7 +59,7 @@ export function ListingCard({ listing, locale, featuredLabel, layout = 'vertical
         </AppText>
         <AppText style={[styles.price, contentRtl ? styles.textRtl : styles.textLtr]}>{formatPrice(listing.price, listing.currency, locale)}</AppText>
         <AppText style={[styles.location, contentRtl ? styles.textRtl : styles.textLtr]} numberOfLines={1}>
-          {listing.area || listing.city || '-'}
+          {getListingLocationLabel(listing.city, listing.wilayah, listing.area, locale) || '-'}
         </AppText>
       </View>
     </>

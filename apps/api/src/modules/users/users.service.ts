@@ -7,6 +7,7 @@ import { hashPassword, verifyPassword } from '../../shared/utils/password';
 import { signAccessToken, signRefreshToken } from '../../shared/utils/tokens';
 import { authRepository } from '../auth/auth.repository';
 import type { AuthTokens } from '../auth/auth.types';
+import { resolveUserMedia } from '../../shared/utils/resolve-entity-media';
 import { usersRepository } from './users.repository';
 import type { ChangePasswordDto, RequestEmailChangeDto, UpdateProfileDto, VerifyEmailChangeDto } from './users.validation';
 
@@ -14,7 +15,7 @@ export class UsersService {
   async me(userId: string) {
     const user = await usersRepository.findById(userId);
     if (!user) throw new ApiError(404, 'User not found');
-    return user;
+    return resolveUserMedia(user);
   }
 
   list() {
@@ -26,7 +27,8 @@ export class UsersService {
     if (!user) throw new ApiError(404, 'User not found');
 
     try {
-      return await usersRepository.updateProfile(userId, dto);
+      const updated = await usersRepository.updateProfile(userId, dto);
+      return resolveUserMedia(updated);
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new ApiError(409, 'Phone number is already used');

@@ -1,19 +1,252 @@
-import { Prisma } from '@prisma/client';
+import { PaymentStatus, Prisma } from '@prisma/client';
 
 import { prisma } from '../../shared/prisma/client';
+import { buildTrendSeries, getTrendSinceDate, toNumber } from './admin-statistics.utils';
 import type { ListAdminUsersQuery, ListAdminReportsQuery, UpdateAdminUserDto } from './admin.validation';
+
+const notDeleted = { deletedAt: null };
 
 export class AdminRepository {
   async statistics() {
-    const [users, ads, pendingAds, payments, reports] = await Promise.all([
-      prisma.user.count({ where: { deletedAt: null } }),
-      prisma.ad.count({ where: { deletedAt: null } }),
-      prisma.ad.count({ where: { isActive: false, deletedAt: null } }),
-      prisma.payment.count({ where: { deletedAt: null } }),
-      prisma.report.count({ where: { deletedAt: null } })
+    const since = getTrendSinceDate();
+    const thirtyDaysAgo = since;
+    const sevenDaysFromNow = new Date();
+    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+
+    const [
+      users,
+      newUsersLast30Days,
+      ads,
+      activeAds,
+      pendingAds,
+      stores,
+      activeStores,
+      inactiveStores,
+      reports,
+      paymentsTotal,
+      paymentsPaid,
+      paymentsPending,
+      paymentsFailed,
+      revenueTotal,
+      revenueLast30Days,
+      revenueStoreSubscriptions,
+      revenuePromotions,
+      revenueBanners,
+      subscriptionStatusGroups,
+      bannerStatusGroups,
+      adStatusGroups,
+      subscriptionsExpiringSoon,
+      bannerRequestsPendingApproval,
+      userTrendRows,
+      adTrendRows,
+      reportTrendRows,
+      revenueTrendRows,
+      subscriptionTrendRows,
+      bannerTrendRows
+    ] = await Promise.all([
+      prisma.user.count({ where: notDeleted }),
+      prisma.user.count({ where: { ...notDeleted, createdAt: { gte: thirtyDaysAgo } } }),
+      prisma.ad.count({ where: notDeleted }),
+      prisma.ad.count({ where: { ...notDeleted, isActive: true, status: 'ACTIVE' } }),
+      prisma.ad.count({
+        where: {
+          ...notDeleted,
+          OR: [{ status: 'PENDING' }, { isApproved: false }]
+        }
+      }),
+      prisma.store.count({ where: notDeleted }),
+      prisma.store.count({ where: { ...notDeleted, isActive: true } }),
+      prisma.store.count({ where: { ...notDeleted, isActive: false } }),
+      prisma.report.count({ where: notDeleted }),
+      prisma.payment.count({ where: notDeleted }),
+      prisma.payment.count({ where: { ...notDeleted, status: PaymentStatus.PAID } }),
+      prisma.payment.count({ where: { ...notDeleted, status: PaymentStatus.PENDING } }),
+      prisma.payment.count({ where: { ...notDeleted, status: PaymentStatus.FAILED } }),
+      prisma.payment.aggregate({
+        where: { ...notDeleted, status: PaymentStatus.PAID },
+        _sum: { amount: true }
+      }),
+      prisma.payment.aggregate({
+        where: {
+          ...notDeleted,
+          status: PaymentStatus.PAID,
+          paidAt: { gte: thirtyDaysAgo }
+        },
+        _sum: { amount: true }
+      }),
+      prisma.payment.aggregate({
+        where: {
+          ...notDeleted,
+          status: PaymentStatus.PAID,
+          storeSubscriptionId: { not: null }
+        },
+        _sum: { amount: true }
+      }),
+      prisma.payment.aggregate({
+        where: {
+          ...notDeleted,
+          status: PaymentStatus.PAID,
+          promotionId: { not: null }
+        },
+        _sum: { amount: true }
+      }),
+      prisma.payment.aggregate({
+        where: {
+          ...notDeleted,
+          status: PaymentStatus.PAID,
+          bannerRequestId: { not: null }
+        },
+        _sum: { amount: true }
+      }),
+      prisma.storeSubscription.groupBy({
+        by: ['status'],
+        where: notDeleted,
+        _count: { _all: true }
+      }),
+      prisma.bannerRequest.groupBy({
+        by: ['status'],
+        _count: { _all: true }
+      }),
+      prisma.ad.groupBy({
+        by: ['status'],
+        where: notDeleted,
+        _count: { _all: true }
+      }),
+      prisma.storeSubscription.count({
+        where: {
+          ...notDeleted,
+          status: 'ACTIVE',
+          endsAt: { gte: new Date(), lte: sevenDaysFromNow }
+        }
+      }),
+      prisma.bannerRequest.count({ where: { status: 'PENDING_APPROVAL' } }),
+      prisma.$queryRaw<Array<{ day: Date; count: bigint }>>`
+        SELECT DATE_TRUNC('day', "createdAt")::date AS day, COUNT(*)::bigint AS count
+        FROM "User"
+        WHERE "deletedAt" IS NULL AND "createdAt" >= ${since}
+        GROUP BY day
+        ORDER BY day
+      `,
+      prisma.$queryRaw<Array<{ day: Date; count: bigint }>>`
+        SELECT DATE_TRUNC('day', "createdAt")::date AS day, COUNT(*)::bigint AS count
+        FROM "Ad"
+        WHERE "deletedAt" IS NULL AND "createdAt" >= ${since}
+        GROUP BY day
+        ORDER BY day
+      `,
+      prisma.$queryRaw<Array<{ day: Date; count: bigint }>>`
+        SELECT DATE_TRUNC('day', "createdAt")::date AS day, COUNT(*)::bigint AS count
+        FROM "Report"
+        WHERE "deletedAt" IS NULL AND "createdAt" >= ${since}
+        GROUP BY day
+        ORDER BY day
+      `,
+      prisma.$queryRaw<Array<{ day: Date; amount: Prisma.Decimal | null }>>`
+        SELECT DATE_TRUNC('day', "paidAt")::date AS day, COALESCE(SUM(amount), 0) AS amount
+        FROM "Payment"
+        WHERE "deletedAt" IS NULL
+          AND status = 'PAID'
+          AND "paidAt" IS NOT NULL
+          AND "paidAt" >= ${since}
+        GROUP BY day
+        ORDER BY day
+      `,
+      prisma.$queryRaw<Array<{ day: Date; count: bigint }>>`
+        SELECT DATE_TRUNC('day', "createdAt")::date AS day, COUNT(*)::bigint AS count
+        FROM "StoreSubscription"
+        WHERE "deletedAt" IS NULL AND "createdAt" >= ${since}
+        GROUP BY day
+        ORDER BY day
+      `,
+      prisma.$queryRaw<Array<{ day: Date; count: bigint }>>`
+        SELECT DATE_TRUNC('day', "createdAt")::date AS day, COUNT(*)::bigint AS count
+        FROM "BannerRequest"
+        WHERE "createdAt" >= ${since}
+        GROUP BY day
+        ORDER BY day
+      `
     ]);
 
-    return { users, ads, pendingAds, payments, reports };
+    const trialSubscriptions = await prisma.storeSubscription.count({
+      where: { ...notDeleted, isTrial: true, status: 'ACTIVE' }
+    });
+
+    const mapGroup = <T extends string>(groups: Array<{ status: T; _count: { _all: number } }>) =>
+      groups.map((item) => ({ status: item.status, count: item._count._all }));
+
+    const userTrend = buildTrendSeries(
+      userTrendRows.map((row) => ({ day: row.day, value: toNumber(row.count) }))
+    );
+    const adTrend = buildTrendSeries(
+      adTrendRows.map((row) => ({ day: row.day, value: toNumber(row.count) }))
+    );
+    const reportTrend = buildTrendSeries(
+      reportTrendRows.map((row) => ({ day: row.day, value: toNumber(row.count) }))
+    );
+    const revenueTrend = buildTrendSeries(
+      revenueTrendRows.map((row) => ({ day: row.day, value: toNumber(row.amount) }))
+    );
+    const subscriptionTrend = buildTrendSeries(
+      subscriptionTrendRows.map((row) => ({ day: row.day, value: toNumber(row.count) }))
+    );
+    const bannerTrend = buildTrendSeries(
+      bannerTrendRows.map((row) => ({ day: row.day, value: toNumber(row.count) }))
+    );
+
+    return {
+      summary: {
+        users,
+        newUsersLast30Days,
+        ads,
+        activeAds,
+        pendingAds,
+        stores,
+        activeStores,
+        reports,
+        payments: paymentsTotal,
+        paymentsPaid,
+        paymentsPending,
+        paymentsFailed,
+        revenueTotal: toNumber(revenueTotal._sum.amount),
+        revenueLast30Days: toNumber(revenueLast30Days._sum.amount),
+        revenueStoreSubscriptions: toNumber(revenueStoreSubscriptions._sum.amount),
+        revenuePromotions: toNumber(revenuePromotions._sum.amount),
+        revenueBanners: toNumber(revenueBanners._sum.amount),
+        storeSubscriptionsActive: subscriptionStatusGroups.find((item) => item.status === 'ACTIVE')?._count._all ?? 0,
+        storeSubscriptionsPending: subscriptionStatusGroups.find((item) => item.status === 'PENDING')?._count._all ?? 0,
+        storeSubscriptionsExpired: subscriptionStatusGroups.find((item) => item.status === 'EXPIRED')?._count._all ?? 0,
+        storeSubscriptionsTrial: trialSubscriptions,
+        bannerRequestsTotal: bannerStatusGroups.reduce((sum, item) => sum + item._count._all, 0),
+        bannerRequestsPendingApproval,
+        bannerRequestsActive: bannerStatusGroups.find((item) => item.status === 'ACTIVE')?._count._all ?? 0
+      },
+      trends: {
+        labels: userTrend.labels,
+        users: userTrend.values,
+        ads: adTrend.values,
+        reports: reportTrend.values,
+        revenue: revenueTrend.values,
+        storeSubscriptions: subscriptionTrend.values,
+        bannerRequests: bannerTrend.values
+      },
+      breakdown: {
+        adsByStatus: mapGroup(adStatusGroups),
+        subscriptionsByStatus: mapGroup(subscriptionStatusGroups),
+        bannerRequestsByStatus: mapGroup(bannerStatusGroups),
+        revenueBySource: [
+          { source: 'storeSubscriptions', amount: toNumber(revenueStoreSubscriptions._sum.amount) },
+          { source: 'promotions', amount: toNumber(revenuePromotions._sum.amount) },
+          { source: 'banners', amount: toNumber(revenueBanners._sum.amount) }
+        ].filter((item) => item.amount > 0)
+      },
+      pending: {
+        reports,
+        pendingAds,
+        bannerRequestsPendingApproval,
+        inactiveStores,
+        subscriptionsExpiringSoon
+      }
+    };
   }
 
   async listUsers(query: ListAdminUsersQuery) {

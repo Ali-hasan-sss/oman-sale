@@ -6,6 +6,8 @@ import { useState } from 'react';
 
 import { HeaderAuthAction } from '@/components/auth/user-menu';
 import { ChatNavLink } from '@/components/chat/chat-nav-link';
+import { HeaderCustomNavButtons } from '@/components/navigation/header-custom-nav-buttons';
+import { StoreNavLink } from '@/components/navigation/store-nav-link';
 import { useI18n } from '@/lib/i18n';
 
 type MobileNavMenuProps = {
@@ -51,12 +53,20 @@ export function MobileNavMenu({ variant = 'light' }: MobileNavMenuProps) {
 
             <nav className="space-y-2">
               <MobileLink href="/stores" label={m.common.browseStores} onClick={() => setIsOpen(false)} />
+              <HeaderCustomNavButtons
+                onNavigate={() => setIsOpen(false)}
+                className="space-y-2"
+                linkClassName="block rounded-xl px-4 py-3 font-bold text-gray-700 transition hover:bg-gray-50"
+              />
               <MobileLink href="/all-listings" label={m.common.allListings} onClick={() => setIsOpen(false)} />
               <div onClick={() => setIsOpen(false)}>
                 <ChatNavLink className="block rounded-xl px-4 py-3 font-bold text-gray-700 transition hover:bg-gray-50" />
               </div>
               <MobileLink href="/my-listings" label={m.common.myListings} onClick={() => setIsOpen(false)} />
-              <MobileLink href="/stores/create" label={m.common.createStore} onClick={() => setIsOpen(false)} />
+              <StoreNavLink
+                onNavigate={() => setIsOpen(false)}
+                className="block rounded-xl px-4 py-3 font-bold text-gray-700 transition hover:bg-gray-50"
+              />
               <MobileLink href="/favorites" label={m.common.favorites} onClick={() => setIsOpen(false)} />
               <MobileLink href="/profile" label={m.common.profile} onClick={() => setIsOpen(false)} />
               <Link

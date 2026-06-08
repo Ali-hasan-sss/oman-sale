@@ -1,4 +1,4 @@
-import { Prisma, StoreSubscriptionStatus } from '@prisma/client';
+import { Prisma, StoreBusinessType, StoreSubscriptionStatus } from '@prisma/client';
 
 import { prisma } from '../../shared/prisma/client';
 import { createSlug } from '../../shared/utils/slug';
@@ -23,6 +23,7 @@ export class StoresRepository {
       ...(query.rootCategoryId && { rootCategoryId: query.rootCategoryId }),
       ...(query.storeTypeId && { storeTypeId: query.storeTypeId }),
       ...(query.city && { city: query.city }),
+      ...(query.wilayah && { wilayah: query.wilayah }),
       ...(query.q && {
         OR: [
           { nameAr: { contains: query.q, mode: 'insensitive' } },
@@ -50,6 +51,7 @@ export class StoresRepository {
           coverUrl: true,
           phone: true,
           city: true,
+          wilayah: true,
           rootCategory: { select: { id: true, nameAr: true, nameEn: true, slug: true } },
           storeType: { select: storeTypeSelect },
           _count: { select: { ads: { where: { deletedAt: null, isActive: true } } } }
@@ -170,8 +172,11 @@ export class StoresRepository {
           coverUrl: dto.coverUrl,
           phone: dto.phone,
           city: dto.city,
+          wilayah: dto.wilayah,
+          businessType: dto.businessType,
           nationalId: dto.nationalId,
-          commercialRegistrationNumber: dto.commercialRegistrationNumber,
+          commercialRegistrationNumber:
+            dto.businessType === StoreBusinessType.COMMERCIAL ? dto.commercialRegistrationNumber ?? null : null,
           workingHours: dto.workingHours as Prisma.InputJsonValue | undefined,
           rootCategoryId: dto.rootCategoryId,
           storeTypeId: dto.storeTypeId,
@@ -198,13 +203,19 @@ export class StoresRepository {
   }
 
   update(id: string, dto: UpdateStoreDto) {
-    const { slug, workingHours, ...rest } = dto;
+    const { slug, workingHours, businessType, commercialRegistrationNumber, ...rest } = dto;
     return prisma.store.update({
       where: { id },
       data: {
         ...rest,
         ...(slug && { slug: createSlug(slug) }),
-        ...(workingHours !== undefined && { workingHours: workingHours as Prisma.InputJsonValue })
+        ...(workingHours !== undefined && { workingHours: workingHours as Prisma.InputJsonValue }),
+        ...(businessType !== undefined && { businessType }),
+        ...(businessType === StoreBusinessType.HOME && { commercialRegistrationNumber: null }),
+        ...(businessType === StoreBusinessType.COMMERCIAL &&
+          commercialRegistrationNumber !== undefined && { commercialRegistrationNumber }),
+        ...(businessType === undefined &&
+          commercialRegistrationNumber !== undefined && { commercialRegistrationNumber })
       }
     });
   }
@@ -321,6 +332,7 @@ export class StoresRepository {
       ...(query.rootCategoryId && { rootCategoryId: query.rootCategoryId }),
       ...(query.storeTypeId && { storeTypeId: query.storeTypeId }),
       ...(query.city && { city: query.city }),
+      ...(query.wilayah && { wilayah: query.wilayah }),
       ...(query.isActive !== undefined && { isActive: query.isActive }),
       ...(query.q && {
         OR: [

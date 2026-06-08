@@ -74,6 +74,10 @@ export const API_ENDPOINTS = {
   tourism: {
     destinations: '/tourism/destinations',
     destination: (idOrSlug: string) => `/tourism/destinations/${idOrSlug}`
+  },
+  assistant: {
+    chat: '/assistant/chat',
+    quickReply: '/assistant/quick-reply'
   }
 } as const;
 

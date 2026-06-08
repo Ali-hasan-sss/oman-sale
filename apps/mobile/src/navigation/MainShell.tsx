@@ -22,6 +22,7 @@ import { BottomTabBar } from '../components/BottomTabBar';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { NetworkStatusBar } from '../components/NetworkStatusBar';
 import { SideDrawer } from '../components/SideDrawer';
+import { AssistantChatWidget } from '../components/assistant/AssistantChatWidget';
 import { connectChatRealtime, disconnectChatRealtime, useAuthStore, useChatStore } from '../stores';
 import { useI18n } from '../i18n';
 import { AddOfferScreen } from '../screens/AddOfferScreen';
@@ -154,7 +155,7 @@ export function MainShell() {
   };
 
   const handleAuthSuccess = () => {
-    const next = pendingScreen ?? lastTab;
+    const next = pendingScreen ?? 'home';
     if (tabScreens.includes(next)) {
       resetToTab(next as TabKey);
     } else {
@@ -212,6 +213,7 @@ export function MainShell() {
   const isChatConversation = screen === 'chatConversation';
   const hideTabBar = isChatConversation;
   const hideAppHeader = isChatConversation;
+  const hideAssistant = isChatConversation || screen === 'login' || screen === 'register';
   const chatEdgeSwipeTopInset = safeInsets.top + CHAT_THREAD_BAR_BODY_HEIGHT;
   const [tabBarKeyboardOffset, setTabBarKeyboardOffset] = useState(0);
   const isCategoryOffers = screen === 'categoryOffers';
@@ -513,6 +515,15 @@ export function MainShell() {
           }
           navigate(next);
         }}
+      />
+
+      <AssistantChatWidget
+        hidden={hideAssistant}
+        onListingPress={openListingDetail}
+        onStorePress={openStoreDetail}
+        onNavigate={navigate}
+        onLogin={() => pushScreen('login')}
+        onRegister={() => pushScreen('register')}
       />
     </View>
   );

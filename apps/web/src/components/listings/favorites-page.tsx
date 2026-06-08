@@ -9,9 +9,11 @@ import { SiteFooter } from '@/components/home/site-footer';
 import { SiteHeaderSearch, UserSiteHeader } from '@/components/navigation/user-site-header';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
+import { getListingLocationLabel } from '@/lib/oman-locations';
 import { getUserAccessToken } from '@/lib/user-auth';
 import { useAuthStore } from '@/store/auth-store';
 import { FavoriteButton } from './favorite-button';
+import { ListingMediaCover } from './listing-media-cover';
 
 type FavoriteListing = {
   id: string;
@@ -19,6 +21,7 @@ type FavoriteListing = {
   price?: string | number | null;
   currency: string;
   city?: string | null;
+  wilayah?: string | null;
   area?: string | null;
   images?: Array<{ imageUrl: string }>;
   category?: {
@@ -114,16 +117,17 @@ export function FavoritesPage() {
 function FavoriteCard({ listing, onRemoved, text }: { listing: FavoriteListing; onRemoved: () => void; text: (typeof labels)['ar'] }) {
   const { locale, localizedPath } = useI18n();
   const category = (locale === 'en' ? listing.category?.nameEn : listing.category?.nameAr) || listing.category?.name || '';
-  const image = listing.images?.[0]?.imageUrl;
   const badgeLabel = listing.promotion?.plan?.badgeLabel || text.featured;
 
   return (
     <Link href={localizedPath(`/listing/${listing.id}`)} className="group block overflow-hidden rounded-xl bg-white shadow-sm transition hover:shadow-lg">
       <div className="relative h-56 overflow-hidden">
-        <img
-          src={image || fallbackImage}
+        <ListingMediaCover
+          items={listing.images}
           alt={listing.title}
-          className={`h-full w-full transition-transform duration-500 group-hover:scale-105 ${image ? 'object-cover' : 'object-contain p-8'}`}
+          fallbackSrc={fallbackImage}
+          className="h-full w-full transition-transform duration-500 group-hover:scale-105"
+          imageClassName="h-full w-full"
         />
         <FavoriteButton
           adId={listing.id}
@@ -141,7 +145,7 @@ function FavoriteCard({ listing, onRemoved, text }: { listing: FavoriteListing; 
         <p className="mb-3 text-xl font-bold text-green-600">{formatPrice(listing.price, listing.currency, locale)}</p>
         <div className="flex items-center gap-1 text-sm text-gray-500">
           <MapPin size={16} className="text-gray-400" />
-          <span>{listing.area || listing.city || '-'}</span>
+          <span>{getListingLocationLabel(listing.city, listing.wilayah, listing.area, locale) || '-'}</span>
         </div>
       </div>
     </Link>

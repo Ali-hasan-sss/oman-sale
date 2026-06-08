@@ -43,19 +43,21 @@ export function StoreCreateSuccessPage() {
     }
 
     const sessionId = searchParams.get('session_id');
+    const goToMyStore = () => router.replace(localizedPath('/my-store'));
+
     if (!sessionId) {
-      setMessage(text.subtitle);
+      goToMyStore();
       return;
     }
 
     api
       .post('/stores/payments/thawani/confirm', { sessionId })
-      .then(() => setMessage(text.subtitle))
+      .then(goToMyStore)
       .catch(() => {
         setFailed(true);
         setMessage(text.confirmError);
       });
-  }, [localizedPath, router, searchParams, text.confirmError, text.subtitle]);
+  }, [localizedPath, router, searchParams, text.confirmError]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">

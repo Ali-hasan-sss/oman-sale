@@ -1,21 +1,23 @@
 'use client';
 
-import { Check, Upload, X } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { ChangeEvent, FormEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { ListingAdMediaUploader } from '@/components/listings/listing-ad-media-uploader';
 import { SiteFooter } from '@/components/home/site-footer';
 import { SiteHeaderSearch, UserSiteHeader } from '@/components/navigation/user-site-header';
 import { api } from '@/lib/api';
 import { getValidationFieldErrors, resolveApiErrorMessage } from '@/lib/api-errors';
 import { buildCategoryTree, flattenCategoryTreeWithPath } from '@/lib/category-tree';
 import {
-  omanCities,
   parseListingPrice,
   sanitizePriceInput,
   validateListingForm
 } from '@/lib/listing-form-validation';
 import { useI18n } from '@/lib/i18n';
+import { getWilayahsForGovernorate, omanGovernorates } from '@/lib/oman-locations';
+import { PlanPriceWithVat } from '@/components/pricing/plan-price-with-vat';
 import { getUserAccessToken } from '@/lib/user-auth';
 import { useAuthStore } from '@/store/auth-store';
 
@@ -65,15 +67,23 @@ const labels = {
     titlePlaceholder: 'مثال: تويوتا كامري 2023 للبيع',
     category: 'الفئة *',
     selectCategory: 'اختر الفئة',
-    location: 'الموقع *',
-    selectCity: 'اختر المدينة',
+    city: 'المحافظة *',
+    selectCity: 'اختر المحافظة',
+    wilayah: 'الولاية / المنطقة *',
+    selectWilayah: 'اختر الولاية',
     price: 'السعر (ر.ع) *',
     pricePlaceholder: 'مثال: 12,500',
     description: 'الوصف *',
     descriptionPlaceholder: 'اكتب وصفاً تفصيلياً للإعلان...',
     images: 'الصور',
+    video: 'فيديو الإعلان',
+    videoTitle: 'اضغط لرفع فيديو قصير للإعلان',
+    videoHint: 'اختياري — يُضغط تلقائياً ثم يُرفع (حد أقصى 10MB بعد الضغط)',
     uploadTitle: 'اضغط لرفع الصور أو اسحبها هنا',
-    uploadHint: 'يمكنك رفع حتى 8 صور (JPG, PNG)',
+    uploadHint: 'حتى 8 صور — يُضغط كل ملف تلقائياً (حد أقصى 10MB بعد الضغط)',
+    uploadError: 'تعذر رفع الملف. حاول مرة أخرى.',
+    uploading: 'جاري رفع الملفات...',
+    compressing: 'جاري ضغط الملف...',
     removeImage: 'إزالة الصورة',
     adType: 'نوع الإعلان',
     adTypeSubtitle: 'اختر نوع الإعلان المناسب لك',
@@ -96,7 +106,8 @@ const labels = {
     publishFromStore: 'النشر من المتجر',
     publishFromStoreHint: 'يُعرض الإعلان باسم المتجر ويستفيد من مزايا خطة المتجر',
     publishFromPersonal: 'النشر من حسابي الشخصي',
-    publishFromPersonalHint: 'يُعرض الإعلان باسمك ويتطلب الدفع للتمييز مثل أي مستخدم'
+    publishFromPersonalHint: 'يُعرض الإعلان باسمك ويتطلب الدفع للتمييز مثل أي مستخدم',
+    vatShort: 'ضريبة القيمة المضافة'
   },
   en: {
     title: 'Post Your Ad',
@@ -105,15 +116,23 @@ const labels = {
     titlePlaceholder: 'Example: Toyota Camry 2023 for sale',
     category: 'Category *',
     selectCategory: 'Select category',
-    location: 'Location *',
-    selectCity: 'Select city',
+    city: 'Governorate *',
+    selectCity: 'Select governorate',
+    wilayah: 'Wilayah *',
+    selectWilayah: 'Select wilayah',
     price: 'Price (OMR) *',
     pricePlaceholder: 'Example: 12,500',
     description: 'Description *',
     descriptionPlaceholder: 'Write a detailed description for your listing...',
     images: 'Images',
+    video: 'Listing video',
+    videoTitle: 'Click to upload a short listing video',
+    videoHint: 'Optional — auto-compressed before upload (10MB max after compression)',
     uploadTitle: 'Click to upload images or drag them here',
-    uploadHint: 'You can upload up to 8 images (JPG, PNG)',
+    uploadHint: 'Up to 8 images — each file is auto-compressed (10MB max after compression)',
+    uploadError: 'Could not upload file. Please try again.',
+    uploading: 'Uploading files...',
+    compressing: 'Compressing file...',
     removeImage: 'Remove image',
     adType: 'Ad type',
     adTypeSubtitle: 'Choose the right ad type for you',
@@ -136,7 +155,8 @@ const labels = {
     publishFromStore: 'Publish from store',
     publishFromStoreHint: 'Listing appears under your store name with plan benefits',
     publishFromPersonal: 'Publish from personal account',
-    publishFromPersonalHint: 'Listing appears under your name and paid promotion applies'
+    publishFromPersonalHint: 'Listing appears under your name and paid promotion applies',
+    vatShort: 'VAT'
   }
 };
 
@@ -159,9 +179,11 @@ export function AddListingPage() {
   const [title, setTitle] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [city, setCity] = useState('');
+  const [wilayah, setWilayah] = useState('');
   const [price, setPrice] = useState('');
   const [description, setDescription] = useState('');
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [duration, setDuration] = useState(7);
   const [ownerStore, setOwnerStore] = useState<OwnerStore | null>(null);
@@ -180,6 +202,7 @@ export function AddListingPage() {
       descriptionMin: m.errors.fieldDescriptionMin,
       categoryRequired: m.errors.fieldCategoryRequired,
       cityRequired: m.errors.fieldCityRequired,
+      wilayahRequired: m.errors.fieldWilayahRequired,
       priceRequired: m.errors.fieldPriceRequired,
       priceInvalid: m.errors.fieldPriceInvalid
     }),
@@ -236,6 +259,7 @@ export function AddListingPage() {
     const token = getUserAccessToken();
     return token ? { Authorization: `Bearer ${token}` } : undefined;
   }, []);
+  const wilayahOptions = useMemo(() => (city ? getWilayahsForGovernorate(city) : []), [city]);
   const inputClass = 'w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:ring-2 focus:ring-green-500';
 
   function fieldInputClass(fieldError?: string) {
@@ -276,25 +300,11 @@ export function AddListingPage() {
       .catch(() => setError(text.loadError));
   }, [locale]);
 
-  const uploadImages = (event: ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files ?? []).slice(0, 8 - imageUrls.length);
-    files.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const imageData = reader.result;
-        if (typeof imageData === 'string') {
-          setImageUrls((current) => [...current, imageData].slice(0, 8));
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const nextFieldErrors = validateListingForm(
-      { title, description, categoryId, city, price },
+      { title, description, categoryId, city, wilayah, price },
       validationMessages
     );
 
@@ -322,8 +332,10 @@ export function AddListingPage() {
           price: parseListingPrice(price),
           currency: 'OMR',
           city,
+          wilayah,
           categoryId,
           imageUrls,
+          videoUrl: videoUrl ?? undefined,
           ...(isStorePublish && ownerStore ? { storeId: ownerStore.id } : {})
         },
         { headers: authHeaders }
@@ -385,41 +397,62 @@ export function AddListingPage() {
             />
           </Field>
 
+          <Field error={fieldErrors.categoryId} label={text.category}>
+            <select
+              value={categoryId}
+              onChange={(event) => {
+                setCategoryId(event.target.value);
+                clearFieldError('categoryId');
+              }}
+              className={fieldInputClass(fieldErrors.categoryId)}
+            >
+              <option value="">{text.selectCategory}</option>
+              {categoryTree.map((root) => (
+                <optgroup key={root.id} label={root.name}>
+                  {flattenCategoryTreeWithPath([root], (category) => category.name).map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </Field>
+
           <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">
-            <Field error={fieldErrors.categoryId} label={text.category}>
-              <select
-                value={categoryId}
-                onChange={(event) => {
-                  setCategoryId(event.target.value);
-                  clearFieldError('categoryId');
-                }}
-                className={fieldInputClass(fieldErrors.categoryId)}
-              >
-                <option value="">{text.selectCategory}</option>
-                {categoryTree.map((root) => (
-                  <optgroup key={root.id} label={root.name}>
-                    {flattenCategoryTreeWithPath([root], (category) => category.name).map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            </Field>
-            <Field error={fieldErrors.city} label={text.location}>
+            <Field error={fieldErrors.city} label={text.city}>
               <select
                 value={city}
                 onChange={(event) => {
                   setCity(event.target.value);
+                  setWilayah('');
                   clearFieldError('city');
+                  clearFieldError('wilayah');
                 }}
                 className={fieldInputClass(fieldErrors.city)}
               >
                 <option value="">{text.selectCity}</option>
-                {omanCities.map((cityOption) => (
-                  <option key={cityOption} value={cityOption}>
-                    {cityOption}
+                {omanGovernorates.map((governorate) => (
+                  <option key={governorate.value} value={governorate.value}>
+                    {locale === 'en' ? governorate.en : governorate.ar}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field error={fieldErrors.wilayah} label={text.wilayah}>
+              <select
+                value={wilayah}
+                onChange={(event) => {
+                  setWilayah(event.target.value);
+                  clearFieldError('wilayah');
+                }}
+                disabled={!city}
+                className={fieldInputClass(fieldErrors.wilayah)}
+              >
+                <option value="">{text.selectWilayah}</option>
+                {wilayahOptions.map((wilayahOption) => (
+                  <option key={wilayahOption.value} value={wilayahOption.value}>
+                    {locale === 'en' ? wilayahOption.en : wilayahOption.ar}
                   </option>
                 ))}
               </select>
@@ -454,30 +487,22 @@ export function AddListingPage() {
           </Field>
 
           <div className="mb-6">
-            <label className="mb-2 block">{text.images}</label>
-            <label className="block cursor-pointer rounded-lg border-2 border-dashed border-gray-300 p-8 text-center transition hover:border-green-500">
-              <Upload className="mx-auto mb-4 text-gray-400" size={48} />
-              <p className="mb-2 text-gray-600">{text.uploadTitle}</p>
-              <p className="text-sm text-gray-500">{text.uploadHint}</p>
-              <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={uploadImages} className="hidden" />
-            </label>
-            {imageUrls.length > 0 ? (
-              <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-                {imageUrls.map((imageUrl, index) => (
-                  <div key={imageUrl.slice(0, 40) + index} className="relative h-28 overflow-hidden rounded-xl border border-gray-200">
-                    <img src={imageUrl} alt={`${text.images} ${index + 1}`} className="h-full w-full object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => setImageUrls((current) => current.filter((_, currentIndex) => currentIndex !== index))}
-                      className="absolute right-2 top-2 rounded-full bg-white/90 p-1 text-red-600 shadow"
-                      aria-label={text.removeImage}
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : null}
+            <ListingAdMediaUploader
+              imageUrls={imageUrls}
+              videoUrl={videoUrl}
+              onImageUrlsChange={setImageUrls}
+              onVideoUrlChange={setVideoUrl}
+              labels={{
+                imagesTitle: text.uploadTitle,
+                imagesHint: text.uploadHint,
+                videoTitle: text.videoTitle,
+                videoHint: text.videoHint,
+                remove: text.removeImage,
+                uploading: text.uploading,
+                compressing: text.compressing,
+                uploadError: text.uploadError
+              }}
+            />
           </div>
 
           {canPublishFromStore ? (
@@ -521,7 +546,10 @@ export function AddListingPage() {
                   name={locale === 'en' ? plan.nameEn : plan.nameAr}
                   badgeLabel={plan.badgeLabel}
                   color={plan.color}
-                  price={formatPrice(getPlanPrice(plan, duration), locale, text.free)}
+                  basePrice={getPlanPrice(plan, duration)}
+                  freeLabel={text.free}
+                  vatShort={text.vatShort}
+                  locale={locale}
                   onClick={() => setSelectedPlanId(plan.id)}
                 />
               ))}
@@ -631,19 +659,25 @@ function PublishSourceCard({
 function PlanCard({
   active,
   badgeLabel,
+  basePrice,
   color,
   description,
+  freeLabel,
+  locale,
   name,
   onClick,
-  price
+  vatShort
 }: {
   active: boolean;
   badgeLabel?: string | null;
+  basePrice: number;
   color?: string | null;
   description: string;
+  freeLabel: string;
+  locale: 'ar' | 'en';
   name: string;
   onClick: () => void;
-  price: string;
+  vatShort: string;
 }) {
   return (
     <button
@@ -667,7 +701,15 @@ function PlanCard({
         ) : null}
       </div>
       <p className="mb-2 line-clamp-2 min-h-10 text-sm text-gray-600">{description}</p>
-      <p className={`${active ? 'text-2xl text-green-600' : 'text-lg text-gray-900'} font-bold`}>{price}</p>
+      <div className={active ? 'text-green-600' : 'text-gray-900'}>
+        <PlanPriceWithVat
+          basePrice={basePrice}
+          locale={locale}
+          freeLabel={freeLabel}
+          vatShort={vatShort}
+          mainClassName={`${active ? 'text-2xl' : 'text-lg'} font-bold`}
+        />
+      </div>
     </button>
   );
 }
@@ -678,6 +720,3 @@ function getPlanPrice(plan: PromotionPlan, days: number) {
   return Number(plan.monthPrice);
 }
 
-function formatPrice(price: number, locale: 'ar' | 'en', freeLabel: string) {
-  return price === 0 ? freeLabel : locale === 'en' ? `OMR ${price.toLocaleString()}` : `${price.toLocaleString()} ر.ع`;
-}

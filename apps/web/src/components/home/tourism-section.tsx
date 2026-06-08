@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
+import { resolveMediaUrl } from '@/lib/media-url';
 
 const experiences = [
   {
@@ -74,7 +75,7 @@ export function TourismSection() {
       apiDestinations.length > 0
         ? apiDestinations.map((destination) => ({
             id: destination.slug,
-            image: destination.imageUrl,
+            image: resolveMediaUrl(destination.imageUrl),
             title: locale === 'en' ? destination.titleEn : destination.titleAr,
             rating: destination.rating,
             ratingLabel: locale === 'en' ? destination.ratingLabelEn : destination.ratingLabelAr,

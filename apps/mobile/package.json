@@ -4,8 +4,8 @@
   "private": true,
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
-    "dev": "expo start",
-    "dev:clear": "expo start --clear",
+    "dev": "cross-env EXPO_NO_DEPENDENCY_VALIDATION=1 expo start",
+    "dev:clear": "cross-env EXPO_NO_DEPENDENCY_VALIDATION=1 expo start --clear",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
@@ -48,6 +48,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.10",
+    "cross-env": "^10.1.0",
     "typescript": "^5.5.4"
   }
 }

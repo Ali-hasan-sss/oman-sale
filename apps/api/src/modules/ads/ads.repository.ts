@@ -72,6 +72,7 @@ export class AdsRepository {
       ...(query.status && { status: query.status }),
       ...(query.categoryId && categoryFilter),
       ...(query.city && { city: query.city }),
+      ...(query.wilayah && { wilayah: query.wilayah }),
       ...((query.minPrice !== undefined || query.maxPrice !== undefined) && {
         price: {
           ...(query.minPrice !== undefined && { gte: query.minPrice }),
@@ -311,6 +312,7 @@ export class AdsRepository {
         price: data.price,
         currency: data.currency,
         city: data.city,
+        wilayah: data.wilayah,
         area: data.area,
         latitude: data.latitude,
         longitude: data.longitude,
@@ -324,7 +326,16 @@ export class AdsRepository {
         categoryId: data.categoryId,
         ...(data.storeId && { storeId: data.storeId }),
         images: {
-          create: data.imageUrls.map((imageUrl, sortOrder) => ({ imageUrl, sortOrder }))
+          create: [
+            ...(data.videoUrl
+              ? [{ imageUrl: data.videoUrl, mediaType: 'VIDEO' as const, sortOrder: 0 }]
+              : []),
+            ...data.imageUrls.map((imageUrl, index) => ({
+              imageUrl,
+              mediaType: 'IMAGE' as const,
+              sortOrder: (data.videoUrl ? 1 : 0) + index
+            }))
+          ]
         },
         filterValues: { create: filterValues }
       },
@@ -333,7 +344,7 @@ export class AdsRepository {
   }
 
   async update(id: string, data: UpdateAdDto) {
-    const { filterOptionIds, imageUrls, ...adData } = data;
+    const { filterOptionIds, imageUrls, videoUrl, ...adData } = data;
     const now = new Date();
     const filterValues = filterOptionIds ? await this.buildFilterValues(filterOptionIds) : undefined;
 
@@ -342,13 +353,22 @@ export class AdsRepository {
         where: { id },
         data: {
           ...adData,
-          ...(imageUrls && {
+          ...((imageUrls !== undefined || videoUrl !== undefined) && {
             images: {
               updateMany: {
                 where: { deletedAt: null },
                 data: { deletedAt: now }
               },
-              create: imageUrls.map((imageUrl, sortOrder) => ({ imageUrl, sortOrder }))
+              create: [
+                ...(videoUrl
+                  ? [{ imageUrl: videoUrl, mediaType: 'VIDEO' as const, sortOrder: 0 }]
+                  : []),
+                ...(imageUrls ?? []).map((imageUrl, index) => ({
+                  imageUrl,
+                  mediaType: 'IMAGE' as const,
+                  sortOrder: (videoUrl ? 1 : 0) + index
+                }))
+              ]
             }
           }),
           ...(filterValues && {

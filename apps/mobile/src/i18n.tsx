@@ -29,6 +29,10 @@ const dictionary = {
       guestHint: 'تصفح كزائر أو سجل الدخول لمتابعة عروضك',
       viewAll: 'عرض الكل',
       featured: 'مميز',
+      pricing: {
+        vatShort: 'ضريبة القيمة المضافة',
+        free: 'مجاني'
+      },
       search: 'ابحث عن سيارة، عقار، وظيفة...',
       loginRequired: 'سجل الدخول للمتابعة',
       loginRequiredHint: 'يمكنك تصفح التطبيق كزائر، لكن إضافة عرض أو بدء محادثة تحتاج حسابًا.',
@@ -57,7 +61,8 @@ const dictionary = {
       fieldDescriptionRequired: 'الوصف مطلوب.',
       fieldDescriptionMin: 'يجب أن يكون الوصف 10 أحرف على الأقل.',
       fieldCategoryRequired: 'يرجى اختيار الفئة.',
-      fieldCityRequired: 'يرجى اختيار المدينة.',
+      fieldCityRequired: 'يرجى اختيار المحافظة.',
+      fieldWilayahRequired: 'يرجى اختيار الولاية / المنطقة.',
       fieldPriceRequired: 'السعر مطلوب.',
       fieldPriceInvalid: 'أدخل سعراً صحيحاً باستخدام الأرقام فقط.',
       generic: 'حدث خطأ غير متوقع. حاول مرة أخرى.'
@@ -120,7 +125,9 @@ const dictionary = {
       clearAll: 'مسح الكل',
       subcategories: 'الفئة الفرعية',
       all: 'الكل',
-      selectCity: 'المدينة',
+      selectCity: 'المحافظة',
+      selectWilayah: 'الولاية / المنطقة',
+      allWilayahsInGovernorate: 'كل ولايات المحافظة',
       priceRange: 'نطاق السعر',
       minPrice: 'أقل سعر',
       maxPrice: 'أعلى سعر',
@@ -144,7 +151,8 @@ const dictionary = {
       subtitle: 'أدخل تفاصيل العرض وسيتم نشره بعد المراجعة.',
       titleField: 'عنوان العرض',
       category: 'القسم',
-      city: 'المدينة',
+      city: 'المحافظة',
+      wilayah: 'الولاية / المنطقة',
       price: 'السعر',
       description: 'الوصف',
       publish: 'نشر العرض',
@@ -377,6 +385,34 @@ const dictionary = {
       owner: 'المالك',
       noListings: 'لا توجد عروض نشطة في هذا المتجر بعد.',
       loadMore: 'تحميل المزيد'
+    },
+    assistant: {
+      title: 'مساعد Oman Sale',
+      openAssistant: 'فتح المساعد',
+      closeChat: 'إغلاق المحادثة',
+      clearChat: 'مسح المحادثة',
+      placeholder: 'اكتب رسالتك...',
+      send: 'إرسال',
+      typing: 'يفكر',
+      welcome: 'مرحباً! 👋 أنا مساعد Oman Sale — كيف يمكنني مساعدتك؟',
+      welcomeHint: 'يمكنني البحث عن العروض والمتاجر، شرح خطط الاشتراك وأسعار التمييز، والإجابة عن أي ميزة في المنصة.',
+      viewStore: 'عرض المتجر',
+      viewListing: 'عرض',
+      errorGeneric: 'تعذر الاتصال بالمساعد. حاول مرة أخرى.',
+      errorDailyLimitAuth: 'وصلت إلى الحد اليومي (30 رسالة). يمكنك المحاولة مرة أخرى غداً.',
+      errorDailyLimitGuest: 'وصلت إلى الحد اليومي للزوار. سجّل الدخول للحصول على 30 رسالة يومياً.',
+      errorConversationTooLong: 'المحادثة طويلة جداً. امسح المحادثة من أيقونة 🗑️ ثم تابع.',
+      errorRateLimited: 'طلبات كثيرة في وقت قصير. انتظر قليلاً ثم حاول مرة أخرى.',
+      quickReplies: [
+        { label: 'خطط وأسعار', message: 'ما هي خطط المتاجر وأسعار تمييز العروض؟', intent: 'pricing_overview', primary: false },
+        { label: 'معارض سيارات', message: 'أريد معارض سيارات', intent: 'search_car_showrooms', primary: false },
+        { label: 'عروض مميزة', message: 'اعرض لي العروض المميزة', intent: 'featured_listings', primary: false },
+        { label: 'كيف أنشئ متجر؟', message: 'كيف أنشئ متجر على Oman Sale؟', intent: 'create_store', primary: false },
+        { label: 'تمييز إعلان', message: 'كيف أضيف عرضاً مميزاً لإعلاني؟', intent: 'promote_listing', primary: false },
+        { label: 'نشر إعلان', message: 'كيف أنشر إعلاناً جديداً؟', intent: 'post_ad', primary: false },
+        { label: 'استعرض المتاجر', message: 'أريد استكشاف المتاجر', intent: 'browse_stores', primary: false },
+        { label: 'تواصل معنا', message: 'كيف أتواصل مع الدعم؟', intent: 'contact', primary: true }
+      ]
     }
   },
   en: {
@@ -401,6 +437,10 @@ const dictionary = {
       guestHint: 'Browse as a guest or log in to manage your offers',
       viewAll: 'View all',
       featured: 'Featured',
+      pricing: {
+        vatShort: 'VAT',
+        free: 'Free'
+      },
       search: 'Search cars, property, jobs...',
       loginRequired: 'Log in to continue',
       loginRequiredHint: 'You can browse as a guest, but posting offers or starting chats requires an account.',
@@ -429,7 +469,8 @@ const dictionary = {
       fieldDescriptionRequired: 'Description is required.',
       fieldDescriptionMin: 'Description must be at least 10 characters.',
       fieldCategoryRequired: 'Please select a category.',
-      fieldCityRequired: 'Please select a city.',
+      fieldCityRequired: 'Please select a governorate.',
+      fieldWilayahRequired: 'Please select a wilayah.',
       fieldPriceRequired: 'Price is required.',
       fieldPriceInvalid: 'Enter a valid price using numbers only.',
       generic: 'Something went wrong. Please try again.'
@@ -492,7 +533,9 @@ const dictionary = {
       clearAll: 'Clear all',
       subcategories: 'Subcategory',
       all: 'All',
-      selectCity: 'City',
+      selectCity: 'Governorate',
+      selectWilayah: 'Wilayah',
+      allWilayahsInGovernorate: 'All wilayahs in governorate',
       priceRange: 'Price range',
       minPrice: 'Min price',
       maxPrice: 'Max price',
@@ -516,7 +559,8 @@ const dictionary = {
       subtitle: 'Enter the offer details. It will be published after review.',
       titleField: 'Offer title',
       category: 'Category',
-      city: 'City',
+      city: 'Governorate',
+      wilayah: 'Wilayah',
       price: 'Price',
       description: 'Description',
       publish: 'Publish offer',
@@ -749,6 +793,34 @@ const dictionary = {
       owner: 'Owner',
       noListings: 'This store has no active listings yet.',
       loadMore: 'Load more'
+    },
+    assistant: {
+      title: 'Oman Sale Assistant',
+      openAssistant: 'Open assistant',
+      closeChat: 'Close chat',
+      clearChat: 'Clear conversation',
+      placeholder: 'Type a message...',
+      send: 'Send message',
+      typing: 'Thinking',
+      welcome: 'Hi! 👋 I\'m your Oman Sale assistant — how can I help?',
+      welcomeHint: 'I can search listings and stores, explain subscription and promotion pricing, and answer questions about any platform feature.',
+      viewStore: 'View store',
+      viewListing: 'View',
+      errorGeneric: 'Could not reach the assistant. Please try again.',
+      errorDailyLimitAuth: 'You reached today\'s limit (30 messages). Try again tomorrow.',
+      errorDailyLimitGuest: 'You reached the guest daily limit. Sign in for 30 messages per day.',
+      errorConversationTooLong: 'This conversation is too long. Clear the chat with 🗑️ and continue.',
+      errorRateLimited: 'Too many requests. Please wait a moment and try again.',
+      quickReplies: [
+        { label: 'Plans & pricing', message: 'What are your store plans and listing promotion prices?', intent: 'pricing_overview', primary: false },
+        { label: 'Car showrooms', message: 'I want car showrooms', intent: 'search_car_showrooms', primary: false },
+        { label: 'Featured listings', message: 'Show me featured listings', intent: 'featured_listings', primary: false },
+        { label: 'Create a store', message: 'How do I create a store on Oman Sale?', intent: 'create_store', primary: false },
+        { label: 'Promote listing', message: 'How do I make my listing featured?', intent: 'promote_listing', primary: false },
+        { label: 'Post a listing', message: 'How do I post a new listing?', intent: 'post_ad', primary: false },
+        { label: 'Browse stores', message: 'I want to explore stores', intent: 'browse_stores', primary: false },
+        { label: 'Contact support', message: 'How can I contact support?', intent: 'contact', primary: true }
+      ]
     }
   }
 } as const;

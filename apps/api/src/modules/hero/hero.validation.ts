@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { imageReferenceSchema } from '../../shared/utils/media-reference';
+
 export const listHeroSlidesQuerySchema = z.object({
   locale: z.enum(['ar', 'en']).optional(),
   platform: z.enum(['web', 'mobile']).optional()
@@ -12,7 +14,7 @@ export const listAdminHeroSlidesQuerySchema = z.object({
 export const createHeroSlideSchema = z.object({
   sortOrder: z.coerce.number().int().min(0).optional(),
   platform: z.enum(['WEB', 'MOBILE', 'ALL']).default('WEB'),
-  imageUrl: z.string().min(1).max(2000),
+  imageUrl: imageReferenceSchema,
   titleAr: z.string().min(1).max(200),
   titleEn: z.string().min(1).max(200),
   subtitleAr: z.string().min(1).max(400),
@@ -26,7 +28,7 @@ export const createHeroSlideSchema = z.object({
 export const updateHeroSlideSchema = z.object({
   sortOrder: z.coerce.number().int().min(0).optional(),
   platform: z.enum(['WEB', 'MOBILE', 'ALL']).optional(),
-  imageUrl: z.string().min(1).max(2000).optional(),
+  imageUrl: imageReferenceSchema.optional(),
   titleAr: z.string().min(1).max(200).optional(),
   titleEn: z.string().min(1).max(200).optional(),
   subtitleAr: z.string().min(1).max(400).optional(),
@@ -39,7 +41,7 @@ export const updateHeroSlideSchema = z.object({
 
 export const createHeroBannerSchema = z.object({
   sortOrder: z.coerce.number().int().min(0).optional(),
-  imageUrl: z.string().min(1).max(2000),
+  imageUrl: imageReferenceSchema,
   textAr: z.string().max(200).optional().nullable(),
   textEn: z.string().max(200).optional().nullable(),
   linkUrl: z.string().min(1).max(2000),
@@ -54,3 +56,30 @@ export type ListHeroSlidesQuery = z.infer<typeof listHeroSlidesQuerySchema>;
 export type ListAdminHeroSlidesQuery = z.infer<typeof listAdminHeroSlidesQuerySchema>;
 export type CreateHeroBannerInput = z.infer<typeof createHeroBannerSchema>;
 export type UpdateHeroBannerInput = z.infer<typeof updateHeroBannerSchema>;
+
+const headerNavLinkSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(500)
+  .refine((value) => value.startsWith('/') && !value.startsWith('//'), {
+    message: 'Link must be an internal site path starting with /'
+  });
+
+export const createHeaderNavButtonSchema = z.object({
+  sortOrder: z.coerce.number().int().min(0).optional(),
+  labelAr: z.string().trim().min(1).max(80),
+  labelEn: z.string().trim().min(1).max(80),
+  linkUrl: headerNavLinkSchema,
+  isActive: z.boolean().optional()
+});
+
+export const updateHeaderNavButtonSchema = createHeaderNavButtonSchema.partial();
+
+export const listHeaderNavButtonsQuerySchema = z.object({
+  locale: z.enum(['ar', 'en']).optional()
+});
+
+export type CreateHeaderNavButtonInput = z.infer<typeof createHeaderNavButtonSchema>;
+export type UpdateHeaderNavButtonInput = z.infer<typeof updateHeaderNavButtonSchema>;
+export type ListHeaderNavButtonsQuery = z.infer<typeof listHeaderNavButtonsQuerySchema>;

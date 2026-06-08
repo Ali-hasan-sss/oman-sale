@@ -9,6 +9,7 @@ import { SiteFooter } from '@/components/home/site-footer';
 import { UserSiteHeader } from '@/components/navigation/user-site-header';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
+import { getListingLocationLabel } from '@/lib/oman-locations';
 import { getRealtimeSocket } from '@/lib/realtime';
 import { getStoredUser, getUserAccessToken, type UserAuthUser } from '@/lib/user-auth';
 import { useChatRealtimeStore } from '@/store/chat-realtime-store';
@@ -20,6 +21,7 @@ type ChatAd = {
   price?: string | number | null;
   currency: string;
   city?: string | null;
+  wilayah?: string | null;
   area?: string | null;
   images?: Array<{ imageUrl: string }>;
 };
@@ -433,7 +435,7 @@ function AdSummaryCard({
         <h3 className="mb-1 line-clamp-2 text-sm font-bold">{ad.title}</h3>
         <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
           <span className="font-bold text-green-600">{formatPrice(ad.price, ad.currency, locale)}</span>
-          <span>• {ad.area || ad.city || '-'}</span>
+          <span>• {getListingLocationLabel(ad.city, ad.wilayah, ad.area, locale) || '-'}</span>
         </div>
       </div>
     </Link>

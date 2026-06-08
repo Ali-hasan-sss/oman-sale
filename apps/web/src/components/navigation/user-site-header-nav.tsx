@@ -1,11 +1,13 @@
 'use client';
 
-import { Globe, Store } from 'lucide-react';
+import { Globe } from 'lucide-react';
 import Link from 'next/link';
 
 import { HeaderAuthAction } from '@/components/auth/user-menu';
 import { ChatNavLink } from '@/components/chat/chat-nav-link';
 import { BrowseStoresNavButton } from '@/components/navigation/browse-stores-nav-button';
+import { HeaderCustomNavButtons } from '@/components/navigation/header-custom-nav-buttons';
+import { StoreNavLink } from '@/components/navigation/store-nav-link';
 import { useI18n } from '@/lib/i18n';
 
 type UserSiteHeaderNavProps = {
@@ -34,17 +36,14 @@ export function UserSiteHeaderNav({ variant = 'default' }: UserSiteHeaderNavProp
       </button>
       <ChatNavLink className={outline} />
       <BrowseStoresNavButton variant={variant === 'hero' ? 'hero' : 'default'} compact />
+      <HeaderCustomNavButtons variant={variant === 'hero' ? 'hero' : 'default'} className="flex items-center gap-1.5 lg:gap-2" />
       <Link href={localizedPath('/all-listings')} className={outline}>
         {m.common.allListings}
       </Link>
       <Link href={localizedPath('/my-listings')} className={outline}>
         {m.common.myListings}
       </Link>
-      <Link href={localizedPath('/stores/create')} className={`inline-flex items-center gap-1.5 ${outline}`}>
-        <Store size={14} className="shrink-0 lg:hidden" />
-        <Store size={16} className="hidden shrink-0 lg:block" />
-        <span>{m.common.createStore}</span>
-      </Link>
+      <StoreNavLink className={outline} showIcon />
       <Link href={localizedPath('/add-listing')} className={primary}>
         {m.common.addListing}
       </Link>

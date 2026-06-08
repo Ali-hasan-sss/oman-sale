@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { tourismDestinationDetails, tourismDestinations } from '@/data/tourism';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
+import { resolveMediaUrl } from '@/lib/media-url';
 import { siteContactEmail, siteContactPhone } from '@/lib/site-contact';
 
 type ApiTourismDestination = {
@@ -66,7 +67,7 @@ export function TourismDestinationDetailsPage({ destinationId }: { destinationId
   }
 
   const title = apiDestination ? (locale === 'en' ? apiDestination.titleEn : apiDestination.titleAr) : staticDestination!.title[locale];
-  const image = apiDestination?.imageUrl ?? staticDestination!.image;
+  const image = apiDestination ? resolveMediaUrl(apiDestination.imageUrl) : staticDestination!.image;
   const rating = apiDestination?.rating ?? staticDetails!.rating;
   const ratingLabel = apiDestination ? (locale === 'en' ? apiDestination.ratingLabelEn : apiDestination.ratingLabelAr) : staticDetails!.ratingLabel[locale];
   const aboutTitle = locale === 'en' ? `About ${title}` : `عن ${title}`;

@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { SiteHeaderSearch, UserSiteHeader } from '@/components/navigation/user-site-header';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
+import { resolveMediaUrl } from '@/lib/media-url';
 
 type HeroSlide = {
   id: string;
@@ -108,7 +109,7 @@ export function HeroSection() {
             activeSlide === index ? 'opacity-100' : 'opacity-0'
           }`}
         >
-          <img src={slide.imageUrl} alt={slide.title} className="h-full w-full object-cover" />
+          <img src={resolveMediaUrl(slide.imageUrl)} alt={slide.title} className="h-full w-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/35 to-black/60" />
         </div>
       ))}

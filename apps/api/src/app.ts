@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
@@ -13,6 +15,7 @@ import { authRoutes } from './modules/auth/auth.routes';
 import { bannerRequestsRoutes } from './modules/banner-requests/banner-requests.routes';
 import { categoriesRoutes } from './modules/categories/categories.routes';
 import { heroRoutes } from './modules/hero/hero.routes';
+import { mediaRoutes } from './modules/media/media.routes';
 import { chatRoutes } from './modules/chat/chat.routes';
 import { notificationsRoutes } from './modules/notifications/notifications.routes';
 import { paymentsRoutes } from './modules/payments/payments.routes';
@@ -48,6 +51,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(apiRateLimiter);
 app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
+if (env.MEDIA_PROVIDER === 'local') {
+  app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
+}
+
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', service: 'oman-sale-api' });
 });
@@ -62,6 +69,7 @@ app.use('/api/v1/ads', adsRoutes);
 app.use('/api/v1/banner-requests', bannerRequestsRoutes);
 app.use('/api/v1/categories', categoriesRoutes);
 app.use('/api/v1/hero', heroRoutes);
+app.use('/api/v1/media', mediaRoutes);
 app.use('/api/v1/payments', paymentsRoutes);
 app.use('/api/v1/promotions', promotionsRoutes);
 app.use('/api/v1/chat', chatRoutes);

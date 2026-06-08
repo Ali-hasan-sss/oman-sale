@@ -23,6 +23,8 @@ import type {
   SubscribeStoreDto,
   UpdateStoreDto
 } from './stores.validation';
+import { resolveMediaUrl } from '../../shared/utils/media-reference';
+import { resolveStoreMedia, resolveUserMedia } from '../../shared/utils/resolve-entity-media';
 import type { ListAdsQuery } from '../ads/ads.validation';
 
 export class StoresService {
@@ -38,12 +40,13 @@ export class StoresService {
       coverUrl: string | null;
       phone: string | null;
       city?: string | null;
+      wilayah?: string | null;
       rootCategory: { id: string; nameAr: string; nameEn: string; slug: string };
       storeType?: { id: string; nameAr: string; nameEn: string; slug: string; icon: string | null } | null;
       _count?: { ads: number };
     }
   >(store: T) {
-    return {
+    return resolveStoreMedia({
       id: store.id,
       slug: store.slug,
       nameAr: store.nameAr,
@@ -54,10 +57,11 @@ export class StoresService {
       coverUrl: store.coverUrl,
       phone: store.phone,
       city: store.city,
+      wilayah: store.wilayah,
       rootCategory: store.rootCategory,
       storeType: store.storeType ?? null,
       listingsCount: store._count?.ads ?? 0
-    };
+    });
   }
 
   private mapPublicStoreDetail<
@@ -80,7 +84,11 @@ export class StoresService {
       ...this.mapPublicStoreCard(store),
       owner:
         store.user && !store.user.isBlocked
-          ? { id: store.user.id, fullName: store.user.fullName, avatar: store.user.avatar }
+          ? {
+              id: store.user.id,
+              fullName: store.user.fullName,
+              avatar: store.user.avatar ? resolveMediaUrl(store.user.avatar) : store.user.avatar
+            }
           : null
     };
   }
@@ -113,11 +121,11 @@ export class StoresService {
     }
   >(store: T) {
     const accessStatus = getStoreAccessStatus(store);
-    return {
+    return resolveStoreMedia({
       ...store,
       accessStatus,
       requiresPayment: accessStatus === 'TRIAL_EXPIRED' || accessStatus === 'SUBSCRIPTION_EXPIRED' || accessStatus === 'DISABLED'
-    };
+    });
   }
 
   private async assertRootCategory(categoryId: string) {
@@ -445,13 +453,17 @@ export class StoresService {
         endsAt: Date | null;
       }>;
       _count?: { ads: number };
+      user?: { avatar?: string | null } | null;
     }
   >(store: T) {
     const accessStatus = getStoreAccessStatus(store);
+    const resolved = resolveStoreMedia(store);
+
     return {
-      ...store,
+      ...resolved,
       accessStatus,
-      listingsCount: store._count?.ads ?? 0
+      listingsCount: store._count?.ads ?? 0,
+      user: store.user ? resolveUserMedia(store.user) : store.user
     };
   }
 

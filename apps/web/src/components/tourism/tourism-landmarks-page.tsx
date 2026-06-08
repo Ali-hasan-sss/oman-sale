@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { tourismDestinations, tourismFeatures, tourismPageContent } from '@/data/tourism';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
+import { resolveMediaUrl } from '@/lib/media-url';
 
 type ApiTourismDestination = {
   id: string;
@@ -40,7 +41,7 @@ export function TourismLandmarksPage() {
     destinations.length > 0
       ? destinations.map((destination) => ({
           id: destination.slug,
-          image: destination.imageUrl,
+          image: resolveMediaUrl(destination.imageUrl),
           title: locale === 'en' ? destination.titleEn : destination.titleAr
         }))
       : tourismDestinations.map((destination) => ({

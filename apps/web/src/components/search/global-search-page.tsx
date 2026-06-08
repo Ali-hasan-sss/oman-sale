@@ -6,11 +6,13 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { SiteFooter } from '@/components/home/site-footer';
 import { ListingCardsSkeleton } from '@/components/listings/listing-card-skeleton';
+import { ListingMediaCover } from '@/components/listings/listing-media-cover';
 import { UserSiteHeader, SiteHeaderSearch } from '@/components/navigation/user-site-header';
 import { StoreCardsSkeleton } from '@/components/stores/store-card-skeleton';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { getCityLabel } from '@/lib/oman-cities';
+import { getListingLocationLabel } from '@/lib/oman-locations';
 
 type Category = {
   id: string;
@@ -25,6 +27,7 @@ type Listing = {
   price?: string | number | null;
   currency: string;
   city?: string | null;
+  wilayah?: string | null;
   area?: string | null;
   images?: Array<{ imageUrl: string }>;
 };
@@ -162,17 +165,19 @@ export function GlobalSearchPage() {
                       href={localizedPath(`/listing/${listing.id}`)}
                       className="overflow-hidden rounded-xl bg-white shadow-sm transition hover:shadow-md"
                     >
-                      <img
-                        src={listing.images?.[0]?.imageUrl ?? fallbackImage}
+                      <ListingMediaCover
+                        items={listing.images}
                         alt={listing.title}
-                        className="h-44 w-full object-cover"
+                        fallbackSrc={fallbackImage}
+                        className="h-44 w-full"
+                        imageClassName="h-44 w-full"
                       />
                       <div className="p-4">
                         <h3 className="mb-2 line-clamp-1 font-bold">{listing.title}</h3>
                         <p className="font-bold text-green-600">
                           {listing.price ? `${listing.price} ${listing.currency}` : '-'}
                         </p>
-                        <p className="mt-1 text-sm text-gray-500">{listing.area || listing.city || '-'}</p>
+                        <p className="mt-1 text-sm text-gray-500">{getListingLocationLabel(listing.city, listing.wilayah, listing.area, locale) || '-'}</p>
                       </div>
                     </Link>
                   ))}

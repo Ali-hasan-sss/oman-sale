@@ -10,6 +10,8 @@ import { SiteFooter } from '@/components/home/site-footer';
 import { SiteHeaderSearch, UserSiteHeader } from '@/components/navigation/user-site-header';
 import { AvatarWithBanBadge } from '@/components/ui/avatar-with-ban-badge';
 import { api } from '@/lib/api';
+import { registerMediaPreviewUrl, resolveMediaUrl } from '@/lib/media-url';
+import { uploadMediaFile } from '@/lib/media-upload';
 import { useI18n } from '@/lib/i18n';
 import { getUserAccessToken, saveUser, saveUserSession, type UserAuthSession, type UserAuthUser } from '@/lib/user-auth';
 import { useAuthStore } from '@/store/auth-store';
@@ -218,15 +220,18 @@ export function ProfilePage() {
     return token ? { Authorization: `Bearer ${token}` } : undefined;
   };
 
-  const updateAvatar = (event: ChangeEvent<HTMLInputElement>) => {
+  const updateAvatar = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    event.target.value = '';
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') setAvatar(reader.result);
-    };
-    reader.readAsDataURL(file);
+    try {
+      const result = await uploadMediaFile(file, 'profiles');
+      registerMediaPreviewUrl(result.key, result.url);
+      setAvatar(result.key);
+    } catch {
+      setProfileError(profileMessages.profileError);
+    }
   };
 
   const saveProfile = async (event: FormEvent<HTMLFormElement>) => {
@@ -332,7 +337,7 @@ export function ProfilePage() {
               <p className="max-w-2xl text-white/80">{profileMessages.subtitle}</p>
             </div>
             <AvatarWithBanBadge
-              src={avatar}
+              src={avatar ? resolveMediaUrl(avatar) : avatar}
               alt={fullName}
               size={96}
               isBlocked={user?.isBlocked}
@@ -376,7 +381,7 @@ export function ProfilePage() {
           <form onSubmit={saveProfile} className="rounded-3xl bg-white p-6 shadow-sm md:p-8">
             <div className="mb-8 flex flex-col gap-6 md:flex-row md:items-center">
               <AvatarWithBanBadge
-                src={avatar}
+                src={avatar ? resolveMediaUrl(avatar) : avatar}
                 alt={fullName}
                 size={112}
                 isBlocked={user?.isBlocked}

@@ -4,7 +4,9 @@ import { ArrowLeft, Calendar, Eye, Mail, Phone, Tag, UserRound } from 'lucide-re
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
+import { AdminEntityAvatar } from '@/components/admin/admin-entity-avatar';
 import { adminApi } from '@/lib/admin-auth';
+import { resolveMediaUrl } from '@/lib/media-url';
 import { useI18n } from '@/lib/i18n';
 
 type AdminUserAd = {
@@ -158,9 +160,7 @@ export function AdminUserDetails({ userId }: { userId: string }) {
       <section className="rounded-3xl bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-start gap-4">
-            <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-3xl bg-brand-50 text-brand-700">
-              {user.avatar ? <img src={user.avatar} alt={user.fullName} className="h-full w-full object-cover" /> : <UserRound size={34} />}
-            </div>
+            <AdminEntityAvatar src={user.avatar} name={user.fullName} className="h-20 w-20 rounded-3xl text-lg" />
             <div>
               <h3 className="text-2xl font-black text-slate-900">{user.fullName}</h3>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -278,7 +278,7 @@ function AdCard({
 }) {
   const categoryName = locale === 'en' ? ad.category?.nameEn || ad.category?.name : ad.category?.nameAr || ad.category?.name;
   const promotion = ad.promotion?.isActive && !ad.promotion.deletedAt ? ad.promotion : null;
-  const image = ad.images?.[0]?.imageUrl;
+  const image = ad.images?.[0]?.imageUrl ? resolveMediaUrl(ad.images[0].imageUrl) : '';
   const promotionLabel =
     promotion?.plan?.badgeLabel || (locale === 'en' ? promotion?.plan?.nameEn : promotion?.plan?.nameAr) || labels.featuredAd;
 

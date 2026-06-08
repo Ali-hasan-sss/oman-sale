@@ -5,9 +5,11 @@ import Link from 'next/link';
 import { FormEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+import { AdminEntityAvatar } from '@/components/admin/admin-entity-avatar';
 import { adminApi } from '@/lib/admin-auth';
+import { resolveMediaUrl } from '@/lib/media-url';
 import { useI18n } from '@/lib/i18n';
-import { getCityLabel, omanCities } from '@/lib/oman-cities';
+import { getStoreLocationLabel, getWilayahsForGovernorate, omanGovernorates } from '@/lib/oman-locations';
 
 type RootCategory = {
   id: string;
@@ -42,6 +44,8 @@ type AdminStore = {
   coverUrl?: string | null;
   phone?: string | null;
   city?: string | null;
+  wilayah?: string | null;
+  businessType?: 'COMMERCIAL' | 'HOME';
   nationalId?: string;
   commercialRegistrationNumber?: string;
   isActive: boolean;
@@ -85,6 +89,7 @@ export function AdminStoresManagement() {
   const [query, setQuery] = useState('');
   const [rootCategoryId, setRootCategoryId] = useState('');
   const [city, setCity] = useState('');
+  const [wilayah, setWilayah] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -118,6 +123,7 @@ export function AdminStoresManagement() {
           q: query.trim() || undefined,
           rootCategoryId: rootCategoryId || undefined,
           city: city || undefined,
+          wilayah: city && wilayah ? wilayah : undefined,
           isActive: statusFilter === 'active' ? true : statusFilter === 'inactive' ? false : undefined,
           page: 1,
           limit: 30
@@ -141,7 +147,9 @@ export function AdminStoresManagement() {
 
   useEffect(() => {
     loadStores();
-  }, [rootCategoryId, city, statusFilter, locale]);
+  }, [rootCategoryId, city, wilayah, statusFilter, locale]);
+
+  const wilayahOptions = useMemo(() => (city ? getWilayahsForGovernorate(city) : []), [city]);
 
   const activeSubscription = (store: AdminStore) => {
     const now = Date.now();
@@ -334,14 +342,31 @@ export function AdminStoresManagement() {
                 </option>
               ))}
             </select>
-            <select value={city} onChange={(event) => setCity(event.target.value)} className={inputClass}>
+            <select
+              value={city}
+              onChange={(event) => {
+                setCity(event.target.value);
+                setWilayah('');
+              }}
+              className={inputClass}
+            >
               <option value="">{text.allCities}</option>
-              {omanCities.map((cityOption) => (
-                <option key={cityOption.value} value={cityOption.value}>
-                  {locale === 'en' ? cityOption.en : cityOption.ar}
+              {omanGovernorates.map((governorate) => (
+                <option key={governorate.value} value={governorate.value}>
+                  {locale === 'en' ? governorate.en : governorate.ar}
                 </option>
               ))}
             </select>
+            {city ? (
+              <select value={wilayah} onChange={(event) => setWilayah(event.target.value)} className={inputClass}>
+                <option value="">{text.allWilayahs}</option>
+                {wilayahOptions.map((wilayahOption) => (
+                  <option key={wilayahOption.value} value={wilayahOption.value}>
+                    {locale === 'en' ? wilayahOption.en : wilayahOption.ar}
+                  </option>
+                ))}
+              </select>
+            ) : null}
             <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className={inputClass}>
               <option value="">{text.allStatuses}</option>
               <option value="active">{text.activeOnly}</option>
@@ -416,7 +441,7 @@ export function AdminStoresManagement() {
                     <tr key={store.id} className="border-b border-slate-100">
                       <td className={tdClass}>
                         <div className="flex items-center gap-2">
-                          <EntityAvatar src={store.logoUrl} name={storeName} className="h-9 w-9 rounded-lg" />
+                          <AdminEntityAvatar src={store.logoUrl} name={storeName} className="h-9 w-9 rounded-lg" />
                           <div className="min-w-0 text-start">
                             <p className="truncate text-xs font-bold">{storeName}</p>
                             <p className="truncate text-[11px] text-slate-500" dir="ltr">
@@ -427,7 +452,7 @@ export function AdminStoresManagement() {
                       </td>
                       <td className={tdClass}>
                         <div className="flex items-center gap-2">
-                          <EntityAvatar
+                          <AdminEntityAvatar
                             src={store.user?.avatar}
                             name={store.user?.fullName}
                             className="h-8 w-8 rounded-full"
@@ -596,14 +621,14 @@ export function AdminStoresManagement() {
               <div className="space-y-6">
                 <div className="overflow-hidden rounded-2xl bg-slate-100">
                   <img
-                    src={storeDetail.coverUrl || fallbackImage}
+                    src={storeDetail.coverUrl ? resolveMediaUrl(storeDetail.coverUrl) : fallbackImage}
                     alt=""
                     className={`h-40 w-full ${storeDetail.coverUrl ? 'object-cover' : 'object-contain p-8'}`}
                   />
                 </div>
 
                 <div className="flex flex-wrap items-start gap-4">
-                  <EntityAvatar
+                  <AdminEntityAvatar
                     src={storeDetail.logoUrl}
                     name={locale === 'en' ? storeDetail.nameEn : storeDetail.nameAr}
                     className="h-20 w-20 rounded-2xl border-4 border-white shadow-md"
@@ -627,10 +652,22 @@ export function AdminStoresManagement() {
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
+                  <DetailField
+                    label={text.businessType}
+                    value={
+                      storeDetail.businessType === 'HOME'
+                        ? text.homeBusiness
+                        : storeDetail.businessType === 'COMMERCIAL'
+                          ? text.commercialBusiness
+                          : '-'
+                    }
+                  />
                   <DetailField label={text.nationalId} value={storeDetail.nationalId} />
-                  <DetailField label={text.commercialRegistration} value={storeDetail.commercialRegistrationNumber} />
+                  {storeDetail.businessType === 'COMMERCIAL' ? (
+                    <DetailField label={text.commercialRegistration} value={storeDetail.commercialRegistrationNumber} />
+                  ) : null}
                   <DetailField label={text.storePhone} value={storeDetail.phone} />
-                  <DetailField label={text.city} value={getCityLabel(storeDetail.city, locale)} />
+                  <DetailField label={text.city} value={getStoreLocationLabel(storeDetail.city, storeDetail.wilayah, locale)} />
                   <DetailField
                     label={text.createdAt}
                     value={new Date(storeDetail.createdAt).toLocaleDateString(locale === 'ar' ? 'ar-OM' : 'en-GB')}
@@ -649,7 +686,7 @@ export function AdminStoresManagement() {
                   <div className="rounded-2xl border border-slate-100 p-4">
                     <p className="mb-3 text-sm font-bold text-slate-500">{text.owner}</p>
                     <div className="flex flex-wrap items-center gap-4">
-                      <EntityAvatar
+                      <AdminEntityAvatar
                         src={storeDetail.user.avatar}
                         name={storeDetail.user.fullName}
                         className="h-14 w-14 rounded-full"
@@ -963,28 +1000,6 @@ function StoreActionsMenu({
       </button>
       {mounted && menu ? createPortal(menu, document.body) : null}
     </>
-  );
-}
-
-function EntityAvatar({ src, name, className }: { src?: string | null; name?: string; className?: string }) {
-  const initial = name?.trim().slice(0, 1).toUpperCase() ?? '?';
-
-  if (src) {
-    return (
-      <img
-        src={src}
-        alt={name ?? ''}
-        className={`shrink-0 object-cover bg-slate-100 ${className ?? 'h-10 w-10 rounded-full'}`}
-      />
-    );
-  }
-
-  return (
-    <div
-      className={`flex shrink-0 items-center justify-center bg-slate-200 font-black text-slate-600 ${className ?? 'h-10 w-10 rounded-full'}`}
-    >
-      {initial}
-    </div>
   );
 }
 

@@ -34,7 +34,4 @@ export function sortPromotionPlansByPrice(plans: PromotionPlan[], days: number) 
   return [...plans].sort((a, b) => getPlanPrice(a, days) - getPlanPrice(b, days));
 }
 
-export function formatPlanPrice(price: number, locale: 'ar' | 'en', freeLabel: string) {
-  if (price === 0) return freeLabel;
-  return locale === 'en' ? `OMR ${price.toLocaleString('en-US')}` : `${price.toLocaleString('en-US')} ر.ع`;
-}
+export { formatPlanVatBreakdown } from '../lib/plan-pricing';

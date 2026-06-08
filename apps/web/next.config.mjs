@@ -4,6 +4,7 @@ const apiBaseUrl =
   process.env.NEXT_PUBLIC_API_URL ?? (process.env.NODE_ENV === 'production' ? '/api/v1' : `http://127.0.0.1:${apiPort}/api/v1`);
 const contactEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'info@omansale.om';
 const contactPhone = process.env.NEXT_PUBLIC_CONTACT_PHONE ?? '+968 2456 7890';
+const mediaBaseUrl = process.env.NEXT_PUBLIC_MEDIA_BASE_URL ?? '';
 
 const nextConfig = {
   transpilePackages: ['@oman-sale/ui'],
@@ -13,7 +14,16 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'images.unsplash.com',
         pathname: '/**'
-      }
+      },
+      ...(mediaBaseUrl
+        ? [
+            {
+              protocol: 'https',
+              hostname: new URL(mediaBaseUrl).hostname,
+              pathname: '/**'
+            }
+          ]
+        : [])
     ]
   },
   // Ensure NEXT_PUBLIC_* is embedded in the client bundle (no proxy)
@@ -21,7 +31,8 @@ const nextConfig = {
     NEXT_PUBLIC_API_URL: apiBaseUrl,
     NEXT_PUBLIC_API_PORT: apiPort,
     NEXT_PUBLIC_CONTACT_EMAIL: contactEmail,
-    NEXT_PUBLIC_CONTACT_PHONE: contactPhone
+    NEXT_PUBLIC_CONTACT_PHONE: contactPhone,
+    NEXT_PUBLIC_MEDIA_BASE_URL: mediaBaseUrl
   }
 };
 

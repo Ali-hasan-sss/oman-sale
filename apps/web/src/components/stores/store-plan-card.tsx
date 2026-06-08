@@ -2,6 +2,8 @@
 
 import { Check } from 'lucide-react';
 
+import { PlanPriceWithVat } from '@/components/pricing/plan-price-with-vat';
+
 type StorePlanPricing = {
   billingPeriod: 'MONTHLY' | 'YEARLY';
   finalPrice?: number;
@@ -39,14 +41,11 @@ type StorePlanCardProps = {
     trialBadge: string;
     trialDays: string;
     selectPlan: string;
+    vatShort: string;
   };
   onSelectPlan: (planId: string) => void;
   onSelectBilling: (planId: string, period: 'MONTHLY' | 'YEARLY') => void;
 };
-
-function formatPrice(value: number, freeLabel: string) {
-  return value <= 0 ? freeLabel : `${value.toFixed(3)} OMR`;
-}
 
 function featureLines(text: string) {
   return text
@@ -128,7 +127,14 @@ export function StorePlanCard({
               }`}
             >
               <span className="block text-xs uppercase tracking-wide opacity-70">{labels.billingMonthly}</span>
-              <span className="mt-1 block text-base">{formatPrice(monthlyPrice, labels.freePlan)}</span>
+              <span className="mt-1 block">
+                <PlanPriceWithVat
+                  basePrice={monthlyPrice}
+                  locale={locale}
+                  freeLabel={labels.freePlan}
+                  vatShort={labels.vatShort}
+                />
+              </span>
               <span className="mt-1 block text-xs font-normal opacity-80">
                 {monthly.maxListings} {labels.maxListings}
               </span>
@@ -145,7 +151,14 @@ export function StorePlanCard({
               }`}
             >
               <span className="block text-xs uppercase tracking-wide opacity-70">{labels.billingYearly}</span>
-              <span className="mt-1 block text-base">{formatPrice(yearlyPrice, labels.freePlan)}</span>
+              <span className="mt-1 block">
+                <PlanPriceWithVat
+                  basePrice={yearlyPrice}
+                  locale={locale}
+                  freeLabel={labels.freePlan}
+                  vatShort={labels.vatShort}
+                />
+              </span>
               <span className="mt-1 block text-xs font-normal opacity-80">
                 {yearly.maxListings} {labels.maxListings}
               </span>

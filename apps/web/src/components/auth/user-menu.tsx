@@ -9,6 +9,7 @@ import { ConfirmationDialog } from '@/components/confirmation-dialog';
 import { clearAdminSession, getAdminAccessToken, getStoredAdminUser, type AdminUser } from '@/lib/admin-auth';
 import { useI18n } from '@/lib/i18n';
 import { disconnectRealtimeSocket } from '@/lib/realtime';
+import { resolveMediaUrl } from '@/lib/media-url';
 import { clearUserSession } from '@/lib/user-auth';
 import { useAuthStore } from '@/store/auth-store';
 
@@ -217,6 +218,8 @@ function UserMenu() {
 
   if (!user) return null;
 
+  const avatarUrl = user.avatar ? resolveMediaUrl(user.avatar) : '';
+
   return (
     <div ref={menuRef} className="relative">
       <button
@@ -225,8 +228,8 @@ function UserMenu() {
         className="relative flex h-11 w-11 items-center justify-center rounded-full bg-white text-sm font-black text-green-700 shadow-lg ring-1 ring-gray-200 transition hover:ring-green-400"
         aria-label={user.fullName}
       >
-        {user.avatar ? (
-          <img src={user.avatar} alt={user.fullName} className="h-full w-full rounded-full object-cover" />
+        {avatarUrl ? (
+          <img src={avatarUrl} alt={user.fullName} className="h-full w-full rounded-full object-cover" />
         ) : (
           <User size={22} />
         )}

@@ -1,6 +1,7 @@
 import { UserRole } from '@prisma/client';
 
 import { ApiError } from '../../shared/utils/api-error';
+import { resolveUserMedia } from '../../shared/utils/resolve-entity-media';
 import { notificationsService } from '../notifications/notifications.service';
 import { adminRepository } from './admin.repository';
 import type { ListAdminReportsQuery, ListAdminUsersQuery, UpdateAdminUserDto } from './admin.validation';
@@ -10,8 +11,12 @@ export class AdminService {
     return adminRepository.statistics();
   }
 
-  listUsers(query: ListAdminUsersQuery) {
-    return adminRepository.listUsers(query);
+  async listUsers(query: ListAdminUsersQuery) {
+    const result = await adminRepository.listUsers(query);
+    return {
+      ...result,
+      items: result.items.map(resolveUserMedia)
+    };
   }
 
   listReports(query: ListAdminReportsQuery) {
@@ -21,7 +26,7 @@ export class AdminService {
   async getUser(id: string) {
     const user = await adminRepository.findUserById(id);
     if (!user) throw new ApiError(404, 'User not found');
-    return user;
+    return resolveUserMedia(user);
   }
 
   async updateUser(id: string, dto: UpdateAdminUserDto) {

@@ -20,9 +20,11 @@ import {
 } from '../banner-requests/banner-requests.validation';
 import { heroController } from '../hero/hero.controller';
 import {
+  createHeaderNavButtonSchema,
   createHeroBannerSchema,
   createHeroSlideSchema,
   listAdminHeroSlidesQuerySchema,
+  updateHeaderNavButtonSchema,
   updateHeroBannerSchema,
   updateHeroSlideSchema
 } from '../hero/hero.validation';
@@ -181,6 +183,30 @@ adminRoutes.delete(
   authorize(UserRole.ADMIN),
   validateRequest({ params: idParams }),
   asyncHandler(heroController.delete)
+);
+adminRoutes.get('/header-nav-buttons', asyncHandler(heroController.listHeaderButtonsForAdmin));
+adminRoutes.get(
+  '/header-nav-buttons/:id',
+  validateRequest({ params: idParams }),
+  asyncHandler(heroController.getHeaderButtonById)
+);
+adminRoutes.post(
+  '/header-nav-buttons',
+  authorize(UserRole.ADMIN),
+  validateRequest({ body: createHeaderNavButtonSchema }),
+  asyncHandler(heroController.createHeaderButton)
+);
+adminRoutes.patch(
+  '/header-nav-buttons/:id',
+  authorize(UserRole.ADMIN),
+  validateRequest({ params: idParams, body: updateHeaderNavButtonSchema }),
+  asyncHandler(heroController.updateHeaderButton)
+);
+adminRoutes.delete(
+  '/header-nav-buttons/:id',
+  authorize(UserRole.ADMIN),
+  validateRequest({ params: idParams }),
+  asyncHandler(heroController.deleteHeaderButton)
 );
 adminRoutes.get('/hero-banners', asyncHandler(heroController.listBannersForAdmin));
 adminRoutes.get(

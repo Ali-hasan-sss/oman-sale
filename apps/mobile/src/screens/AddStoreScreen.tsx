@@ -11,6 +11,7 @@ import { useI18n } from '../i18n';
 import { buildCategoryTree } from '../lib/category-tree';
 import { resolveApiErrorMessage } from '../lib/api-errors';
 import { getCityLabel, omanCities } from '../lib/oman-cities';
+import { formatPlanVatBreakdown } from '../lib/plan-pricing';
 import { fetchCategories } from '../services/listings.service';
 import { createStoreRequest, fetchMyStores, fetchStorePlans, fetchStoreTypes, type StorePlan } from '../services/stores.service';
 import { useAuthStore } from '../stores';
@@ -228,13 +229,20 @@ export function AddStoreScreen({ onCreated, onAlreadyHasStore }: AddStoreScreenP
             {(['MONTHLY', 'YEARLY'] as const).map((period) => {
               const row = selectedPlan?.pricing.find((item) => item.billingPeriod === period);
               if (!row) return null;
-              const price = Number(row.finalPrice ?? row.price);
+              const basePrice = Number(row.finalPrice ?? row.price);
+              const pricing = formatPlanVatBreakdown(basePrice, locale, {
+                free: t.common.pricing.free,
+                vatShort: t.common.pricing.vatShort
+              });
               const active = billingPeriod === period;
               return (
                 <Pressable key={period} style={[styles.periodChip, active && styles.periodChipActive]} onPress={() => setBillingPeriod(period)}>
                   <AppText style={[styles.periodText, active && styles.periodTextActive]}>
-                    {period === 'MONTHLY' ? t.store.monthly : t.store.yearly} · {price <= 0 ? t.store.free : `${price.toFixed(3)} OMR`}
+                    {period === 'MONTHLY' ? t.store.monthly : t.store.yearly} · {pricing.main}
                   </AppText>
+                  {pricing.sub ? (
+                    <AppText style={[styles.periodVat, active && styles.periodTextActive]}>{pricing.sub}</AppText>
+                  ) : null}
                 </Pressable>
               );
             })}
@@ -288,6 +296,8 @@ const styles = StyleSheet.create({
   periodChipActive: { backgroundColor: colors.brand, borderColor: colors.brand },
   periodText: { fontWeight: '700', color: colors.ink },
   periodTextActive: { color: '#fff' },
+  periodVat: { marginTop: 2, fontSize: 11, color: colors.muted },
+  periodVat: { marginTop: 4, fontSize: 11, color: colors.muted, textAlign: 'center' },
   empty: { color: colors.muted, marginBottom: 12 },
   submit: { marginTop: 8 },
   rtl: { textAlign: 'right' },

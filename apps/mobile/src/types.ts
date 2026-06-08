@@ -47,6 +47,7 @@ export type Listing = {
   price?: string | number | null;
   currency: string;
   city?: string | null;
+  wilayah?: string | null;
   area?: string | null;
   views?: number;
   createdAt?: string;
@@ -88,6 +89,7 @@ export type ChatAd = {
   price?: string | number | null;
   currency: string;
   city?: string | null;
+  wilayah?: string | null;
   area?: string | null;
   images?: Array<{ imageUrl: string }>;
 };

@@ -1,10 +1,11 @@
-export const omanCities = ['مسقط', 'صلالة', 'صحار', 'نزوى', 'صور', 'البريمي', 'الرستاق', 'السيب', 'الخوير', 'القرم'] as const;
+import { omanGovernorateValues, omanWilayahValues } from '@/lib/oman-locations';
 
 export type ListingFormValues = {
   title: string;
   description: string;
   categoryId: string;
   city: string;
+  wilayah: string;
   price: string;
 };
 
@@ -15,6 +16,7 @@ export type ListingValidationMessages = {
   descriptionMin: string;
   categoryRequired: string;
   cityRequired: string;
+  wilayahRequired: string;
   priceRequired: string;
   priceInvalid: string;
 };
@@ -60,8 +62,12 @@ export function validateListingForm(
     errors.categoryId = messages.categoryRequired;
   }
 
-  if (!values.city || !omanCities.includes(values.city as (typeof omanCities)[number])) {
+  if (!values.city || !omanGovernorateValues.includes(values.city)) {
     errors.city = messages.cityRequired;
+  }
+
+  if (!values.wilayah || !omanWilayahValues.includes(values.wilayah)) {
+    errors.wilayah = messages.wilayahRequired;
   }
 
   const price = values.price.replace(/,/g, '').trim();

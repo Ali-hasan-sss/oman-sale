@@ -1,12 +1,11 @@
-import { omanCities as omanCityOptions } from './oman-cities';
-
-export const omanCityValues = omanCityOptions.map((city) => city.value);
+import { omanGovernorateValues, omanWilayahValues } from './oman-locations';
 
 export type ListingFormValues = {
   title: string;
   description: string;
   categoryId: string;
   city: string;
+  wilayah: string;
   price: string;
 };
 
@@ -17,6 +16,7 @@ export type ListingValidationMessages = {
   descriptionMin: string;
   categoryRequired: string;
   cityRequired: string;
+  wilayahRequired: string;
   priceRequired: string;
   priceInvalid: string;
 };
@@ -62,8 +62,12 @@ export function validateListingForm(
     errors.categoryId = messages.categoryRequired;
   }
 
-  if (!values.city || !omanCityValues.includes(values.city as (typeof omanCityValues)[number])) {
+  if (!values.city || !omanGovernorateValues.includes(values.city)) {
     errors.city = messages.cityRequired;
+  }
+
+  if (!values.wilayah || !omanWilayahValues.includes(values.wilayah)) {
+    errors.wilayah = messages.wilayahRequired;
   }
 
   const price = values.price.replace(/,/g, '').trim();

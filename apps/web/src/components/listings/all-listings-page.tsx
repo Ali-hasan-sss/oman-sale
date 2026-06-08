@@ -15,9 +15,11 @@ import {
 } from '@/lib/category-subcategory-filters';
 import { buildCategoryTree } from '@/lib/category-tree';
 import { useI18n } from '@/lib/i18n';
+import { getListingLocationLabel, getWilayahsForGovernorate, omanGovernorates } from '@/lib/oman-locations';
 import { getUserAccessToken } from '@/lib/user-auth';
 import { FavoriteButton } from './favorite-button';
 import { ListingCardsSkeleton } from './listing-card-skeleton';
+import { ListingMediaCover } from './listing-media-cover';
 
 type Category = {
   id: string;
@@ -33,6 +35,7 @@ type Listing = {
   price?: string | number | null;
   currency: string;
   city?: string | null;
+  wilayah?: string | null;
   area?: string | null;
   views: number;
   category?: {
@@ -41,7 +44,7 @@ type Listing = {
     nameAr?: string;
     nameEn?: string;
   };
-  images?: Array<{ imageUrl: string }>;
+  images?: Array<{ imageUrl: string; mediaType?: 'IMAGE' | 'VIDEO' }>;
   promotion?: {
     plan?: {
       badgeLabel?: string | null;
@@ -73,18 +76,6 @@ type CategoryFilter = {
   }>;
 };
 
-const omanCities = [
-  { value: 'مسقط', ar: 'مسقط', en: 'Muscat' },
-  { value: 'صلالة', ar: 'صلالة', en: 'Salalah' },
-  { value: 'صحار', ar: 'صحار', en: 'Sohar' },
-  { value: 'نزوى', ar: 'نزوى', en: 'Nizwa' },
-  { value: 'صور', ar: 'صور', en: 'Sur' },
-  { value: 'البريمي', ar: 'البريمي', en: 'Al Buraimi' },
-  { value: 'الرستاق', ar: 'الرستاق', en: 'Rustaq' },
-  { value: 'السيب', ar: 'السيب', en: 'Seeb' },
-  { value: 'الخوير', ar: 'الخوير', en: 'Al Khuwair' },
-  { value: 'القرم', ar: 'القرم', en: 'Qurum' }
-];
 const priceFloor = 0;
 const priceCeiling = 100000;
 const priceStep = 100;
@@ -104,7 +95,9 @@ const listingsPageMessages = {
     priceLow: 'السعر: من الأقل للأعلى',
     priceHigh: 'السعر: من الأعلى للأقل',
     popular: 'الأكثر مشاهدة',
-    selectCity: 'اختر المدينة',
+    selectCity: 'المحافظة',
+    selectWilayah: 'الولاية / المنطقة',
+    allWilayahsInGovernorate: 'كل ولايات المحافظة',
     priceRange: 'نطاق السعر',
     applyFilters: 'تطبيق الفلاتر',
     resetFilters: 'إعادة تعيين',
@@ -126,7 +119,9 @@ const listingsPageMessages = {
     priceLow: 'Price: low to high',
     priceHigh: 'Price: high to low',
     popular: 'Most viewed',
-    selectCity: 'Select city',
+    selectCity: 'Governorate',
+    selectWilayah: 'Wilayah',
+    allWilayahsInGovernorate: 'All wilayahs in governorate',
     priceRange: 'Price range',
     applyFilters: 'Apply filters',
     resetFilters: 'Reset',
@@ -153,9 +148,11 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
   const [appliedSearch, setAppliedSearch] = useState('');
   const [appliedCategoryId, setAppliedCategoryId] = useState('');
   const [appliedCity, setAppliedCity] = useState('');
+  const [appliedWilayah, setAppliedWilayah] = useState('');
   const [appliedMinPrice, setAppliedMinPrice] = useState('');
   const [appliedMaxPrice, setAppliedMaxPrice] = useState('');
   const [city, setCity] = useState('');
+  const [wilayah, setWilayah] = useState('');
   const [minPrice, setMinPrice] = useState(priceFloor);
   const [maxPrice, setMaxPrice] = useState(priceCeiling);
   const [sort, setSort] = useState('recent');
@@ -216,6 +213,7 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
     const urlMin = searchParams.get('minPrice');
     const urlMax = searchParams.get('maxPrice');
     const urlCity = (searchParams.get('city') ?? '').trim();
+    const urlWilayah = (searchParams.get('wilayah') ?? '').trim();
 
     if (urlMin && !Number.isNaN(Number(urlMin))) {
       const min = Number(urlMin);
@@ -229,10 +227,10 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
       setAppliedMaxPrice(String(max));
     }
 
-    if (urlCity) {
-      setCity(urlCity);
-      setAppliedCity(urlCity);
-    }
+    setCity(urlCity);
+    setAppliedCity(urlCity);
+    setWilayah(urlWilayah);
+    setAppliedWilayah(urlWilayah);
   }, [urlSearch, searchParams]);
 
   useEffect(() => {
@@ -261,6 +259,7 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
           q: appliedSearch || undefined,
           categoryId: effectiveCategoryId || undefined,
           city: appliedCity || undefined,
+          wilayah: appliedCity && appliedWilayah ? appliedWilayah : undefined,
           minPrice: appliedMinPrice || undefined,
           maxPrice: appliedMaxPrice || undefined,
           filterOptionIds: selectedFilterOptionIds.length > 0 ? selectedFilterOptionIds.join(',') : undefined
@@ -275,7 +274,7 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
         setTotal(0);
       })
       .finally(() => setIsLoading(false));
-  }, [appliedCity, appliedMaxPrice, appliedMinPrice, appliedSearch, decodedCategorySlug, effectiveCategoryId, page, categories.length, selectedFilterOptionIds]);
+  }, [appliedCity, appliedWilayah, appliedMaxPrice, appliedMinPrice, appliedSearch, decodedCategorySlug, effectiveCategoryId, page, categories.length, selectedFilterOptionIds]);
 
   useEffect(() => {
     const token = getUserAccessToken();
@@ -307,20 +306,23 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
     { value: 'price-high', label: pageMessages.priceHigh },
     { value: 'popular', label: pageMessages.popular }
   ];
-  const cityOptions = [
+  const governorateOptions = [
     { value: '', label: pageMessages.selectCity },
-    ...omanCities.map((cityOption) => ({
-      value: cityOption.value,
-      label: locale === 'en' ? cityOption.en : cityOption.ar
+    ...omanGovernorates.map((governorate) => ({
+      value: governorate.value,
+      label: locale === 'en' ? governorate.en : governorate.ar
     }))
   ];
+  const wilayahOptions = city ? getWilayahsForGovernorate(city) : [];
 
   const resetFilters = () => {
     setSelectedSubcategoryPath([]);
     setSelectedCategoryId('');
     setAppliedCategoryId('');
     setCity('');
+    setWilayah('');
     setAppliedCity('');
+    setAppliedWilayah('');
     setMinPrice(priceFloor);
     setMaxPrice(priceCeiling);
     setAppliedMinPrice('');
@@ -356,6 +358,7 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
         : selectedCategoryId
     );
     setAppliedCity(city);
+    setAppliedWilayah(city && wilayah ? wilayah : '');
     setAppliedMinPrice(minPrice > priceFloor ? String(minPrice) : '');
     setAppliedMaxPrice(maxPrice < priceCeiling ? String(maxPrice) : '');
     setPage(1);
@@ -391,7 +394,6 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
         <ListingCard
           key={listing.id}
           listing={listing}
-          image={listing.images?.[0]?.imageUrl}
           isFavorited={favoriteIds.has(listing.id)}
           onFavoriteChange={(favorited) => {
             setFavoriteIds((current) => {
@@ -520,16 +522,50 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
                   ))}
 
                   <FilterSection title={pageMessages.selectCity}>
-                    {omanCities.map((cityOption) => (
+                    <FilterChip
+                      active={!city}
+                      onClick={() => {
+                        setCity('');
+                        setWilayah('');
+                      }}
+                    >
+                      {pageMessages.all}
+                    </FilterChip>
+                    {omanGovernorates.map((governorate) => (
                       <FilterChip
-                        key={cityOption.value}
-                        active={city === cityOption.value}
-                        onClick={() => setCity(city === cityOption.value ? '' : cityOption.value)}
+                        key={governorate.value}
+                        active={city === governorate.value}
+                        onClick={() => {
+                          if (city === governorate.value) {
+                            setCity('');
+                            setWilayah('');
+                          } else {
+                            setCity(governorate.value);
+                            setWilayah('');
+                          }
+                        }}
                       >
-                        {locale === 'en' ? cityOption.en : cityOption.ar}
+                        {locale === 'en' ? governorate.en : governorate.ar}
                       </FilterChip>
                     ))}
                   </FilterSection>
+
+                  {city && wilayahOptions.length > 0 ? (
+                    <FilterSection title={pageMessages.selectWilayah}>
+                      <FilterChip active={!wilayah} onClick={() => setWilayah('')}>
+                        {pageMessages.allWilayahsInGovernorate}
+                      </FilterChip>
+                      {wilayahOptions.map((wilayahOption) => (
+                        <FilterChip
+                          key={wilayahOption.value}
+                          active={wilayah === wilayahOption.value}
+                          onClick={() => setWilayah(wilayah === wilayahOption.value ? '' : wilayahOption.value)}
+                        >
+                          {locale === 'en' ? wilayahOption.en : wilayahOption.ar}
+                        </FilterChip>
+                      ))}
+                    </FilterSection>
+                  ) : null}
 
                   <FilterSection title={pageMessages.priceRange}>{priceSlider}</FilterSection>
 
@@ -604,8 +640,28 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
 
               {showMoreFilters ? (
                 <div className="mt-4 grid gap-4 border-t border-gray-100 pt-4 md:grid-cols-4">
-                  <Dropdown value={city} options={cityOptions} onChange={setCity} />
-                  <div className="md:col-span-2">{priceSlider}</div>
+                  <Dropdown
+                    value={city}
+                    options={governorateOptions}
+                    onChange={(value) => {
+                      setCity(value);
+                      setWilayah('');
+                    }}
+                  />
+                  {city && wilayahOptions.length > 0 ? (
+                    <Dropdown
+                      value={wilayah}
+                      options={[
+                        { value: '', label: pageMessages.allWilayahsInGovernorate },
+                        ...wilayahOptions.map((wilayahOption) => ({
+                          value: wilayahOption.value,
+                          label: locale === 'en' ? wilayahOption.en : wilayahOption.ar
+                        }))
+                      ]}
+                      onChange={setWilayah}
+                    />
+                  ) : null}
+                  <div className={city && wilayahOptions.length > 0 ? 'md:col-span-1' : 'md:col-span-2'}>{priceSlider}</div>
                   <div className="flex gap-2">
                     <button onClick={applyFilters} className="flex-1 rounded-lg bg-green-600 px-4 py-2 font-bold text-white transition hover:bg-green-700">
                       {pageMessages.applyFilters}
@@ -630,12 +686,10 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
 }
 
 function ListingCard({
-  image,
   isFavorited,
   listing,
   onFavoriteChange
 }: {
-  image?: string;
   isFavorited: boolean;
   listing: Listing;
   onFavoriteChange: (favorited: boolean) => void;
@@ -650,10 +704,12 @@ function ListingCard({
   return (
     <Link href={localizedPath(`/listing/${listing.id}`)} className="group block cursor-pointer overflow-hidden rounded-xl bg-white shadow-sm transition-all hover:shadow-lg">
       <div className="relative h-56 overflow-hidden">
-        <img
-          src={image ?? fallbackImage}
+        <ListingMediaCover
+          items={listing.images}
           alt={listing.title}
-          className={`h-full w-full transition-transform duration-500 group-hover:scale-105 ${image ? 'object-cover' : 'object-contain p-8'}`}
+          fallbackSrc={fallbackImage}
+          className="h-full w-full transition-transform duration-500 group-hover:scale-105"
+          imageClassName="h-full w-full"
         />
         <FavoriteButton
           adId={listing.id}
@@ -684,7 +740,7 @@ function ListingCard({
         </div>
         <div className="flex items-center gap-1 text-sm text-gray-500">
           <MapPin size={16} className="text-gray-400" />
-          <span>{listing.area || listing.city || '-'}</span>
+          <span>{getListingLocationLabel(listing.city, listing.wilayah, listing.area, locale) || '-'}</span>
         </div>
       </div>
     </Link>

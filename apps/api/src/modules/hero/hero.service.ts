@@ -1,4 +1,5 @@
 import { ApiError } from '../../shared/utils/api-error';
+import { resolveMediaUrl } from '../../shared/utils/media-reference';
 import { buildHeroSlideUpdateData, mapSlideForAdmin } from './hero-slide.mapper';
 import { HeroRepository } from './hero.repository';
 import type {
@@ -7,7 +8,10 @@ import type {
   ListAdminHeroSlidesQuery,
   ListHeroSlidesQuery,
   UpdateHeroBannerInput,
-  UpdateHeroSlideInput
+  UpdateHeaderNavButtonInput,
+  UpdateHeroSlideInput,
+  CreateHeaderNavButtonInput,
+  ListHeaderNavButtonsQuery
 } from './hero.validation';
 
 const heroRepository = new HeroRepository();
@@ -19,7 +23,7 @@ const mapSlideForLocale = (
   id: slide.id,
   sortOrder: slide.sortOrder,
   platform: slide.platform,
-  imageUrl: slide.imageUrl,
+  imageUrl: resolveMediaUrl(slide.imageUrl),
   title: locale === 'en' ? slide.titleEn : slide.titleAr,
   subtitle: locale === 'en' ? slide.subtitleEn : slide.subtitleAr,
   buttonLabel: locale === 'en' ? slide.buttonLabelEn : slide.buttonLabelAr,
@@ -32,7 +36,7 @@ const mapBannerForLocale = (
 ) => ({
   id: banner.id,
   sortOrder: banner.sortOrder,
-  imageUrl: banner.imageUrl,
+  imageUrl: resolveMediaUrl(banner.imageUrl),
   text: locale === 'en' ? banner.textEn : banner.textAr,
   linkUrl: banner.linkUrl
 });
@@ -125,6 +129,48 @@ export class HeroService {
   async deleteBanner(id: string) {
     await this.getBannerById(id);
     return heroRepository.deleteBanner(id);
+  }
+
+  async listHeaderButtonsPublic(query: ListHeaderNavButtonsQuery = {}) {
+    const locale = query.locale === 'en' ? 'en' : 'ar';
+    const buttons = await heroRepository.listActiveHeaderButtons();
+    return buttons.map((button) => ({
+      id: button.id,
+      sortOrder: button.sortOrder,
+      label: locale === 'en' ? button.labelEn : button.labelAr,
+      linkUrl: button.linkUrl
+    }));
+  }
+
+  async listHeaderButtonsForAdmin() {
+    return heroRepository.listAllHeaderButtons();
+  }
+
+  async getHeaderButtonById(id: string) {
+    const button = await heroRepository.findHeaderButtonById(id);
+    if (!button) throw new ApiError(404, 'Header button not found');
+    return button;
+  }
+
+  async createHeaderButton(input: CreateHeaderNavButtonInput) {
+    const sortOrder = input.sortOrder ?? (await heroRepository.getNextHeaderButtonSortOrder());
+    return heroRepository.createHeaderButton({
+      sortOrder,
+      labelAr: input.labelAr,
+      labelEn: input.labelEn,
+      linkUrl: input.linkUrl,
+      isActive: input.isActive ?? true
+    });
+  }
+
+  async updateHeaderButton(id: string, input: UpdateHeaderNavButtonInput) {
+    await this.getHeaderButtonById(id);
+    return heroRepository.updateHeaderButton(id, input);
+  }
+
+  async deleteHeaderButton(id: string) {
+    await this.getHeaderButtonById(id);
+    return heroRepository.deleteHeaderButton(id);
   }
 }
 

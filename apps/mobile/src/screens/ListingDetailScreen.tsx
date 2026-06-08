@@ -19,6 +19,7 @@ import { ListingCoverImage } from '../components/ListingCoverImage';
 import { ListingImageModal } from '../components/ListingImageModal';
 import { ListingDetailSkeleton } from '../components/skeleton';
 import { fallbackListings, formatListingDate, formatPrice, getCategoryName } from '../data';
+import { getListingLocationLabel } from '../lib/oman-locations';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
 import {
@@ -262,7 +263,7 @@ export function ListingDetailScreen({
   }
 
   const selectedImage = imageUrls[activeImage] ?? imageUrls[0];
-  const location = listing.area || listing.city || '-';
+  const location = getListingLocationLabel(listing.city, listing.wilayah, listing.area, locale) || '-';
 
   return (
     <View style={styles.root}>

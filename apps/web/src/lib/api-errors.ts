@@ -52,6 +52,7 @@ function mapZodIssueToMessageKey(issue: ZodIssue): string {
   }
   if (field === 'categoryId') return 'fieldCategoryRequired';
   if (field === 'city') return 'fieldCityRequired';
+  if (field === 'wilayah') return 'fieldWilayahRequired';
   if (field === 'price') return 'fieldPriceInvalid';
 
   return 'VALIDATION_FAILED';

@@ -11,7 +11,7 @@ import { api } from '@/lib/api';
 import { resolveApiErrorMessage } from '@/lib/api-errors';
 import { buildCategoryTree } from '@/lib/category-tree';
 import { useI18n } from '@/lib/i18n';
-import { omanCities } from '@/lib/oman-cities';
+import { getWilayahsForGovernorate, omanGovernorates } from '@/lib/oman-locations';
 import { getUserAccessToken } from '@/lib/user-auth';
 
 type RootCategory = {
@@ -53,12 +53,19 @@ const labels = {
     selectCategory: 'اختر الفئة الرئيسية',
     storeType: 'نوع المتجر *',
     selectStoreType: 'اختر نوع المتجر',
-    city: 'المحافظة / المنطقة *',
+    city: 'المحافظة *',
     selectCity: 'اختر المحافظة',
+    wilayah: 'الولاية / المنطقة *',
+    selectWilayah: 'اختر الولاية',
     phone: 'رقم التواصل *',
     nationalId: 'رقم الهوية / جواز السفر *',
     nationalIdHint: 'البطاقة الشخصية العمانية أو جواز السفر',
     crNumber: 'رقم السجل التجاري *',
+    storeClassification: 'تصنيف المتجر *',
+    commercialStore: 'متجر تجاري رسمي',
+    commercialStoreHint: 'يتطلب إدخال رقم السجل التجاري',
+    homeBusiness: 'أعمال منزلية',
+    homeBusinessHint: 'يكفي إدخال رقم الهوية أو جواز السفر',
     plan: 'خطة الاشتراك *',
     storeDetails: 'بيانات المتجر',
     billingMonthly: 'شهري',
@@ -80,7 +87,8 @@ const labels = {
     trialBadge: 'تجربة مجانية',
     trialDays: 'يوم تجريبي',
     selectPlan: 'اختيار الخطة',
-    alreadyHasStore: 'لديك متجر مرتبط بحسابك بالفعل.'
+    alreadyHasStore: 'لديك متجر مرتبط بحسابك بالفعل.',
+    vatShort: 'ضريبة القيمة المضافة'
   },
   en: {
     title: 'Create a store',
@@ -93,12 +101,19 @@ const labels = {
     selectCategory: 'Select main category',
     storeType: 'Store type *',
     selectStoreType: 'Select store type',
-    city: 'Governorate / region *',
+    city: 'Governorate *',
     selectCity: 'Select governorate',
+    wilayah: 'Wilayah *',
+    selectWilayah: 'Select wilayah',
     phone: 'Contact phone *',
     nationalId: 'National ID / Passport *',
     nationalIdHint: 'Omani civil ID or passport number',
     crNumber: 'Commercial registration number *',
+    storeClassification: 'Store classification *',
+    commercialStore: 'Official commercial store',
+    commercialStoreHint: 'Requires a commercial registration number',
+    homeBusiness: 'Home business',
+    homeBusinessHint: 'National ID or passport is enough',
     plan: 'Subscription plan *',
     storeDetails: 'Store details',
     billingMonthly: 'Monthly',
@@ -120,7 +135,8 @@ const labels = {
     trialBadge: 'Free trial',
     trialDays: 'trial days',
     selectPlan: 'Select plan',
-    alreadyHasStore: 'You already have a store linked to your account.'
+    alreadyHasStore: 'You already have a store linked to your account.',
+    vatShort: 'VAT'
   }
 } as const;
 
@@ -135,6 +151,7 @@ export function CreateStorePage() {
   const [rootCategoryId, setRootCategoryId] = useState('');
   const [storeTypeId, setStoreTypeId] = useState('');
   const [city, setCity] = useState('');
+  const [wilayah, setWilayah] = useState('');
   const [planId, setPlanId] = useState('');
   const [billingPeriod, setBillingPeriod] = useState<'MONTHLY' | 'YEARLY'>('MONTHLY');
   const [nameAr, setNameAr] = useState('');
@@ -142,6 +159,7 @@ export function CreateStorePage() {
   const [bioAr, setBioAr] = useState('');
   const [bioEn, setBioEn] = useState('');
   const [phone, setPhone] = useState('');
+  const [businessType, setBusinessType] = useState<'COMMERCIAL' | 'HOME' | ''>('');
   const [nationalId, setNationalId] = useState('');
   const [commercialRegistrationNumber, setCommercialRegistrationNumber] = useState('');
   const [error, setError] = useState('');
@@ -151,6 +169,8 @@ export function CreateStorePage() {
   const [hasExistingStore, setHasExistingStore] = useState(false);
 
   const rootCategories = useMemo(() => buildCategoryTree(categories), [categories]);
+
+  const wilayahOptions = useMemo(() => (city ? getWilayahsForGovernorate(city) : []), [city]);
 
   const selectedPlan = plans.find((plan) => plan.id === planId);
   const selectedPricing = selectedPlan?.pricing.find((row) => row.billingPeriod === billingPeriod);
@@ -210,7 +230,8 @@ export function CreateStorePage() {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!planId || !rootCategoryId || !storeTypeId || !city) return;
+    if (!planId || !rootCategoryId || !storeTypeId || !city || !wilayah || !businessType) return;
+    if (businessType === 'COMMERCIAL' && !commercialRegistrationNumber.trim()) return;
 
     setError('');
     setIsSubmitting(true);
@@ -225,10 +246,14 @@ export function CreateStorePage() {
           bioEn: bioEn.trim(),
           phone: phone.trim(),
           nationalId: nationalId.trim(),
-          commercialRegistrationNumber: commercialRegistrationNumber.trim(),
+          businessType,
+          ...(businessType === 'COMMERCIAL'
+            ? { commercialRegistrationNumber: commercialRegistrationNumber.trim() }
+            : {}),
           rootCategoryId,
           storeTypeId,
           city,
+          wilayah,
           planId,
           billingPeriod
         },
@@ -241,7 +266,7 @@ export function CreateStorePage() {
         return;
       }
 
-      router.push(localizedPath('/stores/create/success'));
+      router.push(localizedPath('/my-store'));
     } catch (submitError) {
       setError(
         resolveApiErrorMessage(
@@ -319,11 +344,37 @@ export function CreateStorePage() {
 
               <label className="block">
                 <span className="mb-1 block text-sm font-bold">{text.city}</span>
-                <select className={inputClass} value={city} onChange={(e) => setCity(e.target.value)} required>
+                <select
+                  className={inputClass}
+                  value={city}
+                  onChange={(e) => {
+                    setCity(e.target.value);
+                    setWilayah('');
+                  }}
+                  required
+                >
                   <option value="">{text.selectCity}</option>
-                  {omanCities.map((cityOption) => (
-                    <option key={cityOption.value} value={cityOption.value}>
-                      {locale === 'en' ? cityOption.en : cityOption.ar}
+                  {omanGovernorates.map((governorate) => (
+                    <option key={governorate.value} value={governorate.value}>
+                      {locale === 'en' ? governorate.en : governorate.ar}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-sm font-bold">{text.wilayah}</span>
+                <select
+                  className={inputClass}
+                  value={wilayah}
+                  onChange={(e) => setWilayah(e.target.value)}
+                  required
+                  disabled={!city}
+                >
+                  <option value="">{text.selectWilayah}</option>
+                  {wilayahOptions.map((wilayahOption) => (
+                    <option key={wilayahOption.value} value={wilayahOption.value}>
+                      {locale === 'en' ? wilayahOption.en : wilayahOption.ar}
                     </option>
                   ))}
                 </select>
@@ -353,7 +404,8 @@ export function CreateStorePage() {
                           maxListings: text.maxListings,
                           trialBadge: text.trialBadge,
                           trialDays: text.trialDays,
-                          selectPlan: text.selectPlan
+                          selectPlan: text.selectPlan,
+                          vatShort: text.vatShort
                         }}
                         onSelectPlan={setPlanId}
                         onSelectBilling={(id, period) => {
@@ -392,6 +444,41 @@ export function CreateStorePage() {
                 </label>
               </div>
 
+              <div>
+                <span className="mb-3 block text-sm font-bold">{text.storeClassification}</span>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBusinessType('COMMERCIAL');
+                    }}
+                    className={`rounded-xl border-2 p-4 text-start transition ${
+                      businessType === 'COMMERCIAL'
+                        ? 'border-green-600 bg-green-50 ring-2 ring-green-100'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
+                    }`}
+                  >
+                    <span className="block font-bold text-gray-900">{text.commercialStore}</span>
+                    <span className="mt-1 block text-xs text-gray-500">{text.commercialStoreHint}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBusinessType('HOME');
+                      setCommercialRegistrationNumber('');
+                    }}
+                    className={`rounded-xl border-2 p-4 text-start transition ${
+                      businessType === 'HOME'
+                        ? 'border-green-600 bg-green-50 ring-2 ring-green-100'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
+                    }`}
+                  >
+                    <span className="block font-bold text-gray-900">{text.homeBusiness}</span>
+                    <span className="mt-1 block text-xs text-gray-500">{text.homeBusinessHint}</span>
+                  </button>
+                </div>
+              </div>
+
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="block">
                   <span className="mb-1 block text-sm font-bold">{text.phone}</span>
@@ -404,14 +491,33 @@ export function CreateStorePage() {
                 </label>
               </div>
 
-              <label className="block">
-                <span className="mb-1 block text-sm font-bold">{text.crNumber}</span>
-                <input dir="ltr" className={inputClass} value={commercialRegistrationNumber} onChange={(e) => setCommercialRegistrationNumber(e.target.value)} required />
-              </label>
+              {businessType === 'COMMERCIAL' ? (
+                <label className="block">
+                  <span className="mb-1 block text-sm font-bold">{text.crNumber}</span>
+                  <input
+                    dir="ltr"
+                    className={inputClass}
+                    value={commercialRegistrationNumber}
+                    onChange={(e) => setCommercialRegistrationNumber(e.target.value)}
+                    required
+                  />
+                </label>
+              ) : null}
 
               <button
                 type="submit"
-                disabled={isSubmitting || !planId || !rootCategoryId || !storeTypeId || !city || plans.length === 0 || isLoadingPlans}
+                disabled={
+                  isSubmitting ||
+                  !planId ||
+                  !rootCategoryId ||
+                  !storeTypeId ||
+                  !city ||
+                  !wilayah ||
+                  !businessType ||
+                  (businessType === 'COMMERCIAL' && !commercialRegistrationNumber.trim()) ||
+                  plans.length === 0 ||
+                  isLoadingPlans
+                }
                 className="w-full rounded-lg bg-green-600 px-6 py-3 font-bold text-white transition hover:bg-green-700 disabled:opacity-60"
               >
                 {isSubmitting ? text.submitting : isTrialEligible ? text.submitTrial : isFreePlan ? text.submitFree : text.submit}

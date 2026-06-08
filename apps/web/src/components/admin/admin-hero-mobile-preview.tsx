@@ -1,6 +1,7 @@
 'use client';
 
 import { useI18n } from '@/lib/i18n';
+import { resolveMediaUrl } from '@/lib/media-url';
 
 type AdminHeroMobilePreviewProps = {
   imageUrl: string;
@@ -35,7 +36,7 @@ export function AdminHeroMobilePreview({
         <div className="overflow-hidden rounded-2xl bg-slate-100">
           <div className="relative min-h-[200px] overflow-hidden rounded-2xl shadow-md">
             {imageUrl ? (
-              <img src={imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+              <img src={resolveMediaUrl(imageUrl)} alt="" className="absolute inset-0 h-full w-full object-cover" />
             ) : (
               <div className="absolute inset-0 bg-gradient-to-br from-brand-600 to-brand-800" />
             )}

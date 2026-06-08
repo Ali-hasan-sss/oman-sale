@@ -52,6 +52,34 @@ export class HeroController {
   async deleteBanner(req: Request, res: Response) {
     res.json({ data: await heroService.deleteBanner(getRequiredParam(req, 'id')) });
   }
+
+  async listHeaderButtonsPublic(req: Request, res: Response) {
+    res.json({
+      data: await heroService.listHeaderButtonsPublic(
+        req.query as unknown as import('./hero.validation').ListHeaderNavButtonsQuery
+      )
+    });
+  }
+
+  async listHeaderButtonsForAdmin(_req: Request, res: Response) {
+    res.json({ data: await heroService.listHeaderButtonsForAdmin() });
+  }
+
+  async getHeaderButtonById(req: Request, res: Response) {
+    res.json({ data: await heroService.getHeaderButtonById(getRequiredParam(req, 'id')) });
+  }
+
+  async createHeaderButton(req: Request, res: Response) {
+    res.status(201).json({ data: await heroService.createHeaderButton(req.body) });
+  }
+
+  async updateHeaderButton(req: Request, res: Response) {
+    res.json({ data: await heroService.updateHeaderButton(getRequiredParam(req, 'id'), req.body) });
+  }
+
+  async deleteHeaderButton(req: Request, res: Response) {
+    res.json({ data: await heroService.deleteHeaderButton(getRequiredParam(req, 'id')) });
+  }
 }
 
 export const heroController = new HeroController();

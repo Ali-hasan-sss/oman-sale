@@ -59,6 +59,7 @@ type ListingsState = {
     type: string;
     price: number;
     city: string;
+    wilayah: string;
     categoryId: string;
     imageUrls: string[];
     storeId?: string;

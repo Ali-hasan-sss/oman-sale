@@ -6,6 +6,9 @@ import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
 
 import { adminApi } from '@/lib/admin-auth';
 import { useI18n } from '@/lib/i18n';
+import { getListingLocationLabel, getWilayahsForGovernorate, omanGovernorates } from '@/lib/oman-locations';
+import { getListingCoverMedia, getListingGalleryMedia, getListingThumbnailMedia, isListingVideo } from '@/lib/listing-media';
+import { resolveMediaUrl } from '@/lib/media-url';
 
 type AdStatus = 'DRAFT' | 'PENDING' | 'ACTIVE' | 'REJECTED' | 'EXPIRED' | 'ARCHIVED';
 type AdType = 'PRODUCT' | 'SERVICE' | 'JOB' | 'JOB_REQUEST' | 'LOGISTICS' | 'CONSTRUCTION';
@@ -26,6 +29,7 @@ type AdminAd = {
   price?: string | number | null;
   currency: string;
   city?: string | null;
+  wilayah?: string | null;
   area?: string | null;
   contactPhone?: string | null;
   status: AdStatus;
@@ -37,7 +41,7 @@ type AdminAd = {
   deletedAt?: string | null;
   user?: { fullName: string; email: string; phone?: string | null } | null;
   category?: Category | null;
-  images?: Array<{ imageUrl: string }>;
+  images?: Array<{ imageUrl: string; mediaType?: string }>;
   promotion?: {
     startsAt?: string;
     endsAt?: string;
@@ -66,6 +70,7 @@ type FormState = {
   type: AdType;
   price: string;
   city: string;
+  wilayah: string;
   area: string;
   contactPhone: string;
   status: AdStatus;
@@ -74,7 +79,6 @@ type FormState = {
 };
 
 const statuses: AdStatus[] = ['DRAFT', 'PENDING', 'ACTIVE', 'REJECTED', 'EXPIRED', 'ARCHIVED'];
-const cities = ['مسقط', 'صلالة', 'صحار', 'نزوى', 'صور', 'البريمي', 'الرستاق', 'السيب', 'الخوير', 'القرم'];
 const inputClass = 'w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500';
 
 const initialForm: FormState = {
@@ -84,6 +88,7 @@ const initialForm: FormState = {
   type: 'PRODUCT',
   price: '',
   city: 'مسقط',
+  wilayah: 'مسقط',
   area: '',
   contactPhone: '',
   status: 'ACTIVE',
@@ -275,6 +280,7 @@ export function AdminAdsManagement() {
       type: ad.type,
       price: ad.price?.toString() ?? '',
       city: ad.city ?? 'مسقط',
+      wilayah: ad.wilayah ?? '',
       area: ad.area ?? '',
       contactPhone: ad.contactPhone ?? '',
       status: ad.status,
@@ -298,6 +304,7 @@ export function AdminAdsManagement() {
       price: form.price ? Number(form.price) : undefined,
       currency: 'OMR',
       city: form.city,
+      wilayah: form.wilayah,
       area: form.area || undefined,
       contactPhone: form.contactPhone || undefined,
       status: form.status,
@@ -404,12 +411,34 @@ export function AdminAdsManagement() {
               </select>
             </Field>
             <Field label="Price"><input className={inputClass} value={form.price} type="number" onChange={(event) => setForm({ ...form, price: event.target.value })} /></Field>
-            <Field label="City">
-              <select className={inputClass} value={form.city} onChange={(event) => setForm({ ...form, city: event.target.value })}>
-                {cities.map((city) => <option key={city} value={city}>{city}</option>)}
+            <Field label="Governorate">
+              <select
+                className={inputClass}
+                value={form.city}
+                onChange={(event) => setForm({ ...form, city: event.target.value, wilayah: '' })}
+              >
+                {omanGovernorates.map((governorate) => (
+                  <option key={governorate.value} value={governorate.value}>
+                    {locale === 'en' ? governorate.en : governorate.ar}
+                  </option>
+                ))}
               </select>
             </Field>
-            <Field label="Area"><input className={inputClass} value={form.area} onChange={(event) => setForm({ ...form, area: event.target.value })} /></Field>
+            <Field label="Wilayah">
+              <select
+                className={inputClass}
+                value={form.wilayah}
+                onChange={(event) => setForm({ ...form, wilayah: event.target.value })}
+                disabled={!form.city}
+              >
+                <option value="">Select wilayah</option>
+                {getWilayahsForGovernorate(form.city).map((wilayahOption) => (
+                  <option key={wilayahOption.value} value={wilayahOption.value}>
+                    {locale === 'en' ? wilayahOption.en : wilayahOption.ar}
+                  </option>
+                ))}
+              </select>
+            </Field>
             <Field label="Phone"><input className={inputClass} value={form.contactPhone} onChange={(event) => setForm({ ...form, contactPhone: event.target.value })} /></Field>
             <label className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-3 font-bold text-slate-700">
               <input type="checkbox" checked={form.isApproved} onChange={(event) => setForm({ ...form, isApproved: event.target.checked })} />
@@ -454,7 +483,7 @@ export function AdminAdsManagement() {
                   <tr key={ad.id} className={ad.deletedAt ? 'bg-red-50/40' : undefined}>
                     <td className="px-3 py-2">
                       <div className="flex min-w-0 items-center gap-2">
-                        <img src={ad.images?.[0]?.imageUrl ?? '/logo.png'} alt={ad.title} className="h-9 w-11 shrink-0 rounded-lg object-cover" />
+                        <AdminAdMediaThumb images={ad.images} alt={ad.title} />
                         <div className="min-w-0">
                           <p className="truncate font-bold text-slate-900">{ad.title}</p>
                           <p className="truncate text-[10px] text-slate-500">{categoryName(ad.category)} · {formatPrice(ad.price, ad.currency)}</p>
@@ -498,7 +527,7 @@ export function AdminAdsManagement() {
               <h2 className="text-xl font-black">{text.details}</h2>
               <button onClick={() => setViewingAd(null)} className="rounded-full p-2 transition hover:bg-slate-100"><X size={18} /></button>
             </div>
-            <img src={viewingAd.images?.[0]?.imageUrl ?? '/logo.png'} alt={viewingAd.title} className="mb-4 h-72 w-full rounded-2xl object-cover" />
+            <AdminAdMediaPreview images={viewingAd.images} alt={viewingAd.title} className="mb-4 h-72 w-full rounded-2xl object-cover" />
             <h3 className="text-2xl font-black">{viewingAd.title}</h3>
             <p className="mt-2 font-bold text-brand-600">{formatPrice(viewingAd.price, viewingAd.currency)}</p>
             <p className="mt-4 whitespace-pre-line text-slate-700">{viewingAd.description}</p>
@@ -512,7 +541,10 @@ export function AdminAdsManagement() {
               <DetailItem label={text.sold} value={viewingAd.isSold ? text.sold : '-'} />
               <DetailItem label={text.deleted} value={viewingAd.deletedAt ? text.deleted : '-'} />
               <DetailItem label={text.views} value={viewingAd.views.toLocaleString(locale === 'ar' ? 'ar-OM' : 'en-US')} />
-              <DetailItem label={text.location} value={[viewingAd.city, viewingAd.area].filter(Boolean).join(' - ') || '-'} />
+              <DetailItem
+                label={text.location}
+                value={getListingLocationLabel(viewingAd.city, viewingAd.wilayah, viewingAd.area, locale) || '-'}
+              />
               <DetailItem label={text.phone} value={viewingAd.contactPhone || viewingAd.user?.phone || '-'} />
               <DetailItem label={text.promotionScore} value={`${promotionName(viewingAd)} · ${promotionScore(viewingAd).toLocaleString(locale === 'ar' ? 'ar-OM' : 'en-US')}`} />
               <DetailItem label={text.createdAt} value={new Intl.DateTimeFormat(locale === 'ar' ? 'ar-OM' : 'en-US').format(new Date(viewingAd.createdAt))} />
@@ -522,8 +554,13 @@ export function AdminAdsManagement() {
               <div className="mt-6">
                 <p className="mb-2 text-sm font-bold text-slate-700">{text.images}</p>
                 <div className="grid grid-cols-3 gap-2 md:grid-cols-5">
-                  {viewingAd.images.map((image) => (
-                    <img key={image.imageUrl} src={image.imageUrl} alt={viewingAd.title} className="h-20 rounded-xl object-cover" />
+                  {getListingGalleryMedia(viewingAd.images).map((image) => (
+                    <AdminAdMediaPreview
+                      key={image.imageUrl}
+                      images={[image]}
+                      alt={viewingAd.title}
+                      className="h-20 w-full rounded-xl object-cover"
+                    />
                   ))}
                 </div>
               </div>
@@ -587,6 +624,48 @@ export function AdminAdsManagement() {
       ) : null}
     </div>
   );
+}
+
+const fallbackAdImage = '/logo.png';
+
+function AdminAdMediaThumb({
+  images,
+  alt
+}: {
+  images?: Array<{ imageUrl: string; mediaType?: string }>;
+  alt: string;
+}) {
+  const thumb = getListingThumbnailMedia(images);
+  const src = thumb?.imageUrl ? resolveMediaUrl(thumb.imageUrl) : '';
+
+  if (!thumb || isListingVideo(thumb) || !src || src.startsWith('media:')) {
+    return <img src={fallbackAdImage} alt={alt} className="h-9 w-11 shrink-0 rounded-lg object-contain p-1" />;
+  }
+
+  return <img src={src} alt={alt} className="h-9 w-11 shrink-0 rounded-lg object-cover" />;
+}
+
+function AdminAdMediaPreview({
+  images,
+  alt,
+  className
+}: {
+  images?: Array<{ imageUrl: string; mediaType?: string }>;
+  alt: string;
+  className?: string;
+}) {
+  const cover = getListingCoverMedia(images);
+  const src = cover?.imageUrl ? resolveMediaUrl(cover.imageUrl) : '';
+
+  if (!src || src.startsWith('media:')) {
+    return <img src={fallbackAdImage} alt={alt} className={`object-contain p-8 ${className ?? ''}`} />;
+  }
+
+  if (isListingVideo(cover)) {
+    return <video src={src} controls playsInline preload="metadata" className={className} />;
+  }
+
+  return <img src={src} alt={alt} className={className} />;
 }
 
 function Field({ children, label }: { children: ReactNode; label: string }) {
