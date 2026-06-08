@@ -73,11 +73,10 @@ export class LocalMediaStorage implements MediaStorage {
     await fs.writeFile(diskPath, input.buffer);
 
     const reference = toMediaReference(objectKey);
-    const base = env.MEDIA_PUBLIC_BASE_URL?.replace(/\/$/, '') ?? `${env.API_URL.replace(/\/$/, '')}/uploads`;
 
     return {
       key: reference,
-      url: `${base}/${objectKey}`,
+      url: resolveMediaUrl(reference),
       provider: 'local'
     };
   }

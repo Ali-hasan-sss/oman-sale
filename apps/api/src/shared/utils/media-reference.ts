@@ -98,7 +98,7 @@ export function getPublicMediaBaseUrl(): string | null {
   }
 
   if (env.MEDIA_PROVIDER === 'local') {
-    return `${env.API_URL.replace(/\/$/, '')}/uploads`;
+    return getMediaFilesProxyBaseUrl();
   }
 
   return null;
@@ -108,11 +108,21 @@ export function resolveMediaUrl(value: string | null | undefined): string {
   if (!value) return '';
 
   if (!isMediaReference(value)) {
-    return value;
+    return rewriteLegacyUploadsUrl(value);
   }
 
   const base = getPublicMediaBaseUrl();
   if (!base) return value;
 
   return `${base}/${getMediaKey(value)}`;
+}
+
+function rewriteLegacyUploadsUrl(value: string): string {
+  const uploadsMatch = value.match(/\/uploads\/(.+)$/);
+  if (!uploadsMatch) return value;
+
+  const objectKey = uploadsMatch[1];
+  if (!objectKey || objectKey.includes('..')) return value;
+
+  return `${getMediaFilesProxyBaseUrl()}/${objectKey}`;
 }

@@ -20,7 +20,7 @@ export function resolveMediaUrl(value: string | null | undefined): string {
   if (!value) return '';
 
   if (!isMediaReference(value)) {
-    return value;
+    return rewriteLegacyUploadsUrl(value);
   }
 
   const cachedPreview = previewUrlByReference.get(value);
@@ -34,4 +34,17 @@ export function resolveMediaUrl(value: string | null | undefined): string {
   }
 
   return `${base}/${key}`;
+}
+
+function rewriteLegacyUploadsUrl(value: string): string {
+  try {
+    const url = new URL(value, typeof window !== 'undefined' ? window.location.origin : undefined);
+    const uploadsMatch = url.pathname.match(/^\/uploads\/(.+)$/);
+    if (!uploadsMatch) return value;
+
+    const apiBase = typeof window !== 'undefined' ? '/api/v1' : process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') ?? '/api/v1';
+    return `${apiBase}/media/files/${uploadsMatch[1]}`;
+  } catch {
+    return value;
+  }
 }

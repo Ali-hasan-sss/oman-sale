@@ -132,6 +132,35 @@ curl https://api.omansale.om/api/v1/health
 {"status":"ok","service":"oman-sale-api"}
 ```
 
+### 7) الصور والملفات (Media)
+
+الواجهة تطلب الصور عبر **`/api/v1/media/files/...`** (يمر عبر Nginx → API). لا تضبط `MEDIA_PUBLIC_BASE_URL` على `https://omansale.om/uploads` — هذا المسار كان يُوجَّه إلى Next.js ويعطي 404.
+
+**موصى به للإنتاج (S3):**
+
+```env
+MEDIA_PROVIDER=s3
+AWS_REGION=us-east-1
+AWS_S3_BUCKET=oman-sale-storage
+AWS_S3_PREFIX=oman-sale
+MEDIA_S3_ACCESS=private
+API_URL=https://api.omansale.om
+```
+
+لا حاجة لـ `MEDIA_PUBLIC_BASE_URL` عند `MEDIA_S3_ACCESS=private`.
+
+**إذا استخدمت تخزيناً محلياً (`MEDIA_PROVIDER=local`):**
+
+- الملفات في `apps/api/uploads/` على السيرفر
+- Nginx يوجّه `/uploads/` و `/api/` إلى API (انظر `infra/nginx/omansale.om`)
+- بعد تحديث Nginx: `sudo cp infra/nginx/omansale.om /etc/nginx/sites-available/omansale.om && sudo nginx -t && sudo systemctl reload nginx`
+
+**فحص صورة:**
+
+```bash
+curl -I "https://omansale.om/api/v1/media/files/oman-sale/banners/2026/YOUR-FILE.png"
+```
+
 ---
 
 ## الوصول القديم عبر IP:3601 (اختياري)
