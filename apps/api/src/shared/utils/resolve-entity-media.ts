@@ -37,3 +37,18 @@ export function resolveUserMedia<T>(user: T): T {
     avatar: record.avatar ? resolveMediaUrl(record.avatar) : record.avatar
   };
 }
+
+function normalizeGalleryImages(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === 'string' && item.length > 0);
+}
+
+export function resolveTourismDestinationMedia<T>(destination: T): T {
+  const record = destination as T & { imageUrl: string; galleryImages?: unknown };
+
+  return {
+    ...destination,
+    imageUrl: resolveMediaUrl(record.imageUrl),
+    galleryImages: normalizeGalleryImages(record.galleryImages).map(resolveMediaUrl)
+  };
+}

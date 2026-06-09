@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { HeaderAuthAction } from '@/components/auth/user-menu';
 import { ChatNavLink } from '@/components/chat/chat-nav-link';
 import { HeaderCustomNavButtons } from '@/components/navigation/header-custom-nav-buttons';
+import { SiteBrandMark } from '@/components/navigation/site-brand-mark';
 import { StoreNavLink } from '@/components/navigation/store-nav-link';
 import { useI18n } from '@/lib/i18n';
 
@@ -44,7 +45,7 @@ export function MobileNavMenu({ variant = 'light' }: MobileNavMenuProps) {
             <div className="mb-6 flex items-center justify-between">
               <Link href={localizedPath('/')} onClick={() => setIsOpen(false)} className="flex items-center gap-3">
                 <img src="/logo.png" alt="Oman Sale" className="h-12 w-auto" />
-                <span className="font-black text-gray-900">Oman Sale</span>
+                <SiteBrandMark variant="light" />
               </Link>
               <button className="rounded-xl p-2 transition hover:bg-gray-100" onClick={() => setIsOpen(false)} type="button">
                 <X size={22} />

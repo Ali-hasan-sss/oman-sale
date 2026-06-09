@@ -1,20 +1,22 @@
 'use client';
 
-import { ArrowRight, Calendar, Mail, MapPin, Phone, Star } from 'lucide-react';
+import { ArrowRight, Calendar, Images, Mail, MapPin, Star } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
+import { ListingMediaGalleryModal } from '@/components/listings/listing-media-gallery-modal';
 import { tourismDestinationDetails, tourismDestinations } from '@/data/tourism';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { resolveMediaUrl } from '@/lib/media-url';
-import { siteContactEmail, siteContactPhone } from '@/lib/site-contact';
+import { siteContactEmail } from '@/lib/site-contact';
 
 type ApiTourismDestination = {
   id: string;
   slug: string;
   imageUrl: string;
+  galleryImages?: string[];
   titleAr: string;
   titleEn: string;
   rating: string;
@@ -33,9 +35,11 @@ type ApiTourismDestination = {
 };
 
 export function TourismDestinationDetailsPage({ destinationId }: { destinationId: string }) {
-  const { locale, localizedPath } = useI18n();
+  const { locale, dir, localizedPath } = useI18n();
   const [apiDestination, setApiDestination] = useState<ApiTourismDestination | null>(null);
   const [apiLoaded, setApiLoaded] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
   const staticDestination = tourismDestinations.find((item) => item.id === destinationId);
   const staticDetails = tourismDestinationDetails[destinationId];
 
@@ -59,6 +63,16 @@ export function TourismDestinationDetailsPage({ destinationId }: { destinationId
     };
   }, [destinationId]);
 
+  const galleryItems = useMemo(() => {
+    const sources = apiDestination
+      ? [apiDestination.imageUrl, ...(apiDestination.galleryImages ?? [])]
+      : staticDestination?.image
+        ? [staticDestination.image]
+        : [];
+    const unique = [...new Set(sources.map((item) => resolveMediaUrl(item)).filter(Boolean))];
+    return unique.map((imageUrl) => ({ imageUrl }));
+  }, [apiDestination, staticDestination]);
+
   if (!apiDestination && (!staticDestination || !staticDetails)) {
     if (!apiLoaded) {
       return <div className="min-h-screen bg-gray-50 py-20 text-center text-gray-500">Loading...</div>;
@@ -68,6 +82,7 @@ export function TourismDestinationDetailsPage({ destinationId }: { destinationId
 
   const title = apiDestination ? (locale === 'en' ? apiDestination.titleEn : apiDestination.titleAr) : staticDestination!.title[locale];
   const image = apiDestination ? resolveMediaUrl(apiDestination.imageUrl) : staticDestination!.image;
+  const hasGallery = galleryItems.length > 0;
   const rating = apiDestination?.rating ?? staticDetails!.rating;
   const ratingLabel = apiDestination ? (locale === 'en' ? apiDestination.ratingLabelEn : apiDestination.ratingLabelAr) : staticDetails!.ratingLabel[locale];
   const aboutTitle = locale === 'en' ? `About ${title}` : `عن ${title}`;
@@ -84,6 +99,14 @@ export function TourismDestinationDetailsPage({ destinationId }: { destinationId
   const bestTimeTitle = locale === 'en' ? 'Best time to visit' : 'أفضل وقت للزيارة';
   const contactTitle = locale === 'en' ? 'Contact information' : 'معلومات الاتصال';
   const quickLinksTitle = locale === 'en' ? 'Quick links' : 'روابط سريعة';
+  const galleryTitle = locale === 'en' ? 'Photo gallery' : 'معرض الصور';
+  const galleryHint = locale === 'en' ? 'Tap an image to view fullscreen' : 'اضغط على صورة للعرض بملء الشاشة';
+  const mediaLabel = locale === 'en' ? 'Photo' : 'صورة';
+
+  const openGallery = (index: number) => {
+    setActiveGalleryIndex(index);
+    setGalleryOpen(true);
+  };
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-8">
@@ -100,9 +123,16 @@ export function TourismDestinationDetailsPage({ destinationId }: { destinationId
       </div>
 
       <section className="relative mb-8 h-96 overflow-hidden rounded-2xl">
-        <img src={image} alt={title} className="h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-        <div className="absolute bottom-8 right-8">
+        <button
+          type="button"
+          onClick={() => hasGallery && openGallery(0)}
+          className={`h-full w-full ${hasGallery ? 'cursor-zoom-in' : 'cursor-default'}`}
+          aria-label={hasGallery ? galleryHint : undefined}
+        >
+          <img src={image} alt={title} className="h-full w-full object-cover" />
+        </button>
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+        <div className="pointer-events-none absolute bottom-8 right-8">
           <h1 className="mb-2 text-5xl font-bold text-white">{title}</h1>
           <div className="flex items-center gap-2 text-white">
             <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
@@ -110,10 +140,43 @@ export function TourismDestinationDetailsPage({ destinationId }: { destinationId
             <span className="text-sm">{ratingLabel}</span>
           </div>
         </div>
+        {galleryItems.length > 1 ? (
+          <button
+            type="button"
+            onClick={() => openGallery(0)}
+            className="absolute bottom-8 left-8 inline-flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-sm font-bold text-slate-900 shadow-lg transition hover:bg-white"
+          >
+            <Images size={18} />
+            {galleryItems.length} {locale === 'en' ? 'photos' : 'صورة'}
+          </button>
+        ) : null}
       </section>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="space-y-8 lg:col-span-2">
+          {galleryItems.length > 1 ? (
+            <ContentSection title={galleryTitle}>
+              <p className="mb-4 text-sm text-gray-500">{galleryHint}</p>
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                {galleryItems.map((item, index) => (
+                  <button
+                    key={`${item.imageUrl}-${index}`}
+                    type="button"
+                    onClick={() => openGallery(index)}
+                    className="group relative aspect-[4/3] overflow-hidden rounded-xl"
+                  >
+                    <img
+                      src={resolveMediaUrl(item.imageUrl)}
+                      alt=""
+                      className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                    />
+                    <span className="absolute inset-0 bg-black/0 transition group-hover:bg-black/10" />
+                  </button>
+                ))}
+              </div>
+            </ContentSection>
+          ) : null}
+
           <ContentSection title={aboutTitle}>
             <p className="text-gray-700 leading-relaxed">{about}</p>
           </ContentSection>
@@ -150,7 +213,6 @@ export function TourismDestinationDetailsPage({ destinationId }: { destinationId
           <div className="rounded-xl bg-white p-6 shadow-sm">
             <h3 className="mb-4 text-xl font-bold">{contactTitle}</h3>
             <div className="space-y-4">
-              <ContactRow icon={<Phone className="h-5 w-5 text-green-600" />} value={siteContactPhone} ltr />
               <ContactRow icon={<Mail className="h-5 w-5 text-green-600" />} value={siteContactEmail} ltr />
               <ContactRow icon={<MapPin className="mt-1 h-5 w-5 text-green-600" />} value={address} />
             </div>
@@ -172,6 +234,20 @@ export function TourismDestinationDetailsPage({ destinationId }: { destinationId
           </div>
         </aside>
       </div>
+
+      {galleryOpen && hasGallery ? (
+        <ListingMediaGalleryModal
+          items={galleryItems}
+          initialIndex={activeGalleryIndex}
+          title={title}
+          mediaLabel={mediaLabel}
+          dir={dir}
+          onClose={(finalIndex) => {
+            if (typeof finalIndex === 'number') setActiveGalleryIndex(finalIndex);
+            setGalleryOpen(false);
+          }}
+        />
+      ) : null}
     </main>
   );
 }

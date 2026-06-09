@@ -7,6 +7,7 @@ import { Suspense, type KeyboardEvent, type ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 
 import { MobileNavMenu } from '@/components/navigation/mobile-nav-menu';
+import { SiteBrandMark } from '@/components/navigation/site-brand-mark';
 import { UserSiteHeaderNav } from '@/components/navigation/user-site-header-nav';
 import {
   buildHeaderSearchUrl,
@@ -39,10 +40,13 @@ export function UserSiteHeader({ variant = 'default', sticky = true, children }:
                 <span className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-white/95 shadow-lg sm:h-16 sm:w-16">
                   <img src="/logo.png" alt="Oman Sale" className="h-full w-full object-contain p-1.5" />
                 </span>
-                <span className="hidden text-xl font-black text-white drop-shadow md:block md:text-2xl">Oman Sale</span>
+                <SiteBrandMark variant="hero" className="hidden md:flex" />
               </>
             ) : (
-              <img src="/logo.png" alt="Oman Sale" className="h-12 w-auto sm:h-14" />
+              <>
+                <img src="/logo.png" alt="Oman Sale" className="h-12 w-auto sm:h-14" />
+                <SiteBrandMark variant="light" className="hidden md:flex" />
+              </>
             )}
           </Link>
           <MobileNavMenu variant={variant === 'hero' ? 'hero' : 'light'} />

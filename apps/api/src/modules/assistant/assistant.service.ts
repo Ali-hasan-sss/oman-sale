@@ -6,11 +6,14 @@ import type { AssistantChatDto } from './assistant.validation';
 import type {
   AssistantChatResult,
   GetPlatformInfoToolArgs,
+  GetTourismInfoToolArgs,
   SearchListingsToolArgs,
   SearchStoresToolArgs
 } from './assistant.types';
 import { executeFeaturedListings, executeSearchListings, executeSearchStores } from './assistant.tools';
 import { executeGetPlatformInfo } from './assistant-platform';
+import { buildOffTopicRefusal, isClearlyOffTopic } from './assistant-scope';
+import { executeGetTourismInfo } from './assistant-tourism';
 import { formatAssistantReply } from './assistant-format';
 import { trimAssistantContext } from './assistant-limits';
 
@@ -93,6 +96,21 @@ const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
         required: ['topic']
       }
     }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_tourism_info',
+      description:
+        'Get tourism landmarks published on Oman Sale and details about them (about, highlights, activities, best time to visit, address). Use when the user asks about tourist places, landmarks, destinations in Oman, or a specific site landmark by name.',
+      parameters: {
+        type: 'object',
+        properties: {
+          slug: { type: 'string', description: 'Landmark slug if the user names a specific destination on the site' },
+          q: { type: 'string', description: 'Search keywords in Arabic or English (e.g. مسقط، وادي شاب، Nizwa)' }
+        }
+      }
+    }
   }
 ];
 
@@ -102,10 +120,20 @@ function buildSystemPrompt(locale: 'ar' | 'en', isAuthenticated: boolean) {
     ? 'The user IS signed in — suggest direct actions (create store, my listings, add listing).'
     : 'The user is NOT signed in — when they need an account, mention login/register; action buttons will be shown automatically.';
 
-  return `You are the Oman Sale marketplace assistant — a helpful guide for buying, selling, stores, listings, plans, and platform features in Oman.
+  return `You are the Oman Sale marketplace assistant — a helpful guide for buying, selling, stores, listings, plans, platform features, and tourism in Oman.
 Always reply in ${language} matching the user's locale (${locale}).
 Currency is OMR (Omani Rial). Users may say "ريال" or "OMR".
 ${authNote}
+
+SCOPE (strict — never break):
+- ONLY help with: Oman Sale platform features, listings/ads, stores, plans & pricing, payments, chat, favorites, banner ads, tourism landmarks on the site, and general travel/tourism in Oman when it helps visitors explore Oman.
+- REFUSE politely (do not use tools) for: translations, homework, science/math, coding, politics, entertainment gossip, or any topic unrelated to Oman Sale or Omani tourism/travel.
+- When refusing off-topic requests, briefly explain you are the Oman Sale assistant and offer to help with listings, stores, plans, or tourism in Oman.
+
+TOURISM:
+- Landmarks on Oman Sale or questions about specific places on the site → call get_tourism_info (use q with place keywords, or slug if known).
+- General Oman tourism (best time to visit, what to see in Muscat/Salalah, travel tips) → answer briefly using get_tourism_info when relevant, plus general Oman tourism knowledge. Mention the /tourism page on Oman Sale when useful.
+- Do not invent landmark details — use get_tourism_info data for site landmarks. For general Oman facts not in the tool, keep answers short and travel-focused.
 
 SEARCH:
 - Product/offer searches → search_listings (short keywords in q, not full sentences).
@@ -149,6 +177,26 @@ export class AssistantService {
     const actions: AssistantChatResult['actions'] = [];
     const lastUserMessage = [...dto.messages].reverse().find((message) => message.role === 'user')?.content ?? '';
 
+    if (isClearlyOffTopic(lastUserMessage)) {
+      return {
+        reply: formatAssistantReply(buildOffTopicRefusal(locale)),
+        listings: [],
+        stores: [],
+        actions: [
+          {
+            label: locale === 'ar' ? 'صفحة المعالم السياحية' : 'Tourism landmarks',
+            href: `/${locale}/tourism`,
+            variant: 'default'
+          },
+          {
+            label: locale === 'ar' ? 'جميع العروض' : 'All listings',
+            href: `/${locale}/all-listings`,
+            variant: 'default'
+          }
+        ]
+      };
+    }
+
     const conversation: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
       { role: 'system', content: buildSystemPrompt(locale, auth.isAuthenticated) },
       ...trimAssistantContext(dto.messages).map((message) => ({
@@ -176,7 +224,8 @@ export class AssistantService {
             const name = toolCall.function.name;
             const args = JSON.parse(toolCall.function.arguments || '{}') as SearchListingsToolArgs &
               SearchStoresToolArgs &
-              GetPlatformInfoToolArgs;
+              GetPlatformInfoToolArgs &
+              GetTourismInfoToolArgs;
 
             if (name === 'search_listings') {
               const { listings: found, isFallback, actions: searchActions } = await executeSearchListings(
@@ -227,6 +276,22 @@ export class AssistantService {
                     storeTypeName: item.storeTypeName,
                     listingsCount: item.listingsCount
                   }))
+                })
+              };
+            }
+
+            if (name === 'get_tourism_info') {
+              const tourism = await executeGetTourismInfo(args, auth);
+              listings.splice(0, listings.length);
+              stores.splice(0, stores.length);
+              actions.splice(0, actions.length, ...tourism.actions);
+              return {
+                role: 'tool' as const,
+                tool_call_id: toolCall.id,
+                content: JSON.stringify({
+                  summary: tourism.summary,
+                  count: tourism.count,
+                  destinations: tourism.destinations
                 })
               };
             }

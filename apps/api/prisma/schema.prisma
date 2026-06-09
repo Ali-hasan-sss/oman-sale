@@ -681,6 +681,7 @@ model TourismDestination {
   slug              String   @unique
   sortOrder         Int      @default(0)
   imageUrl          String
+  galleryImages     Json     @default("[]")
   titleAr           String
   titleEn           String
   rating            String   @default("4.9")

@@ -201,6 +201,7 @@ async function main() {
         slug,
         sortOrder: index,
         imageUrl,
+        galleryImages: [],
         titleAr,
         titleEn,
         rating: '4.9',

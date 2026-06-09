@@ -73,3 +73,8 @@ export type GetPlatformInfoToolArgs = {
   topic: PlatformInfoTopic;
   planName?: string;
 };
+
+export type GetTourismInfoToolArgs = {
+  slug?: string;
+  q?: string;
+};

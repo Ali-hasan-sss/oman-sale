@@ -1,12 +1,12 @@
 'use client';
 
-import { ArrowUp, Facebook, Instagram, Mail, MapPin, Phone, Twitter, Youtube } from 'lucide-react';
+import { ArrowUp, Facebook, Instagram, Mail, MapPin, Twitter, Youtube } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
-import { siteContactEmail, siteContactPhone } from '@/lib/site-contact';
+import { siteContactEmail } from '@/lib/site-contact';
 
 type FooterCategory = {
   id: string;
@@ -61,10 +61,6 @@ export function SiteFooter() {
               <div className="flex items-center gap-3">
                 <Mail size={16} className="text-brand-500" />
                 <span className="text-slate-300" dir="ltr">{siteContactEmail}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Phone size={16} className="text-brand-500" />
-                <span className="text-slate-300" dir="ltr">{siteContactPhone}</span>
               </div>
               <div className="flex items-center gap-3">
                 <MapPin size={16} className="text-brand-500" />

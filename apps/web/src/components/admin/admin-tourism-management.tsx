@@ -13,6 +13,7 @@ type TourismDestination = {
   slug: string;
   sortOrder: number;
   imageUrl: string;
+  galleryImages: string[];
   titleAr: string;
   titleEn: string;
   rating: string;
@@ -42,6 +43,7 @@ const emptyForm: TourismForm = {
   slug: '',
   sortOrder: 0,
   imageUrl: '',
+  galleryImages: [],
   titleAr: '',
   titleEn: '',
   rating: '4.9',
@@ -109,6 +111,7 @@ export function AdminTourismManagement() {
     setEditingId(item.id);
     setForm({
       ...item,
+      galleryImages: item.galleryImages ?? [],
       highlightsAr: join(item.highlightsAr),
       highlightsEn: join(item.highlightsEn),
       activitiesAr: join(item.activitiesAr),
@@ -187,6 +190,25 @@ export function AdminTourismManagement() {
                   }}
                 />
               </div>
+              <div className="md:col-span-2">
+                <label className="mb-2 block text-sm font-bold text-slate-700">{m.admin.tourismGalleryTitle}</label>
+                <ImageUploader
+                  folder="tourism"
+                  useAdminAuth
+                  multiple
+                  maxFiles={12}
+                  value={form.galleryImages}
+                  onChange={(galleryImages) => setForm({ ...form, galleryImages })}
+                  labels={{
+                    title: m.admin.tourismGalleryUploadTitle,
+                    hint: m.admin.tourismGalleryUploadHint,
+                    remove: m.admin.removeImage,
+                    uploading: m.admin.tourismImageUploading,
+                    compressing: m.admin.tourismImageCompressing,
+                    uploadError: m.admin.tourismImageUploadError
+                  }}
+                />
+              </div>
               <Input label={m.admin.nameAr} value={form.titleAr} onChange={(titleAr) => setForm({ ...form, titleAr })} />
               <Input label={m.admin.nameEn} value={form.titleEn} onChange={(titleEn) => setForm({ ...form, titleEn })} />
               <Input label={m.admin.rating} value={form.rating} onChange={(rating) => setForm({ ...form, rating })} />
@@ -221,6 +243,11 @@ export function AdminTourismManagement() {
                 <div className="min-w-0 flex-1">
                   <h3 className="font-black text-slate-900">{locale === 'en' ? item.titleEn : item.titleAr}</h3>
                   <p className="mt-1 text-xs text-slate-500" dir="ltr">/{item.slug}</p>
+                  {(item.galleryImages?.length ?? 0) > 0 ? (
+                    <p className="mt-1 text-xs font-bold text-brand-700">
+                      {m.admin.tourismGalleryCount}: {item.galleryImages.length}
+                    </p>
+                  ) : null}
                   <p className="mt-2 line-clamp-2 text-sm text-slate-600">{locale === 'en' ? item.aboutEn : item.aboutAr}</p>
                 </div>
                 <div className="flex gap-2">

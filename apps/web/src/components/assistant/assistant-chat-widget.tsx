@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowUp, Maximize2, MessageCircle, Trash2, X } from 'lucide-react';
+import { ArrowUp, Bot, Maximize2, Sparkles, Trash2, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -12,6 +12,8 @@ import { useAssistantChat, type AssistantMessage, type QuickReplyIntent } from '
 import { useI18n } from '@/lib/i18n';
 import { useAuthStore } from '@/store/auth-store';
 import { formatAssistantMessage } from '@/lib/assistant-message-format';
+
+const ASSISTANT_TEASER_STORAGE_KEY = 'oman_sale_assistant_teaser_dismissed';
 
 function formatMessageTime(value: string, locale: string) {
   return new Intl.DateTimeFormat(locale === 'ar' ? 'ar-OM' : 'en-GB', {
@@ -30,6 +32,14 @@ export function AssistantChatWidget() {
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState('');
+  const [teaserDismissed, setTeaserDismissed] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    try {
+      return window.localStorage.getItem(ASSISTANT_TEASER_STORAGE_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -39,6 +49,15 @@ export function AssistantChatWidget() {
   useEffect(() => {
     hydrateFromStorage();
   }, [hydrateFromStorage]);
+
+  const dismissTeaser = () => {
+    setTeaserDismissed(true);
+    try {
+      window.localStorage.setItem(ASSISTANT_TEASER_STORAGE_KEY, '1');
+    } catch {
+      // ignore storage errors
+    }
+  };
 
   const isAuthenticated = Boolean(user);
 
@@ -107,14 +126,44 @@ export function AssistantChatWidget() {
   return (
     <>
       {!open ? (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="fixed bottom-6 end-6 z-[80] flex h-14 w-14 items-center justify-center rounded-full bg-brand-600 text-white shadow-lg transition-transform hover:scale-105 hover:bg-brand-700"
-          aria-label={t.openAssistant}
-        >
-          <MessageCircle className="h-6 w-6" />
-        </button>
+        <div className="fixed bottom-6 end-6 z-[80] flex flex-col items-end gap-3">
+          {!teaserDismissed ? (
+            <div className="animate-assistant-teaser relative max-w-[min(260px,calc(100vw-5rem))]">
+              <div className="relative rounded-2xl border border-brand-100 bg-white px-4 py-3 pe-10 shadow-xl shadow-brand-900/10">
+                <button
+                  type="button"
+                  onClick={dismissTeaser}
+                  className="absolute end-2 top-2 flex h-7 w-7 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                  aria-label={t.dismissTeaser}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+                <div className="mb-1 flex items-center gap-1.5 text-brand-700">
+                  <Sparkles className="h-4 w-4 shrink-0" />
+                  <span className="text-xs font-black">{t.title}</span>
+                </div>
+                <p className="text-sm font-medium leading-relaxed text-slate-700">{t.teaser}</p>
+              </div>
+              <span className="absolute -bottom-2 end-6 h-4 w-4 rotate-45 border-b border-r border-brand-100 bg-white" aria-hidden />
+            </div>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={() => {
+              dismissTeaser();
+              setOpen(true);
+            }}
+            className="animate-assistant-float group relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-lg shadow-brand-700/35 transition hover:scale-105 hover:from-brand-600 hover:to-brand-800"
+            aria-label={t.openAssistant}
+          >
+            <span className="absolute inset-0 rounded-full bg-brand-500/30 animate-assistant-pulse" aria-hidden />
+            <span className="absolute -top-0.5 -end-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-[10px] font-black text-amber-950 shadow-sm">
+              AI
+            </span>
+            <Bot className="relative h-7 w-7 transition group-hover:scale-110" />
+          </button>
+        </div>
       ) : null}
 
       {open ? (
@@ -124,8 +173,13 @@ export function AssistantChatWidget() {
         >
           <header className="flex shrink-0 items-center justify-between gap-2 border-b border-[#EFEFEF] bg-white px-4 py-3">
             <div className="flex min-w-0 items-center gap-2.5">
-              <div className="flex h-9 items-center justify-center rounded-md bg-brand-600 px-2.5 text-xs font-bold text-white">
-                OS
+              <div className="flex shrink-0 items-center gap-1.5">
+                <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-white ring-1 ring-brand-100">
+                  <img src="/logo.png" alt="Oman Sale" className="h-7 w-7 object-contain" />
+                </span>
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 text-white shadow-sm">
+                  <Bot className="h-4 w-4" />
+                </span>
               </div>
               <span className="truncate text-sm font-medium text-[#2B2B2B]">{t.title}</span>
             </div>

@@ -1,6 +1,7 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -131,8 +132,18 @@ export function AssistantChatWidget({
           >
             <View style={styles.header}>
               <View style={styles.headerBrand}>
-                <View style={styles.logo}>
-                  <AppText style={styles.logoText}>OS</AppText>
+                <View style={styles.headerBrandIcons}>
+                  <View style={styles.logoImageWrap}>
+                    <Image
+                      source={require('../../assets/nav-logo.png')}
+                      style={styles.logoImage}
+                      resizeMode="contain"
+                      {...(Platform.OS === 'android' ? { resizeMethod: 'resize' as const } : {})}
+                    />
+                  </View>
+                  <View style={styles.botIconWrap}>
+                    <MaterialCommunityIcons name="robot" size={18} color="#fff" />
+                  </View>
                 </View>
                 <AppText style={styles.headerTitle}>{a.title}</AppText>
               </View>
@@ -316,16 +327,32 @@ const styles = StyleSheet.create({
     gap: 10,
     flex: 1
   },
-  logo: {
-    backgroundColor: colors.brand,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4
+  headerBrandIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6
   },
-  logoText: {
-    color: '#fff',
-    fontWeight: '900',
-    fontSize: 12
+  logoImageWrap: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#d1fae5'
+  },
+  logoImage: {
+    width: 28,
+    height: 32
+  },
+  botIconWrap: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 8,
+    backgroundColor: colors.brand
   },
   headerTitle: {
     fontSize: 14,
