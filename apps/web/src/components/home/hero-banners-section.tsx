@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Megaphone } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { HeroBannersSkeleton } from '@/components/home/home-section-skeletons';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { resolveMediaUrl } from '@/lib/media-url';
@@ -46,6 +47,7 @@ const isExternalLink = (link: string) => {
 export function HeroBannersSection() {
   const { locale, localizedPath } = useI18n();
   const [banners, setBanners] = useState<HeroBanner[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [loopIndex, setLoopIndex] = useState(0);
   const [animate, setAnimate] = useState(true);
   const isAdjustingRef = useRef(false);
@@ -86,6 +88,7 @@ export function HeroBannersSection() {
     let cancelled = false;
 
     const loadBanners = async () => {
+      if (!cancelled) setIsLoading(true);
       try {
         const response = await api.get<{ data: HeroBanner[] }>('/hero/banners', {
           params: { locale }
@@ -96,6 +99,8 @@ export function HeroBannersSection() {
         }
       } catch {
         if (!cancelled) setBanners([]);
+      } finally {
+        if (!cancelled) setIsLoading(false);
       }
     };
 
@@ -157,6 +162,10 @@ export function HeroBannersSection() {
     setLoopIndex(realIndex + 1);
     startAutoPlay();
   };
+
+  if (isLoading) {
+    return <HeroBannersSkeleton />;
+  }
 
   if (banners.length === 0) {
     return (

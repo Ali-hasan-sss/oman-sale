@@ -1,7 +1,7 @@
 'use client';
 
 import { Edit3, Plus, Trash2, X } from 'lucide-react';
-import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 
 import { HeaderNavButtonsPreview } from '@/components/admin/header-nav-buttons-preview';
 import { adminApi } from '@/lib/admin-auth';
@@ -26,7 +26,6 @@ const emptyForm = (): HeaderButtonForm => ({
 
 export function AdminHeaderButtonsManagement() {
   const { m } = useI18n();
-  const formRef = useRef<HTMLFormElement>(null);
   const [buttons, setButtons] = useState<HeaderNavButtonRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -64,7 +63,6 @@ export function AdminHeaderButtonsManagement() {
     });
     setShowForm(true);
     setError(null);
-    window.setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
   };
 
   const openEdit = (button: HeaderNavButtonRecord) => {
@@ -78,7 +76,6 @@ export function AdminHeaderButtonsManagement() {
     });
     setShowForm(true);
     setError(null);
-    window.setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
   };
 
   const closeForm = () => {
@@ -142,16 +139,20 @@ export function AdminHeaderButtonsManagement() {
       {error ? <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</p> : null}
 
       {showForm ? (
-        <form ref={formRef} onSubmit={handleSubmit} className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-black text-slate-900">
-              {editingId ? m.admin.headerButtonsEdit : m.admin.headerButtonsAdd}
-            </h3>
-            <button type="button" onClick={closeForm} className="rounded-lg p-2 text-slate-500 hover:bg-white">
-              <X size={20} />
-            </button>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <form
+            onSubmit={handleSubmit}
+            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl"
+          >
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <h3 className="text-lg font-black text-slate-900">
+                {editingId ? m.admin.headerButtonsEdit : m.admin.headerButtonsAdd}
+              </h3>
+              <button type="button" onClick={closeForm} className="rounded-full p-2 text-slate-500 hover:bg-slate-100">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
             <label className="block">
               <span className="mb-1 block text-sm font-bold text-slate-700">{m.admin.headerButtonLabelAr}</span>
               <input
@@ -215,8 +216,9 @@ export function AdminHeaderButtonsManagement() {
             <button type="button" onClick={closeForm} className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-bold text-slate-700">
               {m.admin.cancel}
             </button>
-          </div>
-        </form>
+            </div>
+          </form>
+        </div>
       ) : null}
 
       <div className="mt-6">

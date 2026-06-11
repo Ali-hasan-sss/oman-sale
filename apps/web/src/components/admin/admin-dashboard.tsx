@@ -216,7 +216,7 @@ export function AdminDashboard() {
     ? [
         { label: m.admin.pendingReports, count: stats.pending.reports, href: '/admin/reports' },
         { label: m.admin.pendingAdsReview, count: stats.pending.pendingAds, href: '/admin/ads' },
-        { label: m.admin.pendingBannerRequests, count: stats.pending.bannerRequestsPendingApproval, href: '/admin/hero' },
+        { label: m.admin.pendingBannerRequests, count: stats.pending.bannerRequestsPendingApproval, href: '/admin/banner-requests' },
         { label: m.admin.pendingInactiveStores, count: stats.pending.inactiveStores, href: '/admin/stores' },
         {
           label: m.admin.pendingExpiringSubscriptions,

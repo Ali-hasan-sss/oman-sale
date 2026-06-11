@@ -4,6 +4,7 @@ import { Loader2, Video, X } from 'lucide-react';
 import { useState } from 'react';
 
 import { ImageUploader } from '@/components/media/image-uploader';
+import { adminApi } from '@/lib/admin-auth';
 import { registerMediaPreviewUrl, resolveMediaUrl } from '@/lib/media-url';
 import { MediaCompressionError, uploadMediaFile } from '@/lib/media-upload';
 
@@ -25,6 +26,7 @@ type ListingAdMediaUploaderProps = {
   onVideoUrlChange: (value: string | null) => void;
   labels: ListingAdMediaUploaderLabels;
   disabled?: boolean;
+  useAdminAuth?: boolean;
 };
 
 export function ListingAdMediaUploader({
@@ -33,7 +35,8 @@ export function ListingAdMediaUploader({
   onImageUrlsChange,
   onVideoUrlChange,
   labels,
-  disabled = false
+  disabled = false,
+  useAdminAuth = false
 }: ListingAdMediaUploaderProps) {
   const [videoStage, setVideoStage] = useState<'idle' | 'compressing' | 'uploading'>('idle');
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
@@ -45,7 +48,8 @@ export function ListingAdMediaUploader({
     setError('');
     try {
       const result = await uploadMediaFile(file, 'ads', {
-        onStageChange: (stage) => setVideoStage(stage)
+        onStageChange: (stage) => setVideoStage(stage),
+        client: useAdminAuth ? adminApi() : undefined
       });
       registerMediaPreviewUrl(result.key, result.url);
       setVideoPreviewUrl(result.url);
@@ -137,6 +141,7 @@ export function ListingAdMediaUploader({
             uploadError: labels.uploadError
           }}
           disabled={disabled}
+          useAdminAuth={useAdminAuth}
         />
       </div>
 

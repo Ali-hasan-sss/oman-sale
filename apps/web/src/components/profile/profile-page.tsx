@@ -323,7 +323,7 @@ export function ProfilePage() {
   };
 
   return (
-    <div id="top" className="min-h-screen bg-gray-50" dir={dir}>
+    <div id="top" className="site-page-shell bg-gray-50" dir={dir}>
       <UserSiteHeader>
         <SiteHeaderSearch />
       </UserSiteHeader>

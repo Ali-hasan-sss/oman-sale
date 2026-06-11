@@ -1,17 +1,19 @@
 'use client';
 
-import { Heart, LayoutDashboard, LogOut, User } from 'lucide-react';
+import { Heart, LayoutDashboard, List, LogOut, MessageCircle, Store, User } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { ConfirmationDialog } from '@/components/confirmation-dialog';
+import { useOwnerStore } from '@/hooks/use-owner-store';
 import { clearAdminSession, getAdminAccessToken, getStoredAdminUser, type AdminUser } from '@/lib/admin-auth';
 import { useI18n } from '@/lib/i18n';
 import { disconnectRealtimeSocket } from '@/lib/realtime';
 import { resolveMediaUrl } from '@/lib/media-url';
 import { clearUserSession } from '@/lib/user-auth';
 import { useAuthStore } from '@/store/auth-store';
+import { useChatRealtimeStore } from '@/store/chat-realtime-store';
 
 const AUTH_CHANGED_EVENT = 'oman-sale-auth-changed';
 
@@ -174,11 +176,18 @@ function UserMenu() {
   const { locale, localizedPath, m } = useI18n();
   const user = useAuthStore((state) => state.user);
   const clearSession = useAuthStore((state) => state.clearSession);
+  const { hasStore } = useOwnerStore();
+  const connect = useChatRealtimeStore((state) => state.connect);
+  const unreadCount = useChatRealtimeStore((state) => state.unreadCount);
   const [isOpen, setIsOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const logoutText = logoutDialogLabels[locale];
+
+  useEffect(() => {
+    connect();
+  }, [connect]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -247,6 +256,35 @@ function UserMenu() {
             <p className="line-clamp-1 font-bold text-gray-900">{user.fullName}</p>
             <p className="line-clamp-1 text-xs text-gray-500">{user.email}</p>
           </div>
+          <Link
+            href={localizedPath('/my-listings')}
+            onClick={() => setIsOpen(false)}
+            className="flex items-center gap-2 px-4 py-3 text-sm text-gray-700 transition hover:bg-gray-50"
+          >
+            <List size={16} />
+            {m.common.myListings}
+          </Link>
+          <Link
+            href={localizedPath('/chats')}
+            onClick={() => setIsOpen(false)}
+            className="relative flex items-center gap-2 px-4 py-3 text-sm text-gray-700 transition hover:bg-gray-50"
+          >
+            <MessageCircle size={16} />
+            {m.common.chats}
+            {unreadCount > 0 ? (
+              <span className="ms-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold text-white">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            ) : null}
+          </Link>
+          <Link
+            href={localizedPath(hasStore ? '/my-store' : '/stores/create')}
+            onClick={() => setIsOpen(false)}
+            className="flex items-center gap-2 px-4 py-3 text-sm text-gray-700 transition hover:bg-gray-50"
+          >
+            <Store size={16} />
+            {hasStore ? m.common.myStore : m.common.createStore}
+          </Link>
           <Link
             href={localizedPath('/profile')}
             onClick={() => setIsOpen(false)}

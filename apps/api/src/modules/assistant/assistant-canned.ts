@@ -157,6 +157,7 @@ export async function executeQuickReply(
         reply: formatAssistantReply(buildPricingOverviewReply(locale, storePlans, promotionPlans, disclaimer)),
         listings: [],
         stores: [],
+        articles: [],
         actions: info.actions
       };
     }
@@ -168,6 +169,7 @@ export async function executeQuickReply(
         reply: formatAssistantReply(buildStoreSearchReply(locale, result.stores.length, result.isFallback)),
         listings: [],
         stores: result.stores,
+        articles: [],
         actions: result.actions
       };
     }
@@ -179,6 +181,7 @@ export async function executeQuickReply(
         reply: formatAssistantReply(buildStoreSearchReply(locale, result.stores.length, result.isFallback)),
         listings: [],
         stores: result.stores,
+        articles: [],
         actions: result.actions
       };
     }
@@ -190,6 +193,7 @@ export async function executeQuickReply(
         reply: formatAssistantReply(reply),
         listings: featured.listings,
         stores: [],
+        articles: [],
         actions: featured.actions
       };
     }
@@ -205,6 +209,7 @@ export async function executeQuickReply(
         reply: formatAssistantReply(reply),
         listings: [],
         stores: [],
+        articles: [],
         actions: info.actions
       };
     }
@@ -214,6 +219,7 @@ export async function executeQuickReply(
         reply: formatAssistantReply(locale === 'ar' ? 'كيف يمكنني مساعدتك؟' : 'How can I help you?'),
         listings: [],
         stores: [],
+        articles: [],
         actions: []
       };
   }

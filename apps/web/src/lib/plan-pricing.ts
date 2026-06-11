@@ -1,5 +1,10 @@
 export const PLAN_VAT_RATE = 0.05;
 
+/** API/store subscription `finalPrice` is always before VAT. */
+export function getPlanPreVatAmount(price: number) {
+  return Number.isFinite(price) ? Math.max(0, price) : 0;
+}
+
 export type PlanPriceWithVat = {
   basePrice: number;
   vatAmount: number;
@@ -10,15 +15,20 @@ export function roundOmr(value: number) {
   return Math.round(value * 1000) / 1000;
 }
 
-export function calculatePlanPriceWithVat(basePrice: number): PlanPriceWithVat {
-  const base = Number.isFinite(basePrice) ? Math.max(0, basePrice) : 0;
-  if (base <= 0) {
+export function calculatePlanPriceWithVat(preVatPrice: number): PlanPriceWithVat {
+  const basePrice = getPlanPreVatAmount(preVatPrice);
+  if (basePrice <= 0) {
     return { basePrice: 0, vatAmount: 0, finalPrice: 0 };
   }
 
-  const vatAmount = roundOmr(base * PLAN_VAT_RATE);
-  const finalPrice = roundOmr(base + vatAmount);
-  return { basePrice: base, vatAmount, finalPrice };
+  const vatAmount = roundOmr(basePrice * PLAN_VAT_RATE);
+  const finalPrice = roundOmr(basePrice + vatAmount);
+  return { basePrice, vatAmount, finalPrice };
+}
+
+/** Total amount due at checkout or on invoice (pre-VAT + VAT). */
+export function getPlanTotalWithVat(preVatPrice: number) {
+  return calculatePlanPriceWithVat(preVatPrice).finalPrice;
 }
 
 export function formatOmrAmount(amount: number, locale: 'ar' | 'en', freeLabel = '') {

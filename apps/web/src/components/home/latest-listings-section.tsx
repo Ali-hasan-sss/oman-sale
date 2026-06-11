@@ -4,6 +4,7 @@ import { ArrowUpLeft, MapPin } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
+import { ListingCardsSkeleton } from '@/components/listings/listing-card-skeleton';
 import { FavoriteButton } from '@/components/listings/favorite-button';
 import { ListingMediaCover } from '@/components/listings/listing-media-cover';
 import { api } from '@/lib/api';
@@ -64,7 +65,6 @@ export function LatestListingsSection() {
   }, [listings.length]);
 
   const visibleListings = useMemo(() => listings.slice(0, 8), [listings]);
-  const loadingText = locale === 'ar' ? 'جاري تحميل الإعلانات...' : 'Loading listings...';
   const emptyText = locale === 'ar' ? 'لا توجد إعلانات متاحة حاليًا' : 'No listings are available right now';
 
   return (
@@ -78,9 +78,7 @@ export function LatestListingsSection() {
       </div>
 
       {isLoading ? (
-        <div className="rounded-2xl bg-white p-8 text-center font-bold text-slate-500 shadow-sm">
-          {loadingText}
-        </div>
+        <ListingCardsSkeleton count={8} />
       ) : visibleListings.length === 0 ? (
         <div className="rounded-2xl bg-white p-8 text-center font-bold text-slate-500 shadow-sm">
           {emptyText}

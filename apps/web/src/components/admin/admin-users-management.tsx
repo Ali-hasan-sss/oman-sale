@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import { AdminEntityAvatar } from '@/components/admin/admin-entity-avatar';
+import { AdminTableSkeleton } from '@/components/admin/admin-table-skeleton';
 import { adminApi } from '@/lib/admin-auth';
 import { useI18n } from '@/lib/i18n';
 
@@ -135,11 +136,11 @@ export function AdminUsersManagement() {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-slate-500">
-                    {m.admin.loadingUsers}
-                  </td>
-                </tr>
+                <AdminTableSkeleton
+                  asBodyOnly
+                  rows={10}
+                  columnTypes={['avatar-text', 'badge', 'badges', 'short', 'short', 'text', 'actions']}
+                />
               ) : (
                 users.map((user) => (
                   <tr key={user.id} className="border-b border-slate-100">

@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { MobileNavMenu } from '@/components/navigation/mobile-nav-menu';
 import { SiteBrandMark } from '@/components/navigation/site-brand-mark';
 import { UserSiteHeaderNav } from '@/components/navigation/user-site-header-nav';
+import { GlobalHeaderSearch } from '@/components/navigation/global-header-search';
 import {
   buildHeaderSearchUrl,
   getHeaderSearchMode,
@@ -31,7 +32,7 @@ export function UserSiteHeader({ variant = 'default', sticky = true, children }:
       : `${sticky ? 'sticky top-0 z-50' : 'relative'} shrink-0 bg-white shadow-sm`;
 
   return (
-    <header className={headerClass}>
+    <header id="site-header" className={headerClass}>
       <div className="mx-auto max-w-7xl px-4 py-3 sm:py-4">
         <div className={`flex items-center justify-between gap-2 sm:gap-3 md:gap-4 ${children ? 'mb-3 sm:mb-4' : ''}`}>
           <Link href={localizedPath('/')} className="flex shrink-0 items-center gap-2 sm:gap-3">
@@ -116,7 +117,8 @@ function SiteHeaderSearchInner({
   const placeholder = getHeaderSearchPlaceholder(mode, {
     global: m.headerSearch.globalPlaceholder,
     listings: m.headerSearch.listingsPlaceholder,
-    stores: m.headerSearch.storesPlaceholder
+    stores: m.headerSearch.storesPlaceholder,
+    news: m.headerSearch.newsPlaceholder
   });
 
   const submit = () => {
@@ -125,8 +127,23 @@ function SiteHeaderSearchInner({
       controlledOnSubmit(term);
       return;
     }
-    router.push(buildHeaderSearchUrl(mode, term, localizedPath, pathname));
+    router.push(buildHeaderSearchUrl(mode, term, localizedPath, pathname, searchParams));
   };
+
+  if (mode === 'global') {
+    return (
+      <GlobalHeaderSearch
+        className={className}
+        variant={variant}
+        value={value}
+        onChange={(nextValue) => {
+          if (isControlled) controlledOnChange?.(nextValue);
+          else setLocalValue(nextValue);
+        }}
+        onSubmit={controlledOnSubmit}
+      />
+    );
+  }
 
   return (
     <SiteHeaderSearchField

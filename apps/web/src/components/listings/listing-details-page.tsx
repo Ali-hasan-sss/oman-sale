@@ -66,6 +66,31 @@ type ListingDetails = {
 
 const fallbackImage = '/logo.png';
 
+const fakePromptStorageKey = (listingId: string) => `oman_sale_listing_fake_prompt_${listingId}`;
+
+const fakeReportPendingKey = (listingId: string) => `oman_sale_listing_fake_report_pending_${listingId}`;
+
+function hasAnsweredFakePrompt(listingId: string) {
+  if (typeof window === 'undefined') return true;
+  return window.localStorage.getItem(fakePromptStorageKey(listingId)) !== null;
+}
+
+function markFakePromptAnswered(listingId: string) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(fakePromptStorageKey(listingId), '1');
+}
+
+function setFakeReportPending(listingId: string, pending: boolean) {
+  if (typeof window === 'undefined') return;
+  if (pending) window.sessionStorage.setItem(fakeReportPendingKey(listingId), '1');
+  else window.sessionStorage.removeItem(fakeReportPendingKey(listingId));
+}
+
+function isFakeReportPending(listingId: string) {
+  if (typeof window === 'undefined') return false;
+  return window.sessionStorage.getItem(fakeReportPendingKey(listingId)) === '1';
+}
+
 const labels = {
   ar: {
     loading: 'جاري تحميل الإعلان...',
@@ -97,6 +122,12 @@ const labels = {
     reportLoginRequired: 'يجب تسجيل الدخول للإبلاغ عن الإعلان.',
     reportAlreadySent: 'لقد أبلغت عن هذا الإعلان مسبقاً.',
     reportOwnListing: 'لا يمكنك الإبلاغ عن إعلانك.',
+    fakePromptQuestion: 'هل هذا الإعلان وهمي؟',
+    fakePromptYes: 'نعم',
+    fakePromptNo: 'لا',
+    fakePromptUnknown: 'لا أعلم',
+    fakeReportReason: 'هذا الإعلان وهمي، يرجى مراجعته',
+    fakeReportSending: 'جاري إرسال البلاغ...',
     imageOf: 'صورة'
   },
   en: {
@@ -129,6 +160,12 @@ const labels = {
     reportLoginRequired: 'Sign in to report this listing.',
     reportAlreadySent: 'You have already reported this listing.',
     reportOwnListing: 'You cannot report your own listing.',
+    fakePromptQuestion: 'Is this listing fake?',
+    fakePromptYes: 'Yes',
+    fakePromptNo: 'No',
+    fakePromptUnknown: "I don't know",
+    fakeReportReason: 'This listing appears to be fake. Please review it.',
+    fakeReportSending: 'Sending report...',
     imageOf: 'Image'
   }
 };
@@ -151,6 +188,9 @@ export function ListingDetailsPage({ id }: { id: string }) {
   const [reportMessage, setReportMessage] = useState('');
   const [reportError, setReportError] = useState('');
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+  const [showFakePrompt, setShowFakePrompt] = useState(false);
+  const [fakePromptMessage, setFakePromptMessage] = useState('');
+  const [isSubmittingFakeReport, setIsSubmittingFakeReport] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
 
   useEffect(() => {
@@ -211,14 +251,14 @@ export function ListingDetailsPage({ id }: { id: string }) {
     setReportOpen(true);
   };
 
-  const submitReport = async () => {
+  const submitReport = async (reasonOverride?: string) => {
     const token = getUserAccessToken();
-    if (!token || !listing) return;
+    if (!token || !listing) return false;
 
-    const reason = reportReason.trim();
+    const reason = (reasonOverride ?? reportReason).trim();
     if (reason.length < 5) {
       setReportError(text.reportError);
-      return;
+      return false;
     }
 
     setIsSubmittingReport(true);
@@ -232,16 +272,83 @@ export function ListingDetailsPage({ id }: { id: string }) {
       );
       setReportMessage(text.reportSuccess);
       setReportReason('');
-      window.setTimeout(() => setReportOpen(false), 1200);
+      if (!reasonOverride) {
+        window.setTimeout(() => setReportOpen(false), 1200);
+      }
+      return true;
     } catch (error: unknown) {
       const status = (error as { response?: { status?: number } })?.response?.status;
       if (status === 409) setReportError(text.reportAlreadySent);
       else if (status === 400) setReportError(text.reportOwnListing);
       else setReportError(text.reportError);
+      return false;
     } finally {
       setIsSubmittingReport(false);
     }
   };
+
+  const handleFakePromptAnswer = async (answer: 'yes' | 'no' | 'unknown') => {
+    if (!listing) return;
+
+    if (answer !== 'yes') {
+      markFakePromptAnswered(listing.id);
+      setShowFakePrompt(false);
+      return;
+    }
+
+    const token = getUserAccessToken();
+    if (!token) {
+      setFakeReportPending(listing.id, true);
+      router.push(localizedPath(`/login?returnUrl=${encodeURIComponent(window.location.pathname)}`));
+      return;
+    }
+
+    const currentUser = getStoredUser();
+    if (currentUser?.id && listing.user?.id && currentUser.id === listing.user.id) {
+      markFakePromptAnswered(listing.id);
+      setShowFakePrompt(false);
+      setReportError(text.reportOwnListing);
+      return;
+    }
+
+    markFakePromptAnswered(listing.id);
+    setShowFakePrompt(false);
+    setIsSubmittingFakeReport(true);
+    setFakePromptMessage(text.fakeReportSending);
+
+    const success = await submitReport(text.fakeReportReason);
+    setIsSubmittingFakeReport(false);
+    setFakePromptMessage(success ? text.reportSuccess : '');
+  };
+
+  useEffect(() => {
+    if (!listing) return;
+
+    const currentUser = getStoredUser();
+    const isOwnListing = Boolean(currentUser?.id && listing.user?.id && currentUser.id === listing.user.id);
+    if (isOwnListing || hasAnsweredFakePrompt(listing.id)) {
+      setShowFakePrompt(false);
+      return;
+    }
+
+    const token = getUserAccessToken();
+    if (token && isFakeReportPending(listing.id)) {
+      setShowFakePrompt(false);
+      setIsSubmittingFakeReport(true);
+      setFakePromptMessage(text.fakeReportSending);
+
+      void submitReport(text.fakeReportReason).then((success) => {
+        setIsSubmittingFakeReport(false);
+        setFakeReportPending(listing.id, false);
+        markFakePromptAnswered(listing.id);
+        setFakePromptMessage(success ? text.reportSuccess : '');
+      });
+      return;
+    }
+
+    setShowFakePrompt(true);
+    setFakePromptMessage('');
+  }, [listing, text.fakeReportReason, text.fakeReportSending, text.reportSuccess]);
 
   const openConversation = async () => {
     const token = getUserAccessToken();
@@ -275,7 +382,7 @@ export function ListingDetailsPage({ id }: { id: string }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50" dir={dir}>
+    <div className="site-page-shell bg-gray-50" dir={dir}>
       <UserSiteHeader>
         <SiteHeaderSearch />
       </UserSiteHeader>
@@ -371,6 +478,40 @@ export function ListingDetailsPage({ id }: { id: string }) {
                   <div className="whitespace-pre-line leading-relaxed text-gray-700">{listing.description}</div>
                 </div>
                 <div className="mt-6 border-t border-gray-200 pt-6">
+                  {showFakePrompt ? (
+                    <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                      <p className="mb-3 text-sm font-bold text-amber-950">{text.fakePromptQuestion}</p>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          disabled={isSubmittingFakeReport}
+                          onClick={() => handleFakePromptAnswer('yes')}
+                          className="rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-700 disabled:opacity-60"
+                        >
+                          {text.fakePromptYes}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isSubmittingFakeReport}
+                          onClick={() => handleFakePromptAnswer('no')}
+                          className="rounded-xl border border-amber-300 bg-white px-4 py-2 text-sm font-bold text-amber-950 transition hover:bg-amber-100 disabled:opacity-60"
+                        >
+                          {text.fakePromptNo}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isSubmittingFakeReport}
+                          onClick={() => handleFakePromptAnswer('unknown')}
+                          className="rounded-xl border border-amber-300 bg-white px-4 py-2 text-sm font-bold text-amber-950 transition hover:bg-amber-100 disabled:opacity-60"
+                        >
+                          {text.fakePromptUnknown}
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                  {fakePromptMessage ? (
+                    <p className="mb-3 text-sm font-bold text-green-700">{fakePromptMessage}</p>
+                  ) : null}
                   {reportError && !reportOpen ? (
                     <p className="mb-3 text-sm font-bold text-red-600">{reportError}</p>
                   ) : null}
@@ -521,7 +662,7 @@ export function ListingDetailsPage({ id }: { id: string }) {
               <button
                 type="button"
                 disabled={isSubmittingReport}
-                onClick={submitReport}
+                onClick={() => submitReport()}
                 className="flex-1 rounded-xl bg-red-600 px-4 py-3 font-bold text-white transition hover:bg-red-700 disabled:opacity-60"
               >
                 {text.reportSubmit}

@@ -1,6 +1,14 @@
 import { API_ENDPOINTS, http, type ApiEnvelope } from '../lib/api';
 
-export type StoreBillingPeriod = 'MONTHLY' | 'YEARLY';
+export type StoreBillingPeriod = 'ONE_MONTH' | 'TWO_MONTHS' | 'THREE_MONTHS';
+
+export const STORE_BILLING_PERIODS: StoreBillingPeriod[] = ['ONE_MONTH', 'TWO_MONTHS', 'THREE_MONTHS'];
+
+export function getBillingPeriodLabel(period: StoreBillingPeriod, locale: 'ar' | 'en') {
+  if (period === 'THREE_MONTHS') return locale === 'ar' ? '3 أشهر' : '3 months';
+  if (period === 'TWO_MONTHS') return locale === 'ar' ? 'شهرين' : '2 months';
+  return locale === 'ar' ? 'شهر واحد' : '1 month';
+}
 
 export type StorePlanPricing = {
   id: string;
@@ -16,6 +24,8 @@ export type StorePlan = {
   nameEn: string;
   descriptionAr: string;
   descriptionEn: string;
+  sortOrder?: number;
+  isAdminFree?: boolean;
   pricing: StorePlanPricing[];
 };
 
@@ -99,7 +109,7 @@ export type OwnerStore = {
     maxListings: number;
     finalPrice?: string | number;
     billingPeriod: StoreBillingPeriod;
-    plan?: { id: string; nameAr: string; nameEn: string; trialMaxListings?: number };
+    plan?: { id: string; nameAr: string; nameEn: string; trialMaxListings?: number; isAdminFree?: boolean; sortOrder?: number };
   }>;
 };
 
@@ -157,7 +167,16 @@ export async function activateStorePaidRequest(storeId: string, locale: 'ar' | '
   return response.data.data;
 }
 
-export async function renewStoreSubscriptionRequest(
+export async function renewStoreSubscriptionRequest(storeId: string, locale: 'ar' | 'en') {
+  const response = await http.post<ApiEnvelope<{ checkout?: { paymentUrl?: string; activated?: boolean } }>>(
+    API_ENDPOINTS.stores.renewSubscription(storeId),
+    undefined,
+    { params: { locale } }
+  );
+  return response.data.data;
+}
+
+export async function subscribeStoreRequest(
   storeId: string,
   payload: { planId: string; billingPeriod: StoreBillingPeriod },
   locale: 'ar' | 'en'

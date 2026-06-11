@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDown, Filter, MapPin, SlidersHorizontal } from 'lucide-react';
+import { ChevronDown, MapPin } from 'lucide-react';
 import Link from 'next/link';
 import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -16,6 +16,7 @@ import {
 import { buildCategoryTree } from '@/lib/category-tree';
 import { useI18n } from '@/lib/i18n';
 import { getListingLocationLabel, getWilayahsForGovernorate, omanGovernorates } from '@/lib/oman-locations';
+import { useSiteHeaderOffset } from '@/hooks/use-site-header-offset';
 import { getUserAccessToken } from '@/lib/user-auth';
 import { FavoriteButton } from './favorite-button';
 import { ListingCardsSkeleton } from './listing-card-skeleton';
@@ -79,6 +80,8 @@ type CategoryFilter = {
 const priceFloor = 0;
 const priceCeiling = 100000;
 const priceStep = 100;
+const priceScalePresets = [100, 200, 500, 1000, 5000, 10000, priceCeiling] as const;
+const defaultPriceScale = 1000;
 
 const listingsPageMessages = {
   ar: {
@@ -87,7 +90,7 @@ const listingsPageMessages = {
     all: 'الكل',
     filter: 'تصفية',
     filters: 'الفلاتر',
-    clearAll: 'مسح الكل',
+    clearAll: 'عرض الكل',
     subcategories: 'الفئة الفرعية',
     moreFilters: 'المزيد من الخيارات',
     sortBy: 'الترتيب حسب:',
@@ -99,6 +102,7 @@ const listingsPageMessages = {
     selectWilayah: 'الولاية / المنطقة',
     allWilayahsInGovernorate: 'كل ولايات المحافظة',
     priceRange: 'نطاق السعر',
+    priceScale: 'مقياس السعر',
     applyFilters: 'تطبيق الفلاتر',
     resetFilters: 'إعادة تعيين',
     loadMore: 'تحميل المزيد',
@@ -123,6 +127,7 @@ const listingsPageMessages = {
     selectWilayah: 'Wilayah',
     allWilayahsInGovernorate: 'All wilayahs in governorate',
     priceRange: 'Price range',
+    priceScale: 'Price scale',
     applyFilters: 'Apply filters',
     resetFilters: 'Reset',
     loadMore: 'Load more',
@@ -154,10 +159,11 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
   const [city, setCity] = useState('');
   const [wilayah, setWilayah] = useState('');
   const [minPrice, setMinPrice] = useState(priceFloor);
-  const [maxPrice, setMaxPrice] = useState(priceCeiling);
+  const [maxPrice, setMaxPrice] = useState(defaultPriceScale);
   const [sort, setSort] = useState('recent');
-  const [showMoreFilters, setShowMoreFilters] = useState(false);
+  const [priceScale, setPriceScale] = useState(defaultPriceScale);
   const [page, setPage] = useState(1);
+  const headerOffset = useSiteHeaderOffset();
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
@@ -167,18 +173,29 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
     : undefined;
   const isCategoryPage = Boolean(decodedCategorySlug);
   const rootCategories = useMemo(() => buildCategoryTree(categories), [categories]);
-  const subcategoryLevels = activeCategory
+  const rootCategoryId = isCategoryPage ? (activeCategory?.id ?? '') : appliedCategoryId || selectedCategoryId;
+  const effectiveCategoryId = rootCategoryId
+    ? getEffectiveCategoryId(rootCategoryId, selectedSubcategoryPath)
+    : '';
+  const subcategoryLevels = isCategoryPage
     ? buildSubcategoryFilterLevels(
         categories,
-        activeCategory.id,
+        rootCategoryId,
         selectedSubcategoryPath,
         (category) => category.name,
         listingsPageMessages[locale].subcategories
       )
     : [];
-  const effectiveCategoryId = isCategoryPage
-    ? getEffectiveCategoryId(activeCategory?.id ?? '', selectedSubcategoryPath)
-    : appliedCategoryId;
+  const allListingsSubcategoryLevels =
+    !isCategoryPage && rootCategoryId
+      ? buildSubcategoryFilterLevels(
+          categories,
+          rootCategoryId,
+          selectedSubcategoryPath,
+          (category) => category.name,
+          listingsPageMessages[locale].subcategories
+        )
+      : [];
 
   useEffect(() => {
     setIsLoadingCategories(true);
@@ -205,6 +222,12 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
     setSelectedSubcategoryPath([]);
     setSelectedFilterOptionIds([]);
   }, [activeCategory?.id]);
+
+  useEffect(() => {
+    if (isCategoryPage) return;
+    setSelectedSubcategoryPath([]);
+    setSelectedFilterOptionIds([]);
+  }, [appliedCategoryId, isCategoryPage]);
 
   useEffect(() => {
     setAppliedSearch(urlSearch);
@@ -297,21 +320,15 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
 
   const shownTotal = total;
   const hasMore = listings.length > 0 && listings.length < total;
-  const minPercent = (minPrice / priceCeiling) * 100;
-  const maxPercent = (maxPrice / priceCeiling) * 100;
+  const activePriceCeiling = priceScale;
+  const minPercent = (minPrice / activePriceCeiling) * 100;
+  const maxPercent = (maxPrice / activePriceCeiling) * 100;
   const pageMessages = listingsPageMessages[locale];
   const sortOptions = [
     { value: 'recent', label: pageMessages.recent },
     { value: 'price-low', label: pageMessages.priceLow },
     { value: 'price-high', label: pageMessages.priceHigh },
     { value: 'popular', label: pageMessages.popular }
-  ];
-  const governorateOptions = [
-    { value: '', label: pageMessages.selectCity },
-    ...omanGovernorates.map((governorate) => ({
-      value: governorate.value,
-      label: locale === 'en' ? governorate.en : governorate.ar
-    }))
   ];
   const wilayahOptions = city ? getWilayahsForGovernorate(city) : [];
 
@@ -324,7 +341,8 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
     setAppliedCity('');
     setAppliedWilayah('');
     setMinPrice(priceFloor);
-    setMaxPrice(priceCeiling);
+    setMaxPrice(defaultPriceScale);
+    setPriceScale(defaultPriceScale);
     setAppliedMinPrice('');
     setAppliedMaxPrice('');
     setSelectedFilterOptionIds([]);
@@ -340,6 +358,7 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
   const selectRootCategory = (categoryId: string) => {
     setSelectedCategoryId(categoryId);
     setAppliedCategoryId(categoryId);
+    setSelectedSubcategoryPath([]);
     setSelectedFilterOptionIds([]);
     setPage(1);
   };
@@ -347,21 +366,31 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
   const clearRootCategory = () => {
     setSelectedCategoryId('');
     setAppliedCategoryId('');
+    setSelectedSubcategoryPath([]);
     setSelectedFilterOptionIds([]);
     setPage(1);
   };
 
   const applyFilters = () => {
-    setAppliedCategoryId(
-      isCategoryPage
-        ? getEffectiveCategoryId(activeCategory?.id ?? '', selectedSubcategoryPath)
-        : selectedCategoryId
-    );
+    if (!isCategoryPage && selectedCategoryId) {
+      setAppliedCategoryId(selectedCategoryId);
+    }
     setAppliedCity(city);
     setAppliedWilayah(city && wilayah ? wilayah : '');
     setAppliedMinPrice(minPrice > priceFloor ? String(minPrice) : '');
-    setAppliedMaxPrice(maxPrice < priceCeiling ? String(maxPrice) : '');
+    setAppliedMaxPrice(maxPrice < activePriceCeiling ? String(maxPrice) : '');
     setPage(1);
+  };
+
+  const selectPriceScale = (ceiling: number) => {
+    setPriceScale(ceiling);
+    setMinPrice((current) => Math.min(current, ceiling));
+    setMaxPrice((current) => Math.min(current, ceiling));
+  };
+
+  const formatPriceScaleLabel = (value: number) => {
+    if (value >= priceCeiling) return pageMessages.all;
+    return locale === 'ar' ? `${value.toLocaleString('en-US')}+ ر.ع` : `${value.toLocaleString('en-US')}+ OMR`;
   };
 
   const handleSubcategorySelect = (levelIndex: number, categoryId: string) => {
@@ -419,11 +448,30 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
 
   const priceSlider = (
     <div>
-      <div className="mb-2 flex items-center justify-between text-sm font-bold text-gray-700">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-sm font-bold text-gray-700">
         <span>{pageMessages.priceRange}</span>
         <span dir="ltr">
           {minPrice.toLocaleString('en-US')} - {maxPrice.toLocaleString('en-US')} OMR
         </span>
+      </div>
+      <div className="mb-3">
+        <p className="mb-2 text-xs font-bold text-gray-500">{pageMessages.priceScale}</p>
+        <div className="flex flex-wrap gap-1.5">
+          {priceScalePresets.map((preset) => (
+            <button
+              key={preset}
+              type="button"
+              onClick={() => selectPriceScale(preset)}
+              className={`rounded-full border px-2.5 py-1 text-xs font-bold transition ${
+                priceScale === preset
+                  ? 'border-green-600 bg-green-50 text-green-700'
+                  : 'border-gray-300 bg-white text-gray-600 hover:border-green-500'
+              }`}
+            >
+              {formatPriceScaleLabel(preset)}
+            </button>
+          ))}
+        </div>
       </div>
       <div className="relative h-10">
         <div className="absolute left-0 right-0 top-1/2 h-2 -translate-y-1/2 rounded-full bg-gray-200" />
@@ -438,7 +486,7 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
         <input
           type="range"
           min={priceFloor}
-          max={priceCeiling}
+          max={activePriceCeiling}
           step={priceStep}
           value={minPrice}
           onChange={(event) => updateMinPrice(Number(event.target.value))}
@@ -447,7 +495,7 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
         <input
           type="range"
           min={priceFloor}
-          max={priceCeiling}
+          max={activePriceCeiling}
           step={priceStep}
           value={maxPrice}
           onChange={(event) => updateMaxPrice(Number(event.target.value))}
@@ -457,8 +505,121 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
     </div>
   );
 
+  const filterSidebar = (
+    <aside className="lg:col-span-1">
+      <div className="rounded-lg bg-white p-6 shadow-sm lg:sticky" style={{ top: headerOffset || 16 }}>
+        <div className="mb-6 flex items-center justify-between">
+          <h2 className="text-lg font-bold">{pageMessages.filters}</h2>
+          <button onClick={resetFilters} className="text-sm text-blue-600 hover:underline">
+            {pageMessages.clearAll}
+          </button>
+        </div>
+        <div
+          className="filter-sidebar-scrollbar space-y-6 overflow-y-auto"
+          style={{ maxHeight: headerOffset ? `calc(100vh - ${headerOffset}px - 1rem)` : 'calc(100vh - 12rem)' }}
+        >
+          {subcategoryLevels.map((level) => (
+            <FilterSection key={`${level.parentId}-${level.levelIndex}`} title={level.title}>
+              <FilterChip active={!level.selectedId} onClick={() => handleSubcategorySelect(level.levelIndex, '')}>
+                {pageMessages.all}
+              </FilterChip>
+              {level.options.map((category) => (
+                <FilterChip
+                  key={category.id}
+                  active={level.selectedId === category.id}
+                  onClick={() =>
+                    handleSubcategorySelect(level.levelIndex, level.selectedId === category.id ? '' : category.id)
+                  }
+                >
+                  {category.name}
+                </FilterChip>
+              ))}
+            </FilterSection>
+          ))}
+
+          {categoryFilters.map((filter) => (
+            <FilterSection key={filter.id} title={filter.title}>
+              {filter.options.map((option) => (
+                <FilterChip
+                  key={option.id}
+                  active={selectedFilterOptionIds.includes(option.id)}
+                  onClick={() => toggleFilterOption(option.id)}
+                >
+                  {option.label}
+                </FilterChip>
+              ))}
+            </FilterSection>
+          ))}
+
+          <FilterSection title={pageMessages.selectCity}>
+            <FilterChip
+              active={!city}
+              onClick={() => {
+                setCity('');
+                setWilayah('');
+              }}
+            >
+              {pageMessages.all}
+            </FilterChip>
+            {omanGovernorates.map((governorate) => (
+              <FilterChip
+                key={governorate.value}
+                active={city === governorate.value}
+                onClick={() => {
+                  if (city === governorate.value) {
+                    setCity('');
+                    setWilayah('');
+                  } else {
+                    setCity(governorate.value);
+                    setWilayah('');
+                  }
+                }}
+              >
+                {locale === 'en' ? governorate.en : governorate.ar}
+              </FilterChip>
+            ))}
+          </FilterSection>
+
+          {city && wilayahOptions.length > 0 ? (
+            <FilterSection title={pageMessages.selectWilayah}>
+              <FilterChip active={!wilayah} onClick={() => setWilayah('')}>
+                {pageMessages.allWilayahsInGovernorate}
+              </FilterChip>
+              {wilayahOptions.map((wilayahOption) => (
+                <FilterChip
+                  key={wilayahOption.value}
+                  active={wilayah === wilayahOption.value}
+                  onClick={() => setWilayah(wilayah === wilayahOption.value ? '' : wilayahOption.value)}
+                >
+                  {locale === 'en' ? wilayahOption.en : wilayahOption.ar}
+                </FilterChip>
+              ))}
+            </FilterSection>
+          ) : null}
+
+          <FilterSection title={pageMessages.priceRange}>{priceSlider}</FilterSection>
+
+          <div className="flex gap-2 pt-2">
+            <button
+              onClick={applyFilters}
+              className="flex-1 rounded-lg bg-green-600 px-4 py-2 font-bold text-white transition hover:bg-green-700"
+            >
+              {pageMessages.applyFilters}
+            </button>
+            <button
+              onClick={resetFilters}
+              className="rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-50"
+            >
+              {pageMessages.resetFilters}
+            </button>
+          </div>
+        </div>
+      </div>
+    </aside>
+  );
+
   return (
-    <div className="min-h-screen bg-gray-50" dir={dir}>
+    <div className="site-page-shell bg-gray-50" dir={dir}>
       <UserSiteHeader>
         <SiteHeaderSearch />
       </UserSiteHeader>
@@ -471,125 +632,9 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
           </p>
         </div>
 
-        {isCategoryPage ? (
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
-            <aside className="lg:col-span-1">
-              <div className="sticky top-4 rounded-lg bg-white p-6 shadow-sm">
-                <div className="mb-6 flex items-center justify-between">
-                  <h2 className="text-lg font-bold">{pageMessages.filters}</h2>
-                  <button onClick={resetFilters} className="text-sm text-blue-600 hover:underline">
-                    {pageMessages.clearAll}
-                  </button>
-                </div>
-                <div className="filter-sidebar-scrollbar max-h-[calc(100vh-200px)] space-y-6 overflow-y-auto">
-                  {subcategoryLevels.map((level) => (
-                    <FilterSection key={`${level.parentId}-${level.levelIndex}`} title={level.title}>
-                      <FilterChip
-                        active={!level.selectedId}
-                        onClick={() => handleSubcategorySelect(level.levelIndex, '')}
-                      >
-                        {pageMessages.all}
-                      </FilterChip>
-                      {level.options.map((category) => (
-                        <FilterChip
-                          key={category.id}
-                          active={level.selectedId === category.id}
-                          onClick={() =>
-                            handleSubcategorySelect(
-                              level.levelIndex,
-                              level.selectedId === category.id ? '' : category.id
-                            )
-                          }
-                        >
-                          {category.name}
-                        </FilterChip>
-                      ))}
-                    </FilterSection>
-                  ))}
-
-                  {categoryFilters.map((filter) => (
-                    <FilterSection key={filter.id} title={filter.title}>
-                      {filter.options.map((option) => (
-                        <FilterChip
-                          key={option.id}
-                          active={selectedFilterOptionIds.includes(option.id)}
-                          onClick={() => toggleFilterOption(option.id)}
-                        >
-                          {option.label}
-                        </FilterChip>
-                      ))}
-                    </FilterSection>
-                  ))}
-
-                  <FilterSection title={pageMessages.selectCity}>
-                    <FilterChip
-                      active={!city}
-                      onClick={() => {
-                        setCity('');
-                        setWilayah('');
-                      }}
-                    >
-                      {pageMessages.all}
-                    </FilterChip>
-                    {omanGovernorates.map((governorate) => (
-                      <FilterChip
-                        key={governorate.value}
-                        active={city === governorate.value}
-                        onClick={() => {
-                          if (city === governorate.value) {
-                            setCity('');
-                            setWilayah('');
-                          } else {
-                            setCity(governorate.value);
-                            setWilayah('');
-                          }
-                        }}
-                      >
-                        {locale === 'en' ? governorate.en : governorate.ar}
-                      </FilterChip>
-                    ))}
-                  </FilterSection>
-
-                  {city && wilayahOptions.length > 0 ? (
-                    <FilterSection title={pageMessages.selectWilayah}>
-                      <FilterChip active={!wilayah} onClick={() => setWilayah('')}>
-                        {pageMessages.allWilayahsInGovernorate}
-                      </FilterChip>
-                      {wilayahOptions.map((wilayahOption) => (
-                        <FilterChip
-                          key={wilayahOption.value}
-                          active={wilayah === wilayahOption.value}
-                          onClick={() => setWilayah(wilayah === wilayahOption.value ? '' : wilayahOption.value)}
-                        >
-                          {locale === 'en' ? wilayahOption.en : wilayahOption.ar}
-                        </FilterChip>
-                      ))}
-                    </FilterSection>
-                  ) : null}
-
-                  <FilterSection title={pageMessages.priceRange}>{priceSlider}</FilterSection>
-
-                  <div className="flex gap-2 pt-2">
-                    <button onClick={applyFilters} className="flex-1 rounded-lg bg-green-600 px-4 py-2 font-bold text-white transition hover:bg-green-700">
-                      {pageMessages.applyFilters}
-                    </button>
-                    <button onClick={resetFilters} className="rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-50">
-                      {pageMessages.resetFilters}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </aside>
-
-            <section className="lg:col-span-3">
-              {sortBar}
-              {listingsGrid}
-              <LoadMoreButton disabled={!hasMore || isLoading} label={pageMessages.loadMore} onClick={() => setPage((current) => current + 1)} />
-            </section>
-          </div>
-        ) : (
+        {!isCategoryPage ? (
           <>
-            <div className="filter-chips-scroll mb-6 flex gap-2 overflow-x-auto pb-2">
+            <div className="filter-chips-scroll mb-4 flex gap-2 overflow-x-auto pb-2">
               <button
                 onClick={clearRootCategory}
                 className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 transition ${!appliedCategoryId ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
@@ -605,79 +650,58 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
                     />
                   ))
                 : rootCategories.map((category) => (
+                    <button
+                      key={category.id}
+                      onClick={() =>
+                        appliedCategoryId === category.id ? clearRootCategory() : selectRootCategory(category.id)
+                      }
+                      className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 transition ${appliedCategoryId === category.id ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                    >
+                      {category.name}
+                    </button>
+                  ))}
+            </div>
+
+            {allListingsSubcategoryLevels.map((level) => (
+              <div
+                key={`${level.parentId}-${level.levelIndex}`}
+                className="filter-chips-scroll mb-6 flex gap-2 overflow-x-auto pb-2"
+              >
+                <span className="shrink-0 self-center text-sm font-bold text-gray-500">{level.title}:</span>
+                <button
+                  onClick={() => handleSubcategorySelect(level.levelIndex, '')}
+                  className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 transition ${!level.selectedId ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                >
+                  {pageMessages.all}
+                </button>
+                {level.options.map((category) => (
                   <button
                     key={category.id}
                     onClick={() =>
-                      appliedCategoryId === category.id ? clearRootCategory() : selectRootCategory(category.id)
+                      handleSubcategorySelect(level.levelIndex, level.selectedId === category.id ? '' : category.id)
                     }
-                    className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 transition ${appliedCategoryId === category.id ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                    className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 transition ${level.selectedId === category.id ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
                   >
                     {category.name}
                   </button>
                 ))}
-            </div>
-
-            <div className="mb-8 rounded-lg bg-white p-4 shadow-sm">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <button className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-50">
-                    <Filter size={20} />
-                    <span>{pageMessages.filter}</span>
-                  </button>
-                  <button
-                    onClick={() => setShowMoreFilters((current) => !current)}
-                    className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-50"
-                  >
-                    <SlidersHorizontal size={20} />
-                    <span>{pageMessages.moreFilters}</span>
-                  </button>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">{pageMessages.sortBy}</span>
-                  <Dropdown value={sort} options={sortOptions} onChange={setSort} />
-                </div>
               </div>
-
-              {showMoreFilters ? (
-                <div className="mt-4 grid gap-4 border-t border-gray-100 pt-4 md:grid-cols-4">
-                  <Dropdown
-                    value={city}
-                    options={governorateOptions}
-                    onChange={(value) => {
-                      setCity(value);
-                      setWilayah('');
-                    }}
-                  />
-                  {city && wilayahOptions.length > 0 ? (
-                    <Dropdown
-                      value={wilayah}
-                      options={[
-                        { value: '', label: pageMessages.allWilayahsInGovernorate },
-                        ...wilayahOptions.map((wilayahOption) => ({
-                          value: wilayahOption.value,
-                          label: locale === 'en' ? wilayahOption.en : wilayahOption.ar
-                        }))
-                      ]}
-                      onChange={setWilayah}
-                    />
-                  ) : null}
-                  <div className={city && wilayahOptions.length > 0 ? 'md:col-span-1' : 'md:col-span-2'}>{priceSlider}</div>
-                  <div className="flex gap-2">
-                    <button onClick={applyFilters} className="flex-1 rounded-lg bg-green-600 px-4 py-2 font-bold text-white transition hover:bg-green-700">
-                      {pageMessages.applyFilters}
-                    </button>
-                    <button onClick={resetFilters} className="rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-50">
-                      {pageMessages.resetFilters}
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-
-            {listingsGrid}
-            <LoadMoreButton disabled={!hasMore || isLoading} label={pageMessages.loadMore} onClick={() => setPage((current) => current + 1)} />
+            ))}
           </>
-        )}
+        ) : null}
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+          {filterSidebar}
+          <section className="lg:col-span-3">
+            {sortBar}
+            {listingsGrid}
+            <LoadMoreButton
+              disabled={!hasMore || isLoading}
+              label={pageMessages.loadMore}
+              onClick={() => setPage((current) => current + 1)}
+            />
+          </section>
+        </div>
       </main>
 
       <SiteFooter />

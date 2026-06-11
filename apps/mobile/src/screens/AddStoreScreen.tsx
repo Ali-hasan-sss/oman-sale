@@ -13,7 +13,16 @@ import { resolveApiErrorMessage } from '../lib/api-errors';
 import { getCityLabel, omanCities } from '../lib/oman-cities';
 import { formatPlanVatBreakdown } from '../lib/plan-pricing';
 import { fetchCategories } from '../services/listings.service';
-import { createStoreRequest, fetchMyStores, fetchStorePlans, fetchStoreTypes, type StorePlan } from '../services/stores.service';
+import {
+  createStoreRequest,
+  fetchMyStores,
+  fetchStorePlans,
+  fetchStoreTypes,
+  getBillingPeriodLabel,
+  STORE_BILLING_PERIODS,
+  type StoreBillingPeriod,
+  type StorePlan
+} from '../services/stores.service';
 import { useAuthStore } from '../stores';
 import { colors, radius } from '../theme';
 
@@ -38,7 +47,7 @@ export function AddStoreScreen({ onCreated, onAlreadyHasStore }: AddStoreScreenP
   const [storeTypeId, setStoreTypeId] = useState('');
   const [city, setCity] = useState('');
   const [planId, setPlanId] = useState('');
-  const [billingPeriod, setBillingPeriod] = useState<'MONTHLY' | 'YEARLY'>('MONTHLY');
+  const [billingPeriod, setBillingPeriod] = useState<StoreBillingPeriod>('ONE_MONTH');
   const [nameAr, setNameAr] = useState('');
   const [nameEn, setNameEn] = useState('');
   const [bioAr, setBioAr] = useState('');
@@ -226,7 +235,7 @@ export function AddStoreScreen({ onCreated, onAlreadyHasStore }: AddStoreScreenP
           ))}
 
           <View style={styles.periodRow}>
-            {(['MONTHLY', 'YEARLY'] as const).map((period) => {
+            {STORE_BILLING_PERIODS.map((period) => {
               const row = selectedPlan?.pricing.find((item) => item.billingPeriod === period);
               if (!row) return null;
               const basePrice = Number(row.finalPrice ?? row.price);
@@ -238,7 +247,7 @@ export function AddStoreScreen({ onCreated, onAlreadyHasStore }: AddStoreScreenP
               return (
                 <Pressable key={period} style={[styles.periodChip, active && styles.periodChipActive]} onPress={() => setBillingPeriod(period)}>
                   <AppText style={[styles.periodText, active && styles.periodTextActive]}>
-                    {period === 'MONTHLY' ? t.store.monthly : t.store.yearly} · {pricing.main}
+                    {getBillingPeriodLabel(period, locale)} · {pricing.main}
                   </AppText>
                   {pricing.sub ? (
                     <AppText style={[styles.periodVat, active && styles.periodTextActive]}>{pricing.sub}</AppText>

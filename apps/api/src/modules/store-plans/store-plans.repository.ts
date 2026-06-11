@@ -10,6 +10,26 @@ import type {
   UpsertStorePlanPricingDto
 } from './store-plans.validation';
 
+type StorePlanWriteData = Omit<
+  CreateStorePlanDto,
+  | 'oneMonthPrice'
+  | 'oneMonthMaxListings'
+  | 'twoMonthsPrice'
+  | 'twoMonthsMaxListings'
+  | 'threeMonthsPrice'
+  | 'threeMonthsMaxListings'
+>;
+
+type StorePlanUpdateData = Omit<
+  UpdateStorePlanDto,
+  | 'oneMonthPrice'
+  | 'oneMonthMaxListings'
+  | 'twoMonthsPrice'
+  | 'twoMonthsMaxListings'
+  | 'threeMonthsPrice'
+  | 'threeMonthsMaxListings'
+>;
+
 export class StorePlansRepository {
   listPlans(query: ListStorePlansQuery) {
     return prisma.storeSubscriptionPlan.findMany({
@@ -45,6 +65,43 @@ export class StorePlansRepository {
     });
   }
 
+  listRootCategories() {
+    return prisma.category.findMany({
+      where: { parentId: null, deletedAt: null },
+      select: { id: true, nameAr: true, nameEn: true, slug: true, parentId: true },
+      orderBy: [{ sortOrder: 'asc' }, { nameAr: 'asc' }]
+    });
+  }
+
+  async syncPricingForAllRootCategories(
+    planId: string,
+    dto: Pick<
+      BulkUpsertStorePlanPricingDto,
+      | 'oneMonthPrice'
+      | 'oneMonthMaxListings'
+      | 'twoMonthsPrice'
+      | 'twoMonthsMaxListings'
+      | 'threeMonthsPrice'
+      | 'threeMonthsMaxListings'
+    >
+  ) {
+    const categories = await this.listRootCategories();
+
+    await Promise.all(
+      categories.map((category) =>
+        this.bulkUpsertPricing(planId, {
+          categoryId: category.id,
+          oneMonthPrice: dto.oneMonthPrice,
+          oneMonthMaxListings: dto.oneMonthMaxListings,
+          twoMonthsPrice: dto.twoMonthsPrice,
+          twoMonthsMaxListings: dto.twoMonthsMaxListings,
+          threeMonthsPrice: dto.threeMonthsPrice,
+          threeMonthsMaxListings: dto.threeMonthsMaxListings
+        })
+      )
+    );
+  }
+
   findPlanById(id: string) {
     return prisma.storeSubscriptionPlan.findFirst({
       where: { id, deletedAt: null },
@@ -72,11 +129,11 @@ export class StorePlansRepository {
     });
   }
 
-  createPlan(dto: CreateStorePlanDto) {
+  createPlan(dto: StorePlanWriteData) {
     return prisma.storeSubscriptionPlan.create({ data: dto });
   }
 
-  updatePlan(id: string, dto: UpdateStorePlanDto) {
+  updatePlan(id: string, dto: StorePlanUpdateData) {
     return prisma.storeSubscriptionPlan.update({ where: { id }, data: dto });
   }
 
@@ -134,22 +191,28 @@ export class StorePlansRepository {
   }
 
   async bulkUpsertPricing(planId: string, dto: BulkUpsertStorePlanPricingDto) {
-    const [monthly, yearly] = await Promise.all([
+    const [oneMonth, twoMonths, threeMonths] = await Promise.all([
       this.upsertPricing(planId, {
         categoryId: dto.categoryId,
-        billingPeriod: StoreBillingPeriod.MONTHLY,
-        price: dto.monthlyPrice,
-        maxListings: dto.monthlyMaxListings
+        billingPeriod: StoreBillingPeriod.ONE_MONTH,
+        price: dto.oneMonthPrice,
+        maxListings: dto.oneMonthMaxListings
       }),
       this.upsertPricing(planId, {
         categoryId: dto.categoryId,
-        billingPeriod: StoreBillingPeriod.YEARLY,
-        price: dto.yearlyPrice,
-        maxListings: dto.yearlyMaxListings
+        billingPeriod: StoreBillingPeriod.TWO_MONTHS,
+        price: dto.twoMonthsPrice,
+        maxListings: dto.twoMonthsMaxListings
+      }),
+      this.upsertPricing(planId, {
+        categoryId: dto.categoryId,
+        billingPeriod: StoreBillingPeriod.THREE_MONTHS,
+        price: dto.threeMonthsPrice,
+        maxListings: dto.threeMonthsMaxListings
       })
     ]);
 
-    return { monthly, yearly };
+    return { oneMonth, twoMonths, threeMonths };
   }
 
   updatePricingDiscount(pricingId: string, dto: UpdateStorePlanDiscountDto) {

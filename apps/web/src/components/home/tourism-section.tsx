@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { MapPin, Star } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
+import { TourismSectionSkeleton } from '@/components/home/home-section-skeletons';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { resolveMediaUrl } from '@/lib/media-url';
@@ -52,9 +53,11 @@ type ApiTourismDestination = {
 export function TourismSection() {
   const { locale, localizedPath, m } = useI18n();
   const [apiDestinations, setApiDestinations] = useState<ApiTourismDestination[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
+    setIsLoading(true);
 
     api
       .get<{ data: ApiTourismDestination[] }>('/tourism/destinations')
@@ -63,6 +66,9 @@ export function TourismSection() {
       })
       .catch(() => {
         if (!cancelled) setApiDestinations([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
       });
 
     return () => {
@@ -95,6 +101,10 @@ export function TourismSection() {
   );
 
   const featuredExperiences = displayDestinations.slice(0, 4);
+
+  if (isLoading) {
+    return <TourismSectionSkeleton />;
+  }
 
   return (
     <>

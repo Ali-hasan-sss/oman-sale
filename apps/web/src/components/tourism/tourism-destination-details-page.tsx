@@ -75,7 +75,7 @@ export function TourismDestinationDetailsPage({ destinationId }: { destinationId
 
   if (!apiDestination && (!staticDestination || !staticDetails)) {
     if (!apiLoaded) {
-      return <div className="min-h-screen bg-gray-50 py-20 text-center text-gray-500">Loading...</div>;
+      return <div className="py-20 text-center text-gray-500">Loading...</div>;
     }
     notFound();
   }

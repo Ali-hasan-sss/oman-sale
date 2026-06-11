@@ -10,6 +10,7 @@ import {
   confirmThawaniPaymentSchema,
   createStoreSchema,
   listStorePlansForCategoryQuerySchema,
+  listStoreSubscriptionsQuerySchema,
   listStoresQuerySchema,
   subscribeStoreSchema,
   updateStoreSchema
@@ -44,6 +45,14 @@ storesRoutes.get(
 );
 
 storesRoutes.get(
+  '/:id/subscriptions',
+  requireAuth,
+  ensureActiveUser,
+  validateRequest({ params: idParams, query: listStoreSubscriptionsQuerySchema }),
+  asyncHandler(storesController.listSubscriptions)
+);
+
+storesRoutes.get(
   '/:id/ads',
   requireAuth,
   ensureActiveUser,
@@ -75,14 +84,6 @@ storesRoutes.patch(
   asyncHandler(storesController.update)
 );
 
-storesRoutes.delete(
-  '/:id',
-  requireAuth,
-  ensureActiveUser,
-  validateRequest({ params: idParams }),
-  asyncHandler(storesController.remove)
-);
-
 storesRoutes.post(
   '/:id/activate-paid',
   requireAuth,
@@ -97,4 +98,12 @@ storesRoutes.post(
   ensureActiveUser,
   validateRequest({ params: idParams, body: subscribeStoreSchema }),
   asyncHandler(storesController.subscribe)
+);
+
+storesRoutes.post(
+  '/:id/renew-subscription',
+  requireAuth,
+  ensureActiveUser,
+  validateRequest({ params: idParams }),
+  asyncHandler(storesController.renewSubscription)
 );

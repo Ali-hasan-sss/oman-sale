@@ -25,6 +25,7 @@ import { storePlansRoutes } from './modules/store-plans/store-plans.routes';
 import { storesRoutes } from './modules/stores/stores.routes';
 import { searchRoutes } from './modules/search/search.routes';
 import { assistantRoutes } from './modules/assistant/assistant.routes';
+import { articlesRoutes } from './modules/articles/articles.routes';
 import { tourismRoutes } from './modules/tourism/tourism.routes';
 import { usersRoutes } from './modules/users/users.routes';
 import { errorHandler } from './shared/middleware/error-handler';
@@ -81,6 +82,7 @@ app.use('/api/v1/stores', storesRoutes);
 app.use('/api/v1/search', searchRoutes);
 app.use('/api/v1/assistant', assistantRoutes);
 app.use('/api/v1/tourism', tourismRoutes);
+app.use('/api/v1/articles', articlesRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

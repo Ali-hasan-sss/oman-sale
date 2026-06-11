@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
 
 import { tourismDestinations, tourismFeatures, tourismPageContent } from '@/data/tourism';
 import { api } from '@/lib/api';
@@ -18,6 +19,8 @@ type ApiTourismDestination = {
 
 export function TourismLandmarksPage() {
   const { locale, localizedPath } = useI18n();
+  const searchParams = useSearchParams();
+  const query = (searchParams.get('q') ?? '').trim().toLowerCase();
   const content = tourismPageContent[locale];
   const [destinations, setDestinations] = useState<ApiTourismDestination[]>([]);
 
@@ -37,18 +40,27 @@ export function TourismLandmarksPage() {
     };
   }, []);
 
-  const displayDestinations =
-    destinations.length > 0
-      ? destinations.map((destination) => ({
-          id: destination.slug,
-          image: resolveMediaUrl(destination.imageUrl),
-          title: locale === 'en' ? destination.titleEn : destination.titleAr
-        }))
-      : tourismDestinations.map((destination) => ({
-          id: destination.id,
-          image: destination.image,
-          title: destination.title[locale]
-        }));
+  const displayDestinations = useMemo(() => {
+    const base =
+      destinations.length > 0
+        ? destinations.map((destination) => ({
+            id: destination.slug,
+            image: resolveMediaUrl(destination.imageUrl),
+            title: locale === 'en' ? destination.titleEn : destination.titleAr
+          }))
+        : tourismDestinations.map((destination) => ({
+            id: destination.id,
+            image: destination.image,
+            title: destination.title[locale]
+          }));
+
+    if (!query) return base;
+
+    return base.filter(
+      (destination) =>
+        destination.title.toLowerCase().includes(query) || destination.id.toLowerCase().includes(query)
+    );
+  }, [destinations, locale, query]);
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-8">

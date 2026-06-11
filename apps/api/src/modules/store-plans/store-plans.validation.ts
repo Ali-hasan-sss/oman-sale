@@ -10,22 +10,34 @@ const storePlanBaseSchema = z.object({
   trialDays: z.coerce.number().int().min(0).max(365).optional(),
   trialMaxListings: z.coerce.number().int().min(0).max(10000).optional(),
   promotionPlanId: z.string().uuid().nullable().optional(),
+  isAdminFree: z.boolean().optional(),
   isActive: z.boolean().optional()
 });
 
-export const createStorePlanSchema = storePlanBaseSchema.superRefine((data, ctx) => {
-  const trialDays = data.trialDays ?? 0;
-  const trialMaxListings = data.trialMaxListings ?? 0;
-  if (trialDays > 0 && trialMaxListings <= 0) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'Trial max listings is required when trial days is greater than zero',
-      path: ['trialMaxListings']
-    });
-  }
+const storePlanDefaultPricingSchema = z.object({
+  oneMonthPrice: z.coerce.number().min(0),
+  oneMonthMaxListings: z.coerce.number().int().positive(),
+  twoMonthsPrice: z.coerce.number().min(0),
+  twoMonthsMaxListings: z.coerce.number().int().positive(),
+  threeMonthsPrice: z.coerce.number().min(0),
+  threeMonthsMaxListings: z.coerce.number().int().positive()
 });
 
-export const updateStorePlanSchema = storePlanBaseSchema.partial();
+export const createStorePlanSchema = storePlanBaseSchema
+  .merge(storePlanDefaultPricingSchema)
+  .superRefine((data, ctx) => {
+    const trialDays = data.trialDays ?? 0;
+    const trialMaxListings = data.trialMaxListings ?? 0;
+    if (trialDays > 0 && trialMaxListings <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Trial max listings is required when trial days is greater than zero',
+        path: ['trialMaxListings']
+      });
+    }
+  });
+
+export const updateStorePlanSchema = storePlanBaseSchema.partial().merge(storePlanDefaultPricingSchema.partial());
 
 export const upsertStorePlanPricingSchema = z.object({
   categoryId: z.string().uuid(),
@@ -36,10 +48,12 @@ export const upsertStorePlanPricingSchema = z.object({
 
 export const bulkUpsertStorePlanPricingSchema = z.object({
   categoryId: z.string().uuid(),
-  monthlyPrice: z.coerce.number().min(0),
-  monthlyMaxListings: z.coerce.number().int().positive(),
-  yearlyPrice: z.coerce.number().min(0),
-  yearlyMaxListings: z.coerce.number().int().positive()
+  oneMonthPrice: z.coerce.number().min(0),
+  oneMonthMaxListings: z.coerce.number().int().positive(),
+  twoMonthsPrice: z.coerce.number().min(0),
+  twoMonthsMaxListings: z.coerce.number().int().positive(),
+  threeMonthsPrice: z.coerce.number().min(0),
+  threeMonthsMaxListings: z.coerce.number().int().positive()
 });
 
 export const updateStorePlanDiscountSchema = z
@@ -58,7 +72,8 @@ export const updateStorePlanDiscountSchema = z
 
 export const listStorePlansQuerySchema = z.object({
   categoryId: z.string().uuid().optional(),
-  includeInactive: z.coerce.boolean().optional()
+  includeInactive: z.coerce.boolean().optional(),
+  includePricing: z.coerce.boolean().optional()
 });
 
 export type CreateStorePlanDto = z.infer<typeof createStorePlanSchema>;

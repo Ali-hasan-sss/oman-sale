@@ -48,7 +48,7 @@ export function SiteFooter() {
   return (
     <footer className="bg-ink-950 text-white">
       <div className="mx-auto max-w-7xl px-4 py-12">
-        <div className="grid grid-cols-1 gap-8 border-b border-slate-800 pb-12 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-8 border-b border-slate-800 pb-12 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <div className="mb-4 flex items-center gap-3">
               <span className="flex h-20 w-20 items-center justify-center overflow-hidden">
@@ -70,6 +70,13 @@ export function SiteFooter() {
           </div>
 
           <FooterList title={m.footer.categories} items={footerCategories} />
+          <FooterList
+            title={m.footer.news}
+            items={[
+              [m.articles.pageTitle, '/news'],
+              [m.footer.pricing, '/pricing']
+            ]}
+          />
           <FooterList title={m.footer.regions} items={footerRegions} />
         </div>
 

@@ -1,13 +1,14 @@
 'use client';
 
-import { Phone, Store } from 'lucide-react';
+import { ChevronDown, Phone, Store } from 'lucide-react';
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 import { SiteFooter } from '@/components/home/site-footer';
 import { FilterChipsSkeleton, StoreCardsSkeleton } from '@/components/stores/store-card-skeleton';
 import { UserSiteHeader, SiteHeaderSearch } from '@/components/navigation/user-site-header';
+import { useSiteHeaderOffset } from '@/hooks/use-site-header-offset';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { getStoreLocationLabel, getWilayahsForGovernorate, omanGovernorates } from '@/lib/oman-locations';
@@ -50,6 +51,7 @@ export function StoresBrowsePage() {
   const { dir, locale, localizedPath, m } = useI18n();
   const searchParams = useSearchParams();
   const text = m.storesBrowse;
+  const headerOffset = useSiteHeaderOffset();
 
   const [storeTypes, setStoreTypes] = useState<StoreType[]>([]);
   const [stores, setStores] = useState<PublicStore[]>([]);
@@ -114,13 +116,18 @@ export function StoresBrowsePage() {
   }, [query, storeTypeId, city, wilayah]);
 
   const wilayahOptions = city ? getWilayahsForGovernorate(city) : [];
-
   const hasMore = stores.length < total;
-
   const showStoreSkeleton = isLoading && page === 1;
 
+  const resetFilters = () => {
+    setStoreTypeId('');
+    setCity('');
+    setWilayah('');
+    setPage(1);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50" dir={dir}>
+    <div className="site-page-shell bg-gray-50" dir={dir}>
       <UserSiteHeader>
         <SiteHeaderSearch />
       </UserSiteHeader>
@@ -134,106 +141,129 @@ export function StoresBrowsePage() {
           </p>
         </div>
 
-        <div className="mb-4">
-          {isLoadingStoreTypes ? (
-            <FilterChipsSkeleton count={7} />
-          ) : (
-            <div className="filter-chips-scroll flex gap-2 overflow-x-auto pb-2">
-              <FilterChip active={!storeTypeId} onClick={() => setStoreTypeId('')}>
-                {text.allStoreTypes}
-              </FilterChip>
-              {storeTypes.map((storeType) => (
-                <FilterChip
-                  key={storeType.id}
-                  active={storeTypeId === storeType.id}
-                  onClick={() => setStoreTypeId(storeTypeId === storeType.id ? '' : storeType.id)}
-                >
-                  {locale === 'en' ? storeType.nameEn : storeType.nameAr}
-                </FilterChip>
-              ))}
-            </div>
-          )}
-        </div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+          <aside className="lg:col-span-1">
+            <div className="rounded-lg bg-white p-6 shadow-sm lg:sticky" style={{ top: headerOffset || 16 }}>
+              <div className="mb-6 flex items-center justify-between">
+                <h2 className="text-lg font-bold">{text.filters}</h2>
+                <button type="button" onClick={resetFilters} className="text-sm text-blue-600 hover:underline">
+                  {text.clearAll}
+                </button>
+              </div>
 
-        <div className="mb-4">
-          <div className="filter-chips-scroll flex gap-2 overflow-x-auto pb-2">
-            <FilterChip
-              active={!city}
-              onClick={() => {
-                setCity('');
-                setWilayah('');
-              }}
-            >
-              {text.allCities}
-            </FilterChip>
-            {omanGovernorates.map((governorate) => (
-              <FilterChip
-                key={governorate.value}
-                active={city === governorate.value}
-                onClick={() => {
-                  if (city === governorate.value) {
-                    setCity('');
-                    setWilayah('');
-                  } else {
-                    setCity(governorate.value);
-                    setWilayah('');
-                  }
-                }}
+              <div
+                className="filter-sidebar-scrollbar space-y-6 overflow-y-auto"
+                style={{ maxHeight: headerOffset ? `calc(100vh - ${headerOffset}px - 1rem)` : 'calc(100vh - 12rem)' }}
               >
-                {locale === 'en' ? governorate.en : governorate.ar}
-              </FilterChip>
-            ))}
-          </div>
-        </div>
+                {isLoadingStoreTypes ? (
+                  <FilterChipsSkeleton count={6} />
+                ) : (
+                  <FilterSection title={text.storeTypeFilter}>
+                    <SidebarFilterChip active={!storeTypeId} onClick={() => setStoreTypeId('')}>
+                      {text.allStoreTypes}
+                    </SidebarFilterChip>
+                    {storeTypes.map((storeType) => (
+                      <SidebarFilterChip
+                        key={storeType.id}
+                        active={storeTypeId === storeType.id}
+                        onClick={() => setStoreTypeId(storeTypeId === storeType.id ? '' : storeType.id)}
+                      >
+                        {locale === 'en' ? storeType.nameEn : storeType.nameAr}
+                      </SidebarFilterChip>
+                    ))}
+                  </FilterSection>
+                )}
 
-        {city && wilayahOptions.length > 0 ? (
-          <div className="mb-6">
-            <p className="mb-2 text-sm font-bold text-gray-600">{text.allWilayahs}</p>
-            <div className="filter-chips-scroll flex gap-2 overflow-x-auto pb-2">
-              <FilterChip active={!wilayah} onClick={() => setWilayah('')}>
-                {text.allWilayahsInGovernorate}
-              </FilterChip>
-              {wilayahOptions.map((wilayahOption) => (
-                <FilterChip
-                  key={wilayahOption.value}
-                  active={wilayah === wilayahOption.value}
-                  onClick={() => setWilayah(wilayah === wilayahOption.value ? '' : wilayahOption.value)}
-                >
-                  {locale === 'en' ? wilayahOption.en : wilayahOption.ar}
-                </FilterChip>
-              ))}
+                <FilterSection title={text.governorateFilter}>
+                  <SidebarFilterChip
+                    active={!city}
+                    onClick={() => {
+                      setCity('');
+                      setWilayah('');
+                    }}
+                  >
+                    {text.allCities}
+                  </SidebarFilterChip>
+                  {omanGovernorates.map((governorate) => (
+                    <SidebarFilterChip
+                      key={governorate.value}
+                      active={city === governorate.value}
+                      onClick={() => {
+                        if (city === governorate.value) {
+                          setCity('');
+                          setWilayah('');
+                        } else {
+                          setCity(governorate.value);
+                          setWilayah('');
+                        }
+                      }}
+                    >
+                      {locale === 'en' ? governorate.en : governorate.ar}
+                    </SidebarFilterChip>
+                  ))}
+                </FilterSection>
+
+                {city && wilayahOptions.length > 0 ? (
+                  <FilterSection title={text.allWilayahs}>
+                    <SidebarFilterChip active={!wilayah} onClick={() => setWilayah('')}>
+                      {text.allWilayahsInGovernorate}
+                    </SidebarFilterChip>
+                    {wilayahOptions.map((wilayahOption) => (
+                      <SidebarFilterChip
+                        key={wilayahOption.value}
+                        active={wilayah === wilayahOption.value}
+                        onClick={() => setWilayah(wilayah === wilayahOption.value ? '' : wilayahOption.value)}
+                      >
+                        {locale === 'en' ? wilayahOption.en : wilayahOption.ar}
+                      </SidebarFilterChip>
+                    ))}
+                  </FilterSection>
+                ) : null}
+
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={resetFilters}
+                    className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm font-bold transition hover:bg-gray-50"
+                  >
+                    {text.resetFilters}
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="mb-6" />
-        )}
+          </aside>
 
-        {error ? <p className="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</p> : null}
+          <section className="lg:col-span-3">
+            {error ? <p className="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</p> : null}
 
-        {showStoreSkeleton ? (
-          <StoreCardsSkeleton count={8} />
-        ) : stores.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-16 text-center text-gray-500">{text.empty}</p>
-        ) : (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {stores.map((store) => (
-              <StoreCard key={store.id} store={store} locale={locale} localizedPath={localizedPath} text={text} />
-            ))}
-          </div>
-        )}
+            {showStoreSkeleton ? (
+              <StoreCardsSkeleton count={8} />
+            ) : stores.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-16 text-center text-gray-500">
+                {text.empty}
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {stores.map((store) => (
+                  <StoreCard key={store.id} store={store} locale={locale} localizedPath={localizedPath} text={text} />
+                ))}
+              </div>
+            )}
 
-        {hasMore ? (
-          <div className="mt-8 text-center">
-            <button
-              type="button"
-              disabled={isLoading}
-              onClick={() => setPage((current) => current + 1)}
-              className="rounded-xl bg-slate-900 px-6 py-3 font-bold text-white transition hover:bg-slate-800 disabled:opacity-60"
-            >
-              {isLoading ? text.loading : text.loadMore}
-            </button>
-          </div>
-        ) : null}
+            {hasMore ? (
+              <div className="mt-12 text-center">
+                <button
+                  type="button"
+                  disabled={isLoading}
+                  onClick={() => setPage((current) => current + 1)}
+                  className="rounded-lg bg-gray-100 px-8 py-3 font-bold transition hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isLoading ? text.loading : text.loadMore}
+                </button>
+              </div>
+            ) : null}
+          </section>
+        </div>
       </main>
 
       <SiteFooter />
@@ -303,13 +333,41 @@ function StoreCard({
   );
 }
 
-function FilterChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+function FilterSection({ children, title }: { children: ReactNode; title: string }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div>
+      <button
+        className="mb-3 flex w-full items-center justify-between"
+        onClick={() => setIsOpen((current) => !current)}
+        type="button"
+      >
+        <h3 className="text-sm font-bold">{title}</h3>
+        <ChevronDown size={18} className={`transition ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      {isOpen ? <div className="flex flex-wrap gap-2">{children}</div> : null}
+    </div>
+  );
+}
+
+function SidebarFilterChip({
+  active,
+  onClick,
+  children
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-bold transition ${
-        active ? 'bg-green-600 text-white' : 'bg-white text-gray-700 shadow-sm hover:bg-gray-100'
+      className={`rounded-full border px-3 py-1.5 text-sm transition ${
+        active
+          ? 'border-blue-600 bg-blue-50 text-blue-700'
+          : 'border-gray-300 bg-white text-gray-700 hover:border-blue-500'
       }`}
     >
       {children}

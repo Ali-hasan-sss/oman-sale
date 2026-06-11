@@ -165,7 +165,7 @@ export function ChatsPage() {
   }, [conversations, currentUser?.id, search]);
 
   return (
-    <div className="min-h-screen bg-gray-50" dir={dir}>
+    <div className="site-page-shell bg-gray-50" dir={dir}>
       <UserSiteHeader />
 
       <main className="mx-auto max-w-7xl px-4 py-8" dir={dir}>

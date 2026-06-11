@@ -1,8 +1,9 @@
 'use client';
 
-import { Edit3, Plus, Trash2 } from 'lucide-react';
+import { Edit3, Plus, Trash2, X } from 'lucide-react';
 import { FormEvent, ReactNode, useEffect, useState } from 'react';
 
+import { AdminTableSkeleton } from '@/components/admin/admin-table-skeleton';
 import { adminApi } from '@/lib/admin-auth';
 import { useI18n } from '@/lib/i18n';
 
@@ -65,8 +66,12 @@ export function AdminPromotionsManagement() {
   const [form, setForm] = useState<PromotionFormState>(initialForm);
   const [formErrors, setFormErrors] = useState<PromotionFormErrors>({});
   const [editingId, setEditingId] = useState<string>();
+  const [formModalOpen, setFormModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<PromotionPlan | null>(null);
+  const [deleteError, setDeleteError] = useState<string>();
   const [error, setError] = useState<string>();
 
   const loadPlans = async () => {
@@ -107,10 +112,18 @@ export function AdminPromotionsManagement() {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const resetForm = () => {
+  const closeFormModal = () => {
     setForm(initialForm);
     setFormErrors({});
     setEditingId(undefined);
+    setFormModalOpen(false);
+  };
+
+  const startAdd = () => {
+    setForm(initialForm);
+    setFormErrors({});
+    setEditingId(undefined);
+    setFormModalOpen(true);
   };
 
   const startEdit = (plan: PromotionPlan) => {
@@ -131,7 +144,7 @@ export function AdminPromotionsManagement() {
       isActive: plan.isActive
     });
     setFormErrors({});
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setFormModalOpen(true);
   };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -163,86 +176,51 @@ export function AdminPromotionsManagement() {
         await adminApi().post('/promotions/plans', payload);
       }
 
-      resetForm();
+      closeFormModal();
       await loadPlans();
     } finally {
       setIsSaving(false);
     }
   };
 
-  const deletePlan = async (planId: string) => {
-    await adminApi().delete(`/promotions/plans/${planId}`);
-    await loadPlans();
+  const confirmDeletePlan = async () => {
+    if (!deleteTarget) return;
+
+    setIsDeleting(true);
+    setDeleteError(undefined);
+
+    try {
+      await adminApi().delete(`/promotions/plans/${deleteTarget.id}`);
+      setDeleteTarget(null);
+      await loadPlans();
+    } catch {
+      setDeleteError(m.admin.promotionsDeleteError);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
     <div className="space-y-6">
       <section className="rounded-3xl bg-white p-6 shadow-sm">
-        <div className="mb-6">
-          <h2 className="text-2xl font-black">{m.admin.promotionsManagement}</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            {plans.length} {m.admin.totalResults}
-          </p>
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-black">{m.admin.promotionsManagement}</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              {plans.length} {m.admin.totalResults}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={startAdd}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-3 font-bold text-white transition hover:bg-brand-700"
+          >
+            <Plus size={18} />
+            {m.admin.createPromotion}
+          </button>
         </div>
 
         {error ? <div className="mb-4 rounded-xl bg-red-50 p-4 text-sm font-bold text-red-700">{error}</div> : null}
-
-        <form onSubmit={submit} className="mb-8 grid gap-4 rounded-2xl bg-slate-50 p-4 lg:grid-cols-3">
-          <Field label={m.admin.promotionNameAr} error={formErrors.nameAr}>
-            <input value={form.nameAr} onChange={(event) => setForm((current) => ({ ...current, nameAr: event.target.value }))} className={inputClass} />
-          </Field>
-          <Field label={m.admin.promotionNameEn} error={formErrors.nameEn}>
-            <input dir="ltr" value={form.nameEn} onChange={(event) => setForm((current) => ({ ...current, nameEn: event.target.value }))} className={inputClass} />
-          </Field>
-          <Field label={m.admin.badgeLabel}>
-            <input value={form.badgeLabel} onChange={(event) => setForm((current) => ({ ...current, badgeLabel: event.target.value }))} className={inputClass} />
-          </Field>
-          <Field label={m.admin.promotionDescriptionAr} error={formErrors.descriptionAr}>
-            <textarea value={form.descriptionAr} onChange={(event) => setForm((current) => ({ ...current, descriptionAr: event.target.value }))} className={`${inputClass} min-h-24`} />
-          </Field>
-          <Field label={m.admin.promotionDescriptionEn} error={formErrors.descriptionEn}>
-            <textarea dir="ltr" value={form.descriptionEn} onChange={(event) => setForm((current) => ({ ...current, descriptionEn: event.target.value }))} className={`${inputClass} min-h-24`} />
-          </Field>
-          <Field label={m.admin.color}>
-            <input type="color" value={form.color} onChange={(event) => setForm((current) => ({ ...current, color: event.target.value }))} className="h-12 w-full rounded-xl border border-slate-200 bg-white px-2" />
-          </Field>
-          <Field label={m.admin.weekPrice} error={formErrors.weekPrice} hint={m.admin.freePriceHint}>
-            <input type="number" min="0" step="0.001" value={form.weekPrice} onChange={(event) => setForm((current) => ({ ...current, weekPrice: event.target.value }))} className={inputClass} />
-          </Field>
-          <Field label={m.admin.twoWeeksPrice} error={formErrors.twoWeeksPrice} hint={m.admin.freePriceHint}>
-            <input type="number" min="0" step="0.001" value={form.twoWeeksPrice} onChange={(event) => setForm((current) => ({ ...current, twoWeeksPrice: event.target.value }))} className={inputClass} />
-          </Field>
-          <Field label={m.admin.monthPrice} error={formErrors.monthPrice} hint={m.admin.freePriceHint}>
-            <input type="number" min="0" step="0.001" value={form.monthPrice} onChange={(event) => setForm((current) => ({ ...current, monthPrice: event.target.value }))} className={inputClass} />
-          </Field>
-          <Field label={m.admin.priorityScore} error={formErrors.priorityScore}>
-            <input type="number" min="0" value={form.priorityScore} onChange={(event) => setForm((current) => ({ ...current, priorityScore: event.target.value }))} className={inputClass} />
-          </Field>
-          <Field label={m.admin.dailyImpressions} error={formErrors.dailyImpressions}>
-            <input type="number" min="1" value={form.dailyImpressions} onChange={(event) => setForm((current) => ({ ...current, dailyImpressions: event.target.value }))} className={inputClass} />
-          </Field>
-          <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700">
-            <label className="flex items-center gap-2">
-              <input type="checkbox" checked={form.appearsFirst} onChange={(event) => setForm((current) => ({ ...current, appearsFirst: event.target.checked }))} />
-              {m.admin.appearsFirst}
-            </label>
-            <label className="flex items-center gap-2">
-              <input type="checkbox" checked={form.isActive} onChange={(event) => setForm((current) => ({ ...current, isActive: event.target.checked }))} />
-              {m.admin.isActive}
-            </label>
-          </div>
-          <div className="flex gap-3 lg:col-span-3">
-            <button disabled={isSaving} className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-3 font-bold text-white transition hover:bg-brand-700 disabled:opacity-60">
-              <Plus size={18} />
-              {editingId ? m.admin.updatePromotion : m.admin.createPromotion}
-            </button>
-            {editingId ? (
-              <button type="button" onClick={resetForm} className="rounded-xl border border-slate-200 px-5 py-3 font-bold text-slate-700">
-                {m.admin.cancel}
-              </button>
-            ) : null}
-          </div>
-        </form>
 
         <div className="overflow-hidden rounded-2xl border border-slate-200">
           <table className="w-full text-sm">
@@ -258,9 +236,15 @@ export function AdminPromotionsManagement() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {isLoading ? (
+                <AdminTableSkeleton
+                  asBodyOnly
+                  rows={6}
+                  columnTypes={['avatar-text', 'text', 'text', 'text', 'badge', 'actions']}
+                />
+              ) : plans.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center font-bold text-slate-500">
-                    {m.admin.loading}
+                    {m.admin.promotionsEmpty}
                   </td>
                 </tr>
               ) : (
@@ -282,17 +266,32 @@ export function AdminPromotionsManagement() {
                       <td className="px-4 py-3">{formatPrice(plan.twoWeeksPrice)}</td>
                       <td className="px-4 py-3">{formatPrice(plan.monthPrice)}</td>
                       <td className="px-4 py-3">
-                        <span className={`rounded-full px-3 py-1 text-xs font-bold ${plan.isActive ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-bold ${
+                            plan.isActive ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-600'
+                          }`}
+                        >
                           {plan.isActive ? m.admin.active : m.admin.inactive}
                         </span>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-2">
-                          <button onClick={() => startEdit(plan)} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white/80 px-3 py-2 font-bold text-slate-700 transition hover:bg-white">
+                          <button
+                            type="button"
+                            onClick={() => startEdit(plan)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white/80 px-3 py-2 font-bold text-slate-700 transition hover:bg-white"
+                          >
                             <Edit3 size={14} />
                             {m.admin.editPromotion}
                           </button>
-                          <button onClick={() => deletePlan(plan.id)} className="inline-flex items-center gap-1 rounded-lg border border-red-100 bg-white/80 px-3 py-2 font-bold text-red-600 transition hover:bg-red-50">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDeleteError(undefined);
+                              setDeleteTarget(plan);
+                            }}
+                            className="inline-flex items-center gap-1 rounded-lg border border-red-100 bg-white/80 px-3 py-2 font-bold text-red-600 transition hover:bg-red-50"
+                          >
                             <Trash2 size={14} />
                             {m.admin.deletePromotion}
                           </button>
@@ -306,14 +305,214 @@ export function AdminPromotionsManagement() {
           </table>
         </div>
       </section>
+
+      {deleteTarget ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4">
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+            <h3 className="text-xl font-black text-slate-900">{m.admin.promotionsDeleteTitle}</h3>
+            <p className="mt-2 text-sm text-slate-600">{m.admin.promotionsDeleteConfirm}</p>
+            <p className="mt-3 font-bold text-slate-800">{deleteTarget.nameAr}</p>
+            <p className="text-sm text-slate-500">{deleteTarget.nameEn}</p>
+            {deleteError ? (
+              <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{deleteError}</p>
+            ) : null}
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={confirmDeletePlan}
+                className="flex-1 rounded-xl bg-red-600 px-4 py-3 font-bold text-white transition hover:bg-red-700 disabled:opacity-60"
+              >
+                {isDeleting ? m.admin.loading : m.admin.deletePromotion}
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => {
+                  setDeleteTarget(null);
+                  setDeleteError(undefined);
+                }}
+                className="rounded-xl border border-slate-200 px-4 py-3 font-bold text-slate-700 transition hover:bg-slate-50"
+              >
+                {m.admin.cancel}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {formModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <h3 className="text-xl font-black text-slate-900">
+                {editingId ? m.admin.updatePromotion : m.admin.createPromotion}
+              </h3>
+              <button
+                type="button"
+                onClick={closeFormModal}
+                className="rounded-full p-2 transition hover:bg-slate-100"
+                aria-label={m.admin.cancel}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={submit} className="grid gap-4 lg:grid-cols-3">
+              <Field label={m.admin.promotionNameAr} error={formErrors.nameAr}>
+                <input
+                  value={form.nameAr}
+                  onChange={(event) => setForm((current) => ({ ...current, nameAr: event.target.value }))}
+                  className={inputClass}
+                />
+              </Field>
+              <Field label={m.admin.promotionNameEn} error={formErrors.nameEn}>
+                <input
+                  dir="ltr"
+                  value={form.nameEn}
+                  onChange={(event) => setForm((current) => ({ ...current, nameEn: event.target.value }))}
+                  className={inputClass}
+                />
+              </Field>
+              <Field label={m.admin.badgeLabel}>
+                <input
+                  value={form.badgeLabel}
+                  onChange={(event) => setForm((current) => ({ ...current, badgeLabel: event.target.value }))}
+                  className={inputClass}
+                />
+              </Field>
+              <Field label={m.admin.promotionDescriptionAr} error={formErrors.descriptionAr}>
+                <textarea
+                  value={form.descriptionAr}
+                  onChange={(event) => setForm((current) => ({ ...current, descriptionAr: event.target.value }))}
+                  className={`${inputClass} min-h-24`}
+                />
+              </Field>
+              <Field label={m.admin.promotionDescriptionEn} error={formErrors.descriptionEn}>
+                <textarea
+                  dir="ltr"
+                  value={form.descriptionEn}
+                  onChange={(event) => setForm((current) => ({ ...current, descriptionEn: event.target.value }))}
+                  className={`${inputClass} min-h-24`}
+                />
+              </Field>
+              <Field label={m.admin.color}>
+                <input
+                  type="color"
+                  value={form.color}
+                  onChange={(event) => setForm((current) => ({ ...current, color: event.target.value }))}
+                  className="h-12 w-full rounded-xl border border-slate-200 bg-white px-2"
+                />
+              </Field>
+              <Field label={m.admin.weekPrice} error={formErrors.weekPrice} hint={m.admin.freePriceHint}>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.001"
+                  value={form.weekPrice}
+                  onChange={(event) => setForm((current) => ({ ...current, weekPrice: event.target.value }))}
+                  className={inputClass}
+                />
+              </Field>
+              <Field label={m.admin.twoWeeksPrice} error={formErrors.twoWeeksPrice} hint={m.admin.freePriceHint}>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.001"
+                  value={form.twoWeeksPrice}
+                  onChange={(event) => setForm((current) => ({ ...current, twoWeeksPrice: event.target.value }))}
+                  className={inputClass}
+                />
+              </Field>
+              <Field label={m.admin.monthPrice} error={formErrors.monthPrice} hint={m.admin.freePriceHint}>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.001"
+                  value={form.monthPrice}
+                  onChange={(event) => setForm((current) => ({ ...current, monthPrice: event.target.value }))}
+                  className={inputClass}
+                />
+              </Field>
+              <Field label={m.admin.priorityScore} labelHint={m.admin.priorityScoreHint} error={formErrors.priorityScore}>
+                <input
+                  type="number"
+                  min="0"
+                  value={form.priorityScore}
+                  onChange={(event) => setForm((current) => ({ ...current, priorityScore: event.target.value }))}
+                  className={inputClass}
+                />
+              </Field>
+              <Field label={m.admin.dailyImpressions} labelHint={m.admin.dailyImpressionsHint} error={formErrors.dailyImpressions}>
+                <input
+                  type="number"
+                  min="1"
+                  value={form.dailyImpressions}
+                  onChange={(event) => setForm((current) => ({ ...current, dailyImpressions: event.target.value }))}
+                  className={inputClass}
+                />
+              </Field>
+              <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={form.appearsFirst}
+                    onChange={(event) => setForm((current) => ({ ...current, appearsFirst: event.target.checked }))}
+                  />
+                  {m.admin.appearsFirst}
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={form.isActive}
+                    onChange={(event) => setForm((current) => ({ ...current, isActive: event.target.checked }))}
+                  />
+                  {m.admin.isActive}
+                </label>
+              </div>
+              <div className="flex gap-3 lg:col-span-3">
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-3 font-bold text-white transition hover:bg-brand-700 disabled:opacity-60"
+                >
+                  {editingId ? m.admin.updatePromotion : m.admin.createPromotion}
+                </button>
+                <button
+                  type="button"
+                  onClick={closeFormModal}
+                  className="rounded-xl border border-slate-200 px-5 py-3 font-bold text-slate-700 transition hover:bg-slate-50"
+                >
+                  {m.admin.cancel}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
 
-function Field({ children, error, hint, label }: { children: ReactNode; error?: string; hint?: string; label: string }) {
+function Field({
+  children,
+  error,
+  hint,
+  label,
+  labelHint
+}: {
+  children: ReactNode;
+  error?: string;
+  hint?: string;
+  label: string;
+  labelHint?: string;
+}) {
   return (
     <div className="space-y-2">
-      <span className="block text-sm font-bold text-slate-700">{label}</span>
+      <div>
+        <span className="block text-sm font-bold text-slate-700">{label}</span>
+        {labelHint ? <span className="mt-0.5 block text-xs font-normal text-slate-500">({labelHint})</span> : null}
+      </div>
       {children}
       {hint ? <span className="block text-xs text-slate-500">{hint}</span> : null}
       {error ? <span className="block text-xs font-bold text-red-600">{error}</span> : null}

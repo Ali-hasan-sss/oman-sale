@@ -1,33 +1,39 @@
 'use client';
 
-import { BarChart3, Building2, ExternalLink, Flag, FolderTree, Globe, Image, LayoutList, Lock, LogOut, MapPin, Megaphone, Menu, Store, Users, X } from 'lucide-react';
+import { BarChart3, Building2, ExternalLink, Flag, FolderTree, Globe, Image, LayoutList, LayoutPanelTop, Lock, LogOut, MapPin, Megaphone, Menu, Newspaper, Store, Users, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { FormEvent, PropsWithChildren, useEffect, useState } from 'react';
 
 import { notifyAuthChanged } from '@/components/auth/user-menu';
-import { AdminPageLoader } from '@/components/admin/admin-page-loader';
+import { AdminContentLoader } from '@/components/admin/admin-page-loader';
 import { adminApi, clearAdminSession, getAdminAccessToken } from '@/lib/admin-auth';
+import { ADMIN_PENDING_COUNTS_EVENT } from '@/lib/admin-pending-counts';
 import { useI18n } from '@/lib/i18n';
 
 const navItems = [
   { key: 'home', href: '/admin', icon: BarChart3 },
+  { key: 'hero', href: '/admin/hero', icon: Image }, 
   { key: 'users', href: '/admin/users', icon: Users },
+  { key: 'stores', href: '/admin/stores', icon: Building2 },
   { key: 'categories', href: '/admin/categories', icon: FolderTree },
-  { key: 'reports', href: '/admin/reports', icon: Flag },
   { key: 'ads', href: '/admin/ads', icon: LayoutList },
+  { key: 'reports', href: '/admin/reports', icon: Flag },
+  { key: 'bannerRequests', href: '/admin/banner-requests', icon: LayoutPanelTop },
   { key: 'promotions', href: '/admin/promotions', icon: Megaphone },
   { key: 'storePlans', href: '/admin/store-plans', icon: Store },
-  { key: 'stores', href: '/admin/stores', icon: Building2 },
-  { key: 'hero', href: '/admin/hero', icon: Image },
   { key: 'tourism', href: '/admin/tourism', icon: MapPin },
+  { key: 'articles', href: '/admin/articles', icon: Newspaper },
 ] as const;
 
-export function AdminShell({ children, contentLoading = false }: PropsWithChildren<{ contentLoading?: boolean }>) {
+export function AdminShell({ children }: PropsWithChildren) {
   const { dir, locale, localizedPath, m, toggleLocale } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
-  const [isReady, setIsReady] = useState(false);
+  const [isReady, setIsReady] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return Boolean(getAdminAccessToken());
+  });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
@@ -36,6 +42,20 @@ export function AdminShell({ children, contentLoading = false }: PropsWithChildr
   const [passwordMessage, setPasswordMessage] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [passwordSaving, setPasswordSaving] = useState(false);
+  const [pendingReports, setPendingReports] = useState(0);
+  const [pendingBannerRequests, setPendingBannerRequests] = useState(0);
+
+  const loadPendingCounts = () => {
+    adminApi()
+      .get<{
+        data: { pending: { reports: number; bannerRequestsPendingApproval: number } };
+      }>('/admin/statistics')
+      .then((response) => {
+        setPendingReports(response.data.data.pending.reports);
+        setPendingBannerRequests(response.data.data.pending.bannerRequestsPendingApproval);
+      })
+      .catch(() => undefined);
+  };
 
   useEffect(() => {
     if (!getAdminAccessToken()) {
@@ -44,7 +64,17 @@ export function AdminShell({ children, contentLoading = false }: PropsWithChildr
     }
 
     setIsReady(true);
-  }, [router]);
+  }, [router, localizedPath]);
+
+  useEffect(() => {
+    if (!isReady) return;
+
+    loadPendingCounts();
+
+    const handlePendingCountsChanged = () => loadPendingCounts();
+    window.addEventListener(ADMIN_PENDING_COUNTS_EVENT, handlePendingCountsChanged);
+    return () => window.removeEventListener(ADMIN_PENDING_COUNTS_EVENT, handlePendingCountsChanged);
+  }, [isReady, pathname]);
 
   useEffect(() => {
     setSidebarOpen(false);
@@ -94,33 +124,33 @@ export function AdminShell({ children, contentLoading = false }: PropsWithChildr
     }
   };
 
-  if (!isReady && !contentLoading) {
-    return <AdminPageLoader dir={dir} label={m.admin.loading} />;
-  }
-
-  const sidebar = (
-    <>
-      <div className="mb-8 flex items-center justify-between gap-3">
-        <Link href={localizedPath('/admin')} className="flex items-center gap-3">
-          <span className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
-            <img src="/logo.png" alt="Oman Sale" className="h-full w-full object-contain p-1" />
-          </span>
-          <div>
-            <p className="text-lg font-black">Oman Sale</p>
-            <p className="text-xs text-slate-500">{m.admin.dashboard}</p>
-          </div>
-        </Link>
-        <button
-          onClick={() => setSidebarOpen(false)}
-          className="rounded-xl border border-slate-200 p-2 text-slate-600 lg:hidden"
-          aria-label={closeSidebarLabel}
-          title={closeSidebarLabel}
-        >
-          <X size={18} />
-        </button>
+  const sidebarContent = (showCloseButton: boolean) => (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="shrink-0 border-b border-slate-100 p-5">
+        <div className="flex items-center justify-between gap-3">
+          <Link href={localizedPath('/admin')} className="flex items-center gap-3">
+            <span className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
+              <img src="/logo.png" alt="Oman Sale" className="h-full w-full object-contain p-1" />
+            </span>
+            <div>
+              <p className="text-lg font-black">Oman Sale</p>
+              <p className="text-xs text-slate-500">{m.admin.dashboard}</p>
+            </div>
+          </Link>
+          {showCloseButton ? (
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="rounded-xl border border-slate-200 p-2 text-slate-600 lg:hidden"
+              aria-label={closeSidebarLabel}
+              title={closeSidebarLabel}
+            >
+              <X size={18} />
+            </button>
+          ) : null}
+        </div>
       </div>
 
-      <nav className="space-y-2">
+      <nav className="admin-sidebar-scrollbar min-h-0 flex-1 space-y-2 overflow-y-auto p-5">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = pathname === localizedPath(item.href);
@@ -134,43 +164,62 @@ export function AdminShell({ children, contentLoading = false }: PropsWithChildr
               }`}
             >
               <Icon size={18} />
-              {m.admin[item.key]}
+              <span className="min-w-0 flex-1">{m.admin[item.key]}</span>
+              {item.key === 'reports' && pendingReports > 0 ? (
+                <span className="ms-auto inline-flex min-w-6 items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-black text-white">
+                  {pendingReports > 99 ? '99+' : pendingReports}
+                </span>
+              ) : null}
+              {item.key === 'bannerRequests' && pendingBannerRequests > 0 ? (
+                <span className="ms-auto inline-flex min-w-6 items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-black text-white">
+                  {pendingBannerRequests > 99 ? '99+' : pendingBannerRequests}
+                </span>
+              ) : null}
             </Link>
           );
         })}
       </nav>
 
-      <button
-        onClick={logout}
-        className="absolute bottom-5 right-5 left-5 flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 font-bold text-white transition hover:bg-slate-800"
-      >
-        <LogOut size={18} />
-        {m.admin.logout}
-      </button>
-    </>
+      <div className="shrink-0 border-t border-slate-100 p-5">
+        <button
+          onClick={logout}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 font-bold text-white transition hover:bg-slate-800"
+        >
+          <LogOut size={18} />
+          {m.admin.logout}
+        </button>
+      </div>
+    </div>
   );
 
   return (
-    <div className="min-h-screen bg-slate-100" dir={dir}>
-      {sidebarOpen ? <button className="fixed inset-0 z-30 bg-slate-900/40 lg:hidden" onClick={() => setSidebarOpen(false)} aria-label={closeSidebarLabel} /> : null}
+    <div className="flex h-screen overflow-hidden bg-slate-100" dir={dir}>
+      {sidebarOpen ? (
+        <button
+          className="fixed inset-0 z-30 bg-slate-900/40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+          aria-label={closeSidebarLabel}
+        />
+      ) : null}
+
       <aside
-        className={`fixed inset-y-0 z-30 hidden w-72 bg-white p-5 shadow-sm lg:block ${
-          dir === 'rtl' ? 'right-0 border-l border-slate-200' : 'left-0 border-r border-slate-200'
+        className={`hidden h-full w-72 shrink-0 flex-col bg-white shadow-sm lg:flex ${
+          dir === 'rtl' ? 'border-l border-slate-200' : 'border-r border-slate-200'
         }`}
       >
-        {sidebar}
+        {sidebarContent(false)}
       </aside>
 
       <aside
-        className={`fixed inset-y-0 z-40 w-72 bg-white p-5 shadow-xl transition-transform duration-300 lg:hidden ${
+        className={`fixed inset-y-0 z-40 flex h-full w-72 flex-col bg-white shadow-xl transition-transform duration-300 lg:hidden ${
           dir === 'rtl' ? `right-0 ${sidebarOpen ? 'translate-x-0' : 'translate-x-full'}` : `left-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`
         }`}
       >
-        {sidebar}
+        {sidebarContent(true)}
       </aside>
 
-      <div className={dir === 'rtl' ? 'lg:pr-72' : 'lg:pl-72'}>
-        <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="shrink-0 border-b border-slate-200 bg-white/90 backdrop-blur">
           <div className="flex items-center justify-between px-4 py-4 lg:px-8">
             <div className="flex items-center gap-3">
               <button
@@ -221,7 +270,9 @@ export function AdminShell({ children, contentLoading = false }: PropsWithChildr
           </div>
         </header>
 
-        <main className="px-4 py-8 lg:px-8">{children}</main>
+        <main className="admin-content-scrollbar min-h-0 flex-1 overflow-y-auto px-4 py-8 lg:px-8">
+          {isReady ? children : <AdminContentLoader label={m.admin.loading} />}
+        </main>
       </div>
 
       {passwordModalOpen ? (

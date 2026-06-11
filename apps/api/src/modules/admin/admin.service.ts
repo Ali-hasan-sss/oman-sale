@@ -1,7 +1,7 @@
 import { UserRole } from '@prisma/client';
 
 import { ApiError } from '../../shared/utils/api-error';
-import { resolveUserMedia } from '../../shared/utils/resolve-entity-media';
+import { resolveAdMedia, resolveUserMedia } from '../../shared/utils/resolve-entity-media';
 import { notificationsService } from '../notifications/notifications.service';
 import { adminRepository } from './admin.repository';
 import type { ListAdminReportsQuery, ListAdminUsersQuery, UpdateAdminUserDto } from './admin.validation';
@@ -19,8 +19,19 @@ export class AdminService {
     };
   }
 
-  listReports(query: ListAdminReportsQuery) {
-    return adminRepository.listReports(query);
+  async listReports(query: ListAdminReportsQuery) {
+    const result = await adminRepository.listReports(query);
+    return {
+      ...result,
+      items: result.items.map((report) => ({
+        ...report,
+        user: resolveUserMedia(report.user),
+        ad: resolveAdMedia({
+          ...report.ad,
+          user: report.ad.user ? resolveUserMedia(report.ad.user) : report.ad.user
+        })
+      }))
+    };
   }
 
   async getUser(id: string) {

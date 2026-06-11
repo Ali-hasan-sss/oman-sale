@@ -9,6 +9,7 @@ import {
 } from '../../shared/payments/thawani.client';
 import { ApiError } from '../../shared/utils/api-error';
 import { activateStoreSubscription } from './store-subscription.utils';
+import { getPlanChargeAmount } from '../../shared/utils/plan-pricing.utils';
 import { storesRepository } from './stores.repository';
 
 type CheckoutInput = {
@@ -32,11 +33,6 @@ export async function checkoutStoreSubscription(input: CheckoutInput): Promise<S
     return { activated: true };
   }
 
-  if (shouldSkipThawaniCheckout()) {
-    await activateStoreSubscription(input.subscriptionId);
-    return { activated: true };
-  }
-
   if (!isThawaniConfigured()) {
     throw new ApiError(503, 'Payment gateway is not configured');
   }
@@ -45,12 +41,14 @@ export async function checkoutStoreSubscription(input: CheckoutInput): Promise<S
   const successUrl = `${env.WEB_URL}${localePrefix}/stores/create/success`;
   const cancelUrl = `${env.WEB_URL}${localePrefix}/stores/create/cancel`;
 
+  const chargeAmount = getPlanChargeAmount(input.finalPrice);
+
   const { sessionId, paymentUrl } = await createThawaniCheckoutSession({
     clientReferenceId: input.subscriptionId,
     products: [
       {
         name: input.storeName.slice(0, 80),
-        unit_amount: omrToBaisa(input.finalPrice),
+        unit_amount: omrToBaisa(chargeAmount),
         quantity: 1
       }
     ],
@@ -65,7 +63,7 @@ export async function checkoutStoreSubscription(input: CheckoutInput): Promise<S
   const payment = await storesRepository.createPaymentForSubscription({
     userId: input.userId,
     subscriptionId: input.subscriptionId,
-    amount: input.finalPrice,
+    amount: chargeAmount,
     provider: PaymentProvider.THAWANI,
     sessionId,
     paymentUrl

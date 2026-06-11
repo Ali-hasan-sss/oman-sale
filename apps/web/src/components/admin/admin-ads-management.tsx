@@ -4,6 +4,9 @@ import { Edit3, ExternalLink, Eye, Plus, Power, PowerOff, RotateCcw, Search, Tra
 import Link from 'next/link';
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
 
+import { AdminPagination } from '@/components/admin/admin-pagination';
+import { AdminTableSkeleton } from '@/components/admin/admin-table-skeleton';
+import { ListingAdMediaUploader } from '@/components/listings/listing-ad-media-uploader';
 import { adminApi } from '@/lib/admin-auth';
 import { useI18n } from '@/lib/i18n';
 import { getListingLocationLabel, getWilayahsForGovernorate, omanGovernorates } from '@/lib/oman-locations';
@@ -75,7 +78,8 @@ type FormState = {
   contactPhone: string;
   status: AdStatus;
   isApproved: boolean;
-  imageUrls: string;
+  imageUrls: string[];
+  videoUrl: string | null;
 };
 
 const statuses: AdStatus[] = ['DRAFT', 'PENDING', 'ACTIVE', 'REJECTED', 'EXPIRED', 'ARCHIVED'];
@@ -93,7 +97,8 @@ const initialForm: FormState = {
   contactPhone: '',
   status: 'ACTIVE',
   isApproved: true,
-  imageUrls: ''
+  imageUrls: [],
+  videoUrl: null
 };
 
 const labels = {
@@ -138,7 +143,14 @@ const labels = {
     of: 'من',
     loadError: 'تعذر تحميل العروض.',
     formError: 'يرجى تعبئة عنوان ووصف وفئة العرض.',
-    imagesHint: 'ضع كل رابط صورة في سطر مستقل'
+    mediaImagesTitle: 'صور العرض',
+    mediaImagesHint: 'ارفع حتى 8 صور (JPG, PNG, WebP)',
+    mediaVideoTitle: 'فيديو العرض',
+    mediaVideoHint: 'ارفع فيديو واحد (MP4, WebM)',
+    mediaRemove: 'إزالة',
+    mediaUploading: 'جاري الرفع...',
+    mediaCompressing: 'جاري الضغط...',
+    mediaUploadError: 'تعذر رفع الملف.'
   },
   en: {
     title: 'Ads management',
@@ -181,9 +193,22 @@ const labels = {
     of: 'of',
     loadError: 'Could not load ads.',
     formError: 'Please fill title, description and category.',
-    imagesHint: 'Put each image URL on a separate line'
+    mediaImagesTitle: 'Listing images',
+    mediaImagesHint: 'Upload up to 8 images (JPG, PNG, WebP)',
+    mediaVideoTitle: 'Listing video',
+    mediaVideoHint: 'Upload one video (MP4, WebM)',
+    mediaRemove: 'Remove',
+    mediaUploading: 'Uploading...',
+    mediaCompressing: 'Compressing...',
+    mediaUploadError: 'Could not upload file.'
   }
 };
+
+function parseAdMedia(images?: Array<{ imageUrl: string; mediaType?: string }>) {
+  const video = images?.find((item) => isListingVideo(item));
+  const imageUrls = images?.filter((item) => !isListingVideo(item)).map((item) => item.imageUrl) ?? [];
+  return { imageUrls, videoUrl: video?.imageUrl ?? null };
+}
 
 export function AdminAdsManagement() {
   const { locale, localizedPath, m } = useI18n();
@@ -272,6 +297,7 @@ export function AdminAdsManagement() {
   };
 
   const startEdit = (ad: AdminAd) => {
+    const media = parseAdMedia(ad.images);
     setEditingAd(ad);
     setForm({
       title: ad.title,
@@ -285,7 +311,8 @@ export function AdminAdsManagement() {
       contactPhone: ad.contactPhone ?? '',
       status: ad.status,
       isApproved: ad.isApproved,
-      imageUrls: ad.images?.map((image) => image.imageUrl).join('\n') ?? ''
+      imageUrls: media.imageUrls,
+      videoUrl: media.videoUrl
     });
     setShowForm(true);
   };
@@ -309,7 +336,8 @@ export function AdminAdsManagement() {
       contactPhone: form.contactPhone || undefined,
       status: form.status,
       categoryId: form.categoryId,
-      imageUrls: form.imageUrls.split('\n').map((url) => url.trim()).filter(Boolean)
+      imageUrls: form.imageUrls,
+      videoUrl: form.videoUrl
     };
 
     if (editingAd) {
@@ -448,9 +476,23 @@ export function AdminAdsManagement() {
               <Field label="Description"><textarea className={`${inputClass} min-h-32`} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></Field>
             </div>
             <div className="lg:col-span-2">
-              <Field label="Images">
-                <textarea className={`${inputClass} min-h-24`} value={form.imageUrls} onChange={(event) => setForm({ ...form, imageUrls: event.target.value })} placeholder={text.imagesHint} />
-              </Field>
+              <ListingAdMediaUploader
+                useAdminAuth
+                imageUrls={form.imageUrls}
+                videoUrl={form.videoUrl}
+                onImageUrlsChange={(imageUrls) => setForm({ ...form, imageUrls })}
+                onVideoUrlChange={(videoUrl) => setForm({ ...form, videoUrl })}
+                labels={{
+                  imagesTitle: text.mediaImagesTitle,
+                  imagesHint: text.mediaImagesHint,
+                  videoTitle: text.mediaVideoTitle,
+                  videoHint: text.mediaVideoHint,
+                  remove: text.mediaRemove,
+                  uploading: text.mediaUploading,
+                  compressing: text.mediaCompressing,
+                  uploadError: text.mediaUploadError
+                }}
+              />
             </div>
             <div className="flex gap-2 lg:col-span-2">
               <button className="rounded-xl bg-brand-600 px-5 py-3 font-bold text-white transition hover:bg-brand-700">{text.save}</button>
@@ -475,7 +517,11 @@ export function AdminAdsManagement() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {isLoading ? (
-                <tr><td colSpan={5} className="px-2 py-6 text-center font-bold text-slate-500">{text.loading}</td></tr>
+                <AdminTableSkeleton
+                  asBodyOnly
+                  rows={10}
+                  columnTypes={['avatar-text', 'text', 'badges', 'text', 'short']}
+                />
               ) : ads.length === 0 ? (
                 <tr><td colSpan={5} className="px-2 py-6 text-center font-bold text-slate-500">{text.noData}</td></tr>
               ) : (
@@ -511,13 +557,17 @@ export function AdminAdsManagement() {
             </tbody>
           </table>
         </div>
-        <div className="flex items-center justify-between border-t border-slate-100 px-4 py-4">
-          <p className="text-sm font-bold text-slate-500">{text.page} {page} {text.of} {totalPages}</p>
-          <div className="flex gap-2">
-            <button disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))} className="rounded-xl border border-slate-200 px-4 py-2 font-bold disabled:opacity-50">Prev</button>
-            <button disabled={page >= totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))} className="rounded-xl border border-slate-200 px-4 py-2 font-bold disabled:opacity-50">Next</button>
-          </div>
-        </div>
+        <AdminPagination
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          labels={{
+            previous: m.admin.previous,
+            next: m.admin.next,
+            page: text.page,
+            of: text.of
+          }}
+        />
       </section>
 
       {viewingAd ? (

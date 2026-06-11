@@ -13,6 +13,7 @@
     "prisma:generate": "npm --workspace @oman-sale/api run prisma:generate",
     "prisma:migrate": "npm --workspace @oman-sale/api run prisma:migrate",
     "prisma:deploy": "npm --workspace @oman-sale/api run prisma:deploy",
+    "prisma:deploy:pg": "npm --workspace @oman-sale/api run prisma:deploy:pg",
     "jobs:dev": "npm --workspace @oman-sale/jobs run dev",
     "jobs:start": "npm --workspace @oman-sale/jobs run start",
     "mobile:dev": "npm --workspace @oman-sale/mobile run dev",

@@ -132,10 +132,10 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
   };
 
   return (
-    <div id="top" className="min-h-screen bg-gray-50" dir={dir}>
+    <div id="top" className="site-page-shell bg-gray-50" dir={dir}>
       <UserSiteHeader />
 
-      <main className="flex min-h-[80vh] items-center justify-center px-4 py-8">
+      <main className="flex flex-1 items-center justify-center px-4 py-8">
         <div className="w-full max-w-md">
           <div className="mb-8 text-center">
             <h1 className="mb-2 text-3xl font-bold">{isRegister ? authMessages.registerTitle : authMessages.loginTitle}</h1>

@@ -19,15 +19,22 @@ import { MyStoreScreenSkeleton } from '../components/skeleton';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
 import { formatPlanVatBreakdown } from '../lib/plan-pricing';
+import { canActivateStorePlanWithoutPayment } from '../lib/store-plan-activation';
+import { canRenewActiveSubscriptionWithinWindow } from '../lib/subscription-usage';
+import { filterPlansForUpgrade, isPaidBillingOption } from '../lib/store-plan-upgrade';
 import {
   activateStorePaidRequest,
   deleteStoreRequest,
   fetchMyStores,
   fetchStoreAds,
   fetchStorePlans,
+  getBillingPeriodLabel,
   renewStoreSubscriptionRequest,
+  subscribeStoreRequest,
+  STORE_BILLING_PERIODS,
   updateStoreRequest,
   type OwnerStore,
+  type StoreBillingPeriod,
   type StorePlan
 } from '../services/stores.service';
 import type { Listing } from '../types';
@@ -56,7 +63,7 @@ export function MyStoreScreen({ onCreateStore, onOpenListing }: MyStoreScreenPro
   const [plans, setPlans] = useState<StorePlan[]>([]);
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
   const [selectedUpgradePlanId, setSelectedUpgradePlanId] = useState('');
-  const [upgradeBillingPeriod, setUpgradeBillingPeriod] = useState<'MONTHLY' | 'YEARLY'>('MONTHLY');
+  const [upgradeBillingPeriod, setUpgradeBillingPeriod] = useState<StoreBillingPeriod>('ONE_MONTH');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -85,19 +92,52 @@ export function MyStoreScreen({ onCreateStore, onOpenListing }: MyStoreScreenPro
   }, [activeSubscription]);
 
   const isOnActiveTrial = Boolean(store?.accessStatus === 'TRIAL' && activeSubscription?.isTrial);
-  const showPayButton = isOnActiveTrial;
-  const showRenewButton = Boolean(store?.requiresPayment && !isOnActiveTrial);
+  const renewReference = store?.subscriptions.find((subscription) => !subscription.isTrial) ?? null;
+  const activeNonTrialSubscription =
+    activeSubscription && !activeSubscription.isTrial ? activeSubscription : null;
+
+  const canRenewFree = Boolean(
+    renewReference?.plan &&
+      canActivateStorePlanWithoutPayment(
+        renewReference.plan,
+        renewReference.billingPeriod,
+        Number(renewReference.finalPrice ?? 0)
+      )
+  );
+
+  const canRenewWithinWindow = Boolean(
+    activeNonTrialSubscription?.endsAt &&
+      canRenewActiveSubscriptionWithinWindow(activeNonTrialSubscription.endsAt)
+  );
+
+  const isExpiredRenewal = Boolean(
+    store?.requiresPayment && !isOnActiveTrial && !activeNonTrialSubscription
+  );
+
+  const showRenewButton = Boolean(
+    renewReference && !isOnActiveTrial && (isExpiredRenewal || canRenewWithinWindow)
+  );
   const showUpgradeButton = Boolean(store && (store.accessStatus === 'ACTIVE' || store.accessStatus === 'TRIAL'));
+
+  const upgradePlans = useMemo(() => {
+    const currentPlan = activeSubscription?.plan;
+    return filterPlansForUpgrade(plans, currentPlan?.id, currentPlan?.sortOrder ?? 0);
+  }, [plans, activeSubscription?.plan]);
+
+  const showPayButton = isOnActiveTrial;
+
+  useEffect(() => {
+    setSelectedUpgradePlanId((current) => {
+      if (current && upgradePlans.some((plan) => plan.id === current)) return current;
+      return upgradePlans[0]?.id ?? '';
+    });
+  }, [upgradePlans]);
 
   const loadPlans = useCallback(async (rootCategoryId: string) => {
     setIsLoadingPlans(true);
     try {
       const nextPlans = await fetchStorePlans(rootCategoryId);
       setPlans(nextPlans);
-      setSelectedUpgradePlanId((current) => {
-        if (current && nextPlans.some((plan) => plan.id === current)) return current;
-        return nextPlans[0]?.id ?? '';
-      });
     } catch {
       setPlans([]);
     } finally {
@@ -177,13 +217,11 @@ export function MyStoreScreen({ onCreateStore, onOpenListing }: MyStoreScreenPro
   };
 
   const startCheckout = async (
-    action: 'activate-paid' | 'subscribe',
-    options?: { planId: string; billingPeriod: 'MONTHLY' | 'YEARLY' }
+    action: 'activate-paid' | 'subscribe' | 'renew-subscription',
+    options?: { planId: string; billingPeriod: StoreBillingPeriod }
   ) => {
     if (!store) return;
-    const subscription = activeSubscription ?? store.subscriptions[0];
-    if (!subscription && action !== 'subscribe') return;
-    if (action === 'subscribe' && !options?.planId && !subscription) return;
+    if (action === 'subscribe' && !options?.planId) return;
 
     setIsPaying(true);
     setError('');
@@ -191,14 +229,9 @@ export function MyStoreScreen({ onCreateStore, onOpenListing }: MyStoreScreenPro
       const result =
         action === 'activate-paid'
           ? await activateStorePaidRequest(store.id, locale)
-          : await renewStoreSubscriptionRequest(
-              store.id,
-              {
-                planId: options?.planId ?? subscription!.planId,
-                billingPeriod: options?.billingPeriod ?? subscription!.billingPeriod
-              },
-              locale
-            );
+          : action === 'renew-subscription'
+            ? await renewStoreSubscriptionRequest(store.id, locale)
+            : await subscribeStoreRequest(store.id, options!, locale);
       if (result.checkout?.paymentUrl) {
         await Linking.openURL(result.checkout.paymentUrl);
         return;
@@ -212,7 +245,7 @@ export function MyStoreScreen({ onCreateStore, onOpenListing }: MyStoreScreenPro
     }
   };
 
-  const getPlanPriceDisplay = (plan: StorePlan, period: 'MONTHLY' | 'YEARLY') => {
+  const getPlanPriceDisplay = (plan: StorePlan, period: StoreBillingPeriod) => {
     const row = plan.pricing.find((pricing) => pricing.billingPeriod === period);
     const basePrice = Number(row?.finalPrice ?? row?.price ?? 0);
     return formatPlanVatBreakdown(basePrice, locale, {
@@ -350,11 +383,13 @@ export function MyStoreScreen({ onCreateStore, onOpenListing }: MyStoreScreenPro
             ) : null}
             {showRenewButton ? (
               <Pressable
-                style={[styles.primaryButton, isPaying && styles.buttonDisabled]}
-                disabled={isPaying}
-                onPress={() => startCheckout('subscribe')}
+                style={[styles.primaryButton, (isPaying || !canRenewFree) && styles.buttonDisabled]}
+                disabled={isPaying || !canRenewFree}
+                onPress={() => startCheckout('renew-subscription')}
               >
-                <AppText style={styles.primaryButtonText}>{text.renew}</AppText>
+                <AppText style={styles.primaryButtonText}>
+                  {canRenewFree ? text.renewFree : text.renew}
+                </AppText>
               </Pressable>
             ) : null}
             {showUpgradeButton ? (
@@ -375,11 +410,11 @@ export function MyStoreScreen({ onCreateStore, onOpenListing }: MyStoreScreenPro
             <AppText style={[styles.upgradeTitle, textAlign]}>{text.upgradeTitle}</AppText>
             {isLoadingPlans ? (
               <ActivityIndicator color={colors.brand} />
-            ) : plans.length === 0 ? (
-              <AppText style={[styles.meta, textAlign]}>{text.noPlans}</AppText>
+            ) : upgradePlans.length === 0 ? (
+              <AppText style={[styles.meta, textAlign]}>{text.noPaidUpgradePlans}</AppText>
             ) : (
               <>
-                {plans.map((plan) => {
+                {upgradePlans.map((plan) => {
                   const selected = selectedUpgradePlanId === plan.id;
                   const planName = locale === 'en' ? plan.nameEn : plan.nameAr;
                   return (
@@ -388,9 +423,11 @@ export function MyStoreScreen({ onCreateStore, onOpenListing }: MyStoreScreenPro
                         <AppText style={[styles.planName, textAlign]}>{planName}</AppText>
                       </Pressable>
                       <View style={styles.billingRow}>
-                        {(['MONTHLY', 'YEARLY'] as const).map((period) => {
+                        {STORE_BILLING_PERIODS.map((period) => {
                           const row = plan.pricing.find((pricing) => pricing.billingPeriod === period);
                           if (!row) return null;
+                          const finalPrice = Number(row.finalPrice ?? row.price ?? 0);
+                          if (!isPaidBillingOption(plan, period, finalPrice)) return null;
                           const active = selected && upgradeBillingPeriod === period;
                           return (
                             <Pressable
@@ -402,7 +439,7 @@ export function MyStoreScreen({ onCreateStore, onOpenListing }: MyStoreScreenPro
                               }}
                             >
                               <AppText style={[styles.billingChipLabel, active && styles.billingChipLabelActive]}>
-                                {period === 'MONTHLY' ? text.monthly : text.yearly}
+                                {getBillingPeriodLabel(period, locale)}
                               </AppText>
                               {(() => {
                                 const pricing = getPlanPriceDisplay(plan, period);

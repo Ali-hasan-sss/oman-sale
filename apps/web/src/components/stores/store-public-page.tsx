@@ -122,7 +122,7 @@ export function StorePublicPage({ slug }: { slug: string }) {
   const hasMore = listings.length < total;
 
   return (
-    <div className="min-h-screen bg-gray-50" dir={dir}>
+    <div className="site-page-shell bg-gray-50" dir={dir}>
       <UserSiteHeader />
 
       {isLoadingStore ? (

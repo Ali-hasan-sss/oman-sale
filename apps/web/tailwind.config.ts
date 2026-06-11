@@ -4,6 +4,9 @@ const config: Config = {
   content: ['./src/**/*.{ts,tsx}', '../../packages/ui/src/**/*.{ts,tsx}'],
   theme: {
     extend: {
+      fontFamily: {
+        cairo: ['var(--font-cairo)', 'Cairo', 'sans-serif']
+      },
       colors: {
         brand: {
           DEFAULT: '#0f766e',

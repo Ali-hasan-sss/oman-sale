@@ -4,11 +4,29 @@
 
 body {
   min-height: 100vh;
+  min-height: 100dvh;
   background: #f8fafc;
   color: #0f172a;
+  font-family: var(--font-cairo), 'Cairo', sans-serif;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.site-page-shell {
+  display: flex;
+  min-height: 100vh;
+  min-height: 100dvh;
+  flex-direction: column;
+}
+
+.site-page-shell > main {
+  flex: 1 1 auto;
+}
+
+.site-page-shell > footer {
+  flex-shrink: 0;
+  margin-top: auto;
 }
 
 ::selection {
@@ -22,29 +40,48 @@ body {
   }
 }
 
-.filter-sidebar-scrollbar {
+.thin-scrollbar,
+.filter-sidebar-scrollbar,
+.admin-sidebar-scrollbar,
+.admin-content-scrollbar {
   scrollbar-color: #cbd5e1 transparent;
   scrollbar-width: thin;
 }
 
-.filter-sidebar-scrollbar::-webkit-scrollbar {
+.thin-scrollbar::-webkit-scrollbar,
+.filter-sidebar-scrollbar::-webkit-scrollbar,
+.admin-sidebar-scrollbar::-webkit-scrollbar,
+.admin-content-scrollbar::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 
-.filter-sidebar-scrollbar::-webkit-scrollbar-track {
+.thin-scrollbar::-webkit-scrollbar-track,
+.filter-sidebar-scrollbar::-webkit-scrollbar-track,
+.admin-sidebar-scrollbar::-webkit-scrollbar-track,
+.admin-content-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.filter-sidebar-scrollbar::-webkit-scrollbar-thumb {
+.thin-scrollbar::-webkit-scrollbar-thumb,
+.filter-sidebar-scrollbar::-webkit-scrollbar-thumb,
+.admin-sidebar-scrollbar::-webkit-scrollbar-thumb,
+.admin-content-scrollbar::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 999px;
 }
 
-.filter-sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+.thin-scrollbar::-webkit-scrollbar-thumb:hover,
+.filter-sidebar-scrollbar::-webkit-scrollbar-thumb:hover,
+.admin-sidebar-scrollbar::-webkit-scrollbar-thumb:hover,
+.admin-content-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
 
-.filter-sidebar-scrollbar::-webkit-scrollbar-button {
+.thin-scrollbar::-webkit-scrollbar-button,
+.filter-sidebar-scrollbar::-webkit-scrollbar-button,
+.admin-sidebar-scrollbar::-webkit-scrollbar-button,
+.admin-content-scrollbar::-webkit-scrollbar-button {
   display: none;
   height: 0;
   width: 0;

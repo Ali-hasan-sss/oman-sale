@@ -9,7 +9,7 @@ import type { Readable } from 'node:stream';
 import { env } from '../../config/env';
 import { getMediaKey, resolveMediaUrl, toMediaReference } from './media-reference';
 
-export type MediaFolder = 'ads' | 'stores' | 'profiles' | 'chat' | 'banners' | 'hero' | 'tourism' | 'general';
+export type MediaFolder = 'ads' | 'stores' | 'profiles' | 'chat' | 'banners' | 'hero' | 'tourism' | 'articles' | 'general';
 
 export type UploadInput = {
   buffer: Buffer;

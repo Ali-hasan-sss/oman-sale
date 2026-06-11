@@ -13,6 +13,7 @@ import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { getCityLabel } from '@/lib/oman-cities';
 import { getListingLocationLabel } from '@/lib/oman-locations';
+import { resolveMediaUrl } from '@/lib/media-url';
 
 type Category = {
   id: string;
@@ -44,6 +45,22 @@ type Store = {
   listingsCount: number;
 };
 
+type Article = {
+  id: string;
+  slug: string;
+  titleAr: string;
+  titleEn: string;
+  coverImageUrl: string;
+};
+
+type TourismDestination = {
+  id: string;
+  slug: string;
+  titleAr: string;
+  titleEn: string;
+  imageUrl: string;
+};
+
 const fallbackImage = '/logo.png';
 
 export function GlobalSearchPage() {
@@ -54,6 +71,8 @@ export function GlobalSearchPage() {
 
   const [listings, setListings] = useState<Listing[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [tourism, setTourism] = useState<TourismDestination[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -74,6 +93,8 @@ export function GlobalSearchPage() {
     if (!query) {
       setListings([]);
       setStores([]);
+      setArticles([]);
+      setTourism([]);
       setIsLoading(false);
       return;
     }
@@ -85,23 +106,43 @@ export function GlobalSearchPage() {
       }),
       api.get<{ data: { items: Store[]; total: number } }>('/stores', {
         params: { q: query, page: 1, limit: 8 }
-      })
+      }),
+      api.get<{ data: { items: Article[]; total: number } }>('/articles', {
+        params: { q: query, page: 1, limit: 8 }
+      }),
+      api.get<{ data: TourismDestination[] }>('/tourism/destinations')
     ])
-      .then(([listingsResponse, storesResponse]) => {
+      .then(([listingsResponse, storesResponse, articlesResponse, tourismResponse]) => {
         setListings(listingsResponse.data.data.items);
         setStores(storesResponse.data.data.items);
+        setArticles(articlesResponse.data.data.items);
+        const term = query.toLowerCase();
+        setTourism(
+          tourismResponse.data.data.filter((destination) => {
+            const title = locale === 'en' ? destination.titleEn : destination.titleAr;
+            return (
+              title.toLowerCase().includes(term) ||
+              destination.slug.toLowerCase().includes(term) ||
+              destination.titleAr.toLowerCase().includes(term) ||
+              destination.titleEn.toLowerCase().includes(term)
+            );
+          }).slice(0, 8)
+        );
       })
       .catch(() => {
         setListings([]);
         setStores([]);
+        setArticles([]);
+        setTourism([]);
       })
       .finally(() => setIsLoading(false));
-  }, [query]);
+  }, [query, locale]);
 
-  const hasResults = matchedCategories.length > 0 || listings.length > 0 || stores.length > 0;
+  const hasResults =
+    matchedCategories.length > 0 || listings.length > 0 || stores.length > 0 || articles.length > 0 || tourism.length > 0;
 
   return (
-    <div className="min-h-screen bg-gray-50" dir={dir}>
+    <div className="site-page-shell bg-gray-50" dir={dir}>
       <UserSiteHeader>
         <SiteHeaderSearch />
       </UserSiteHeader>
@@ -181,6 +222,65 @@ export function GlobalSearchPage() {
                       </div>
                     </Link>
                   ))}
+                </div>
+              </section>
+            ) : null}
+
+            {articles.length > 0 ? (
+              <section>
+                <div className="mb-4 flex items-center justify-between gap-4">
+                  <h2 className="text-xl font-black text-gray-900">{text.articles}</h2>
+                  <Link href={localizedPath(`/news?q=${encodeURIComponent(query)}`)} className="text-sm font-bold text-green-700 hover:underline">
+                    {text.viewAll}
+                  </Link>
+                </div>
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+                  {articles.map((article) => {
+                    const title = locale === 'en' ? article.titleEn : article.titleAr;
+                    return (
+                      <Link
+                        key={article.id}
+                        href={localizedPath(`/news/${article.slug}`)}
+                        className="overflow-hidden rounded-xl bg-white shadow-sm transition hover:shadow-md"
+                      >
+                        <img src={resolveMediaUrl(article.coverImageUrl)} alt={title} className="h-44 w-full object-cover" />
+                        <div className="p-4">
+                          <h3 className="line-clamp-2 font-bold text-gray-900">{title}</h3>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </section>
+            ) : null}
+
+            {tourism.length > 0 ? (
+              <section>
+                <div className="mb-4 flex items-center justify-between gap-4">
+                  <h2 className="text-xl font-black text-gray-900">{text.tourism}</h2>
+                  <Link href={localizedPath(`/tourism?q=${encodeURIComponent(query)}`)} className="text-sm font-bold text-green-700 hover:underline">
+                    {text.viewAll}
+                  </Link>
+                </div>
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                  {tourism.map((destination) => {
+                    const title = locale === 'en' ? destination.titleEn : destination.titleAr;
+                    return (
+                      <Link
+                        key={destination.id}
+                        href={localizedPath(`/destination/${destination.slug}`)}
+                        className="group relative block h-44 overflow-hidden rounded-xl bg-white shadow-sm transition hover:shadow-md"
+                      >
+                        <img
+                          src={resolveMediaUrl(destination.imageUrl)}
+                          alt={title}
+                          className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                        <h3 className="absolute inset-x-0 bottom-0 p-4 font-bold text-white">{title}</h3>
+                      </Link>
+                    );
+                  })}
                 </div>
               </section>
             ) : null}

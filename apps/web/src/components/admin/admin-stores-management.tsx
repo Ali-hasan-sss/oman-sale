@@ -1,15 +1,29 @@
 'use client';
 
-import { Building2, Eye, EllipsisVertical, Power, PowerOff, Search, Sparkles, Trash2, X } from 'lucide-react';
+import { Building2, Eye, EllipsisVertical, Power, PowerOff, RefreshCw, Search, Sparkles, Trash2, X } from 'lucide-react';
 import Link from 'next/link';
 import { FormEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { AdminEntityAvatar } from '@/components/admin/admin-entity-avatar';
+import { AdminStoresTableSkeleton } from '@/components/admin/admin-stores-table-skeleton';
+import { SubscriptionRingGauge } from '@/components/stores/subscription-ring-gauge';
 import { adminApi } from '@/lib/admin-auth';
 import { resolveMediaUrl } from '@/lib/media-url';
 import { useI18n } from '@/lib/i18n';
 import { getStoreLocationLabel, getWilayahsForGovernorate, omanGovernorates } from '@/lib/oman-locations';
+import {
+  getBillingPeriodLabel,
+  STORE_BILLING_PERIODS,
+  type StoreBillingPeriod
+} from '@/lib/store-billing-period';
+import {
+  canRenewActiveSubscriptionWithinWindow,
+  getEffectiveSubscriptionMaxListings,
+  getListingsUsageColor,
+  getSubscriptionTimeUsage,
+  getTimeUsageColor
+} from '@/lib/subscription-usage';
 
 type RootCategory = {
   id: string;
@@ -20,7 +34,7 @@ type RootCategory = {
 };
 
 type StorePlanPricing = {
-  billingPeriod: 'MONTHLY' | 'YEARLY';
+  billingPeriod: StoreBillingPeriod;
   finalPrice?: number;
   price: string | number;
   maxListings: number;
@@ -59,12 +73,13 @@ type AdminStore = {
     isActive: boolean;
     isTrial: boolean;
     status: string;
-    billingPeriod: 'MONTHLY' | 'YEARLY';
+    billingPeriod: StoreBillingPeriod;
     maxListings: number;
+    baselineListings?: number;
     startsAt?: string | null;
     endsAt?: string | null;
     finalPrice?: string | number;
-    plan?: { id: string; nameAr: string; nameEn: string } | null;
+    plan?: { id: string; nameAr: string; nameEn: string; trialMaxListings?: number } | null;
   }>;
 };
 
@@ -76,6 +91,8 @@ type StoresResponse = {
 };
 
 const inputClass = 'w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-100';
+const filterSelectClass =
+  'h-11 min-w-[9.5rem] rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-brand-100';
 const fallbackImage = '/logo.png';
 const thClass = 'px-2 py-2 align-middle text-start text-xs font-bold text-slate-500 lg:px-2.5';
 const tdClass = 'px-2 py-2 align-middle text-start text-xs text-slate-900 lg:px-2.5';
@@ -98,7 +115,7 @@ export function AdminStoresManagement() {
   const [assignTarget, setAssignTarget] = useState<AdminStore | null>(null);
   const [plans, setPlans] = useState<StorePlan[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState('');
-  const [billingPeriod, setBillingPeriod] = useState<'MONTHLY' | 'YEARLY'>('MONTHLY');
+  const [billingPeriod, setBillingPeriod] = useState<StoreBillingPeriod>('ONE_MONTH');
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [detailStore, setDetailStore] = useState<AdminStore | null>(null);
@@ -165,6 +182,26 @@ export function AdminStoresManagement() {
     );
   };
 
+  const canRenewSubscription = (store: AdminStore) => {
+    const subscription = activeSubscription(store);
+    if (!subscription || subscription.isTrial || !subscription.endsAt) return false;
+    return canRenewActiveSubscriptionWithinWindow(subscription.endsAt);
+  };
+
+  const renewSubscription = async (store: AdminStore) => {
+    if (!canRenewSubscription(store)) return;
+    if (!window.confirm(text.renewConfirm)) return;
+
+    setOpenActionsMenuId(null);
+    setActionError('');
+    try {
+      await adminApi().post(`/admin/stores/${store.id}/renew-subscription`);
+      await loadStores();
+    } catch {
+      setActionError(text.renewError);
+    }
+  };
+
   const accessLabel = (status: AdminStore['accessStatus']) => {
     if (status === 'ACTIVE') return text.statusActive;
     if (status === 'TRIAL') return text.statusTrial;
@@ -191,7 +228,7 @@ export function AdminStoresManagement() {
     setAssignTarget(store);
     setActionError('');
     setSelectedPlanId('');
-    setBillingPeriod('MONTHLY');
+    setBillingPeriod('ONE_MONTH');
     setIsLoadingPlans(true);
     try {
       const response = await adminApi().get<{ data: StorePlan[] }>('/stores/plans', {
@@ -299,6 +336,32 @@ export function AdminStoresManagement() {
     return text.paid;
   };
 
+  const detailActiveSubscription = useMemo(
+    () => (detailStore ? activeSubscription(detailStore) : null),
+    [detailStore]
+  );
+
+  const detailListingsUsed = detailStore?.listingsCount ?? 0;
+
+  const detailEffectiveMaxListings = useMemo(() => {
+    if (!detailActiveSubscription) return 0;
+    return getEffectiveSubscriptionMaxListings({
+      isTrial: detailActiveSubscription.isTrial,
+      maxListings: detailActiveSubscription.maxListings,
+      baselineListings: detailActiveSubscription.baselineListings,
+      trialMaxListings: detailActiveSubscription.plan?.trialMaxListings
+    });
+  }, [detailActiveSubscription]);
+
+  const detailSubscriptionTimeUsage = useMemo(() => {
+    if (!detailActiveSubscription) return null;
+    return getSubscriptionTimeUsage({
+      startsAt: detailActiveSubscription.startsAt,
+      endsAt: detailActiveSubscription.endsAt,
+      billingPeriod: detailActiveSubscription.billingPeriod
+    });
+  }, [detailActiveSubscription]);
+
   return (
     <div className="space-y-6">
       <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 to-brand-800 p-8 text-white shadow-lg">
@@ -314,27 +377,42 @@ export function AdminStoresManagement() {
       </section>
 
       <section className="rounded-3xl bg-white p-6 shadow-sm">
-        <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-          <div>
-            <p className="text-sm text-slate-500">
-              {m.admin.totalResults}: {total.toLocaleString(locale === 'ar' ? 'ar-OM' : 'en-US')}
-            </p>
-          </div>
+        <div className="mb-6 space-y-3">
+          <p className="text-sm text-slate-500">
+            {m.admin.totalResults}: {total.toLocaleString(locale === 'ar' ? 'ar-OM' : 'en-US')}
+          </p>
 
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-            <div className="relative md:col-span-2">
-              <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') loadStores();
-                }}
-                placeholder={text.search}
-                className={`${inputClass} pr-11`}
-              />
+          <div className="flex flex-wrap items-center gap-3 lg:flex-nowrap">
+            <div className="flex min-w-[min(100%,18rem)] flex-1 items-stretch gap-2 sm:min-w-[14rem] sm:max-w-md">
+              <div className="relative min-w-0 flex-1">
+                <Search
+                  className={`absolute top-1/2 -translate-y-1/2 text-slate-400 ${dir === 'rtl' ? 'right-3' : 'left-3'}`}
+                  size={18}
+                />
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') loadStores();
+                  }}
+                  placeholder={text.search}
+                  className={`${inputClass} h-11 py-2 ${dir === 'rtl' ? 'pr-10' : 'pl-10'}`}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={loadStores}
+                className="shrink-0 rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white transition hover:bg-slate-800"
+              >
+                {m.admin.search}
+              </button>
             </div>
-            <select value={rootCategoryId} onChange={(event) => setRootCategoryId(event.target.value)} className={inputClass}>
+
+            <select
+              value={rootCategoryId}
+              onChange={(event) => setRootCategoryId(event.target.value)}
+              className={filterSelectClass}
+            >
               <option value="">{text.allCategories}</option>
               {rootCategories.map((category) => (
                 <option key={category.id} value={category.id}>
@@ -342,13 +420,14 @@ export function AdminStoresManagement() {
                 </option>
               ))}
             </select>
+
             <select
               value={city}
               onChange={(event) => {
                 setCity(event.target.value);
                 setWilayah('');
               }}
-              className={inputClass}
+              className={filterSelectClass}
             >
               <option value="">{text.allCities}</option>
               {omanGovernorates.map((governorate) => (
@@ -357,8 +436,9 @@ export function AdminStoresManagement() {
                 </option>
               ))}
             </select>
+
             {city ? (
-              <select value={wilayah} onChange={(event) => setWilayah(event.target.value)} className={inputClass}>
+              <select value={wilayah} onChange={(event) => setWilayah(event.target.value)} className={filterSelectClass}>
                 <option value="">{text.allWilayahs}</option>
                 {wilayahOptions.map((wilayahOption) => (
                   <option key={wilayahOption.value} value={wilayahOption.value}>
@@ -367,20 +447,17 @@ export function AdminStoresManagement() {
                 ))}
               </select>
             ) : null}
-            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className={inputClass}>
+
+            <select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+              className={filterSelectClass}
+            >
               <option value="">{text.allStatuses}</option>
               <option value="active">{text.activeOnly}</option>
               <option value="inactive">{text.inactiveOnly}</option>
             </select>
           </div>
-
-          <button
-            type="button"
-            onClick={loadStores}
-            className="rounded-xl bg-slate-900 px-5 py-3 font-bold text-white transition hover:bg-slate-800"
-          >
-            {m.admin.search}
-          </button>
         </div>
 
         {error ? <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</p> : null}
@@ -388,47 +465,51 @@ export function AdminStoresManagement() {
           <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{actionError}</p>
         ) : null}
 
-        {isLoading ? (
-          <p className="py-10 text-center font-bold text-slate-500">{text.loading}</p>
-        ) : stores.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-slate-200 px-4 py-10 text-center text-slate-500">{text.empty}</p>
-        ) : (
-          <div className="overflow-x-auto" dir={dir}>
-            <table className="w-full table-fixed text-sm">
-              <colgroup>
-                <col className="w-[19%]" />
-                <col className="w-[19%]" />
-                <col className="w-[11%]" />
-                <col className="w-[13%]" />
-                <col className="w-[9%]" />
-                <col className="w-[6%]" />
-                <col className="w-[8%]" />
-                <col className="w-[5%]" />
-              </colgroup>
-              <thead>
-                <tr className="border-b border-slate-200 text-start">
-                  <th className={thClass}>
-                    <div className="flex items-center gap-2">
-                      <span className="inline-block h-9 w-9 shrink-0" aria-hidden />
-                      <span>{text.store}</span>
-                    </div>
-                  </th>
-                  <th className={thClass}>
-                    <div className="flex items-center gap-2">
-                      <span className="inline-block h-8 w-8 shrink-0" aria-hidden />
-                      <span>{text.owner}</span>
-                    </div>
-                  </th>
-                  <th className={thClass}>{text.category}</th>
-                  <th className={thClass}>{text.plan}</th>
-                  <th className={thClass}>{text.accessStatus}</th>
-                  <th className={thClass}>{text.listings}</th>
-                  <th className={thClass}>{m.admin.status}</th>
-                  <th className={thClass}>{m.admin.actions}</th>
+        <div className="overflow-x-auto" dir={dir}>
+          <table className="w-full table-fixed text-sm">
+            <colgroup>
+              <col className="w-[19%]" />
+              <col className="w-[19%]" />
+              <col className="w-[11%]" />
+              <col className="w-[13%]" />
+              <col className="w-[9%]" />
+              <col className="w-[6%]" />
+              <col className="w-[8%]" />
+              <col className="w-[5%]" />
+            </colgroup>
+            <thead>
+              <tr className="border-b border-slate-200 text-start">
+                <th className={thClass}>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block h-9 w-9 shrink-0" aria-hidden />
+                    <span>{text.store}</span>
+                  </div>
+                </th>
+                <th className={thClass}>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block h-8 w-8 shrink-0" aria-hidden />
+                    <span>{text.owner}</span>
+                  </div>
+                </th>
+                <th className={thClass}>{text.category}</th>
+                <th className={thClass}>{text.plan}</th>
+                <th className={thClass}>{text.accessStatus}</th>
+                <th className={thClass}>{text.listings}</th>
+                <th className={thClass}>{m.admin.status}</th>
+                <th className={thClass}>{m.admin.actions}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <AdminStoresTableSkeleton rows={10} />
+              ) : stores.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-10 text-center text-slate-500">
+                    {text.empty}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {stores.map((store) => {
+              ) : (
+                stores.map((store) => {
                   const subscription = activeSubscription(store);
                   const planName = subscription?.plan
                     ? locale === 'en'
@@ -483,7 +564,7 @@ export function AdminStoresManagement() {
                         <p className="truncate text-start text-xs font-bold">{planName}</p>
                         {subscription ? (
                           <p className="truncate text-start text-[11px] text-slate-500">
-                            {subscription.billingPeriod === 'MONTHLY' ? text.monthly : text.yearly} · {subscription.maxListings}
+                            {getBillingPeriodLabel(subscription.billingPeriod, locale)} · {subscription.maxListings}
                           </p>
                         ) : null}
                       </td>
@@ -507,6 +588,7 @@ export function AdminStoresManagement() {
                             store={store}
                             dir={dir}
                             text={text}
+                            canRenew={canRenewSubscription(store)}
                             isOpen={openActionsMenuId === store.id}
                             onToggle={() => setOpenActionsMenuId((current) => (current === store.id ? null : store.id))}
                             onClose={() => setOpenActionsMenuId(null)}
@@ -520,6 +602,7 @@ export function AdminStoresManagement() {
                               setOpenActionsMenuId(null);
                               openAssignPlan(store);
                             }}
+                            onRenew={() => renewSubscription(store)}
                           onDelete={() => {
                             setOpenActionsMenuId(null);
                             setDeleteTarget(store);
@@ -528,11 +611,11 @@ export function AdminStoresManagement() {
                       </td>
                     </tr>
                   );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       {assignTarget ? (
@@ -574,11 +657,14 @@ export function AdminStoresManagement() {
                   <span className="mb-2 block font-bold text-slate-700">{text.billingPeriod}</span>
                   <select
                     value={billingPeriod}
-                    onChange={(event) => setBillingPeriod(event.target.value as 'MONTHLY' | 'YEARLY')}
+                    onChange={(event) => setBillingPeriod(event.target.value as StoreBillingPeriod)}
                     className={inputClass}
                   >
-                    <option value="MONTHLY">{text.monthly}</option>
-                    <option value="YEARLY">{text.yearly}</option>
+                    {STORE_BILLING_PERIODS.map((period) => (
+                      <option key={period} value={period}>
+                        {getBillingPeriodLabel(period, locale)}
+                      </option>
+                    ))}
                   </select>
                 </label>
               </div>
@@ -765,7 +851,56 @@ export function AdminStoresManagement() {
             ) : detailStore.subscriptions.length === 0 ? (
               <p className="rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center text-slate-500">{text.noPlan}</p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
+                {detailActiveSubscription ? (
+                  <div className="space-y-3">
+                    <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4 text-sm">
+                      <p className="font-bold text-slate-900">
+                        {detailActiveSubscription.plan
+                          ? locale === 'en'
+                            ? detailActiveSubscription.plan.nameEn
+                            : detailActiveSubscription.plan.nameAr
+                          : text.noPlan}
+                      </p>
+                      <p className="mt-1 text-slate-600">
+                        {getBillingPeriodLabel(detailActiveSubscription.billingPeriod, locale)}
+                        {detailActiveSubscription.isTrial ? ` • ${text.trial}` : ` • ${text.paid}`}
+                      </p>
+                      {detailActiveSubscription.endsAt ? (
+                        <p className="mt-1 text-slate-600">
+                          {text.endsAt}:{' '}
+                          {new Date(detailActiveSubscription.endsAt).toLocaleDateString(locale === 'ar' ? 'ar-OM' : 'en-GB')}
+                        </p>
+                      ) : null}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <SubscriptionRingGauge
+                        title={text.listingsUsage}
+                        used={detailListingsUsed}
+                        total={detailEffectiveMaxListings}
+                        usedLabel={text.listingsConsumed}
+                        remainingLabel={text.listingsRemaining}
+                        centerValue={`${Math.max(detailEffectiveMaxListings - detailListingsUsed, 0)}`}
+                        centerSub={text.listingsRemaining}
+                        accentColor={getListingsUsageColor(detailListingsUsed, detailEffectiveMaxListings)}
+                      />
+                      {detailSubscriptionTimeUsage ? (
+                        <SubscriptionRingGauge
+                          title={text.subscriptionTime}
+                          used={detailSubscriptionTimeUsage.elapsedDays}
+                          total={detailSubscriptionTimeUsage.totalDays}
+                          usedLabel={text.daysConsumed}
+                          remainingLabel={text.daysRemaining}
+                          centerValue={`${detailSubscriptionTimeUsage.remainingDays}`}
+                          centerSub={text.dayUnit}
+                          accentColor={getTimeUsageColor(detailSubscriptionTimeUsage.elapsedRatio)}
+                        />
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
+
                 <h4 className="font-bold text-slate-700">{text.subscriptionHistory}</h4>
                 {detailStore.subscriptions.map((subscription) => (
                   <div key={subscription.id} className="rounded-2xl border border-slate-100 p-4 text-sm">
@@ -790,7 +925,7 @@ export function AdminStoresManagement() {
                       </p>
                     ) : null}
                     <p className="text-slate-600">
-                      {subscription.billingPeriod === 'MONTHLY' ? text.monthly : text.yearly} • {text.maxListings}:{' '}
+                      {getBillingPeriodLabel(subscription.billingPeriod, locale)} • {text.maxListings}:{' '}
                       {subscription.maxListings}
                     </p>
                     {subscription.finalPrice != null ? (
@@ -853,10 +988,12 @@ type StoreActionsMenuProps = {
     viewStoreDetails: string;
     viewSubscription: string;
     assignPlan: string;
+    renewSubscription: string;
     deactivate: string;
     activate: string;
     deleteStore: string;
   };
+  canRenew: boolean;
   isOpen: boolean;
   onToggle: () => void;
   onClose: () => void;
@@ -864,6 +1001,7 @@ type StoreActionsMenuProps = {
   onViewSubscription: () => void;
   onToggleActive: () => void;
   onAssignPlan: () => void;
+  onRenew: () => void;
   onDelete: () => void;
 };
 
@@ -871,6 +1009,7 @@ function StoreActionsMenu({
   store,
   dir,
   text,
+  canRenew,
   isOpen,
   onToggle,
   onClose,
@@ -878,6 +1017,7 @@ function StoreActionsMenu({
   onViewSubscription,
   onToggleActive,
   onAssignPlan,
+  onRenew,
   onDelete
 }: StoreActionsMenuProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -971,6 +1111,12 @@ function StoreActionsMenu({
           <Sparkles size={15} className="text-brand-600" />
           {text.assignPlan}
         </button>
+        {canRenew ? (
+          <button type="button" className={itemClass} onClick={onRenew}>
+            <RefreshCw size={15} className="text-brand-600" />
+            {text.renewSubscription}
+          </button>
+        ) : null}
         <button
           type="button"
           className={`${itemClass} ${store.isActive ? 'text-red-700 hover:bg-red-50' : 'text-green-700 hover:bg-green-50'}`}

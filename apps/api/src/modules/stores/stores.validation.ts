@@ -100,7 +100,8 @@ export const createStoreSchema = z.object({
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
     .optional(),
   planId: z.string().uuid(),
-  billingPeriod: z.nativeEnum(StoreBillingPeriod)
+  billingPeriod: z.nativeEnum(StoreBillingPeriod),
+  activationMode: z.enum(['trial', 'plan']).optional()
 })
   .superRefine((value, ctx) => validateStoreLocation(value, ctx, true))
   .superRefine((value, ctx) => validateStoreBusinessType(value, ctx, true));
@@ -171,6 +172,11 @@ export const listStorePlansForCategoryQuerySchema = z.object({
   rootCategoryId: z.string().uuid()
 });
 
+export const listStoreSubscriptionsQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(50).default(2)
+});
+
 export const confirmThawaniPaymentSchema = z.object({
   sessionId: z.string().trim().min(8)
 });
@@ -182,3 +188,4 @@ export type ListStoresQuery = z.infer<typeof listStoresQuerySchema>;
 export type ListAdminStoresQuery = z.infer<typeof listAdminStoresQuerySchema>;
 export type AdminAssignStorePlanDto = z.infer<typeof adminAssignStorePlanSchema>;
 export type ListStorePlansForCategoryQuery = z.infer<typeof listStorePlansForCategoryQuerySchema>;
+export type ListStoreSubscriptionsQuery = z.infer<typeof listStoreSubscriptionsQuerySchema>;

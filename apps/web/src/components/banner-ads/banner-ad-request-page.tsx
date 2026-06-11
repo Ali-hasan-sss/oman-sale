@@ -153,7 +153,7 @@ export function BannerAdRequestPage() {
     'w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100';
 
   return (
-    <div className="min-h-screen bg-slate-50" dir={dir}>
+    <div className="site-page-shell bg-slate-50" dir={dir}>
       <UserSiteHeader />
 
       <main className="mx-auto max-w-3xl px-4 py-10">

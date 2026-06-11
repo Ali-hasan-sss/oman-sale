@@ -44,6 +44,17 @@ export type AssistantStoreCard = {
   categoryName?: string | null;
 };
 
+export type AssistantArticleCard = {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  coverImageUrl: string;
+  views: number;
+  publishedAt?: string | null;
+  categoryName?: string | null;
+};
+
 export type QuickReplyIntent =
   | 'pricing_overview'
   | 'search_car_showrooms'
@@ -61,6 +72,7 @@ export type AssistantMessage = {
   createdAt: string;
   listings?: AssistantListingCard[];
   stores?: AssistantStoreCard[];
+  articles?: AssistantArticleCard[];
   actions?: AssistantAction[];
 };
 
@@ -69,6 +81,7 @@ type ChatResponse = {
     reply: string;
     listings: AssistantListingCard[];
     stores: AssistantStoreCard[];
+    articles: AssistantArticleCard[];
     actions: AssistantAction[];
   };
 };
@@ -183,6 +196,7 @@ export function useAssistantChat(
           createdAt: new Date().toISOString(),
           listings: response.data.data.listings,
           stores: response.data.data.stores,
+          articles: response.data.data.articles,
           actions: response.data.data.actions
         };
 
@@ -229,6 +243,7 @@ export function useAssistantChat(
           createdAt: new Date().toISOString(),
           listings: response.data.data.listings,
           stores: response.data.data.stores,
+          articles: response.data.data.articles,
           actions: response.data.data.actions
         };
 

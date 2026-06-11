@@ -3,6 +3,7 @@
 import { Store } from 'lucide-react';
 import Link from 'next/link';
 
+import { CreateStoreBannerSkeleton } from '@/components/home/home-section-skeletons';
 import { useOwnerStore } from '@/hooks/use-owner-store';
 import { useI18n } from '@/lib/i18n';
 
@@ -10,7 +11,8 @@ export function CreateStoreBanner() {
   const { localizedPath, m } = useI18n();
   const { hasStore, loaded } = useOwnerStore();
 
-  if (!loaded || hasStore) return null;
+  if (!loaded) return <CreateStoreBannerSkeleton />;
+  if (hasStore) return null;
 
   return (
     <section className="mx-auto max-w-7xl px-4 pb-2 pt-8">

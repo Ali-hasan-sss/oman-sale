@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   Dumbbell,
   Edit3,
+  Filter,
   Gamepad2,
   GraduationCap,
   Hammer,
@@ -41,6 +42,7 @@ import {
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+import { CategoriesSkeleton } from '@/components/admin/admin-categories-skeleton';
 import { adminApi } from '@/lib/admin-auth';
 import { CategoryIcon, isCategoryEmojiIcon, isCategoryIconKey, type CategoryIconKey } from '@/lib/category-icons';
 import { buildCategoryTree, type CategoryTreeNode } from '@/lib/category-tree';
@@ -154,9 +156,59 @@ const createSlug = (value: string) =>
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
+type FilterOptionDraft = {
+  labelAr: string;
+  labelEn: string;
+};
+
+function filterCategoryTree(
+  nodes: CategoryTreeNode<ManagedCategory>[],
+  query: string
+): CategoryTreeNode<ManagedCategory>[] {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return nodes;
+
+  const matchesCategory = (category: ManagedCategory) =>
+    category.nameAr.toLowerCase().includes(normalized) ||
+    category.nameEn.toLowerCase().includes(normalized) ||
+    category.slug.toLowerCase().includes(normalized);
+
+  const filterNode = (node: CategoryTreeNode<ManagedCategory>): CategoryTreeNode<ManagedCategory> | null => {
+    const filteredChildren = node.children
+      .map(filterNode)
+      .filter((child): child is CategoryTreeNode<ManagedCategory> => child !== null);
+
+    if (!matchesCategory(node) && filteredChildren.length === 0) return null;
+
+    return { ...node, children: filteredChildren };
+  };
+
+  return nodes
+    .map(filterNode)
+    .filter((node): node is CategoryTreeNode<ManagedCategory> => node !== null);
+}
+
+function collectExpandableNodeIds(nodes: CategoryTreeNode<ManagedCategory>[]) {
+  const ids: Record<string, boolean> = {};
+
+  const walk = (items: CategoryTreeNode<ManagedCategory>[]) => {
+    items.forEach((node) => {
+      if (node.children.length > 0) {
+        ids[node.id] = true;
+        walk(node.children);
+      }
+    });
+  };
+
+  walk(nodes);
+  return ids;
+}
+
 export function AdminCategoriesManagement() {
   const { m } = useI18n();
   const [categories, setCategories] = useState<ManagedCategory[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [appliedSearchQuery, setAppliedSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [form, setForm] = useState<CategoryFormState>(initialForm);
   const [formErrors, setFormErrors] = useState<CategoryFormErrors>({});
@@ -170,10 +222,17 @@ export function AdminCategoriesManagement() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string>();
   const [categoryFilters, setCategoryFilters] = useState<CategoryFilter[]>([]);
+  const [filtersCategory, setFiltersCategory] = useState<ManagedCategory | null>(null);
   const [filterTitleAr, setFilterTitleAr] = useState('');
   const [filterTitleEn, setFilterTitleEn] = useState('');
-  const [filterOptionsText, setFilterOptionsText] = useState('');
+  const [draftOptionAr, setDraftOptionAr] = useState('');
+  const [draftOptionEn, setDraftOptionEn] = useState('');
+  const [pendingFilterOptions, setPendingFilterOptions] = useState<FilterOptionDraft[]>([]);
+  const [editingFilterId, setEditingFilterId] = useState<string | null>(null);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [isFiltersModalOpen, setIsFiltersModalOpen] = useState(false);
+  const [filtersLoading, setFiltersLoading] = useState(false);
+  const [filtersSaving, setFiltersSaving] = useState(false);
 
   const typeLabels = useMemo<Record<CategoryType, string>>(
     () => ({
@@ -188,6 +247,10 @@ export function AdminCategoriesManagement() {
   );
 
   const categoryTree = useMemo(() => buildCategoryTree(categories), [categories]);
+  const filteredCategoryTree = useMemo(
+    () => filterCategoryTree(categoryTree, appliedSearchQuery),
+    [appliedSearchQuery, categoryTree]
+  );
 
   const loadCategories = async () => {
     setIsLoading(true);
@@ -223,21 +286,17 @@ export function AdminCategoriesManagement() {
     });
   }, [categoryTree]);
 
+  useEffect(() => {
+    if (!appliedSearchQuery.trim()) return;
+    setExpandedParents((current) => ({ ...current, ...collectExpandableNodeIds(filteredCategoryTree) }));
+  }, [appliedSearchQuery, filteredCategoryTree]);
+
   const loadCategoryFilters = async (categoryId: string) => {
     const response = await adminApi().get<{ data: CategoryFilter[] }>(`/categories/${categoryId}/filters`, {
       params: { includeInactive: true, locale: 'ar' }
     });
     setCategoryFilters(response.data.data);
   };
-
-  useEffect(() => {
-    if (!editingId) {
-      setCategoryFilters([]);
-      return;
-    }
-
-    loadCategoryFilters(editingId).catch(() => setCategoryFilters([]));
-  }, [editingId]);
 
   const resetForm = () => {
     setForm(initialForm);
@@ -316,36 +375,107 @@ export function AdminCategoriesManagement() {
     setExpandedParents((current) => ({ ...current, [parentId]: !current[parentId] }));
   };
 
-  const createFilter = async () => {
-    if (!editingId || !filterTitleAr.trim() || !filterTitleEn.trim()) return;
-
-    const options = filterOptionsText
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .map((line) => {
-        const [labelAr, labelEn] = line.split('|').map((value) => value?.trim());
-        return { labelAr: labelAr || '', labelEn: labelEn || labelAr || '' };
-      })
-      .filter((option) => option.labelAr && option.labelEn);
-
-    if (options.length === 0) return;
-
-    await adminApi().post(`/categories/${editingId}/filters`, {
-      titleAr: filterTitleAr,
-      titleEn: filterTitleEn,
-      options
-    });
+  const resetFilterForm = () => {
+    setEditingFilterId(null);
     setFilterTitleAr('');
     setFilterTitleEn('');
-    setFilterOptionsText('');
-    await loadCategoryFilters(editingId);
+    setDraftOptionAr('');
+    setDraftOptionEn('');
+    setPendingFilterOptions([]);
+  };
+
+  const addPendingFilterOption = () => {
+    const labelAr = draftOptionAr.trim();
+    const labelEn = draftOptionEn.trim();
+    if (!labelAr || !labelEn) return;
+
+    setPendingFilterOptions((current) => [...current, { labelAr, labelEn }]);
+    setDraftOptionAr('');
+    setDraftOptionEn('');
+  };
+
+  const removePendingFilterOption = (index: number) => {
+    setPendingFilterOptions((current) => current.filter((_, optionIndex) => optionIndex !== index));
+  };
+
+  const closeFiltersModal = () => {
+    setIsFiltersModalOpen(false);
+    setFiltersCategory(null);
+    setCategoryFilters([]);
+    resetFilterForm();
+  };
+
+  const openFiltersModal = async (category: ManagedCategory) => {
+    setFiltersCategory(category);
+    setIsFiltersModalOpen(true);
+    setFiltersLoading(true);
+    resetFilterForm();
+
+    try {
+      await loadCategoryFilters(category.id);
+    } catch {
+      setCategoryFilters([]);
+    } finally {
+      setFiltersLoading(false);
+    }
+  };
+
+  const startEditFilter = (filter: CategoryFilter) => {
+    setEditingFilterId(filter.id);
+    setFilterTitleAr(filter.titleAr);
+    setFilterTitleEn(filter.titleEn);
+    setDraftOptionAr('');
+    setDraftOptionEn('');
+    setPendingFilterOptions(
+      filter.options.map((option) => ({
+        labelAr: option.labelAr,
+        labelEn: option.labelEn
+      }))
+    );
+  };
+
+  const saveFilter = async () => {
+    if (!filtersCategory || !filterTitleAr.trim() || !filterTitleEn.trim()) return;
+
+    const options = pendingFilterOptions;
+    if (options.length === 0) return;
+
+    setFiltersSaving(true);
+    try {
+      if (editingFilterId) {
+        await adminApi().patch(`/categories/filters/${editingFilterId}`, {
+          titleAr: filterTitleAr.trim(),
+          titleEn: filterTitleEn.trim(),
+          options
+        });
+      } else {
+        await adminApi().post(`/categories/${filtersCategory.id}/filters`, {
+          titleAr: filterTitleAr.trim(),
+          titleEn: filterTitleEn.trim(),
+          options
+        });
+      }
+
+      resetFilterForm();
+      await loadCategoryFilters(filtersCategory.id);
+      await loadCategories();
+    } finally {
+      setFiltersSaving(false);
+    }
   };
 
   const deleteFilter = async (filterId: string) => {
-    if (!editingId) return;
-    await adminApi().delete(`/categories/filters/${filterId}`);
-    await loadCategoryFilters(editingId);
+    if (!filtersCategory || !window.confirm(m.admin.confirmDeleteFilter)) return;
+
+    setFiltersSaving(true);
+    try {
+      await adminApi().delete(`/categories/filters/${filterId}`);
+      if (editingFilterId === filterId) resetFilterForm();
+      await loadCategoryFilters(filtersCategory.id);
+      await loadCategories();
+    } finally {
+      setFiltersSaving(false);
+    }
   };
 
   const resolvedSlug = form.slug || createSlug(form.nameEn || form.nameAr);
@@ -430,6 +560,10 @@ export function AdminCategoriesManagement() {
     setTypeFilter(nextType);
   };
 
+  const applyCategorySearch = () => {
+    setAppliedSearchQuery(searchQuery.trim());
+  };
+
   const formTitle =
     formMode === 'create-child'
       ? `${m.admin.subcategoryOf}: ${lockedParentName}`
@@ -473,17 +607,37 @@ export function AdminCategoriesManagement() {
 
         {error ? <div className="mb-4 rounded-xl bg-red-50 p-4 text-sm font-bold text-red-700">{error}</div> : null}
 
+        <div className="mb-5 flex flex-col gap-3 lg:flex-row">
+          <div className="relative min-w-0 flex-1">
+            <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <input
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') applyCategorySearch();
+              }}
+              placeholder={m.admin.searchCategories}
+              className="w-full rounded-xl border border-slate-200 py-3 pl-4 pr-11 outline-none focus:ring-2 focus:ring-brand-100"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={applyCategorySearch}
+            className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800"
+          >
+            {m.admin.search}
+          </button>
+        </div>
+
         <div className="space-y-3">
           {isLoading ? (
-            <div className="rounded-2xl border border-slate-200 px-4 py-8 text-center font-bold text-slate-500">
-              {m.admin.loading}
-            </div>
-          ) : categoryTree.length === 0 ? (
+            <CategoriesSkeleton count={5} />
+          ) : filteredCategoryTree.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center font-bold text-slate-500">
               {m.admin.noCategories}
             </div>
           ) : (
-            categoryTree.map((parent) => (
+            filteredCategoryTree.map((parent) => (
               <CategoryTreeBranch
                 key={parent.id}
                 node={parent}
@@ -494,12 +648,14 @@ export function AdminCategoriesManagement() {
                 onAddChild={startAddChild}
                 onEdit={startEdit}
                 onDelete={deleteCategory}
+                onManageFilters={openFiltersModal}
                 labels={{
                   subcategories: m.admin.subcategories,
                   noSubcategories: m.admin.noSubcategories,
                   addSubcategory: m.admin.addSubcategory,
                   editCategory: m.admin.editCategory,
                   deleteCategory: m.admin.deleteCategory,
+                  manageFilters: m.admin.manageFilters,
                   adsCount: m.admin.adsCount,
                   active: m.admin.active,
                   inactive: m.admin.inactive
@@ -622,74 +778,170 @@ export function AdminCategoriesManagement() {
               </button>
             </div>
           </form>
+        </CategoryFormModal>
+      ) : null}
 
-          {editingId ? (
-            <section className="mt-6 border-t border-slate-200 pt-6">
-              <div className="mb-4">
-                <h3 className="text-lg font-black">فلاتر هذه الفئة</h3>
-                <p className="text-sm text-slate-500">
-                  اكتب الخيارات كل خيار في سطر، ويمكن فصل العربي والإنجليزي بعلامة | مثل: جديد | New
-                </p>
-              </div>
+      {isFiltersModalOpen && filtersCategory ? (
+        <CategoryFormModal
+          title={`${m.admin.categoryFiltersTitle}: ${filtersCategory.nameAr}`}
+          onClose={closeFiltersModal}
+        >
+          <p className="mb-4 text-sm text-slate-500">{m.admin.categoryFiltersHint}</p>
 
-              <div className="mb-5 grid gap-4 lg:grid-cols-2">
+          <div className="mb-5 grid gap-4 lg:grid-cols-2">
+            <input
+              value={filterTitleAr}
+              onChange={(event) => setFilterTitleAr(event.target.value)}
+              placeholder={m.admin.filterTitleArPlaceholder}
+              className="rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
+            />
+            <input
+              dir="ltr"
+              value={filterTitleEn}
+              onChange={(event) => setFilterTitleEn(event.target.value)}
+              placeholder={m.admin.filterTitleEnPlaceholder}
+              className="rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
+            />
+            <div className="space-y-3 lg:col-span-2">
+              <p className="text-sm font-bold text-slate-700">{m.admin.filterOptionsLabel}</p>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <input
-                  value={filterTitleAr}
-                  onChange={(event) => setFilterTitleAr(event.target.value)}
-                  placeholder="عنوان الفلتر بالعربية"
-                  className="rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
+                  value={draftOptionAr}
+                  onChange={(event) => setDraftOptionAr(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      addPendingFilterOption();
+                    }
+                  }}
+                  placeholder={m.admin.filterOptionArPlaceholder}
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500 sm:flex-1"
                 />
                 <input
                   dir="ltr"
-                  value={filterTitleEn}
-                  onChange={(event) => setFilterTitleEn(event.target.value)}
-                  placeholder="Filter title in English"
-                  className="rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
-                />
-                <textarea
-                  value={filterOptionsText}
-                  onChange={(event) => setFilterOptionsText(event.target.value)}
-                  placeholder={'جديد | New\nمستعمل | Used'}
-                  className="min-h-24 rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500 lg:col-span-2"
+                  value={draftOptionEn}
+                  onChange={(event) => setDraftOptionEn(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      addPendingFilterOption();
+                    }
+                  }}
+                  placeholder={m.admin.filterOptionEnPlaceholder}
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500 sm:flex-1"
                 />
                 <button
                   type="button"
-                  onClick={createFilter}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-3 font-bold text-white transition hover:bg-brand-700 lg:col-span-2"
+                  onClick={addPendingFilterOption}
+                  disabled={!draftOptionAr.trim() || !draftOptionEn.trim()}
+                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm font-bold text-brand-700 transition hover:bg-brand-100 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <Plus size={18} />
-                  إضافة فلتر للفئة
+                  <Plus size={16} />
+                  {m.admin.addFilterOption}
                 </button>
               </div>
-
-              <div className="max-h-48 space-y-3 overflow-y-auto">
-                {categoryFilters.map((filter) => (
-                  <div key={filter.id} className="rounded-xl border border-slate-100 bg-slate-50 p-4">
-                    <div className="mb-3 flex items-center justify-between gap-3">
-                      <div>
-                        <p className="font-black">{filter.titleAr}</p>
-                        <p className="text-sm text-slate-500">{filter.titleEn}</p>
-                      </div>
+              {pendingFilterOptions.length > 0 ? (
+                <div className="flex flex-wrap gap-2 rounded-xl border border-slate-100 bg-slate-50 p-3">
+                  {pendingFilterOptions.map((option, index) => (
+                    <span
+                      key={`${option.labelAr}-${option.labelEn}-${index}`}
+                      className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm text-slate-700 ring-1 ring-slate-200"
+                    >
+                      <span>
+                        {option.labelAr} / {option.labelEn}
+                      </span>
                       <button
                         type="button"
-                        onClick={() => deleteFilter(filter.id)}
-                        className="rounded-lg border border-red-100 px-3 py-2 text-sm font-bold text-red-600 transition hover:bg-red-50"
+                        onClick={() => removePendingFilterOption(index)}
+                        className="rounded-full p-0.5 text-slate-400 transition hover:bg-slate-100 hover:text-red-600"
+                        aria-label={m.admin.deleteFilter}
                       >
-                        حذف
+                        <X size={14} />
                       </button>
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap gap-2 lg:col-span-2">
+              <button
+                type="button"
+                disabled={filtersSaving || pendingFilterOptions.length === 0}
+                onClick={() => void saveFilter()}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-3 font-bold text-white transition hover:bg-brand-700 disabled:opacity-60"
+              >
+                <Plus size={18} />
+                {editingFilterId ? m.admin.updateCategoryFilter : m.admin.addCategoryFilter}
+              </button>
+              {editingFilterId ? (
+                <button
+                  type="button"
+                  onClick={resetFilterForm}
+                  className="rounded-xl border border-slate-200 px-5 py-3 font-bold text-slate-700 transition hover:bg-slate-50"
+                >
+                  {m.admin.cancel}
+                </button>
+              ) : null}
+            </div>
+          </div>
+
+          {filtersLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div key={index} className="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                  <div className="mb-3 h-4 w-40 animate-pulse rounded-full bg-slate-200" />
+                  <div className="flex flex-wrap gap-2">
+                    <div className="h-7 w-20 animate-pulse rounded-full bg-slate-200" />
+                    <div className="h-7 w-24 animate-pulse rounded-full bg-slate-200" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : categoryFilters.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm font-bold text-slate-500">
+              {m.admin.noCategoryFilters}
+            </p>
+          ) : (
+            <div className="admin-content-scrollbar max-h-80 space-y-3 overflow-y-auto">
+              {categoryFilters.map((filter) => (
+                <div key={filter.id} className="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="font-black text-slate-900">{filter.titleAr}</p>
+                      <p className="text-sm text-slate-500">{filter.titleEn}</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {filter.options.map((option) => (
-                        <span key={option.id} className="rounded-full bg-white px-3 py-1 text-sm text-slate-700 ring-1 ring-slate-200">
-                          {option.labelAr} / {option.labelEn}
-                        </span>
-                      ))}
+                      <button
+                        type="button"
+                        disabled={filtersSaving}
+                        onClick={() => startEditFilter(filter)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-100 disabled:opacity-60"
+                      >
+                        <Edit3 size={14} />
+                        {m.admin.editFilter}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={filtersSaving}
+                        onClick={() => void deleteFilter(filter.id)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-red-100 bg-white px-3 py-2 text-sm font-bold text-red-600 transition hover:bg-red-50 disabled:opacity-60"
+                      >
+                        <Trash2 size={14} />
+                        {m.admin.deleteFilter}
+                      </button>
                     </div>
                   </div>
-                ))}
-              </div>
-            </section>
-          ) : null}
+                  <div className="flex flex-wrap gap-2">
+                    {filter.options.map((option) => (
+                      <span key={option.id} className="rounded-full bg-white px-3 py-1 text-sm text-slate-700 ring-1 ring-slate-200">
+                        {option.labelAr} / {option.labelEn}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </CategoryFormModal>
       ) : null}
     </div>
@@ -765,12 +1017,14 @@ type CategoryTreeBranchProps = {
   onAddChild: (category: ManagedCategory) => void;
   onEdit: (category: ManagedCategory) => void;
   onDelete: (categoryId: string) => void;
+  onManageFilters: (category: ManagedCategory) => void;
   labels: {
     subcategories: string;
     noSubcategories: string;
     addSubcategory: string;
     editCategory: string;
     deleteCategory: string;
+    manageFilters: string;
     adsCount: string;
     active: string;
     inactive: string;
@@ -786,6 +1040,7 @@ function CategoryTreeBranch({
   onAddChild,
   onEdit,
   onDelete,
+  onManageFilters,
   labels
 }: CategoryTreeBranchProps) {
   const hasChildren = node.children.length > 0;
@@ -800,6 +1055,7 @@ function CategoryTreeBranch({
         typeLabels={typeLabels}
         onEdit={onEdit}
         onDelete={onDelete}
+        onManageFilters={() => onManageFilters(node)}
         onAddChild={() => onAddChild(node)}
         onToggle={hasChildren ? () => onToggle(node.id) : undefined}
         isExpanded={isExpanded}
@@ -808,22 +1064,31 @@ function CategoryTreeBranch({
       />
 
       {isExpanded ? (
-        <div className={isRoot ? 'border-t border-slate-100 bg-slate-50/60' : 'border-t border-slate-100/80 bg-slate-50/40'}>
+        <div className={isRoot ? 'border-t border-slate-100 bg-slate-50/60' : undefined}>
           {hasChildren ? (
-            node.children.map((child) => (
-              <CategoryTreeBranch
-                key={child.id}
-                node={child}
-                depth={depth + 1}
-                expandedNodes={expandedNodes}
-                typeLabels={typeLabels}
-                onToggle={onToggle}
-                onAddChild={onAddChild}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                labels={labels}
-              />
-            ))
+            <div
+              className={
+                isRoot
+                  ? 'relative ms-11 border-s-2 border-slate-300 ps-4 md:ms-14 md:ps-5'
+                  : 'relative ms-6 border-s-2 border-slate-300/80 ps-4'
+              }
+            >
+              {node.children.map((child) => (
+                <CategoryTreeBranch
+                  key={child.id}
+                  node={child}
+                  depth={depth + 1}
+                  expandedNodes={expandedNodes}
+                  typeLabels={typeLabels}
+                  onToggle={onToggle}
+                  onAddChild={onAddChild}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  onManageFilters={onManageFilters}
+                  labels={labels}
+                />
+              ))}
+            </div>
           ) : isRoot ? (
             <p className="px-4 py-4 text-sm font-bold text-slate-400">{labels.noSubcategories}</p>
           ) : null}
@@ -839,6 +1104,7 @@ type CategoryTreeRowProps = {
   typeLabels: Record<CategoryType, string>;
   onEdit: (category: ManagedCategory) => void;
   onDelete: (categoryId: string) => void;
+  onManageFilters?: () => void;
   labels: CategoryTreeBranchProps['labels'];
   onAddChild?: () => void;
   onToggle?: () => void;
@@ -852,6 +1118,7 @@ function CategoryTreeRow({
   typeLabels,
   onEdit,
   onDelete,
+  onManageFilters,
   labels,
   onAddChild,
   onToggle,
@@ -861,10 +1128,14 @@ function CategoryTreeRow({
   const IconPreview = category.icon && isCategoryIconKey(category.icon) ? iconMap[category.icon] : null;
 
   return (
-    <div
-      className={`flex flex-col gap-4 border-b border-slate-100 px-4 py-4 last:border-b-0 lg:flex-row lg:items-center lg:justify-between`}
-      style={{ paddingInlineStart: depth > 0 ? `${16 + depth * 24}px` : undefined }}
-    >
+    <div className="relative flex flex-col gap-4 border-b border-slate-100 px-4 py-4 last:border-b-0 lg:flex-row lg:items-center lg:justify-between">
+      {depth > 0 ? (
+        <span
+          className="absolute top-1/2 h-px w-3 -translate-y-1/2 bg-slate-300"
+          style={{ insetInlineStart: '-0.75rem' }}
+          aria-hidden
+        />
+      ) : null}
       <div className="flex min-w-0 flex-1 items-start gap-3">
         {showExpandToggle ? (
           <button
@@ -922,6 +1193,14 @@ function CategoryTreeRow({
             {labels.addSubcategory}
           </button>
         ) : null}
+        <button
+          type="button"
+          onClick={onManageFilters}
+          className="inline-flex items-center gap-1 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm font-bold text-blue-700 transition hover:bg-blue-100"
+        >
+          <Filter size={14} />
+          {labels.manageFilters}
+        </button>
         <button
           type="button"
           onClick={() => onEdit(category)}

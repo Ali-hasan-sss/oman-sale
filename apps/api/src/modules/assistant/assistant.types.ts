@@ -32,10 +32,22 @@ export type AssistantStoreCard = {
   categoryName?: string | null;
 };
 
+export type AssistantArticleCard = {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  coverImageUrl: string;
+  views: number;
+  publishedAt?: string | null;
+  categoryName?: string | null;
+};
+
 export type AssistantChatResult = {
   reply: string;
   listings: AssistantListingCard[];
   stores: AssistantStoreCard[];
+  articles: AssistantArticleCard[];
   actions: AssistantAction[];
 };
 
@@ -77,4 +89,9 @@ export type GetPlatformInfoToolArgs = {
 export type GetTourismInfoToolArgs = {
   slug?: string;
   q?: string;
+};
+
+export type SearchArticlesToolArgs = {
+  q?: string;
+  limit?: number;
 };

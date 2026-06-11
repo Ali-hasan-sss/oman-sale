@@ -51,6 +51,24 @@ export class PromotionsRepository {
     return prisma.promotionPlan.update({ where: { id }, data: { deletedAt: new Date(), isActive: false } });
   }
 
+  clearIncludedPromotion(adId: string) {
+    return prisma.adPromotion.updateMany({
+      where: { adId, totalPrice: 0, deletedAt: null },
+      data: { isActive: false }
+    });
+  }
+
+  clearStoreIncludedPromotions(storeId: string) {
+    return prisma.adPromotion.updateMany({
+      where: {
+        totalPrice: 0,
+        deletedAt: null,
+        ad: { storeId, deletedAt: null }
+      },
+      data: { isActive: false }
+    });
+  }
+
   applyIncludedPromotion(input: { adId: string; planId: string; endsAt: Date }) {
     const startsAt = new Date();
 

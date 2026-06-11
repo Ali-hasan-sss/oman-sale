@@ -46,6 +46,16 @@ export class StoresController {
       .then((data) => res.json({ data }));
   }
 
+  listSubscriptions(req: Request, res: Response) {
+    return storesService
+      .listSubscriptionsForOwner(
+        getRequiredParam(req, 'id'),
+        req.user!.id,
+        req.query as unknown as import('./stores.validation').ListStoreSubscriptionsQuery
+      )
+      .then((data) => res.json({ data }));
+  }
+
   create(req: Request, res: Response) {
     return storesService.create(req.user!.id, req.body, resolveLocale(req)).then((data) => res.status(201).json({ data }));
   }
@@ -54,10 +64,6 @@ export class StoresController {
     return storesService
       .update(getRequiredParam(req, 'id'), req.user!.id, req.body)
       .then((data) => res.json({ data }));
-  }
-
-  remove(req: Request, res: Response) {
-    return storesService.remove(getRequiredParam(req, 'id'), req.user!.id).then(() => res.status(204).send());
   }
 
   activatePaid(req: Request, res: Response) {
@@ -70,6 +76,12 @@ export class StoresController {
     return storesService
       .subscribe(getRequiredParam(req, 'id'), req.user!.id, req.body, resolveLocale(req))
       .then((data) => res.status(201).json({ data }));
+  }
+
+  renewSubscription(req: Request, res: Response) {
+    return storesService
+      .renewSubscription(getRequiredParam(req, 'id'), req.user!.id)
+      .then((data) => res.json({ data }));
   }
 
   confirmThawaniPayment(req: Request, res: Response) {
@@ -97,6 +109,12 @@ export class StoresController {
   assignPlanForAdmin(req: Request, res: Response) {
     return storesService
       .assignPlanForAdmin(getRequiredParam(req, 'id'), req.body)
+      .then((data) => res.json({ data }));
+  }
+
+  renewSubscriptionForAdmin(req: Request, res: Response) {
+    return storesService
+      .renewSubscriptionForAdmin(getRequiredParam(req, 'id'))
       .then((data) => res.json({ data }));
   }
 

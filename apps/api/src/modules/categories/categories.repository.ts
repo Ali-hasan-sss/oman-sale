@@ -221,20 +221,53 @@ export class CategoriesRepository {
       });
 
       if (data.options) {
-        await tx.categoryFilterOption.updateMany({
+        const existing = await tx.categoryFilterOption.findMany({
           where: { filterId: id, deletedAt: null },
-          data: { deletedAt: new Date(), isActive: false }
+          orderBy: { sortOrder: 'asc' }
         });
-        await tx.categoryFilterOption.createMany({
-          data: data.options.map((option, index) => ({
-            filterId: id,
+        const usedIds = new Set<string>();
+
+        for (let index = 0; index < data.options.length; index++) {
+          const option = data.options[index]!;
+          const payload = {
             labelAr: option.labelAr,
             labelEn: option.labelEn,
             slug: option.slug ? createSlug(option.slug) : createSlug(option.labelEn || option.labelAr),
             isActive: option.isActive ?? true,
             sortOrder: (index + 1) * 10
-          }))
-        });
+          };
+
+          const match =
+            existing.find((item) => item.slug === payload.slug && !usedIds.has(item.id)) ??
+            existing.find((item, itemIndex) => itemIndex === index && !usedIds.has(item.id));
+
+          if (match) {
+            await tx.categoryFilterOption.update({
+              where: { id: match.id },
+              data: payload
+            });
+            usedIds.add(match.id);
+            continue;
+          }
+
+          const created = await tx.categoryFilterOption.create({
+            data: { filterId: id, ...payload }
+          });
+          usedIds.add(created.id);
+        }
+
+        for (const option of existing) {
+          if (usedIds.has(option.id)) continue;
+
+          await tx.categoryFilterOption.update({
+            where: { id: option.id },
+            data: {
+              deletedAt: new Date(),
+              isActive: false,
+              slug: `${option.slug}__archived__${option.id.slice(0, 8)}`
+            }
+          });
+        }
       }
 
       return tx.categoryFilter.findUnique({ where: { id }, include: { options: { where: { deletedAt: null } } } }) ?? filter;

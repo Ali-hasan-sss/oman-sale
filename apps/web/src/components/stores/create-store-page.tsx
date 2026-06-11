@@ -6,13 +6,18 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 
 import { SiteFooter } from '@/components/home/site-footer';
 import { SiteHeaderSearch, UserSiteHeader } from '@/components/navigation/user-site-header';
-import { StorePlanCard } from '@/components/stores/store-plan-card';
+import { CreateStoreBillingPeriodCards } from '@/components/stores/create-store-billing-period-cards';
+import { CreateStorePlanSelectCard } from '@/components/stores/create-store-plan-select-card';
+import { CreateStorePlansSkeleton } from '@/components/stores/create-store-plans-skeleton';
+import { PlanPriceWithVat } from '@/components/pricing/plan-price-with-vat';
 import { api } from '@/lib/api';
 import { resolveApiErrorMessage } from '@/lib/api-errors';
 import { buildCategoryTree } from '@/lib/category-tree';
 import { useI18n } from '@/lib/i18n';
 import { getWilayahsForGovernorate, omanGovernorates } from '@/lib/oman-locations';
 import { getUserAccessToken } from '@/lib/user-auth';
+import { canActivateStorePlanWithoutPayment } from '@/lib/store-plan-activation';
+import { getBillingPeriodLabel, type StoreBillingPeriod } from '@/lib/store-billing-period';
 
 type RootCategory = {
   id: string;
@@ -24,7 +29,7 @@ type RootCategory = {
 
 type StorePlanPricing = {
   id: string;
-  billingPeriod: 'MONTHLY' | 'YEARLY';
+  billingPeriod: StoreBillingPeriod;
   finalPrice?: number;
   price: string | number;
   maxListings: number;
@@ -38,6 +43,7 @@ type StorePlan = {
   descriptionEn: string;
   trialDays?: number;
   trialAvailable?: boolean;
+  isAdminFree?: boolean;
   pricing: StorePlanPricing[];
 };
 
@@ -70,14 +76,16 @@ const labels = {
     storeDetails: 'بيانات المتجر',
     billingMonthly: 'شهري',
     billingYearly: 'سنوي',
-    freePlan: 'مجاني',
+    freePlan: 'مجاناً',
     maxListings: 'حد العروض',
     perMonth: 'شهرياً',
     perYear: 'سنوياً',
     submit: 'متابعة الدفع',
-    submitFree: 'إنشاء المتجر',
+    activatePlan: 'تفعيل الخطة',
     submitTrial: 'بدء الفترة التجريبية',
     submitting: 'جاري المعالجة...',
+    selectedPlanSummary: 'الخطة المختارة',
+    planPrice: 'سعر الخطة',
     loginRequired: 'يجب تسجيل الدخول أولاً',
     loadError: 'تعذر تحميل البيانات.',
     createError: 'تعذر إنشاء المتجر. تحقق من البيانات وحاول مرة أخرى.',
@@ -87,8 +95,14 @@ const labels = {
     trialBadge: 'تجربة مجانية',
     trialDays: 'يوم تجريبي',
     selectPlan: 'اختيار الخطة',
+    selectPeriod: 'اختر مدة الاشتراك',
+    selectPeriodHint: 'حدّد مدة الاشتراك المناسبة لمتجرك.',
+    discount: 'خصم',
     alreadyHasStore: 'لديك متجر مرتبط بحسابك بالفعل.',
-    vatShort: 'ضريبة القيمة المضافة'
+    vatShort: 'ضريبة القيمة المضافة',
+    adminFreeBadge: 'مجانية (شهر واحد)',
+    paymentComingSoon: 'سيتم توفر التفعيل المدفوع قريباً. يمكنك استخدام الفترة التجريبية إن كانت متاحة.',
+    submitPaymentComingSoon: 'التفعيل المدفوع قريباً'
   },
   en: {
     title: 'Create a store',
@@ -116,16 +130,16 @@ const labels = {
     homeBusinessHint: 'National ID or passport is enough',
     plan: 'Subscription plan *',
     storeDetails: 'Store details',
-    billingMonthly: 'Monthly',
-    billingYearly: 'Yearly',
     freePlan: 'Free',
     maxListings: 'Listing limit',
     perMonth: 'per month',
     perYear: 'per year',
     submit: 'Proceed to payment',
-    submitFree: 'Create store',
+    activatePlan: 'Activate plan',
     submitTrial: 'Start free trial',
     submitting: 'Processing...',
+    selectedPlanSummary: 'Selected plan',
+    planPrice: 'Plan price',
     loginRequired: 'Please log in first',
     loadError: 'Could not load page data.',
     createError: 'Could not create the store. Check your details and try again.',
@@ -135,8 +149,14 @@ const labels = {
     trialBadge: 'Free trial',
     trialDays: 'trial days',
     selectPlan: 'Select plan',
+    selectPeriod: 'Choose subscription period',
+    selectPeriodHint: 'Pick the subscription period that works best for your store.',
+    discount: 'Discount',
     alreadyHasStore: 'You already have a store linked to your account.',
-    vatShort: 'VAT'
+    vatShort: 'VAT',
+    adminFreeBadge: 'Free (1 month)',
+    paymentComingSoon: 'Paid activation will be available soon. You can start the free trial if available.',
+    submitPaymentComingSoon: 'Paid activation coming soon'
   }
 } as const;
 
@@ -153,7 +173,7 @@ export function CreateStorePage() {
   const [city, setCity] = useState('');
   const [wilayah, setWilayah] = useState('');
   const [planId, setPlanId] = useState('');
-  const [billingPeriod, setBillingPeriod] = useState<'MONTHLY' | 'YEARLY'>('MONTHLY');
+  const [billingPeriod, setBillingPeriod] = useState<StoreBillingPeriod | ''>('');
   const [nameAr, setNameAr] = useState('');
   const [nameEn, setNameEn] = useState('');
   const [bioAr, setBioAr] = useState('');
@@ -166,6 +186,7 @@ export function CreateStorePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittingMode, setSubmittingMode] = useState<'trial' | 'plan' | null>(null);
   const [hasExistingStore, setHasExistingStore] = useState(false);
 
   const rootCategories = useMemo(() => buildCategoryTree(categories), [categories]);
@@ -175,8 +196,37 @@ export function CreateStorePage() {
   const selectedPlan = plans.find((plan) => plan.id === planId);
   const selectedPricing = selectedPlan?.pricing.find((row) => row.billingPeriod === billingPeriod);
   const finalPrice = Number(selectedPricing?.finalPrice ?? selectedPricing?.price ?? 0);
-  const isFreePlan = finalPrice <= 0;
+  const canActivateFree = Boolean(
+    selectedPlan &&
+      billingPeriod &&
+      canActivateStorePlanWithoutPayment(selectedPlan, billingPeriod, finalPrice)
+  );
   const isTrialEligible = Boolean(selectedPlan?.trialAvailable && selectedPlan.trialDays && selectedPlan.trialDays > 0);
+  const planActivationBlocked = Boolean(selectedPlan && billingPeriod && !canActivateFree);
+  const selectedPlanName = selectedPlan ? (locale === 'en' ? selectedPlan.nameEn : selectedPlan.nameAr) : '';
+  const displayPrice = canActivateFree ? 0 : finalPrice;
+
+  const isFormComplete = Boolean(
+    planId &&
+      billingPeriod &&
+      rootCategoryId &&
+      storeTypeId &&
+      city &&
+      wilayah &&
+      businessType &&
+      nameAr.trim() &&
+      nameEn.trim() &&
+      phone.trim() &&
+      nationalId.trim() &&
+      (businessType !== 'COMMERCIAL' || commercialRegistrationNumber.trim()) &&
+      plans.length > 0 &&
+      !isLoadingPlans
+  );
+
+  const handleSelectPlan = (id: string) => {
+    setPlanId(id);
+    setBillingPeriod('');
+  };
 
   useEffect(() => {
     const token = getUserAccessToken();
@@ -221,20 +271,19 @@ export function CreateStorePage() {
       .get<{ data: StorePlan[] }>('/stores/plans', { params: { rootCategoryId } })
       .then((response) => {
         setPlans(response.data.data);
-        setPlanId(response.data.data[0]?.id ?? '');
-        setBillingPeriod('MONTHLY');
+        setPlanId('');
+        setBillingPeriod('');
       })
       .catch(() => setError(text.loadError))
       .finally(() => setIsLoadingPlans(false));
   }, [rootCategoryId, text.loadError]);
 
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!planId || !rootCategoryId || !storeTypeId || !city || !wilayah || !businessType) return;
-    if (businessType === 'COMMERCIAL' && !commercialRegistrationNumber.trim()) return;
+  const submitStore = async (activationMode: 'trial' | 'plan') => {
+    if (!isFormComplete) return;
 
     setError('');
     setIsSubmitting(true);
+    setSubmittingMode(activationMode);
 
     try {
       const response = await api.post<{ data: { checkout?: { paymentUrl?: string }; requiresPayment: boolean; isTrial?: boolean } }>(
@@ -255,7 +304,8 @@ export function CreateStorePage() {
           city,
           wilayah,
           planId,
-          billingPeriod
+          billingPeriod,
+          activationMode
         },
         { params: { locale } }
       );
@@ -274,27 +324,33 @@ export function CreateStorePage() {
           {
             ACCOUNT_BLOCKED: m.errors.ACCOUNT_BLOCKED,
             ACCOUNT_INACTIVE: m.errors.ACCOUNT_INACTIVE,
-            STORE_LIMIT_REACHED: m.errors.STORE_LIMIT_REACHED
+            STORE_LIMIT_REACHED: m.errors.STORE_LIMIT_REACHED,
+            PAYMENT_COMING_SOON: m.errors.PAYMENT_COMING_SOON
           },
           text.createError
         )
       );
     } finally {
       setIsSubmitting(false);
+      setSubmittingMode(null);
     }
+  };
+
+  const preventFormSubmit = (event: FormEvent) => {
+    event.preventDefault();
   };
 
   const inputClass = 'w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:ring-2 focus:ring-green-500';
 
   return (
-    <div className="min-h-screen bg-gray-50" dir={dir}>
+    <div className="site-page-shell bg-gray-50" dir={dir}>
       <UserSiteHeader>
         <div className="hidden max-w-xl md:block">
           <SiteHeaderSearch />
         </div>
       </UserSiteHeader>
 
-      <main className="mx-auto max-w-3xl px-4 py-10">
+      <main className="mx-auto max-w-6xl px-4 py-10">
         {hasExistingStore ? (
           <div className="rounded-3xl bg-white p-10 text-center shadow-sm">
             <p className="text-gray-600">{text.alreadyHasStore}</p>
@@ -316,7 +372,7 @@ export function CreateStorePage() {
         {isLoading ? (
           <p className="text-gray-500">{text.submitting}</p>
         ) : (
-          <form onSubmit={submit} className="space-y-6">
+          <form onSubmit={preventFormSubmit} className="space-y-6">
             <section className="space-y-4 rounded-2xl bg-white p-8 shadow-sm">
               <label className="block">
                 <span className="mb-1 block text-sm font-bold">{text.category}</span>
@@ -385,35 +441,51 @@ export function CreateStorePage() {
                 {!rootCategoryId ? (
                   <p className="rounded-xl border border-dashed border-gray-200 px-4 py-6 text-sm text-gray-500">{text.selectCategoryFirst}</p>
                 ) : isLoadingPlans ? (
-                  <p className="text-sm text-gray-500">{text.loadingPlans}</p>
+                  <CreateStorePlansSkeleton />
                 ) : plans.length === 0 ? (
                   <p className="text-sm text-gray-500">{text.noPlans}</p>
                 ) : (
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {plans.map((plan) => (
-                      <StorePlanCard
-                        key={plan.id}
-                        plan={plan}
-                        locale={locale}
-                        selected={planId === plan.id}
-                        billingPeriod={billingPeriod}
-                        labels={{
-                          billingMonthly: text.billingMonthly,
-                          billingYearly: text.billingYearly,
-                          freePlan: text.freePlan,
-                          maxListings: text.maxListings,
-                          trialBadge: text.trialBadge,
-                          trialDays: text.trialDays,
-                          selectPlan: text.selectPlan,
-                          vatShort: text.vatShort
-                        }}
-                        onSelectPlan={setPlanId}
-                        onSelectBilling={(id, period) => {
-                          setPlanId(id);
-                          setBillingPeriod(period);
-                        }}
-                      />
-                    ))}
+                  <div className="space-y-6">
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {plans.map((plan) => (
+                        <CreateStorePlanSelectCard
+                          key={plan.id}
+                          plan={plan}
+                          locale={locale}
+                          selected={planId === plan.id}
+                          labels={{
+                            trialBadge: text.trialBadge,
+                            trialDays: text.trialDays,
+                            maxListings: text.maxListings,
+                            adminFreeBadge: text.adminFreeBadge,
+                            selectPlan: text.selectPlan
+                          }}
+                          onSelect={handleSelectPlan}
+                        />
+                      ))}
+                    </div>
+
+                    {selectedPlan ? (
+                      <div className="space-y-3 border-t border-gray-100 pt-6">
+                        <div>
+                          <h3 className="text-base font-black text-gray-900">{text.selectPeriod}</h3>
+                          <p className="mt-1 text-sm text-gray-500">{text.selectPeriodHint}</p>
+                        </div>
+                        <CreateStoreBillingPeriodCards
+                          plan={selectedPlan}
+                          pricing={selectedPlan.pricing}
+                          locale={locale}
+                          selectedPeriod={billingPeriod}
+                          labels={{
+                            freePlan: text.freePlan,
+                            maxListings: text.maxListings,
+                            vatShort: text.vatShort,
+                            discount: text.discount
+                          }}
+                          onSelect={setBillingPeriod}
+                        />
+                      </div>
+                    ) : null}
                   </div>
                 )}
               </div>
@@ -504,24 +576,61 @@ export function CreateStorePage() {
                 </label>
               ) : null}
 
-              <button
-                type="submit"
-                disabled={
-                  isSubmitting ||
-                  !planId ||
-                  !rootCategoryId ||
-                  !storeTypeId ||
-                  !city ||
-                  !wilayah ||
-                  !businessType ||
-                  (businessType === 'COMMERCIAL' && !commercialRegistrationNumber.trim()) ||
-                  plans.length === 0 ||
-                  isLoadingPlans
-                }
-                className="w-full rounded-lg bg-green-600 px-6 py-3 font-bold text-white transition hover:bg-green-700 disabled:opacity-60"
-              >
-                {isSubmitting ? text.submitting : isTrialEligible ? text.submitTrial : isFreePlan ? text.submitFree : text.submit}
-              </button>
+              {selectedPlan && billingPeriod ? (
+                <div className="rounded-2xl border border-green-100 bg-green-50/60 p-5">
+                  <p className="text-sm font-bold text-green-800">{text.selectedPlanSummary}</p>
+                  <p className="mt-1 text-lg font-black text-gray-900">{selectedPlanName}</p>
+                  <p className="mt-1 text-sm text-gray-600">{getBillingPeriodLabel(billingPeriod, locale)}</p>
+                  <div className="mt-3">
+                    <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-gray-500">
+                      {text.planPrice}
+                    </span>
+                    <PlanPriceWithVat
+                      basePrice={displayPrice}
+                      locale={locale}
+                      freeLabel={text.freePlan}
+                      vatShort={text.vatShort}
+                      mainClassName="text-2xl font-black text-green-700"
+                      subClassName="mt-1 block text-sm font-normal text-gray-600"
+                    />
+                  </div>
+                </div>
+              ) : null}
+
+              {billingPeriod && planActivationBlocked ? (
+                <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                  {text.paymentComingSoon}
+                </p>
+              ) : null}
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                {isTrialEligible ? (
+                  <button
+                    type="button"
+                    disabled={isSubmitting || !isFormComplete}
+                    onClick={() => submitStore('trial')}
+                    className="w-full rounded-lg border-2 border-green-600 bg-white px-6 py-3 font-bold text-green-700 transition hover:bg-green-50 disabled:opacity-60"
+                  >
+                    {isSubmitting && submittingMode === 'trial' ? text.submitting : text.submitTrial}
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  disabled={isSubmitting || !isFormComplete || planActivationBlocked}
+                  onClick={() => submitStore('plan')}
+                  className={`w-full rounded-lg bg-green-600 px-6 py-3 font-bold text-white transition hover:bg-green-700 disabled:opacity-60 ${
+                    !isTrialEligible ? 'sm:col-span-2' : ''
+                  }`}
+                >
+                  {isSubmitting && submittingMode === 'plan'
+                    ? text.submitting
+                    : planActivationBlocked
+                      ? text.submitPaymentComingSoon
+                      : canActivateFree
+                        ? text.activatePlan
+                        : text.submit}
+                </button>
+              </div>
             </section>
           </form>
         )}

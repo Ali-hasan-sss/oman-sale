@@ -440,6 +440,22 @@ export class StoresRepository {
       prisma.ad.count({ where })
     ]).then(([items, total]) => ({ items, total, page: query.page, limit: query.limit }));
   }
+
+  listSubscriptions(storeId: string, query: { page: number; limit: number }) {
+    const where: Prisma.StoreSubscriptionWhereInput = { storeId, deletedAt: null };
+    const skip = (query.page - 1) * query.limit;
+
+    return Promise.all([
+      prisma.storeSubscription.findMany({
+        where,
+        skip,
+        take: query.limit,
+        orderBy: { createdAt: 'desc' },
+        include: { plan: true, pricing: true }
+      }),
+      prisma.storeSubscription.count({ where })
+    ]).then(([items, total]) => ({ items, total, page: query.page, limit: query.limit }));
+  }
 }
 
 export const storesRepository = new StoresRepository();

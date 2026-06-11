@@ -7,9 +7,11 @@ import type {
   AssistantChatResult,
   GetPlatformInfoToolArgs,
   GetTourismInfoToolArgs,
+  SearchArticlesToolArgs,
   SearchListingsToolArgs,
   SearchStoresToolArgs
 } from './assistant.types';
+import { executeSearchArticles } from './assistant-articles';
 import { executeFeaturedListings, executeSearchListings, executeSearchStores } from './assistant.tools';
 import { executeGetPlatformInfo } from './assistant-platform';
 import { buildOffTopicRefusal, isClearlyOffTopic } from './assistant-scope';
@@ -100,6 +102,24 @@ const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
   {
     type: 'function',
     function: {
+      name: 'search_articles',
+      description:
+        'Search or list news/articles published on Oman Sale. Use when the user asks for articles, news, blog posts, latest articles (e.g. "أحدث مقالتين"), or articles about a topic. Omit q for latest articles only; pass short topic keywords in q when the user asks about a subject.',
+      parameters: {
+        type: 'object',
+        properties: {
+          q: {
+            type: 'string',
+            description: 'Topic keywords in Arabic or English. Omit when the user only wants the latest articles.'
+          },
+          limit: { type: 'number', description: 'Number of articles to return (max 4)' }
+        }
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
       name: 'get_tourism_info',
       description:
         'Get tourism landmarks published on Oman Sale and details about them (about, highlights, activities, best time to visit, address). Use when the user asks about tourist places, landmarks, destinations in Oman, or a specific site landmark by name.',
@@ -120,13 +140,13 @@ function buildSystemPrompt(locale: 'ar' | 'en', isAuthenticated: boolean) {
     ? 'The user IS signed in — suggest direct actions (create store, my listings, add listing).'
     : 'The user is NOT signed in — when they need an account, mention login/register; action buttons will be shown automatically.';
 
-  return `You are the Oman Sale marketplace assistant — a helpful guide for buying, selling, stores, listings, plans, platform features, and tourism in Oman.
+  return `You are the Oman Sale marketplace assistant — a helpful guide for buying, selling, stores, listings, articles/news, plans, platform features, and tourism in Oman.
 Always reply in ${language} matching the user's locale (${locale}).
 Currency is OMR (Omani Rial). Users may say "ريال" or "OMR".
 ${authNote}
 
 SCOPE (strict — never break):
-- ONLY help with: Oman Sale platform features, listings/ads, stores, plans & pricing, payments, chat, favorites, banner ads, tourism landmarks on the site, and general travel/tourism in Oman when it helps visitors explore Oman.
+- ONLY help with: Oman Sale platform features, listings/ads, stores, articles/news, plans & pricing, payments, chat, favorites, banner ads, tourism landmarks on the site, and general travel/tourism in Oman when it helps visitors explore Oman.
 - REFUSE politely (do not use tools) for: translations, homework, science/math, coding, politics, entertainment gossip, or any topic unrelated to Oman Sale or Omani tourism/travel.
 - When refusing off-topic requests, briefly explain you are the Oman Sale assistant and offer to help with listings, stores, plans, or tourism in Oman.
 
@@ -138,6 +158,7 @@ TOURISM:
 SEARCH:
 - Product/offer searches → search_listings (short keywords in q, not full sentences).
 - Store/showroom/workshop/supermarket searches → search_stores.
+- Articles/news → search_articles. For "latest N articles" pass limit only (no q). For topic searches pass short keywords in q.
 - Browse stores generally → search_stores with minimal q.
 - Only pass city to search_stores or search_listings when the user explicitly mentions a city/governorate in their message — never default to Muscat or any city.
 
@@ -174,6 +195,7 @@ export class AssistantService {
     const auth = { locale, isAuthenticated: dto.isAuthenticated ?? false };
     const listings: AssistantChatResult['listings'] = [];
     const stores: AssistantChatResult['stores'] = [];
+    const articles: AssistantChatResult['articles'] = [];
     const actions: AssistantChatResult['actions'] = [];
     const lastUserMessage = [...dto.messages].reverse().find((message) => message.role === 'user')?.content ?? '';
 
@@ -182,6 +204,7 @@ export class AssistantService {
         reply: formatAssistantReply(buildOffTopicRefusal(locale)),
         listings: [],
         stores: [],
+        articles: [],
         actions: [
           {
             label: locale === 'ar' ? 'صفحة المعالم السياحية' : 'Tourism landmarks',
@@ -191,6 +214,11 @@ export class AssistantService {
           {
             label: locale === 'ar' ? 'جميع العروض' : 'All listings',
             href: `/${locale}/all-listings`,
+            variant: 'default'
+          },
+          {
+            label: locale === 'ar' ? 'الأخبار والمقالات' : 'News & articles',
+            href: `/${locale}/news`,
             variant: 'default'
           }
         ]
@@ -224,6 +252,7 @@ export class AssistantService {
             const name = toolCall.function.name;
             const args = JSON.parse(toolCall.function.arguments || '{}') as SearchListingsToolArgs &
               SearchStoresToolArgs &
+              SearchArticlesToolArgs &
               GetPlatformInfoToolArgs &
               GetTourismInfoToolArgs;
 
@@ -235,6 +264,7 @@ export class AssistantService {
               );
               listings.splice(0, listings.length, ...found);
               stores.splice(0, stores.length);
+              articles.splice(0, articles.length);
               actions.splice(0, actions.length, ...searchActions);
               return {
                 role: 'tool' as const,
@@ -262,6 +292,7 @@ export class AssistantService {
               );
               stores.splice(0, stores.length, ...found);
               listings.splice(0, listings.length);
+              articles.splice(0, articles.length);
               actions.splice(0, actions.length, ...searchActions);
               return {
                 role: 'tool' as const,
@@ -280,10 +311,36 @@ export class AssistantService {
               };
             }
 
+            if (name === 'search_articles') {
+              const found = await executeSearchArticles(args, auth);
+              articles.splice(0, articles.length, ...found.articles);
+              listings.splice(0, listings.length);
+              stores.splice(0, stores.length);
+              actions.splice(0, actions.length, ...found.actions);
+              return {
+                role: 'tool' as const,
+                tool_call_id: toolCall.id,
+                content: JSON.stringify({
+                  count: found.count,
+                  isFallback: found.isFallback,
+                  summary: found.summary,
+                  items: found.articles.map((item) => ({
+                    id: item.id,
+                    slug: item.slug,
+                    title: item.title,
+                    excerpt: item.excerpt,
+                    views: item.views,
+                    categoryName: item.categoryName
+                  }))
+                })
+              };
+            }
+
             if (name === 'get_tourism_info') {
               const tourism = await executeGetTourismInfo(args, auth);
               listings.splice(0, listings.length);
               stores.splice(0, stores.length);
+              articles.splice(0, articles.length);
               actions.splice(0, actions.length, ...tourism.actions);
               return {
                 role: 'tool' as const,
@@ -303,6 +360,7 @@ export class AssistantService {
                 const featured = await executeFeaturedListings(auth);
                 listings.splice(0, listings.length, ...featured.listings);
                 stores.splice(0, stores.length);
+                articles.splice(0, articles.length);
                 actions.splice(0, actions.length, ...featured.actions);
                 return {
                   role: 'tool' as const,
@@ -317,6 +375,7 @@ export class AssistantService {
               const info = await executeGetPlatformInfo(args, auth);
               listings.splice(0, listings.length);
               stores.splice(0, stores.length);
+              articles.splice(0, articles.length);
               actions.splice(0, actions.length, ...info.actions);
               return {
                 role: 'tool' as const,
@@ -356,7 +415,7 @@ export class AssistantService {
       throw new ApiError(502, 'Assistant returned an empty response');
     }
 
-    return { reply: formatAssistantReply(reply), listings, stores, actions };
+    return { reply: formatAssistantReply(reply), listings, stores, articles, actions };
   }
 }
 

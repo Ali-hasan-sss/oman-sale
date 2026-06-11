@@ -24,11 +24,13 @@ export async function applyStoreListingPromotion(adId: string, storeId: string) 
 
   const subscription = store?.subscriptions[0];
   if (!subscription?.endsAt || !subscription.plan.promotionPlanId) {
+    await promotionsRepository.clearIncludedPromotion(adId);
     return null;
   }
 
   const promotionPlan = subscription.plan.promotionPlan;
   if (!promotionPlan || promotionPlan.deletedAt || !promotionPlan.isActive) {
+    await promotionsRepository.clearIncludedPromotion(adId);
     return null;
   }
 
@@ -61,12 +63,14 @@ export async function syncStoreListingPromotions(storeId: string) {
 
   const subscription = store?.subscriptions[0];
   if (!subscription?.endsAt || !subscription.plan.promotionPlanId) {
-    return { updated: 0 };
+    const cleared = await promotionsRepository.clearStoreIncludedPromotions(storeId);
+    return { updated: 0, cleared: cleared.count };
   }
 
   const promotionPlan = subscription.plan.promotionPlan;
   if (!promotionPlan || promotionPlan.deletedAt || !promotionPlan.isActive) {
-    return { updated: 0 };
+    const cleared = await promotionsRepository.clearStoreIncludedPromotions(storeId);
+    return { updated: 0, cleared: cleared.count };
   }
 
   const ads = await prisma.ad.findMany({
@@ -95,14 +99,20 @@ export async function syncStoreListingPromotions(storeId: string) {
 export function resolveStoreListingLimit(subscription: {
   isTrial: boolean;
   maxListings: number;
+  baselineListings?: number;
   plan: { trialMaxListings: number; trialDays: number };
 }) {
-  if (subscription.isTrial) {
-    if (subscription.plan.trialMaxListings > 0) {
-      return subscription.plan.trialMaxListings;
-    }
-    return subscription.maxListings;
-  }
+  const baseline = subscription.baselineListings ?? 0;
+  const planAllowance =
+    subscription.isTrial && subscription.plan.trialMaxListings > 0
+      ? subscription.plan.trialMaxListings
+      : subscription.maxListings;
 
-  return subscription.maxListings;
+  return baseline + planAllowance;
+}
+
+export async function countStoreListingsForBaseline(storeId: string) {
+  return prisma.ad.count({
+    where: { storeId, deletedAt: null, status: 'ACTIVE' }
+  });
 }

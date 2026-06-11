@@ -1,16 +1,29 @@
-import { StoreBillingPeriod, StoreSubscriptionStatus } from '@prisma/client';
+import { StoreSubscriptionStatus } from '@prisma/client';
 
+import { ErrorCodes } from '../../shared/constants/error-codes';
+import { ApiError } from '../../shared/utils/api-error';
 import { prisma } from '../../shared/prisma/client';
-import { syncStoreListingPromotions } from './store-listing-promotion.service';
+import { getSubscriptionEndDate } from './store-billing-period.utils';
+import {
+  countStoreListingsForBaseline,
+  syncStoreListingPromotions
+} from './store-listing-promotion.service';
 
-export function getSubscriptionEndDate(billingPeriod: StoreBillingPeriod, startsAt = new Date()) {
-  const endsAt = new Date(startsAt);
-  if (billingPeriod === StoreBillingPeriod.MONTHLY) {
-    endsAt.setMonth(endsAt.getMonth() + 1);
-  } else {
-    endsAt.setFullYear(endsAt.getFullYear() + 1);
-  }
-  return endsAt;
+export { getSubscriptionEndDate };
+
+export async function reactivateStoreAds(storeId: string) {
+  await prisma.ad.updateMany({
+    where: { storeId, deletedAt: null, status: 'ACTIVE', isApproved: true },
+    data: { isActive: true }
+  });
+}
+
+export async function ensureStoreAccessAfterSubscription(storeId: string) {
+  await prisma.store.update({
+    where: { id: storeId },
+    data: { isActive: true }
+  });
+  await reactivateStoreAds(storeId);
 }
 
 export function getTrialEndDate(trialDays: number, startsAt = new Date()) {
@@ -27,11 +40,14 @@ export async function activateStoreTrialSubscription(subscriptionId: string, tri
 
   if (!subscription) return null;
   if (subscription.status === StoreSubscriptionStatus.ACTIVE && subscription.isActive) {
+    await ensureStoreAccessAfterSubscription(subscription.storeId);
+    await syncStoreListingPromotions(subscription.storeId);
     return subscription;
   }
 
   const startsAt = new Date();
   const endsAt = getTrialEndDate(trialDays, startsAt);
+  const baselineListings = await countStoreListingsForBaseline(subscription.storeId);
 
   const updated = await prisma.$transaction(async (tx) => {
     await tx.storeSubscription.updateMany({
@@ -50,6 +66,7 @@ export async function activateStoreTrialSubscription(subscriptionId: string, tri
         status: StoreSubscriptionStatus.ACTIVE,
         isActive: true,
         isTrial: true,
+        baselineListings,
         startsAt,
         endsAt,
         expiredNotifiedAt: null
@@ -57,14 +74,44 @@ export async function activateStoreTrialSubscription(subscriptionId: string, tri
       include: { store: true, plan: true, pricing: true }
     });
 
-    await tx.store.update({
-      where: { id: subscription.storeId },
-      data: { isActive: true }
+    return row;
+  });
+
+  await ensureStoreAccessAfterSubscription(subscription.storeId);
+  await syncStoreListingPromotions(subscription.storeId);
+  return updated;
+}
+
+export async function extendStoreSubscription(subscriptionId: string) {
+  const subscription = await prisma.storeSubscription.findFirst({
+    where: { id: subscriptionId, deletedAt: null },
+    include: { store: true }
+  });
+
+  if (!subscription || subscription.isTrial) return null;
+
+  const now = new Date();
+  const extensionBase =
+    subscription.endsAt && subscription.endsAt > now ? subscription.endsAt : now;
+  const endsAt = getSubscriptionEndDate(subscription.billingPeriod, extensionBase);
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const row = await tx.storeSubscription.update({
+      where: { id: subscriptionId },
+      data: {
+        status: StoreSubscriptionStatus.ACTIVE,
+        isActive: true,
+        isTrial: false,
+        endsAt,
+        expiredNotifiedAt: null
+      },
+      include: { store: true, plan: true, pricing: true }
     });
 
     return row;
   });
 
+  await ensureStoreAccessAfterSubscription(subscription.storeId);
   await syncStoreListingPromotions(subscription.storeId);
   return updated;
 }
@@ -81,11 +128,14 @@ export async function activateStoreSubscription(subscriptionId: string) {
     subscription.isActive &&
     !subscription.isTrial
   ) {
+    await ensureStoreAccessAfterSubscription(subscription.storeId);
+    await syncStoreListingPromotions(subscription.storeId);
     return subscription;
   }
 
   const startsAt = new Date();
   const endsAt = getSubscriptionEndDate(subscription.billingPeriod, startsAt);
+  const baselineListings = await countStoreListingsForBaseline(subscription.storeId);
 
   const updated = await prisma.$transaction(async (tx) => {
     await tx.storeSubscription.updateMany({
@@ -104,6 +154,7 @@ export async function activateStoreSubscription(subscriptionId: string) {
         status: StoreSubscriptionStatus.ACTIVE,
         isActive: true,
         isTrial: false,
+        baselineListings,
         startsAt,
         endsAt,
         expiredNotifiedAt: null
@@ -111,19 +162,10 @@ export async function activateStoreSubscription(subscriptionId: string) {
       include: { store: true, plan: true, pricing: true }
     });
 
-    await tx.store.update({
-      where: { id: subscription.storeId },
-      data: { isActive: true }
-    });
-
-    await tx.ad.updateMany({
-      where: { storeId: subscription.storeId, deletedAt: null, status: 'ACTIVE', isApproved: true },
-      data: { isActive: true }
-    });
-
     return row;
   });
 
+  await ensureStoreAccessAfterSubscription(subscription.storeId);
   await syncStoreListingPromotions(subscription.storeId);
   return updated;
 }
@@ -168,4 +210,27 @@ export function getStoreAccessStatus(store: {
   }
 
   return store.isActive ? 'ACTIVE' : 'DISABLED';
+}
+
+export const SUBSCRIPTION_RENEWAL_WINDOW_DAYS = 2;
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+export function canRenewActiveSubscription(endsAt: Date, now = new Date()) {
+  const endsMs = endsAt.getTime();
+  const nowMs = now.getTime();
+  if (endsMs <= nowMs) return false;
+
+  const windowMs = SUBSCRIPTION_RENEWAL_WINDOW_DAYS * MS_PER_DAY;
+  return endsMs - nowMs <= windowMs;
+}
+
+export function assertCanRenewActiveSubscription(endsAt: Date) {
+  if (!canRenewActiveSubscription(endsAt)) {
+    throw new ApiError(
+      400,
+      'Subscription can only be renewed within 2 days before expiry',
+      ErrorCodes.SUBSCRIPTION_RENEWAL_TOO_EARLY
+    );
+  }
 }

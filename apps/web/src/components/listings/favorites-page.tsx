@@ -12,6 +12,9 @@ import { useI18n } from '@/lib/i18n';
 import { getListingLocationLabel } from '@/lib/oman-locations';
 import { getUserAccessToken } from '@/lib/user-auth';
 import { useAuthStore } from '@/store/auth-store';
+import { ArticleSaveButton } from '@/components/articles/article-save-button';
+import { resolveMediaUrl } from '@/lib/media-url';
+
 import { FavoriteButton } from './favorite-button';
 import { ListingMediaCover } from './listing-media-cover';
 
@@ -55,12 +58,22 @@ const labels = {
   }
 };
 
+type SavedArticle = {
+  id: string;
+  slug: string;
+  titleAr: string;
+  titleEn: string;
+  coverImageUrl: string;
+  category?: { nameAr: string; nameEn: string };
+};
+
 export function FavoritesPage() {
   const router = useRouter();
-  const { dir, locale, localizedPath } = useI18n();
+  const { dir, locale, localizedPath, m } = useI18n();
   const text = labels[locale];
   const hydrateFromStorage = useAuthStore((state) => state.hydrateFromStorage);
   const [listings, setListings] = useState<FavoriteListing[]>([]);
+  const [savedArticles, setSavedArticles] = useState<SavedArticle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -71,15 +84,24 @@ export function FavoritesPage() {
       return;
     }
 
-    api
-      .get<{ data: FavoriteListing[] }>('/ads/favorites', { headers: { Authorization: `Bearer ${token}` } })
-      .then((response) => setListings(response.data.data))
-      .catch(() => setListings([]))
+    const headers = { Authorization: `Bearer ${token}` };
+    Promise.all([
+      api.get<{ data: FavoriteListing[] }>('/ads/favorites', { headers }),
+      api.get<{ data: SavedArticle[] }>('/articles/saves', { headers })
+    ])
+      .then(([listingsRes, articlesRes]) => {
+        setListings(listingsRes.data.data);
+        setSavedArticles(articlesRes.data.data);
+      })
+      .catch(() => {
+        setListings([]);
+        setSavedArticles([]);
+      })
       .finally(() => setIsLoading(false));
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50" dir={dir}>
+    <div className="site-page-shell bg-gray-50" dir={dir}>
       <UserSiteHeader>
         <SiteHeaderSearch />
       </UserSiteHeader>
@@ -106,6 +128,46 @@ export function FavoritesPage() {
             ))}
           </div>
         )}
+
+        <div className="mt-12">
+          <h2 className="mb-4 text-2xl font-bold text-slate-900">{m.articles.savedArticlesTitle}</h2>
+          {isLoading ? null : savedArticles.length === 0 ? (
+            <div className="rounded-xl bg-white p-6 text-center text-gray-500 shadow-sm">{m.articles.savedArticlesEmpty}</div>
+          ) : (
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+              {savedArticles.map((article) => {
+                const title = locale === 'en' ? article.titleEn : article.titleAr;
+                const category = locale === 'en' ? article.category?.nameEn : article.category?.nameAr;
+                return (
+                  <Link
+                    key={article.id}
+                    href={localizedPath(`/news/${article.slug}`)}
+                    className="group overflow-hidden rounded-xl bg-white shadow-sm transition hover:shadow-lg"
+                  >
+                    <div className="relative h-48">
+                      <img src={resolveMediaUrl(article.coverImageUrl)} alt={title} className="h-full w-full object-cover transition group-hover:scale-105" />
+                      <div className="absolute end-3 top-3">
+                        <ArticleSaveButton
+                          articleId={article.id}
+                          initialSaved
+                          onChange={(saved) => {
+                            if (!saved) setSavedArticles((current) => current.filter((item) => item.id !== article.id));
+                          }}
+                          showLabel={false}
+                          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90"
+                        />
+                      </div>
+                      {category ? <span className="absolute bottom-3 start-3 rounded-md bg-black/60 px-3 py-1 text-xs text-white">{category}</span> : null}
+                    </div>
+                    <div className="p-4">
+                      <h3 className="line-clamp-2 font-bold text-slate-900">{title}</h3>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </main>
 
       <SiteFooter />

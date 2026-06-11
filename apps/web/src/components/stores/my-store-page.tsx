@@ -1,20 +1,36 @@
 'use client';
 
-import { Camera, ChevronDown, ChevronUp, Store, Trash2, Upload, X } from 'lucide-react';
+import { Camera, Store, Upload, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChangeEvent, FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
 
+import { ConfirmationDialog } from '@/components/confirmation-dialog';
 import { SiteFooter } from '@/components/home/site-footer';
 import { ListingMediaCover } from '@/components/listings/listing-media-cover';
 import { SiteHeaderSearch, UserSiteHeader } from '@/components/navigation/user-site-header';
-import { StorePlanCard, type StorePlanCardData } from '@/components/stores/store-plan-card';
 import { MyStorePageSkeleton } from '@/components/stores/my-store-page-skeleton';
+import { StorePlanPickerModal, type StorePlanPickerPlan } from '@/components/stores/store-plan-picker-modal';
+import { StoreSubscriptionHistory } from '@/components/stores/store-subscription-history';
+import { SubscriptionRingGauge } from '@/components/stores/subscription-ring-gauge';
 import { api } from '@/lib/api';
+import { resolveApiErrorMessage } from '@/lib/api-errors';
 import { registerMediaPreviewUrl, resolveMediaUrl } from '@/lib/media-url';
 import { uploadMediaFile } from '@/lib/media-upload';
 import { useI18n } from '@/lib/i18n';
-import { getUserAccessToken } from '@/lib/user-auth';
+import { getUserAccessToken, getStoredUser } from '@/lib/user-auth';
+import { syncCurrentUser } from '@/lib/sync-current-user';
+import { canActivateStorePlanWithoutPayment } from '@/lib/store-plan-activation';
+import { filterPlansForUpgrade } from '@/lib/store-plan-upgrade';
+import { getBillingPeriodLabel, type StoreBillingPeriod } from '@/lib/store-billing-period';
+import {
+  canRenewActiveSubscriptionWithinWindow,
+  getEffectiveSubscriptionMaxListings,
+  getListingsUsageColor,
+  getSubscriptionPlanListingAllowance,
+  getSubscriptionTimeUsage,
+  getTimeUsageColor
+} from '@/lib/subscription-usage';
 
 type StoreSubscription = {
   id: string;
@@ -25,13 +41,16 @@ type StoreSubscription = {
   startsAt?: string | null;
   endsAt?: string | null;
   maxListings: number;
+  baselineListings?: number;
   finalPrice: string | number;
-  billingPeriod: 'MONTHLY' | 'YEARLY';
+  billingPeriod: StoreBillingPeriod;
   plan?: {
     id: string;
     nameAr: string;
     nameEn: string;
     trialMaxListings?: number;
+    isAdminFree?: boolean;
+    sortOrder?: number;
     descriptionAr?: string;
     descriptionEn?: string;
   };
@@ -91,38 +110,78 @@ const labels = {
     endsAt: 'ينتهي في',
     maxListings: 'حد العروض',
     listingsUsed: 'عروض نشطة',
-    renew: 'تجديد الاشتراك',
-    activatePaid: 'تفعيل الاشتراك المدفوع',
-    payNow: 'الدفع والاستفادة من حدود الخطة',
+    listingsConsumed: 'مستهلكة',
+    listingsRemaining: 'متبقية',
+    listingsUsage: 'استخدام العروض',
+    subscriptionTime: 'مدة الاشتراك',
+    daysConsumed: 'مستهلكة',
+    daysRemaining: 'متبقية',
+    dayUnit: 'يوم',
     upgrade: 'ترقية الخطة',
-    upgradeTitle: 'اختر خطة جديدة',
+    upgradeTitle: 'ترقية الخطة',
     upgradeSubmit: 'متابعة للترقية',
-    hideUpgrade: 'إخفاء الخطط',
+    upgradeFree: 'تفعيل الخطة مجاناً',
+    renewPlan: 'تجديد الخطة',
+    renewFree: 'تجديد مجاني',
     paidLimitHint: 'حد العروض بعد الدفع',
     trialLimitHint: 'حد الفترة التجريبية',
     loadingPlans: 'جاري تحميل الخطط...',
     noPlans: 'لا توجد خطط أخرى متاحة حالياً.',
-    billingMonthly: 'شهري',
-    billingYearly: 'سنوي',
-    freePlan: 'مجاني',
+    noPaidUpgradePlans: 'لا توجد خطط مدفوعة أعلى متاحة للترقية حالياً.',
+    freePlan: 'مجاناً',
     trialBadge: 'تجربة مجانية',
     trialDays: 'يوم',
     selectPlan: 'اختيار الخطة',
+    selectPeriod: 'اختر مدة الاشتراك',
+    selectPeriodHint: 'حدّد مدة الاشتراك المناسبة لمتجرك.',
+    discount: 'خصم',
     vatShort: 'ضريبة القيمة المضافة',
     storeListings: 'عروض المتجر',
     noListings: 'لا توجد عروض منشورة من المتجر بعد.',
     addListing: 'إضافة عرض من المتجر',
     loadError: 'تعذر تحميل بيانات المتجر.',
-    checkoutError: 'تعذر بدء عملية الدفع.',
-    monthly: 'شهري',
-    yearly: 'سنوي',
+    checkoutError: 'تعذر إتمام العملية.',
+    adminFreeBadge: 'مجانية (شهر واحد)',
+    paymentComingSoon: 'سيتم توفر التفعيل المدفوع قريباً.',
+    activateFree: 'تفعيل الاشتراك (مجاني)',
     subscriptionHistory: 'سجل الاشتراكات',
+    subscriptionHistoryEmpty: 'لا يوجد سجل اشتراكات بعد.',
+    subscriptionHistoryLoading: 'جاري تحميل السجل...',
+    loadMoreSubscriptions: 'تحميل الاشتراكات السابقة',
+    currentSubscriptionBadge: 'الحالي',
+    viewInvoice: 'عرض الفاتورة',
+    invoiceTitle: 'فاتورة الاشتراك',
+    invoiceNumber: 'رقم الفاتورة',
+    invoiceDate: 'تاريخ الفاتورة',
+    secondPartyTitle: 'الطرف الثاني',
+    storeOwnerLabel: 'صاحب المتجر',
+    storeNameLabel: 'اسم المتجر',
+    invoiceProduct: 'المنتج',
+    unitPrice: 'السعر',
+    subtotal: 'المجموع الفرعي',
+    vatTotal: 'ضريبة القيمة المضافة (5%)',
+    grandTotal: 'المجموع الكلي',
+    freeLabel: 'مجاني',
+    vatShortLabel: 'ض.ق.م',
+    platformInfo: 'معلومات المنصة',
+    platformEmail: 'البريد الإلكتروني',
+    platformWebsite: 'الموقع الإلكتروني',
+    platformTaxNumber: 'الرقم الضريبي',
+    platformCommercialRegistration: 'السجل التجاري',
+    downloadInvoicePdf: 'تحميل PDF',
+    downloadingInvoice: 'جاري التحميل...',
     startsAt: 'يبدأ في',
     subscriptionStatus: 'الحالة',
-    deleteStore: 'حذف المتجر',
-    deleteConfirm: 'حذف هذا المتجر نهائياً؟ سيتم إخفاء عروضه.',
-    deleteError: 'تعذر حذف المتجر.',
-    deleted: 'تم حذف المتجر بنجاح.'
+    cancel: 'إلغاء',
+    submitting: 'جاري المعالجة...',
+    upgradeConfirmTitle: 'تأكيد ترقية الخطة',
+    upgradeConfirmDescription:
+      'سيتم إنهاء الاشتراك الحالي وتفعيل الخطة الجديدة. لن تُحذف إعلاناتك السابقة، لكن مستوى التمييز المعروض سيتبع خطة الاشتراك الجديدة فقط.',
+    upgradeConfirm: 'تأكيد الترقية',
+    listingLimitReached: 'وصلت إلى حد العروض في خطتك الحالية. العروض المنشورة ستبقى ظاهرة، لكن لا يمكن إضافة عروض جديدة إلا بعد حذف بعضها أو ترقية الخطة.',
+    listingsBaselineHint: 'عروض سابقة',
+    listingsPlanAllowanceHint: 'عروض جديدة في الخطة',
+    listingsTotalHint: 'الإجمالي المسموح'
   },
   en: {
     title: 'My Store',
@@ -150,38 +209,79 @@ const labels = {
     endsAt: 'Ends on',
     maxListings: 'Listing limit',
     listingsUsed: 'Active listings',
-    renew: 'Renew subscription',
-    activatePaid: 'Activate paid subscription',
-    payNow: 'Pay to unlock plan limits',
+    listingsConsumed: 'Used',
+    listingsRemaining: 'Remaining',
+    listingsUsage: 'Listing usage',
+    subscriptionTime: 'Subscription period',
+    daysConsumed: 'Elapsed',
+    daysRemaining: 'Remaining',
+    dayUnit: 'days',
     upgrade: 'Upgrade plan',
-    upgradeTitle: 'Choose a new plan',
+    upgradeTitle: 'Upgrade plan',
     upgradeSubmit: 'Continue upgrade',
-    hideUpgrade: 'Hide plans',
+    upgradeFree: 'Activate plan for free',
+    renewPlan: 'Renew plan',
+    renewFree: 'Free renewal',
     paidLimitHint: 'Listing limit after payment',
     trialLimitHint: 'Trial listing limit',
     loadingPlans: 'Loading plans...',
     noPlans: 'No other plans are available right now.',
-    billingMonthly: 'Monthly',
-    billingYearly: 'Yearly',
+    noPaidUpgradePlans: 'No higher paid plans are available for upgrade right now.',
     freePlan: 'Free',
     trialBadge: 'Free trial',
     trialDays: 'days',
     selectPlan: 'Select plan',
+    selectPeriod: 'Choose subscription period',
+    selectPeriodHint: 'Pick the subscription period that works best for your store.',
+    discount: 'Discount',
     vatShort: 'VAT',
     storeListings: 'Store listings',
     noListings: 'No store listings yet.',
     addListing: 'Add store listing',
     loadError: 'Could not load store data.',
-    checkoutError: 'Could not start checkout.',
-    monthly: 'Monthly',
-    yearly: 'Yearly',
+    checkoutError: 'Could not complete the request.',
+    adminFreeBadge: 'Free (1 month)',
+    paymentComingSoon: 'Paid activation will be available soon.',
+    activateFree: 'Activate subscription (free)',
     subscriptionHistory: 'Subscription history',
+    subscriptionHistoryEmpty: 'No subscription history yet.',
+    subscriptionHistoryLoading: 'Loading history...',
+    loadMoreSubscriptions: 'Load previous subscriptions',
+    currentSubscriptionBadge: 'Current',
+    viewInvoice: 'View invoice',
+    invoiceTitle: 'Subscription invoice',
+    invoiceNumber: 'Invoice no.',
+    invoiceDate: 'Invoice date',
+    secondPartyTitle: 'Second party',
+    storeOwnerLabel: 'Store owner',
+    storeNameLabel: 'Store name',
+    invoiceProduct: 'Product',
+    unitPrice: 'Price',
+    subtotal: 'Subtotal',
+    vatTotal: 'VAT (5%)',
+    grandTotal: 'Grand total',
+    freeLabel: 'Free',
+    vatShortLabel: 'VAT',
+    platformInfo: 'Platform information',
+    platformEmail: 'Email',
+    platformWebsite: 'Website',
+    platformTaxNumber: 'Tax number',
+    platformCommercialRegistration: 'Commercial registration',
+    downloadInvoicePdf: 'Download PDF',
+    downloadingInvoice: 'Downloading...',
     startsAt: 'Starts on',
     subscriptionStatus: 'Status',
-    deleteStore: 'Delete store',
-    deleteConfirm: 'Delete this store permanently? Its listings will be hidden.',
-    deleteError: 'Could not delete store.',
-    deleted: 'Store deleted successfully.'
+    cancel: 'Cancel',
+    submitting: 'Processing...',
+    upgradeConfirmTitle: 'Confirm plan upgrade',
+    upgradeConfirmDescription:
+      'Your current subscription will end and the new plan will be activated. Your existing listings will stay published, but their promotion level will follow the new subscription plan only.',
+    upgradeConfirm: 'Confirm upgrade',
+    listingLimitReached:
+      'You have reached your plan listing limit. Published listings stay visible, but you cannot add new ones until you remove some or upgrade your plan.',
+    listingsBaselineHint: 'Previous listings',
+    listingsPlanAllowanceHint: 'New listings in plan',
+    listingsTotalHint: 'Total allowed'
   }
 } as const;
 
@@ -189,7 +289,7 @@ const fallbackImage = '/logo.png';
 
 export function MyStorePage() {
   const router = useRouter();
-  const { dir, locale, localizedPath } = useI18n();
+  const { dir, locale, localizedPath, m } = useI18n();
   const text = labels[locale];
   const [store, setStore] = useState<OwnerStore | null>(null);
   const [listings, setListings] = useState<StoreListing[]>([]);
@@ -200,15 +300,16 @@ export function MyStorePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
-  const [showUpgradePanel, setShowUpgradePanel] = useState(false);
-  const [plans, setPlans] = useState<StorePlanCardData[]>([]);
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [pendingUpgrade, setPendingUpgrade] = useState<{
+    planId: string;
+    billingPeriod: StoreBillingPeriod;
+  } | null>(null);
+  const [plans, setPlans] = useState<StorePlanPickerPlan[]>([]);
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
-  const [selectedUpgradePlanId, setSelectedUpgradePlanId] = useState('');
-  const [upgradeBillingPeriod, setUpgradeBillingPeriod] = useState<'MONTHLY' | 'YEARLY'>('MONTHLY');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [ownerName, setOwnerName] = useState(() => getStoredUser()?.fullName ?? '');
 
   const authHeaders = useMemo(() => {
     const token = getUserAccessToken();
@@ -229,33 +330,119 @@ export function MyStorePage() {
     );
   }, [store]);
 
+  const planListingAllowance = useMemo(() => {
+    if (!activeSubscription) return 0;
+    return getSubscriptionPlanListingAllowance({
+      isTrial: activeSubscription.isTrial,
+      maxListings: activeSubscription.maxListings,
+      trialMaxListings: activeSubscription.plan?.trialMaxListings
+    });
+  }, [activeSubscription]);
+
   const effectiveMaxListings = useMemo(() => {
     if (!activeSubscription) return 0;
-    if (activeSubscription.isTrial && (activeSubscription.plan?.trialMaxListings ?? 0) > 0) {
-      return activeSubscription.plan!.trialMaxListings!;
-    }
-    return activeSubscription.maxListings;
+    return getEffectiveSubscriptionMaxListings({
+      isTrial: activeSubscription.isTrial,
+      maxListings: activeSubscription.maxListings,
+      baselineListings: activeSubscription.baselineListings,
+      trialMaxListings: activeSubscription.plan?.trialMaxListings
+    });
+  }, [activeSubscription]);
+
+  const listingsUsedCount = listings.length;
+  const carriedOverListings = activeSubscription?.baselineListings ?? 0;
+  const canAddListing = Boolean(
+    activeSubscription &&
+      store?.accessStatus !== 'SUBSCRIPTION_EXPIRED' &&
+      store?.accessStatus !== 'TRIAL_EXPIRED' &&
+      store?.accessStatus !== 'DISABLED' &&
+      listingsUsedCount < effectiveMaxListings
+  );
+  const isAtListingPlanLimit = Boolean(activeSubscription && listingsUsedCount >= effectiveMaxListings);
+
+  const subscriptionTimeUsage = useMemo(() => {
+    if (!activeSubscription) return null;
+    return getSubscriptionTimeUsage({
+      startsAt: activeSubscription.startsAt,
+      endsAt: activeSubscription.endsAt,
+      billingPeriod: activeSubscription.billingPeriod
+    });
   }, [activeSubscription]);
 
   const isOnActiveTrial = Boolean(store?.accessStatus === 'TRIAL' && activeSubscription?.isTrial);
-  const canManagePlans = Boolean(store && (store.accessStatus === 'ACTIVE' || store.accessStatus === 'TRIAL'));
-  const showPayButton = isOnActiveTrial;
-  const showRenewButton = Boolean(store?.requiresPayment && !isOnActiveTrial);
-  const showUpgradeButton = canManagePlans;
+  const renewReference = store?.subscriptions.find((subscription) => !subscription.isTrial) ?? null;
+
+  const trialCanActivateFree = Boolean(
+    activeSubscription?.plan &&
+      canActivateStorePlanWithoutPayment(
+        activeSubscription.plan,
+        activeSubscription.billingPeriod,
+        Number(activeSubscription.finalPrice)
+      )
+  );
+
+  const canRenewFree = Boolean(
+    renewReference?.plan &&
+      canActivateStorePlanWithoutPayment(
+        renewReference.plan,
+        renewReference.billingPeriod,
+        Number(renewReference.finalPrice)
+      )
+  );
+
+  const activeNonTrialSubscription =
+    activeSubscription && !activeSubscription.isTrial ? activeSubscription : null;
+
+  const canRenewWithinWindow = Boolean(
+    activeNonTrialSubscription?.endsAt &&
+      canRenewActiveSubscriptionWithinWindow(activeNonTrialSubscription.endsAt)
+  );
+
+  const isExpiredRenewal = Boolean(
+    store?.requiresPayment && !isOnActiveTrial && !activeNonTrialSubscription
+  );
+
+  const showActivateFreeButton = isOnActiveTrial && trialCanActivateFree;
+  const showPaymentComingSoonTrial = isOnActiveTrial && !trialCanActivateFree;
+  const showRenewButton = Boolean(
+    renewReference && !isOnActiveTrial && (isExpiredRenewal || canRenewWithinWindow)
+  );
+  const showUpgradeButton = Boolean(store && (store.accessStatus === 'ACTIVE' || store.accessStatus === 'TRIAL'));
+
+  const upgradePlans = useMemo(
+    () =>
+      filterPlansForUpgrade<StorePlanPickerPlan>(
+        plans,
+        activeSubscription?.plan?.id,
+        activeSubscription?.plan?.sortOrder ?? 0
+      ),
+    [plans, activeSubscription?.plan?.id, activeSubscription?.plan?.sortOrder]
+  );
+
+  const pickerLabels = {
+    selectPeriod: text.selectPeriod,
+    selectPeriodHint: text.selectPeriodHint,
+    freePlan: text.freePlan,
+    maxListings: text.maxListings,
+    vatShort: text.vatShort,
+    discount: text.discount,
+    trialBadge: text.trialBadge,
+    trialDays: text.trialDays,
+    adminFreeBadge: text.adminFreeBadge,
+    selectPlan: text.selectPlan,
+    noPlans: text.noPlans,
+    cancel: text.cancel,
+    submitting: text.submitting
+  };
 
   const loadPlans = async (rootCategoryId: string) => {
     setIsLoadingPlans(true);
     try {
-      const response = await api.get<{ data: StorePlanCardData[] }>('/stores/plans', {
+      const response = await api.get<{ data: StorePlanPickerPlan[] }>('/stores/plans', {
         headers: authHeaders,
         params: { rootCategoryId }
       });
-      const nextPlans = response.data.data;
-      setPlans(nextPlans);
-      setSelectedUpgradePlanId((current) => {
-        if (current && nextPlans.some((plan) => plan.id === current)) return current;
-        return nextPlans[0]?.id ?? '';
-      });
+      setPlans(response.data.data);
     } catch {
       setPlans([]);
     } finally {
@@ -295,18 +482,15 @@ export function MyStorePage() {
       return;
     }
     loadStore();
+    void syncCurrentUser(token).then((user) => {
+      if (user?.fullName) setOwnerName(user.fullName);
+    });
   }, []);
 
   useEffect(() => {
-    if (!showUpgradePanel || !store?.rootCategory?.id) return;
+    if (!upgradeModalOpen || !store?.rootCategory?.id) return;
     loadPlans(store.rootCategory.id);
-  }, [showUpgradePanel, store?.rootCategory?.id]);
-
-  useEffect(() => {
-    if (activeSubscription?.billingPeriod) {
-      setUpgradeBillingPeriod(activeSubscription.billingPeriod);
-    }
-  }, [activeSubscription?.billingPeriod]);
+  }, [upgradeModalOpen, store?.rootCategory?.id]);
 
   const uploadImage = async (event: ChangeEvent<HTMLInputElement>, target: 'logo' | 'cover') => {
     const file = event.target.files?.[0];
@@ -344,66 +528,63 @@ export function MyStorePage() {
     }
   };
 
-  const startCheckout = async (
-    action: 'activate-paid' | 'subscribe',
-    options?: { planId: string; billingPeriod: 'MONTHLY' | 'YEARLY' }
+  const handleSubscriptionAction = async (
+    endpoint: 'activate-paid' | 'subscribe' | 'renew-subscription',
+    options?: { planId: string; billingPeriod: StoreBillingPeriod }
   ) => {
     if (!store) return;
-    const subscription = activeSubscription ?? store.subscriptions[0];
-    if (!subscription && action !== 'subscribe') return;
-    if (action === 'subscribe' && !options?.planId && !subscription) return;
 
     setIsPaying(true);
     setError('');
     try {
-      const endpoint =
-        action === 'activate-paid'
+      const path =
+        endpoint === 'activate-paid'
           ? `/stores/${store.id}/activate-paid`
-          : `/stores/${store.id}/subscribe`;
+          : endpoint === 'renew-subscription'
+            ? `/stores/${store.id}/renew-subscription`
+            : `/stores/${store.id}/subscribe`;
+
       const body =
-        action === 'activate-paid'
-          ? undefined
-          : {
-              planId: options?.planId ?? subscription!.planId,
-              billingPeriod: options?.billingPeriod ?? subscription!.billingPeriod
-            };
+        endpoint === 'subscribe' && options
+          ? { planId: options.planId, billingPeriod: options.billingPeriod }
+          : undefined;
+
       const response = await api.post<{ data: { checkout?: { paymentUrl?: string; activated?: boolean } } }>(
-        endpoint,
+        path,
         body,
         { headers: authHeaders, params: { locale } }
       );
+
       const checkout = response.data.data.checkout;
       if (checkout?.paymentUrl) {
         window.location.href = checkout.paymentUrl;
         return;
       }
-      setShowUpgradePanel(false);
+
+      setUpgradeModalOpen(false);
       await loadStore();
-    } catch {
-      setError(text.checkoutError);
+    } catch (actionError) {
+      setError(
+        resolveApiErrorMessage(
+          actionError,
+          {
+            PAYMENT_COMING_SOON: m.errors.PAYMENT_COMING_SOON,
+            SUBSCRIPTION_RENEWAL_TOO_EARLY: m.errors.SUBSCRIPTION_RENEWAL_TOO_EARLY,
+            SUBSCRIPTION_FREE_PLAN_UPGRADE_NOT_ALLOWED: m.errors.SUBSCRIPTION_FREE_PLAN_UPGRADE_NOT_ALLOWED,
+            SUBSCRIPTION_SAME_PLAN_NOT_ALLOWED: m.errors.SUBSCRIPTION_SAME_PLAN_NOT_ALLOWED,
+            SUBSCRIPTION_DOWNGRADE_NOT_ALLOWED: m.errors.SUBSCRIPTION_DOWNGRADE_NOT_ALLOWED
+          },
+          text.checkoutError
+        )
+      );
     } finally {
       setIsPaying(false);
     }
   };
 
-  const toggleUpgradePanel = () => {
-    setShowUpgradePanel((current) => !current);
-  };
-
-  const deleteStore = async () => {
-    if (!store) return;
-    setIsDeleting(true);
+  const openUpgradeModal = () => {
     setError('');
-    try {
-      await api.delete(`/stores/${store.id}`, { headers: authHeaders });
-      setShowDeleteConfirm(false);
-      router.push(localizedPath('/profile'));
-    } catch {
-      setError(text.deleteError);
-      setShowDeleteConfirm(false);
-    } finally {
-      setIsDeleting(false);
-    }
+    setUpgradeModalOpen(true);
   };
 
   const statusLabel = (status: OwnerStore['accessStatus']) => {
@@ -417,7 +598,7 @@ export function MyStorePage() {
   const inputClass = 'w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:ring-2 focus:ring-green-500';
 
   return (
-    <div className="min-h-screen bg-gray-50" dir={dir}>
+    <div className="site-page-shell bg-gray-50" dir={dir}>
       <UserSiteHeader>
         <SiteHeaderSearch />
       </UserSiteHeader>
@@ -507,10 +688,21 @@ export function MyStorePage() {
               <section className="rounded-3xl bg-white p-6 shadow-sm md:p-8">
                 <div className="mb-6 flex items-center justify-between gap-4">
                   <h2 className="text-2xl font-black">{text.storeListings}</h2>
-                  <Link href={localizedPath('/add-listing')} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white">
-                    {text.addListing}
-                  </Link>
+                  {canAddListing ? (
+                    <Link href={localizedPath('/add-listing')} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white">
+                      {text.addListing}
+                    </Link>
+                  ) : (
+                    <span className="rounded-xl bg-slate-200 px-4 py-2 text-sm font-bold text-slate-500" title={text.listingLimitReached}>
+                      {text.addListing}
+                    </span>
+                  )}
                 </div>
+                {isAtListingPlanLimit ? (
+                  <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                    {text.listingLimitReached}
+                  </p>
+                ) : null}
                 {listings.length === 0 ? (
                   <p className="rounded-xl border border-dashed border-gray-300 px-4 py-8 text-center text-gray-500">{text.noListings}</p>
                 ) : (
@@ -553,208 +745,189 @@ export function MyStorePage() {
                   {statusLabel(store.accessStatus)}
                 </div>
                 {activeSubscription ? (
-                  <div className="space-y-3 text-sm text-gray-600">
-                    <p className="font-bold text-gray-900">
-                      {locale === 'en' ? activeSubscription.plan?.nameEn : activeSubscription.plan?.nameAr}
-                    </p>
-                    <p>
-                      {text.endsAt}: {activeSubscription.endsAt ? new Date(activeSubscription.endsAt).toLocaleDateString(locale === 'ar' ? 'ar-OM' : 'en-GB') : '-'}
-                    </p>
-                    <p>
-                      {text.maxListings}: {effectiveMaxListings}
-                      {activeSubscription.isTrial ? ` (${text.statusTrial})` : ''}
-                    </p>
+                  <div className="space-y-4 text-sm text-gray-600">
+                    <div>
+                      <p className="font-bold text-gray-900">
+                        {locale === 'en' ? activeSubscription.plan?.nameEn : activeSubscription.plan?.nameAr}
+                      </p>
+                      <p className="mt-1">
+                        {getBillingPeriodLabel(activeSubscription.billingPeriod, locale)}
+                        {activeSubscription.isTrial ? ` • ${text.statusTrial}` : ''}
+                      </p>
+                      <p className="mt-1">
+                        {text.endsAt}:{' '}
+                        {activeSubscription.endsAt
+                          ? new Date(activeSubscription.endsAt).toLocaleDateString(locale === 'ar' ? 'ar-OM' : 'en-GB')
+                          : '-'}
+                      </p>
+                    </div>
+
                     {activeSubscription.isTrial ? (
                       <p className="rounded-xl bg-amber-50 px-3 py-2 text-amber-900">
-                        {text.trialLimitHint}: {effectiveMaxListings} • {text.paidLimitHint}: {activeSubscription.maxListings}
+                        {text.trialLimitHint}: {planListingAllowance} • {text.paidLimitHint}: {activeSubscription.maxListings}
                       </p>
                     ) : null}
-                    <p>
-                      {text.listingsUsed}: {listings.length}
-                    </p>
-                    <p>
-                      {activeSubscription.billingPeriod === 'MONTHLY' ? text.monthly : text.yearly}
-                    </p>
-                  </div>
-                ) : null}
 
-                {showPayButton || showRenewButton || showUpgradeButton ? (
-                  <div className="mt-6 space-y-3">
-                    {showPayButton ? (
-                      <button
-                        type="button"
-                        disabled={isPaying}
-                        onClick={() => startCheckout('activate-paid')}
-                        className="w-full rounded-xl bg-green-600 px-4 py-3 font-bold text-white disabled:opacity-70"
-                      >
-                        {text.payNow}
-                      </button>
-                    ) : null}
-                    {showRenewButton ? (
-                      <button
-                        type="button"
-                        disabled={isPaying}
-                        onClick={() => startCheckout('subscribe')}
-                        className="w-full rounded-xl bg-green-600 px-4 py-3 font-bold text-white disabled:opacity-70"
-                      >
-                        {text.renew}
-                      </button>
-                    ) : null}
-                    {showUpgradeButton ? (
-                      <button
-                        type="button"
-                        disabled={isPaying}
-                        onClick={toggleUpgradePanel}
-                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-green-600 bg-white px-4 py-3 font-bold text-green-700 disabled:opacity-70"
-                      >
-                        {showUpgradePanel ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                        {showUpgradePanel ? text.hideUpgrade : text.upgrade}
-                      </button>
-                    ) : null}
-                  </div>
-                ) : null}
-
-                {showUpgradePanel ? (
-                  <div className="mt-6 space-y-4 border-t border-gray-100 pt-6">
-                    <h3 className="text-lg font-black">{text.upgradeTitle}</h3>
-                    {isLoadingPlans ? (
-                      <p className="text-sm text-gray-500">{text.loadingPlans}</p>
-                    ) : plans.length === 0 ? (
-                      <p className="rounded-xl border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
-                        {text.noPlans}
+                    {carriedOverListings > 0 ? (
+                      <p className="rounded-xl bg-slate-50 px-3 py-2 text-slate-700">
+                        {text.listingsBaselineHint}: {carriedOverListings} + {text.listingsPlanAllowanceHint}:{' '}
+                        {planListingAllowance} = {text.listingsTotalHint}: {effectiveMaxListings}
                       </p>
-                    ) : (
-                      <>
-                        <div className="grid gap-4">
-                          {plans.map((plan) => (
-                            <StorePlanCard
-                              key={plan.id}
-                              plan={plan}
-                              locale={locale}
-                              selected={selectedUpgradePlanId === plan.id}
-                              billingPeriod={upgradeBillingPeriod}
-                              labels={{
-                                billingMonthly: text.billingMonthly,
-                                billingYearly: text.billingYearly,
-                                freePlan: text.freePlan,
-                                maxListings: text.maxListings,
-                                trialBadge: text.trialBadge,
-                                trialDays: text.trialDays,
-                                selectPlan: text.selectPlan,
-                                vatShort: text.vatShort
-                              }}
-                              onSelectPlan={setSelectedUpgradePlanId}
-                              onSelectBilling={(planId, period) => {
-                                setSelectedUpgradePlanId(planId);
-                                setUpgradeBillingPeriod(period);
-                              }}
-                            />
-                          ))}
-                        </div>
-                        <button
-                          type="button"
-                          disabled={isPaying || !selectedUpgradePlanId}
-                          onClick={() =>
-                            startCheckout('subscribe', {
-                              planId: selectedUpgradePlanId,
-                              billingPeriod: upgradeBillingPeriod
-                            })
-                          }
-                          className="w-full rounded-xl bg-slate-900 px-4 py-3 font-bold text-white disabled:opacity-70"
-                        >
-                          {text.upgradeSubmit}
-                        </button>
-                      </>
-                    )}
+                    ) : null}
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <SubscriptionRingGauge
+                        title={text.listingsUsage}
+                        used={listingsUsedCount}
+                        total={effectiveMaxListings}
+                        usedLabel={text.listingsConsumed}
+                        remainingLabel={text.listingsRemaining}
+                        centerValue={`${Math.max(effectiveMaxListings - listingsUsedCount, 0)}`}
+                        centerSub={text.listingsRemaining}
+                        accentColor={getListingsUsageColor(listingsUsedCount, effectiveMaxListings)}
+                      />
+                      {subscriptionTimeUsage ? (
+                        <SubscriptionRingGauge
+                          title={text.subscriptionTime}
+                          used={subscriptionTimeUsage.elapsedDays}
+                          total={subscriptionTimeUsage.totalDays}
+                          usedLabel={text.daysConsumed}
+                          remainingLabel={text.daysRemaining}
+                          centerValue={`${subscriptionTimeUsage.remainingDays}`}
+                          centerSub={text.dayUnit}
+                          accentColor={getTimeUsageColor(subscriptionTimeUsage.elapsedRatio)}
+                        />
+                      ) : null}
+                    </div>
                   </div>
                 ) : null}
-              </div>
 
-              {store.subscriptions.length > 0 ? (
-                <div className="rounded-3xl bg-white p-6 shadow-sm md:p-8">
-                  <h2 className="mb-4 text-xl font-black">{text.subscriptionHistory}</h2>
-                  <div className="space-y-3">
-                    {store.subscriptions.map((subscription) => {
-                      const planName =
-                        locale === 'en' ? subscription.plan?.nameEn : subscription.plan?.nameAr;
-                      const isCurrent =
-                        activeSubscription?.id === subscription.id;
-                      return (
-                        <div
-                          key={subscription.id}
-                          className={`rounded-2xl border p-4 text-sm ${
-                            isCurrent ? 'border-green-200 bg-green-50/50' : 'border-gray-100'
-                          }`}
-                        >
-                          <p className="font-bold text-gray-900">{planName ?? '-'}</p>
-                          <p className="mt-1 text-gray-600">
-                            {text.subscriptionStatus}: {subscription.status}
-                            {subscription.isTrial ? ` (${text.statusTrial})` : ''}
-                          </p>
-                          {subscription.startsAt ? (
-                            <p className="text-gray-600">
-                              {text.startsAt}:{' '}
-                              {new Date(subscription.startsAt).toLocaleDateString(locale === 'ar' ? 'ar-OM' : 'en-GB')}
-                            </p>
-                          ) : null}
-                          {subscription.endsAt ? (
-                            <p className="text-gray-600">
-                              {text.endsAt}:{' '}
-                              {new Date(subscription.endsAt).toLocaleDateString(locale === 'ar' ? 'ar-OM' : 'en-GB')}
-                            </p>
-                          ) : null}
-                          <p className="text-gray-600">
-                            {subscription.billingPeriod === 'MONTHLY' ? text.monthly : text.yearly} • {text.maxListings}:{' '}
-                            {subscription.maxListings}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
+                {showPaymentComingSoonTrial ? (
+                  <p className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                    {text.paymentComingSoon}
+                  </p>
+                ) : null}
+
+                <div className="mt-6 space-y-3">
+                  {showActivateFreeButton ? (
+                    <button
+                      type="button"
+                      disabled={isPaying}
+                      onClick={() => handleSubscriptionAction('activate-paid')}
+                      className="w-full rounded-xl bg-green-600 px-4 py-3 font-bold text-white disabled:opacity-70"
+                    >
+                      {text.activateFree}
+                    </button>
+                  ) : null}
+
+                  {showRenewButton ? (
+                    <>
+                      {!canRenewFree ? (
+                        <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                          {text.paymentComingSoon}
+                        </p>
+                      ) : null}
+                      <button
+                        type="button"
+                        disabled={isPaying || !canRenewFree}
+                        onClick={() => handleSubscriptionAction('renew-subscription')}
+                        className="w-full rounded-xl border border-green-600 bg-white px-4 py-3 font-bold text-green-700 disabled:opacity-60"
+                      >
+                        {canRenewFree ? text.renewFree : text.renewPlan}
+                      </button>
+                    </>
+                  ) : null}
+
+                  {showUpgradeButton ? (
+                    <button
+                      type="button"
+                      disabled={isPaying}
+                      onClick={openUpgradeModal}
+                      className="w-full rounded-xl bg-green-600 px-4 py-3 font-bold text-white disabled:opacity-70"
+                    >
+                      {text.upgrade}
+                    </button>
+                  ) : null}
                 </div>
-              ) : null}
-
-              <div className="rounded-3xl border border-red-100 bg-white p-6 shadow-sm md:p-8">
-                <h2 className="mb-2 text-lg font-black text-red-700">{text.deleteStore}</h2>
-                <p className="mb-4 text-sm text-gray-600">{text.deleteConfirm}</p>
-                <button
-                  type="button"
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-3 text-sm font-bold text-white hover:bg-red-700"
-                >
-                  <Trash2 size={16} />
-                  {text.deleteStore}
-                </button>
               </div>
+
+              <StoreSubscriptionHistory
+                storeId={store.id}
+                locale={locale}
+                activeSubscriptionId={activeSubscription?.id}
+                userName={ownerName}
+                storeName={storeName}
+                authHeaders={authHeaders}
+                labels={{
+                  title: text.subscriptionHistory,
+                  startsAt: text.startsAt,
+                  endsAt: text.endsAt,
+                  maxListings: text.maxListings,
+                  loadMore: text.loadMoreSubscriptions,
+                  loading: text.subscriptionHistoryLoading,
+                  empty: text.subscriptionHistoryEmpty,
+                  currentBadge: text.currentSubscriptionBadge,
+                  viewInvoice: text.viewInvoice,
+                  invoice: {
+                    title: text.invoiceTitle,
+                    invoiceNumber: text.invoiceNumber,
+                    invoiceDate: text.invoiceDate,
+                    secondPartyTitle: text.secondPartyTitle,
+                    storeOwnerLabel: text.storeOwnerLabel,
+                    storeNameLabel: text.storeNameLabel,
+                    product: text.invoiceProduct,
+                    unitPrice: text.unitPrice,
+                    subtotal: text.subtotal,
+                    vatTotal: text.vatTotal,
+                    grandTotal: text.grandTotal,
+                    free: text.freeLabel,
+                    maxListings: text.maxListings,
+                    platformInfo: text.platformInfo,
+                    email: text.platformEmail,
+                    website: text.platformWebsite,
+                    taxNumber: text.platformTaxNumber,
+                    commercialRegistration: text.platformCommercialRegistration,
+                    downloadPdf: text.downloadInvoicePdf,
+                    downloading: text.downloadingInvoice,
+                    close: text.cancel
+                  }
+                }}
+              />
             </aside>
           </div>
         )}
 
-        {showDeleteConfirm ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4">
-            <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
-              <h3 className="text-xl font-black text-slate-900">{text.deleteStore}</h3>
-              <p className="mt-2 text-sm text-slate-600">{text.deleteConfirm}</p>
-              <div className="mt-6 flex gap-3">
-                <button
-                  type="button"
-                  disabled={isDeleting}
-                  onClick={deleteStore}
-                  className="flex-1 rounded-xl bg-red-600 px-4 py-3 font-bold text-white disabled:opacity-60"
-                >
-                  {isDeleting ? text.saving : text.deleteStore}
-                </button>
-                <button
-                  type="button"
-                  disabled={isDeleting}
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="rounded-xl border border-slate-200 px-4 py-3 font-bold text-slate-700"
-                >
-                  {locale === 'ar' ? 'إلغاء' : 'Cancel'}
-                </button>
-              </div>
-            </div>
-          </div>
+        <StorePlanPickerModal
+          open={upgradeModalOpen}
+          onClose={() => setUpgradeModalOpen(false)}
+          title={text.upgradeTitle}
+          submitLabel={text.upgradeSubmit}
+          freeSubmitLabel={text.upgradeFree}
+          paymentComingSoonLabel={text.paymentComingSoon}
+          locale={locale}
+          plans={upgradePlans}
+          isLoading={isLoadingPlans}
+          isSubmitting={isPaying}
+          paidOnly
+          noPlansHint={text.noPaidUpgradePlans}
+          labels={pickerLabels}
+          onSubmit={(planId, billingPeriod) => setPendingUpgrade({ planId, billingPeriod })}
+        />
+
+        {pendingUpgrade ? (
+          <ConfirmationDialog
+            title={text.upgradeConfirmTitle}
+            description={text.upgradeConfirmDescription}
+            confirmLabel={text.upgradeConfirm}
+            cancelLabel={text.cancel}
+            isConfirming={isPaying}
+            onCancel={() => setPendingUpgrade(null)}
+            onConfirm={() => {
+              const selection = pendingUpgrade;
+              setPendingUpgrade(null);
+              handleSubscriptionAction('subscribe', selection);
+            }}
+          />
         ) : null}
       </main>
 

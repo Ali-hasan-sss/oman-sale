@@ -3,8 +3,13 @@ import path from 'node:path';
 import dotenv from 'dotenv';
 import { z } from 'zod';
 
-dotenv.config({ path: path.resolve(process.cwd(), '../../.env'), override: true });
-dotenv.config();
+for (const envPath of [
+  path.resolve(__dirname, '../../../.env'),
+  path.resolve(process.cwd(), '../../.env'),
+  path.resolve(process.cwd(), '.env')
+]) {
+  dotenv.config({ path: envPath });
+}
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),

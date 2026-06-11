@@ -28,6 +28,14 @@ import {
   updateHeroBannerSchema,
   updateHeroSlideSchema
 } from '../hero/hero.validation';
+import { articlesController } from '../articles/articles.controller';
+import {
+  articleCategorySchema,
+  articleSchema,
+  listArticlesQuerySchema,
+  updateArticleCategorySchema,
+  updateArticleSchema
+} from '../articles/articles.validation';
 import { tourismController } from '../tourism/tourism.controller';
 import { tourismDestinationSchema, updateTourismDestinationSchema } from '../tourism/tourism.validation';
 import { storeTypesController } from '../store-types/store-types.controller';
@@ -279,6 +287,49 @@ adminRoutes.delete(
   validateRequest({ params: idParams }),
   asyncHandler(tourismController.delete)
 );
+adminRoutes.get('/article-categories', asyncHandler(articlesController.listCategories));
+adminRoutes.post(
+  '/article-categories',
+  authorize(UserRole.ADMIN),
+  validateRequest({ body: articleCategorySchema }),
+  asyncHandler(articlesController.createCategory)
+);
+adminRoutes.patch(
+  '/article-categories/:id',
+  authorize(UserRole.ADMIN),
+  validateRequest({ params: idParams, body: updateArticleCategorySchema }),
+  asyncHandler(articlesController.updateCategory)
+);
+adminRoutes.delete(
+  '/article-categories/:id',
+  authorize(UserRole.ADMIN),
+  validateRequest({ params: idParams }),
+  asyncHandler(articlesController.deleteCategory)
+);
+adminRoutes.get(
+  '/articles',
+  validateRequest({ query: listArticlesQuerySchema }),
+  asyncHandler(articlesController.listForAdmin)
+);
+adminRoutes.get('/articles/:idOrSlug', asyncHandler(articlesController.getForAdmin));
+adminRoutes.post(
+  '/articles',
+  authorize(UserRole.ADMIN),
+  validateRequest({ body: articleSchema }),
+  asyncHandler(articlesController.create)
+);
+adminRoutes.patch(
+  '/articles/:id',
+  authorize(UserRole.ADMIN),
+  validateRequest({ params: idParams, body: updateArticleSchema }),
+  asyncHandler(articlesController.update)
+);
+adminRoutes.delete(
+  '/articles/:id',
+  authorize(UserRole.ADMIN),
+  validateRequest({ params: idParams }),
+  asyncHandler(articlesController.delete)
+);
 adminRoutes.get('/store-types', asyncHandler(storeTypesController.listForAdmin));
 adminRoutes.get(
   '/store-types/:id',
@@ -330,6 +381,12 @@ adminRoutes.post(
   authorize(UserRole.ADMIN),
   validateRequest({ params: idParams, body: adminAssignStorePlanSchema }),
   asyncHandler(storesController.assignPlanForAdmin)
+);
+adminRoutes.post(
+  '/stores/:id/renew-subscription',
+  authorize(UserRole.ADMIN),
+  validateRequest({ params: idParams }),
+  asyncHandler(storesController.renewSubscriptionForAdmin)
 );
 adminRoutes.delete(
   '/stores/:id',

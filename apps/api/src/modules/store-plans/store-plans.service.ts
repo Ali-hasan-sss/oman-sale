@@ -4,7 +4,7 @@ import { ApiError } from '../../shared/utils/api-error';
 import { categoriesRepository } from '../categories/categories.repository';
 import { promotionsRepository } from '../promotions/promotions.repository';
 import { storePlansRepository } from './store-plans.repository';
-import { withComputedPricing } from './store-plan-pricing.utils';
+import { withComputedPricing, type PricingRow } from './store-plan-pricing.utils';
 import type {
   BulkUpsertStorePlanPricingDto,
   CreateStorePlanDto,
@@ -36,11 +36,33 @@ export class StorePlansService {
     };
   }
 
-  private mapPlan(plan: NonNullable<Awaited<ReturnType<typeof storePlansRepository.findPlanById>>>) {
+  private mapPlan<
+    T extends {
+      discountType: StoreDiscountType;
+      discountValue: number | string | { toString(): string };
+      isDiscountActive: boolean;
+      pricing?: PricingRow[] | null;
+    }
+  >(plan: T) {
     const planDiscount = this.getPlanDiscount(plan);
     return {
       ...plan,
-      pricing: plan.pricing.map((row) => withComputedPricing(row, planDiscount))
+      pricing: (plan.pricing ?? []).map((row) => withComputedPricing(row, planDiscount))
+    };
+  }
+
+  private extractDefaultPricing(plan: Awaited<ReturnType<typeof this.getById>>) {
+    const oneMonth = plan.pricing.find((row) => row.billingPeriod === 'ONE_MONTH');
+    const twoMonths = plan.pricing.find((row) => row.billingPeriod === 'TWO_MONTHS');
+    const threeMonths = plan.pricing.find((row) => row.billingPeriod === 'THREE_MONTHS');
+
+    return {
+      oneMonthPrice: oneMonth ? Number(oneMonth.price) : 0,
+      oneMonthMaxListings: oneMonth?.maxListings ?? 10,
+      twoMonthsPrice: twoMonths ? Number(twoMonths.price) : 0,
+      twoMonthsMaxListings: twoMonths?.maxListings ?? 20,
+      threeMonthsPrice: threeMonths ? Number(threeMonths.price) : 0,
+      threeMonthsMaxListings: threeMonths?.maxListings ?? 30
     };
   }
 
@@ -77,7 +99,25 @@ export class StorePlansService {
 
   async create(dto: CreateStorePlanDto) {
     await this.validatePlanFields(dto);
-    return storePlansRepository.createPlan(dto);
+    const {
+      oneMonthPrice,
+      oneMonthMaxListings,
+      twoMonthsPrice,
+      twoMonthsMaxListings,
+      threeMonthsPrice,
+      threeMonthsMaxListings,
+      ...planData
+    } = dto;
+    const plan = await storePlansRepository.createPlan(planData);
+    await storePlansRepository.syncPricingForAllRootCategories(plan.id, {
+      oneMonthPrice,
+      oneMonthMaxListings,
+      twoMonthsPrice,
+      twoMonthsMaxListings,
+      threeMonthsPrice,
+      threeMonthsMaxListings
+    });
+    return this.getById(plan.id);
   }
 
   async update(id: string, dto: UpdateStorePlanDto) {
@@ -86,7 +126,39 @@ export class StorePlansService {
       trialDays: existing.trialDays,
       trialMaxListings: existing.trialMaxListings
     });
-    return storePlansRepository.updatePlan(id, dto);
+
+    const {
+      oneMonthPrice,
+      oneMonthMaxListings,
+      twoMonthsPrice,
+      twoMonthsMaxListings,
+      threeMonthsPrice,
+      threeMonthsMaxListings,
+      ...planData
+    } = dto;
+    await storePlansRepository.updatePlan(id, planData);
+
+    const shouldSyncPricing =
+      oneMonthPrice !== undefined ||
+      oneMonthMaxListings !== undefined ||
+      twoMonthsPrice !== undefined ||
+      twoMonthsMaxListings !== undefined ||
+      threeMonthsPrice !== undefined ||
+      threeMonthsMaxListings !== undefined;
+
+    if (shouldSyncPricing) {
+      const currentDefaults = this.extractDefaultPricing(existing);
+      await storePlansRepository.syncPricingForAllRootCategories(id, {
+        oneMonthPrice: oneMonthPrice ?? currentDefaults.oneMonthPrice,
+        oneMonthMaxListings: oneMonthMaxListings ?? currentDefaults.oneMonthMaxListings,
+        twoMonthsPrice: twoMonthsPrice ?? currentDefaults.twoMonthsPrice,
+        twoMonthsMaxListings: twoMonthsMaxListings ?? currentDefaults.twoMonthsMaxListings,
+        threeMonthsPrice: threeMonthsPrice ?? currentDefaults.threeMonthsPrice,
+        threeMonthsMaxListings: threeMonthsMaxListings ?? currentDefaults.threeMonthsMaxListings
+      });
+    }
+
+    return this.getById(id);
   }
 
   async remove(id: string) {
@@ -107,8 +179,9 @@ export class StorePlansService {
     const result = await storePlansRepository.bulkUpsertPricing(planId, dto);
     const planDiscount = this.getPlanDiscount(plan);
     return {
-      monthly: withComputedPricing(result.monthly, planDiscount),
-      yearly: withComputedPricing(result.yearly, planDiscount)
+      oneMonth: withComputedPricing(result.oneMonth, planDiscount),
+      twoMonths: withComputedPricing(result.twoMonths, planDiscount),
+      threeMonths: withComputedPricing(result.threeMonths, planDiscount)
     };
   }
 

@@ -3,7 +3,7 @@ import { AdminShell } from '@/components/admin/admin-shell';
 
 export default function AdminLoading() {
   return (
-    <AdminShell contentLoading>
+    <AdminShell>
       <AdminContentLoader />
     </AdminShell>
   );

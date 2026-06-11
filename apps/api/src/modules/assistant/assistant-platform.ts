@@ -81,8 +81,9 @@ function formatPrice(value: unknown) {
 }
 
 function billingLabel(period: string, locale: 'ar' | 'en') {
-  if (period === 'YEARLY') return locale === 'ar' ? 'سنوي' : 'yearly';
-  return locale === 'ar' ? 'شهري' : 'monthly';
+  if (period === 'THREE_MONTHS') return locale === 'ar' ? '3 أشهر' : '3 months';
+  if (period === 'TWO_MONTHS') return locale === 'ar' ? 'شهرين' : '2 months';
+  return locale === 'ar' ? 'شهر واحد' : '1 month';
 }
 
 async function fetchPromotionPlans(locale: 'ar' | 'en', planFilter?: string) {

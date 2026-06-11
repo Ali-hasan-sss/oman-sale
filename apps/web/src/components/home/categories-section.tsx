@@ -35,6 +35,7 @@ import Link from 'next/link';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+import { CategoriesSectionSkeleton } from '@/components/home/home-section-skeletons';
 import { api } from '@/lib/api';
 import { CategoryIcon, categoryIconMap, isCategoryIconKey } from '@/lib/category-icons';
 import { buildCategoryTree, type CategoryTreeNode } from '@/lib/category-tree';
@@ -508,7 +509,6 @@ export function CategoriesSection() {
 
   const closeMenu = () => setOpenMenuId(null);
 
-  const loadingText = locale === 'ar' ? 'جاري تحميل البيانات...' : 'Loading data...';
   const emptyText = locale === 'ar' ? 'لا توجد فئات متاحة حاليًا' : 'No categories are available right now';
   const expandLabel = locale === 'ar' ? 'عرض الفئات الفرعية' : 'Show subcategories';
 
@@ -520,9 +520,7 @@ export function CategoriesSection() {
       </div>
 
       {isLoading ? (
-        <div className="mb-8 rounded-2xl bg-white p-8 text-center font-bold text-slate-500 shadow-sm">
-          {loadingText}
-        </div>
+        <CategoriesSectionSkeleton />
       ) : categoryTree.length === 0 ? (
         <div className="mb-8 rounded-2xl bg-white p-8 text-center font-bold text-slate-500 shadow-sm">
           {emptyText}

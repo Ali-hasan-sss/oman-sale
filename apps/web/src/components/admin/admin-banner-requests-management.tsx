@@ -4,6 +4,7 @@ import { Check, ImageIcon, X } from 'lucide-react';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 
 import { adminApi } from '@/lib/admin-auth';
+import { notifyAdminPendingCountsChanged } from '@/lib/admin-pending-counts';
 import { resolveMediaUrl } from '@/lib/media-url';
 import { useI18n } from '@/lib/i18n';
 
@@ -128,6 +129,7 @@ export function AdminBannerRequestsManagement() {
     try {
       await adminApi().post(`/admin/banner-requests/${id}/approve`);
       setMessage(isAr ? 'تمت الموافقة على الطلب ونشر الإعلان.' : 'Request approved and banner published.');
+      notifyAdminPendingCountsChanged();
       await loadData();
     } catch {
       setError(isAr ? 'تعذر الموافقة على الطلب.' : 'Could not approve request.');
@@ -146,6 +148,7 @@ export function AdminBannerRequestsManagement() {
       setRejectId(null);
       setRejectReason('');
       setMessage(isAr ? 'تم رفض الطلب.' : 'Request rejected.');
+      notifyAdminPendingCountsChanged();
       await loadData();
     } catch {
       setError(isAr ? 'تعذر رفض الطلب.' : 'Could not reject request.');

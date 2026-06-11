@@ -359,7 +359,8 @@ export class AdminRepository {
             select: {
               id: true,
               fullName: true,
-              email: true
+              email: true,
+              avatar: true
             }
           },
           ad: {
@@ -376,6 +377,7 @@ export class AdminRepository {
                   fullName: true,
                   email: true,
                   phone: true,
+                  avatar: true,
                   isActive: true,
                   isBlocked: true
                 }
@@ -391,7 +393,7 @@ export class AdminRepository {
                 where: { deletedAt: null },
                 orderBy: { sortOrder: 'asc' },
                 take: 1,
-                select: { imageUrl: true }
+                select: { imageUrl: true, mediaType: true }
               }
             }
           }

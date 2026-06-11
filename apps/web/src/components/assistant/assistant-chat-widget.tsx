@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { AssistantArticleCarousel } from '@/components/assistant/assistant-article-carousel';
 import { AssistantListingCarousel } from '@/components/assistant/assistant-listing-carousel';
 import { AssistantStoreCarousel } from '@/components/assistant/assistant-store-carousel';
 import { AssistantTypingIndicator } from '@/components/assistant/assistant-typing-indicator';
@@ -231,6 +232,11 @@ export function AssistantChatWidget() {
                         <div className="w-full rounded-2xl rounded-tl-sm bg-[#EFEFEF] px-3 py-3 text-[#2B2B2B]">
                           <p className="mb-3 text-[13px] leading-relaxed">{displayContent}</p>
                           <AssistantStoreCarousel stores={message.stores} />
+                        </div>
+                      ) : message.articles && message.articles.length > 0 ? (
+                        <div className="w-full rounded-2xl rounded-tl-sm bg-[#EFEFEF] px-3 py-3 text-[#2B2B2B]">
+                          <p className="mb-3 text-[13px] leading-relaxed">{displayContent}</p>
+                          <AssistantArticleCarousel articles={message.articles} />
                         </div>
                       ) : (
                         <div

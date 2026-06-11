@@ -5,7 +5,7 @@ const dotenv = require('dotenv');
 const { PrismaPg } = require('@prisma/adapter-pg');
 const { PrismaClient } = require('@prisma/client');
 
-dotenv.config({ path: path.resolve(process.cwd(), '../../.env'), override: true });
+dotenv.config({ path: path.resolve(__dirname, '../../../.env'), override: true });
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
@@ -172,6 +172,9 @@ async function main() {
     });
   }
 
+  const { seedStorePlans } = require('./seed-store-plans.cjs');
+  await seedStorePlans(prisma);
+
   const tourismDestinations = [
     ['sultan-qaboos-grand-mosque', 'جامع السلطان قابوس الأكبر', 'Sultan Qaboos Grand Mosque', 'https://images.unsplash.com/photo-1591604129842-1a784c5db2f1?w=400&h=300&fit=crop', 'من أكتوبر إلى أبريل', 'October to April', 'مسقط، سلطنة عمان', 'Muscat, Sultanate of Oman'],
     ['wadi-shab', 'وادي شاب', 'Wadi Shab', 'https://images.unsplash.com/photo-1584469125998-50c49c0d2261?w=400&h=300&fit=crop', 'من أكتوبر إلى مارس', 'October to March', 'ولاية صور، سلطنة عمان', 'Sur, Sultanate of Oman'],
@@ -182,6 +185,126 @@ async function main() {
     ['jebel-shams', 'جبل شمس', 'Jebel Shams', 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop', 'من سبتمبر إلى مايو', 'September to May', 'الداخلية، سلطنة عمان', 'Ad Dakhiliyah, Sultanate of Oman'],
     ['al-hoota-cave', 'كهف الهوتة', 'Al Hoota Cave', 'https://images.unsplash.com/photo-1508433957232-3107f5fd5995?w=400&h=300&fit=crop', 'طوال العام', 'Year-round', 'الحمراء، سلطنة عمان', 'Al Hamra, Sultanate of Oman']
   ];
+
+  const articleCategories = [
+    ['economy', 'اقتصاد', 'Economy'],
+    ['technology', 'تقانة', 'Technology'],
+    ['health', 'صحة', 'Health'],
+    ['sports', 'رياضة', 'Sports'],
+    ['culture', 'ثقافة', 'Culture'],
+    ['education', 'تعليم', 'Education'],
+    ['lifestyle', 'حياة', 'Lifestyle'],
+    ['travel', 'سفر', 'Travel']
+  ];
+
+  const categoryIds = {};
+  for (const [index, category] of articleCategories.entries()) {
+    const [slug, nameAr, nameEn] = category;
+    const record = await prisma.articleCategory.upsert({
+      where: { slug },
+      update: { nameAr, nameEn, sortOrder: index },
+      create: { slug, nameAr, nameEn, sortOrder: index }
+    });
+    categoryIds[slug] = record.id;
+  }
+
+  const seededArticles = [
+    {
+      slug: 'oman-digital-economy-growth',
+      categorySlug: 'economy',
+      titleAr: 'نمو الاقتصاد الرقمي في عُمان يفتح آفاقًا جديدة',
+      titleEn: 'Oman’s digital economy growth opens new horizons',
+      coverImageUrl:
+        'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&h=675&fit=crop',
+      galleryImages: [
+        'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&h=800&fit=crop',
+        'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=1200&h=800&fit=crop'
+      ],
+      bodyAr:
+        '<p>يشهد الاقتصاد الرقمي في سلطنة عُمان تسارعًا ملحوظًا مع دعم الحكومة للتحول الرقمي 🚀</p><p>تستثمر الشركات المحلية في التجارة الإلكترونية والمدفوعات الرقمية، ما يخلق فرصًا جديدة للشباب العُماني.</p><ul><li>نمو التجارة الإلكترونية</li><li>توسع الخدمات المالية الرقمية</li><li>دعم رواد الأعمال</li></ul>',
+      bodyEn:
+        '<p>Oman’s digital economy is accelerating as the government backs national digital transformation 🚀</p><p>Local companies are investing in e-commerce and digital payments, creating fresh opportunities for Omani youth.</p><ul><li>E-commerce growth</li><li>Expanding digital financial services</li><li>Entrepreneurship support</li></ul>'
+    },
+    {
+      slug: 'smart-cities-oman-tech',
+      categorySlug: 'technology',
+      titleAr: 'المدن الذكية في عُمان: مستقبل الخدمات الحضرية',
+      titleEn: 'Smart cities in Oman: the future of urban services',
+      coverImageUrl:
+        'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200&h=675&fit=crop',
+      galleryImages: [
+        'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1200&h=800&fit=crop',
+        'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&h=800&fit=crop',
+        'https://images.unsplash.com/photo-1504639725590-34d0984388bd?w=1200&h=800&fit=crop'
+      ],
+      bodyAr:
+        '<p>تتبنى عُمان مشاريع المدن الذكية لتحسين جودة الحياة في المدن الكبرى 💡</p><p>من أنظمة النقل الذكي إلى إدارة الطاقة، تُحدث التقنية فرقًا حقيقيًا في الخدمات اليومية.</p><p><strong>أبرز المجالات:</strong> النقل، الطاقة، الأمن، والخدمات البلدية.</p>',
+      bodyEn:
+        '<p>Oman is adopting smart city projects to improve quality of life in major urban centers 💡</p><p>From intelligent transport to energy management, technology is making a real difference in everyday services.</p><p><strong>Key areas:</strong> transport, energy, safety, and municipal services.</p>'
+    },
+    {
+      slug: 'wellness-lifestyle-oman',
+      categorySlug: 'lifestyle',
+      titleAr: 'أسلوب حياة متوازن: صحة وعافية في عُمان',
+      titleEn: 'Balanced living: health and wellness in Oman',
+      coverImageUrl:
+        'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=1200&h=675&fit=crop',
+      galleryImages: [
+        'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=1200&h=800&fit=crop',
+        'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=1200&h=800&fit=crop'
+      ],
+      bodyAr:
+        '<p>يتجه الكثيرون في عُمان نحو أسلوب حياة أكثر توازنًا يجمع بين العمل والراحة 🧘‍♂️</p><p>المشي على الشاطئ، الرياضة المنزلية، والتغذية الصحية أصبحت جزءًا من الروتين اليومي.</p><p>❤️ الاهتمام بالصحة النفسية والجسدية أصبح أولوية للعائلات العُمانية.</p>',
+      bodyEn:
+        '<p>Many people in Oman are embracing a more balanced lifestyle that blends work and rest 🧘‍♂️</p><p>Beach walks, home workouts, and healthy eating are becoming part of daily routines.</p><p>❤️ Mental and physical wellness is now a priority for Omani families.</p>'
+    },
+    {
+      slug: 'explore-oman-travel-guide',
+      categorySlug: 'travel',
+      titleAr: 'دليل سريع لاستكشاف جمال عُمان الطبيعي',
+      titleEn: 'A quick guide to exploring Oman’s natural beauty',
+      coverImageUrl:
+        'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&h=675&fit=crop',
+      galleryImages: [
+        'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=1200&h=800&fit=crop',
+        'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=1200&h=800&fit=crop',
+        'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200&h=800&fit=crop'
+      ],
+      bodyAr:
+        '<p>من الجبال الشاهقة إلى الشواطئ الهادئة، تقدم عُمان تجارب سفر لا تُنسى 🏔️🌊</p><p>سواء كنت تحب المغامرة أو الاسترخاء، ستجد وجهة تناسبك في كل محافظة.</p><ol><li>جبل شمس ووادي غول</li><li>صحراء الشرقية</li><li>شواطئ مسقط والقرم</li></ol>',
+      bodyEn:
+        '<p>From towering mountains to calm beaches, Oman offers unforgettable travel experiences 🏔️🌊</p><p>Whether you love adventure or relaxation, you will find a destination that suits you in every governorate.</p><ol><li>Jebel Shams and Wadi Ghul</li><li>Eastern desert landscapes</li><li>Muscat and Qurum beaches</li></ol>'
+    }
+  ];
+
+  for (const article of seededArticles) {
+    await prisma.article.upsert({
+      where: { slug: article.slug },
+      update: {
+        titleAr: article.titleAr,
+        titleEn: article.titleEn,
+        bodyAr: article.bodyAr,
+        bodyEn: article.bodyEn,
+        coverImageUrl: article.coverImageUrl,
+        galleryImages: article.galleryImages,
+        categoryId: categoryIds[article.categorySlug],
+        status: 'PUBLISHED',
+        publishedAt: new Date()
+      },
+      create: {
+        slug: article.slug,
+        titleAr: article.titleAr,
+        titleEn: article.titleEn,
+        bodyAr: article.bodyAr,
+        bodyEn: article.bodyEn,
+        coverImageUrl: article.coverImageUrl,
+        galleryImages: article.galleryImages,
+        categoryId: categoryIds[article.categorySlug],
+        status: 'PUBLISHED',
+        publishedAt: new Date()
+      }
+    });
+  }
 
   for (const [index, destination] of tourismDestinations.entries()) {
     const [slug, titleAr, titleEn, imageUrl, bestTimeAr, bestTimeEn, addressAr, addressEn] = destination;

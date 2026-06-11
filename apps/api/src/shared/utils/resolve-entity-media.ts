@@ -52,3 +52,17 @@ export function resolveTourismDestinationMedia<T>(destination: T): T {
     galleryImages: normalizeGalleryImages(record.galleryImages).map(resolveMediaUrl)
   };
 }
+
+export function resolveArticleMedia<T>(article: T): T {
+  const record = article as T & { coverImageUrl: string; galleryImages?: unknown };
+
+  return {
+    ...article,
+    coverImageUrl: resolveMediaUrl(record.coverImageUrl),
+    galleryImages: normalizeGalleryImages(record.galleryImages).map(resolveMediaUrl)
+  };
+}
+
+export function resolveArticlesMedia<T>(articles: T[]): T[] {
+  return articles.map(resolveArticleMedia);
+}

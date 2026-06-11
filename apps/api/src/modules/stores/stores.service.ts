@@ -8,17 +8,30 @@ import { categoriesRepository } from '../categories/categories.repository';
 import { computeStorePlanFinalPrice } from '../store-plans/store-plan-pricing.utils';
 import { storePlansRepository } from '../store-plans/store-plans.repository';
 import { storeTypesRepository } from '../store-types/store-types.repository';
-import { checkoutStoreSubscription } from './store-checkout.service';
+import {
+  assertAdminFreeBillingPeriod,
+  assertValidUpgradeTarget,
+  canActivateStorePlanWithoutPayment,
+  createPaymentComingSoonError,
+  findActiveNonTrialSubscription
+} from './store-plan-activation.utils';
 import {
   applyStoreListingPromotion,
   resolveStoreListingLimit
 } from './store-listing-promotion.service';
-import { activateStoreTrialSubscription, activateStoreSubscription, getStoreAccessStatus } from './store-subscription.utils';
+import {
+  activateStoreTrialSubscription,
+  activateStoreSubscription,
+  assertCanRenewActiveSubscription,
+  extendStoreSubscription,
+  getStoreAccessStatus
+} from './store-subscription.utils';
 import { storesRepository } from './stores.repository';
 import type {
   AdminAssignStorePlanDto,
   CreateStoreDto,
   ListAdminStoresQuery,
+  ListStoreSubscriptionsQuery,
   ListStoresQuery,
   SubscribeStoreDto,
   UpdateStoreDto
@@ -245,8 +258,14 @@ export class StoresService {
 
     const trialEligible =
       resolved.plan.trialDays > 0 && !(await storesRepository.hasUserUsedPlanTrial(userId, dto.planId));
+    const activationMode = dto.activationMode ?? (trialEligible ? 'trial' : 'plan');
 
-    if (trialEligible) {
+    if (activationMode === 'trial') {
+      if (!trialEligible) {
+        await storesRepository.rollbackPendingStoreCreation(store.id);
+        throw new ApiError(400, 'Trial is not available for this plan', ErrorCodes.VALIDATION_FAILED);
+      }
+
       await activateStoreTrialSubscription(subscription.id, resolved.plan.trialDays);
       return {
         store: await storesRepository.findById(store.id),
@@ -258,27 +277,22 @@ export class StoresService {
       };
     }
 
-    try {
-      const checkout = await checkoutStoreSubscription({
-        userId,
-        subscriptionId: subscription.id,
-        storeName: dto.nameAr || dto.nameEn,
-        finalPrice: resolved.finalPrice,
-        locale
-      });
+    assertAdminFreeBillingPeriod(resolved.plan, dto.billingPeriod);
 
+    if (canActivateStorePlanWithoutPayment(resolved.plan, dto.billingPeriod, resolved.finalPrice)) {
+      await activateStoreSubscription(subscription.id);
       return {
         store: await storesRepository.findById(store.id),
         subscription,
-        checkout,
-        requiresPayment: !checkout.activated,
-        isFreePlan: resolved.finalPrice <= 0,
+        checkout: { activated: true },
+        requiresPayment: false,
+        isFreePlan: true,
         isTrial: false
       };
-    } catch (error) {
-      await storesRepository.rollbackPendingStoreCreation(store.id);
-      throw error;
     }
+
+    await storesRepository.rollbackPendingStoreCreation(store.id);
+    throw createPaymentComingSoonError();
   }
 
   async update(id: string, userId: string, dto: UpdateStoreDto) {
@@ -297,9 +311,57 @@ export class StoresService {
     return storesRepository.update(id, dto);
   }
 
-  async remove(id: string, userId: string) {
-    await this.getByIdForOwner(id, userId);
-    await this.softDeleteStore(id);
+  async renewSubscription(id: string, userId: string) {
+    const store = await this.getByIdForOwner(id, userId);
+    const now = new Date();
+
+    const activePaid = store.subscriptions.find(
+      (subscription) =>
+        subscription.isActive &&
+        subscription.status === StoreSubscriptionStatus.ACTIVE &&
+        !subscription.isTrial &&
+        subscription.endsAt &&
+        new Date(subscription.endsAt) > now
+    );
+
+    if (activePaid) {
+      assertCanRenewActiveSubscription(new Date(activePaid.endsAt!));
+
+      const plan = await storePlansRepository.findPlanById(activePaid.planId);
+      if (!plan) throw new ApiError(404, 'Store plan not found');
+
+      if (
+        !canActivateStorePlanWithoutPayment(
+          plan,
+          activePaid.billingPeriod,
+          Number(activePaid.finalPrice)
+        )
+      ) {
+        throw createPaymentComingSoonError();
+      }
+
+      const updated = await extendStoreSubscription(activePaid.id);
+      if (!updated) {
+        throw new ApiError(400, 'Could not renew subscription', ErrorCodes.VALIDATION_FAILED);
+      }
+
+      return {
+        store: await storesRepository.findById(id).then((row) => (row ? this.mapStoreForOwner(row) : row)),
+        subscription: updated,
+        checkout: { activated: true },
+        requiresPayment: false
+      };
+    }
+
+    const reference = store.subscriptions.find((subscription) => !subscription.isTrial);
+    if (!reference) {
+      throw new ApiError(400, 'No subscription to renew', ErrorCodes.VALIDATION_FAILED);
+    }
+
+    return this.subscribe(id, userId, {
+      planId: reference.planId,
+      billingPeriod: reference.billingPeriod
+    });
   }
 
   private async assertCanCreateStore(userId: string) {
@@ -334,8 +396,18 @@ export class StoresService {
       throw new ApiError(400, 'No active trial subscription to activate');
     }
 
-    if (Number(activeTrial.finalPrice) <= 0) {
-      const { activateStoreSubscription } = await import('./store-subscription.utils');
+    const trialPlan = await storePlansRepository.findPlanById(activeTrial.planId);
+    if (!trialPlan) throw new ApiError(404, 'Store plan not found');
+
+    assertAdminFreeBillingPeriod(trialPlan, activeTrial.billingPeriod);
+
+    if (
+      canActivateStorePlanWithoutPayment(
+        trialPlan,
+        activeTrial.billingPeriod,
+        Number(activeTrial.finalPrice)
+      )
+    ) {
       await activateStoreSubscription(activeTrial.id);
       return {
         store: await storesRepository.findById(id).then((row) => (row ? this.mapStoreForOwner(row) : row)),
@@ -345,25 +417,23 @@ export class StoresService {
       };
     }
 
-    const checkout = await checkoutStoreSubscription({
-      userId,
-      subscriptionId: activeTrial.id,
-      storeName: store.nameAr || store.nameEn,
-      finalPrice: Number(activeTrial.finalPrice),
-      locale
-    });
-
-    return {
-      store,
-      subscription: activeTrial,
-      checkout,
-      requiresPayment: !checkout.activated
-    };
+    throw createPaymentComingSoonError();
   }
 
-  async subscribe(id: string, userId: string, dto: SubscribeStoreDto, locale: 'ar' | 'en' = 'ar') {
+  async subscribe(id: string, userId: string, dto: SubscribeStoreDto, _locale: 'ar' | 'en' = 'ar') {
     const store = await this.getByIdForOwner(id, userId);
     const resolved = await this.resolvePricing(dto.planId, store.rootCategoryId, dto.billingPeriod);
+
+    const activeSub = findActiveNonTrialSubscription(store.subscriptions);
+    if (activeSub?.plan) {
+      assertValidUpgradeTarget(activeSub, resolved.plan, dto.billingPeriod, resolved.finalPrice);
+    }
+
+    assertAdminFreeBillingPeriod(resolved.plan, dto.billingPeriod);
+
+    if (!canActivateStorePlanWithoutPayment(resolved.plan, dto.billingPeriod, resolved.finalPrice)) {
+      throw createPaymentComingSoonError();
+    }
 
     await storesRepository.deactivateActiveSubscriptions(id);
 
@@ -377,19 +447,13 @@ export class StoresService {
       maxListings: resolved.pricing.maxListings
     });
 
-    const checkout = await checkoutStoreSubscription({
-      userId,
-      subscriptionId: subscription.id,
-      storeName: store.nameAr || store.nameEn,
-      finalPrice: resolved.finalPrice,
-      locale
-    });
+    await activateStoreSubscription(subscription.id);
 
     return {
       subscription,
-      checkout,
-      requiresPayment: !checkout.activated,
-      isFreePlan: resolved.finalPrice <= 0
+      checkout: { activated: true },
+      requiresPayment: false,
+      isFreePlan: true
     };
   }
 
@@ -425,6 +489,7 @@ export class StoresService {
     const maxListings = resolveStoreListingLimit({
       isTrial: activeSubscription.isTrial,
       maxListings: activeSubscription.maxListings,
+      baselineListings: activeSubscription.baselineListings,
       plan: activeSubscription.plan
     });
 
@@ -521,6 +586,34 @@ export class StoresService {
     return this.getByIdForAdmin(id);
   }
 
+  async renewSubscriptionForAdmin(id: string) {
+    const store = await storesRepository.findById(id);
+    if (!store) throw new ApiError(404, 'Store not found');
+
+    const now = new Date();
+    const subscription = store.subscriptions.find(
+      (row) =>
+        row.isActive &&
+        row.status === StoreSubscriptionStatus.ACTIVE &&
+        !row.isTrial &&
+        row.endsAt &&
+        row.endsAt > now
+    );
+
+    if (!subscription) {
+      throw new ApiError(400, 'No active paid subscription to renew', ErrorCodes.VALIDATION_FAILED);
+    }
+
+    assertCanRenewActiveSubscription(subscription.endsAt!);
+
+    const updated = await extendStoreSubscription(subscription.id);
+    if (!updated) {
+      throw new ApiError(404, 'Subscription not found');
+    }
+
+    return this.getByIdForAdmin(id);
+  }
+
   async removeForAdmin(id: string) {
     const store = await storesRepository.findById(id);
     if (!store) throw new ApiError(404, 'Store not found');
@@ -531,6 +624,18 @@ export class StoresService {
   async listAds(storeId: string, userId: string, query: ListAdsQuery) {
     await this.getByIdForOwner(storeId, userId);
     return storesRepository.listAds(storeId, query);
+  }
+
+  async listSubscriptionsForOwner(storeId: string, userId: string, query: ListStoreSubscriptionsQuery) {
+    await this.getByIdForOwner(storeId, userId);
+    const result = await storesRepository.listSubscriptions(storeId, query);
+    return {
+      items: result.items,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      hasMore: result.page * result.limit < result.total
+    };
   }
 }
 

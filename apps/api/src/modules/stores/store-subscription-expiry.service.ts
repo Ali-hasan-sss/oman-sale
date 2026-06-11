@@ -37,6 +37,22 @@ export async function expireDueStoreSubscriptions(now = new Date()): Promise<Exp
         }
       });
 
+      const hasReplacementSubscription = await tx.storeSubscription.findFirst({
+        where: {
+          storeId: subscription.storeId,
+          deletedAt: null,
+          isActive: true,
+          status: StoreSubscriptionStatus.ACTIVE,
+          id: { not: subscription.id },
+          endsAt: { gt: now }
+        },
+        select: { id: true }
+      });
+
+      if (hasReplacementSubscription) {
+        return;
+      }
+
       await tx.store.update({
         where: { id: subscription.storeId },
         data: { isActive: false }
@@ -101,13 +117,6 @@ export async function notifyStoreSubscriptionExpired(input: {
           en: `The subscription for store "${input.storeNameEn}" (${input.planNameEn}) has expired. The store and its listings are disabled. Renew to continue.`
         },
     channels: { inApp: true, email: true, whatsapp: true }
-  });
-}
-
-export async function reactivateStoreAds(storeId: string) {
-  await prisma.ad.updateMany({
-    where: { storeId, deletedAt: null, status: 'ACTIVE', isApproved: true },
-    data: { isActive: true }
   });
 }
 

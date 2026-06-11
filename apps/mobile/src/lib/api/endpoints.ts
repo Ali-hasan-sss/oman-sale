@@ -69,7 +69,8 @@ export const API_ENDPOINTS = {
     ads: (id: string) => `/stores/${id}/ads`,
     adsBySlug: (slug: string) => `/stores/slug/${slug}/ads`,
     activatePaid: (id: string) => `/stores/${id}/activate-paid`,
-    subscribe: (id: string) => `/stores/${id}/subscribe`
+    subscribe: (id: string) => `/stores/${id}/subscribe`,
+    renewSubscription: (id: string) => `/stores/${id}/renew-subscription`
   },
   tourism: {
     destinations: '/tourism/destinations',

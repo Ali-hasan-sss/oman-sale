@@ -4,7 +4,7 @@ import { TourismHeader } from '@/components/tourism/tourism-header';
 
 export default function DestinationPage({ params }: { params: { id: string } }) {
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="site-page-shell bg-slate-50">
       <TourismHeader />
       <TourismDestinationDetailsPage destinationId={params.id} />
       <SiteFooter />

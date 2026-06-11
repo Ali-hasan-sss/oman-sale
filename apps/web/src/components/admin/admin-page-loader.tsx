@@ -1,11 +1,3 @@
-export function AdminPageLoader({ label = 'Loading dashboard...', dir = 'ltr' }: { label?: string; dir?: 'ltr' | 'rtl' }) {
-  return (
-    <div className="min-h-screen bg-slate-100 px-4 py-6 lg:px-8" dir={dir}>
-      <AdminContentLoader label={label} />
-    </div>
-  );
-}
-
 export function AdminContentLoader({ label = 'Loading dashboard...' }: { label?: string }) {
   return (
     <div className="mx-auto max-w-6xl space-y-6">

@@ -3,9 +3,14 @@
 import { Check } from 'lucide-react';
 
 import { PlanPriceWithVat } from '@/components/pricing/plan-price-with-vat';
+import {
+  getBillingPeriodLabel,
+  STORE_BILLING_PERIODS,
+  type StoreBillingPeriod
+} from '@/lib/store-billing-period';
 
 type StorePlanPricing = {
-  billingPeriod: 'MONTHLY' | 'YEARLY';
+  billingPeriod: StoreBillingPeriod;
   finalPrice?: number;
   price: string | number;
   maxListings: number;
@@ -20,6 +25,7 @@ export type StorePlanCardData = {
   trialDays?: number;
   trialMaxListings?: number;
   trialAvailable?: boolean;
+  isAdminFree?: boolean;
   promotionPlan?: {
     nameAr: string;
     nameEn: string;
@@ -32,10 +38,8 @@ type StorePlanCardProps = {
   plan: StorePlanCardData;
   locale: 'ar' | 'en';
   selected: boolean;
-  billingPeriod: 'MONTHLY' | 'YEARLY';
+  billingPeriod: StoreBillingPeriod;
   labels: {
-    billingMonthly: string;
-    billingYearly: string;
     freePlan: string;
     maxListings: string;
     trialBadge: string;
@@ -44,7 +48,7 @@ type StorePlanCardProps = {
     vatShort: string;
   };
   onSelectPlan: (planId: string) => void;
-  onSelectBilling: (planId: string, period: 'MONTHLY' | 'YEARLY') => void;
+  onSelectBilling: (planId: string, period: StoreBillingPeriod) => void;
 };
 
 function featureLines(text: string) {
@@ -63,10 +67,6 @@ export function StorePlanCard({
   onSelectPlan,
   onSelectBilling
 }: StorePlanCardProps) {
-  const monthly = plan.pricing.find((row) => row.billingPeriod === 'MONTHLY');
-  const yearly = plan.pricing.find((row) => row.billingPeriod === 'YEARLY');
-  const monthlyPrice = Number(monthly?.finalPrice ?? monthly?.price ?? 0);
-  const yearlyPrice = Number(yearly?.finalPrice ?? yearly?.price ?? 0);
   const features = featureLines(locale === 'en' ? plan.descriptionEn : plan.descriptionAr);
   const name = locale === 'en' ? plan.nameEn : plan.nameAr;
 
@@ -76,21 +76,25 @@ export function StorePlanCard({
         selected ? 'border-green-600 ring-2 ring-green-100' : 'border-gray-200 bg-white'
       }`}
     >
-      <div className={`px-5 py-4 ${selected ? 'bg-green-600 text-white' : 'bg-slate-900 text-white'}`}>
-        <div className="flex items-start justify-between gap-3">
-          <div>
+      <div
+        className={`flex min-h-[7.5rem] flex-col px-5 py-4 ${selected ? 'bg-green-600 text-white' : 'bg-slate-900 text-white'}`}
+      >
+        <div className="flex flex-1 items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
             <h3 className="text-lg font-black">{name}</h3>
-            {plan.trialAvailable && plan.trialDays ? (
-              <span className="mt-2 inline-block rounded-full bg-amber-300 px-2 py-0.5 text-xs font-bold text-amber-950">
-                {labels.trialBadge} · {plan.trialDays} {labels.trialDays}
-                {plan.trialMaxListings ? ` · ${plan.trialMaxListings} ${labels.maxListings}` : ''}
-              </span>
-            ) : null}
-            {plan.promotionPlan ? (
-              <span className="mt-2 inline-block rounded-full bg-white/20 px-2 py-0.5 text-xs font-bold">
-                {plan.promotionPlan.badgeLabel || (locale === 'en' ? plan.promotionPlan.nameEn : plan.promotionPlan.nameAr)}
-              </span>
-            ) : null}
+            <div className="mt-2 flex min-h-[2.75rem] flex-wrap content-start gap-2">
+              {plan.trialAvailable && plan.trialDays ? (
+                <span className="inline-block rounded-full bg-amber-300 px-2 py-0.5 text-xs font-bold text-amber-950">
+                  {labels.trialBadge} · {plan.trialDays} {labels.trialDays}
+                  {plan.trialMaxListings ? ` · ${plan.trialMaxListings} ${labels.maxListings}` : ''}
+                </span>
+              ) : null}
+              {plan.promotionPlan ? (
+                <span className="inline-block rounded-full bg-white/20 px-2 py-0.5 text-xs font-bold">
+                  {plan.promotionPlan.badgeLabel || (locale === 'en' ? plan.promotionPlan.nameEn : plan.promotionPlan.nameAr)}
+                </span>
+              ) : null}
+            </div>
           </div>
           <input
             className="mt-1"
@@ -105,7 +109,7 @@ export function StorePlanCard({
 
       <div className="flex flex-1 flex-col p-5">
         {features.length > 0 ? (
-          <ul className="mb-4 space-y-2">
+          <ul className="mb-4 flex-1 space-y-2">
             {features.map((feature) => (
               <li key={feature} className="flex items-start gap-2 text-sm text-gray-700">
                 <Check size={16} className="mt-0.5 shrink-0 text-green-600" />
@@ -113,57 +117,45 @@ export function StorePlanCard({
               </li>
             ))}
           </ul>
-        ) : null}
+        ) : (
+          <div className="mb-4 flex-1" />
+        )}
 
         <div className="mt-auto space-y-2">
-          {monthly ? (
-            <button
-              type="button"
-              onClick={() => onSelectBilling(plan.id, 'MONTHLY')}
-              className={`w-full rounded-xl border px-4 py-3 text-start text-sm font-bold transition ${
-                selected && billingPeriod === 'MONTHLY'
-                  ? 'border-green-600 bg-green-50 text-green-800'
-                  : 'border-gray-200 text-gray-700 hover:border-green-300'
-              }`}
-            >
-              <span className="block text-xs uppercase tracking-wide opacity-70">{labels.billingMonthly}</span>
-              <span className="mt-1 block">
-                <PlanPriceWithVat
-                  basePrice={monthlyPrice}
-                  locale={locale}
-                  freeLabel={labels.freePlan}
-                  vatShort={labels.vatShort}
-                />
-              </span>
-              <span className="mt-1 block text-xs font-normal opacity-80">
-                {monthly.maxListings} {labels.maxListings}
-              </span>
-            </button>
-          ) : null}
-          {yearly ? (
-            <button
-              type="button"
-              onClick={() => onSelectBilling(plan.id, 'YEARLY')}
-              className={`w-full rounded-xl border px-4 py-3 text-start text-sm font-bold transition ${
-                selected && billingPeriod === 'YEARLY'
-                  ? 'border-green-600 bg-green-50 text-green-800'
-                  : 'border-gray-200 text-gray-700 hover:border-green-300'
-              }`}
-            >
-              <span className="block text-xs uppercase tracking-wide opacity-70">{labels.billingYearly}</span>
-              <span className="mt-1 block">
-                <PlanPriceWithVat
-                  basePrice={yearlyPrice}
-                  locale={locale}
-                  freeLabel={labels.freePlan}
-                  vatShort={labels.vatShort}
-                />
-              </span>
-              <span className="mt-1 block text-xs font-normal opacity-80">
-                {yearly.maxListings} {labels.maxListings}
-              </span>
-            </button>
-          ) : null}
+          {(plan.isAdminFree ? (['ONE_MONTH'] as const) : STORE_BILLING_PERIODS).map((period) => {
+            const row = plan.pricing.find((pricing) => pricing.billingPeriod === period);
+            if (!row) return null;
+
+            const price = plan.isAdminFree ? 0 : Number(row.finalPrice ?? row.price ?? 0);
+
+            return (
+              <button
+                key={period}
+                type="button"
+                onClick={() => onSelectBilling(plan.id, period)}
+                className={`w-full rounded-xl border px-4 py-3 text-start text-sm font-bold transition ${
+                  selected && billingPeriod === period
+                    ? 'border-green-600 bg-green-50 text-green-800'
+                    : 'border-gray-200 text-gray-700 hover:border-green-300'
+                }`}
+              >
+                <span className="block text-xs uppercase tracking-wide opacity-70">
+                  {getBillingPeriodLabel(period, locale)}
+                </span>
+                <span className="mt-1 block">
+                  <PlanPriceWithVat
+                    basePrice={price}
+                    locale={locale}
+                    freeLabel={labels.freePlan}
+                    vatShort={labels.vatShort}
+                  />
+                </span>
+                <span className="mt-1 block text-xs font-normal opacity-80">
+                  {row.maxListings} {labels.maxListings}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
     </article>

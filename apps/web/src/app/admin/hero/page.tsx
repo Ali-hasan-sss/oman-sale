@@ -1,18 +1,10 @@
-import { AdminBannerRequestsManagement } from '@/components/admin/admin-banner-requests-management';
-import { AdminHeroBannersManagement } from '@/components/admin/admin-hero-banners-management';
-import { AdminHeroManagement } from '@/components/admin/admin-hero-management';
-import { AdminHeaderButtonsManagement } from '@/components/admin/admin-header-buttons-management';
+import { AdminHeroPage } from '@/components/admin/admin-hero-page';
 import { AdminShell } from '@/components/admin/admin-shell';
 
-export default function AdminHeroPage() {
+export default function AdminHeroRoutePage() {
   return (
     <AdminShell>
-      <div className="space-y-8">
-        <AdminHeaderButtonsManagement />
-        <AdminHeroManagement />
-        <AdminHeroBannersManagement />
-        <AdminBannerRequestsManagement />
-      </div>
+      <AdminHeroPage />
     </AdminShell>
   );
 }
