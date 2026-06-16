@@ -37,6 +37,7 @@ type AuthMessages = {
   registerNow: string;
   loginNow: string;
   socialLogin: string;
+  socialRegister: string;
   loginError: string;
   registerError: string;
   verifyTitle: string;
@@ -44,6 +45,23 @@ type AuthMessages = {
   verifyButton: string;
   resendCode: string;
   verifyError: string;
+  nextButton: string;
+  confirmPassword: string;
+  passwordMismatch: string;
+  phoneVerifyTitle: string;
+  phoneVerifySubtitle: string;
+  resendInSeconds: string;
+  registerStepInfo: string;
+  registerStepEmail: string;
+  registerStepPhone: string;
+  registerStepPassword: string;
+  registerStepLabelInfo: string;
+  registerStepLabelEmail: string;
+  registerStepLabelPhone: string;
+  registerStepLabelPassword: string;
+  registerStepsAriaLabel: string;
+  searchCountry: string;
+  phoneInvalid: string;
   forgotPasswordTitle: string;
   forgotPasswordSubtitle: string;
   sendResetCode: string;
@@ -53,6 +71,17 @@ type AuthMessages = {
   resetPasswordButton: string;
   resetPasswordSuccess: string;
   resetPasswordError: string;
+  googleSignIn: string;
+  googleSignInError: string;
+  googleNotConfigured: string;
+  completeProfileTitle: string;
+  completeProfileSubtitle: string;
+  completeProfileButton: string;
+  completeProfileError: string;
+  completeProfileStepDetails: string;
+  completeProfileStepPhone: string;
+  completeProfileStepPassword: string;
+  completeProfileStepsAriaLabel: string;
 };
 
 type CommonMessages = (typeof ar)['common'] & {

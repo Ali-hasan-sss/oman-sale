@@ -3,7 +3,7 @@ import type { AxiosInstance } from 'axios';
 import { api } from '@/lib/api';
 import { MediaCompressionError, prepareMediaForUpload } from '@/lib/media-compress';
 
-export type MediaFolder = 'ads' | 'stores' | 'profiles' | 'chat' | 'banners' | 'hero' | 'tourism' | 'articles' | 'general';
+export type MediaFolder = 'ads' | 'stores' | 'profiles' | 'chat' | 'banners' | 'hero' | 'tourism' | 'articles' | 'verification' | 'general';
 
 export type MediaUploadResult = {
   key: string;

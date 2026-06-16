@@ -9,7 +9,7 @@ import type { Readable } from 'node:stream';
 import { env } from '../../config/env';
 import { getMediaKey, resolveMediaUrl, toMediaReference } from './media-reference';
 
-export type MediaFolder = 'ads' | 'stores' | 'profiles' | 'chat' | 'banners' | 'hero' | 'tourism' | 'articles' | 'general';
+export type MediaFolder = 'ads' | 'stores' | 'profiles' | 'chat' | 'banners' | 'hero' | 'tourism' | 'articles' | 'general' | 'verification';
 
 export type UploadInput = {
   buffer: Buffer;
@@ -43,7 +43,8 @@ const extensionByMime: Record<string, string> = {
   'image/gif': 'gif',
   'video/mp4': 'mp4',
   'video/webm': 'webm',
-  'video/quicktime': 'mov'
+  'video/quicktime': 'mov',
+  'application/pdf': 'pdf'
 };
 
 function resolveExtension(fileName: string, contentType: string) {

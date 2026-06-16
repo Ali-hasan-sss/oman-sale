@@ -2,7 +2,7 @@ export function HeroSectionSkeleton() {
   return (
     <section className="relative flex h-[100dvh] max-h-[100dvh] min-h-0 flex-col overflow-hidden bg-slate-300">
       <div className="relative z-10 shrink-0 px-4 py-3 sm:py-4">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
+        <div className="site-container flex items-center justify-between gap-3">
           <div className="h-12 w-36 animate-pulse rounded-2xl bg-white/40 sm:h-14" />
           <div className="h-10 w-28 animate-pulse rounded-xl bg-white/30" />
         </div>
@@ -94,7 +94,7 @@ export function TourismSectionSkeleton() {
 
 export function CreateStoreBannerSkeleton() {
   return (
-    <section className="mx-auto max-w-7xl px-4 pb-2 pt-8">
+    <section className="site-container pb-2 pt-8">
       <div className="h-28 animate-pulse rounded-3xl bg-slate-200 sm:h-24" />
     </section>
   );

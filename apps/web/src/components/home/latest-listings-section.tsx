@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ListingCardsSkeleton } from '@/components/listings/listing-card-skeleton';
 import { FavoriteButton } from '@/components/listings/favorite-button';
 import { ListingMediaCover } from '@/components/listings/listing-media-cover';
+import { ListingTitleWithVerified } from '@/components/trust-badge/listing-verified-badge';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { getListingLocationLabel } from '@/lib/oman-locations';
@@ -31,6 +32,7 @@ type Listing = {
       badgeLabel?: string | null;
     };
   } | null;
+  trustBadgeApproved?: boolean;
 };
 
 type ListingsResponse = {
@@ -130,7 +132,13 @@ export function LatestListingsSection() {
                 </div>
 
                 <div className="p-4">
-                  <h3 className="mb-2 truncate text-base font-bold text-ink-900">{listing.title}</h3>
+                  <ListingTitleWithVerified
+                    title={listing.title}
+                    verified={listing.trustBadgeApproved}
+                    label={m.trustBadge.verifiedLabel}
+                    titleClassName="truncate text-base"
+                    className="mb-2"
+                  />
                   <p className="mb-3 text-xl font-black text-brand-600">{formatPrice(listing.price, listing.currency)}</p>
                   <div className="flex items-center gap-1 text-sm text-slate-500">
                     <MapPin size={16} className="text-slate-400" />

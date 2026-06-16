@@ -65,6 +65,8 @@
     "regions": "Regions",
     "news": "News",
     "pricing": "Pricing & plans",
+    "privacy": "Privacy policy",
+    "terms": "Terms of use",
     "newsletterTitle": "Subscribe to the newsletter",
     "newsletterSubtitle": "Get the latest offers and listings",
     "emailPlaceholder": "Your email address",
@@ -142,6 +144,7 @@
     "registerNow": "Register now",
     "loginNow": "Login now",
     "socialLogin": "Or continue with",
+    "socialRegister": "Or sign up with",
     "loginError": "Could not log in. Check your email and password.",
     "registerError": "Could not create the account. Check your details and try again.",
     "verifyTitle": "Verify your email",
@@ -149,6 +152,23 @@
     "verifyButton": "Verify email",
     "resendCode": "Resend code",
     "verifyError": "The verification code is invalid or expired.",
+    "nextButton": "Next",
+    "confirmPassword": "Confirm password",
+    "passwordMismatch": "Passwords do not match.",
+    "phoneVerifyTitle": "Verify your phone",
+    "phoneVerifySubtitle": "Enter the 6-digit verification code we sent via WhatsApp.",
+    "resendInSeconds": "Resend in {seconds}s",
+    "registerStepInfo": "Step 1 of 4",
+    "registerStepEmail": "Step 2 of 4",
+    "registerStepPhone": "Step 3 of 4",
+    "registerStepPassword": "Step 4 of 4",
+    "registerStepLabelInfo": "Details",
+    "registerStepLabelEmail": "Email",
+    "registerStepLabelPhone": "Phone",
+    "registerStepLabelPassword": "Password",
+    "registerStepsAriaLabel": "Account creation steps",
+    "searchCountry": "Search country...",
+    "phoneInvalid": "Invalid phone number. Check the country code and number.",
     "forgotPasswordTitle": "Forgot password",
     "forgotPasswordSubtitle": "Enter your email and we will send a reset code.",
     "sendResetCode": "Send reset code",
@@ -157,7 +177,55 @@
     "newPassword": "New password",
     "resetPasswordButton": "Update password",
     "resetPasswordSuccess": "Password updated. You can sign in now.",
-    "resetPasswordError": "Could not reset password. Check the code and try again."
+    "resetPasswordError": "Could not reset password. Check the code and try again.",
+    "googleSignIn": "Continue with Google",
+    "googleSignInError": "Could not sign in with Google. Please try again.",
+    "googleNotConfigured": "Google sign-in is not configured yet. Contact support.",
+    "completeProfileTitle": "Complete your profile",
+    "completeProfileSubtitle": "Finish your account details to publish listings and use the platform.",
+    "completeProfileButton": "Complete profile",
+    "completeProfileError": "Could not complete your profile. Check the details and try again.",
+    "completeProfileStepDetails": "Details",
+    "completeProfileStepPhone": "Phone",
+    "completeProfileStepPassword": "Password",
+    "completeProfileStepsAriaLabel": "Profile completion steps"
+  },
+  "trustBadge": {
+    "verifiedLabel": "Verified account",
+    "verifiedSellerDescription": "The seller or store identity has been verified by platform admin",
+    "userTitle": "Personal account verification",
+    "userDescription": "Upload your national ID or passport to get the blue verified badge. Verification does not affect publishing or subscriptions.",
+    "storeTitle": "Store verification",
+    "storeDescription": "Upload your store documents to get the blue verified badge on your store and listings.",
+    "documentType": "Document type",
+    "nationalId": "National ID",
+    "passport": "Passport",
+    "uploadDocument": "Upload document",
+    "commercialRegistration": "Commercial registration",
+    "occiCertificate": "OCCI certificate",
+    "smeCard": "SME card",
+    "otherDocument": "Other document",
+    "otherDocumentLabel": "Other document name",
+    "otherDocumentLabelPlaceholder": "e.g. Municipal license",
+    "fileHint": "Supported: JPG, PNG, WEBP, GIF, PDF — max 8 MB",
+    "chooseDocument": "Click to choose a document",
+    "changeDocument": "Change",
+    "uploadingDocument": "Uploading document...",
+    "documentUploaded": "Document uploaded",
+    "submitRequest": "Submit verification request",
+    "submitting": "Submitting...",
+    "submitSuccess": "Verification request submitted for review.",
+    "submitError": "Could not submit verification request.",
+    "uploadError": "Could not upload file.",
+    "unsupportedFile": "Unsupported file type.",
+    "fileTooLarge": "File is too large.",
+    "documentRequired": "Please upload a document.",
+    "commercialRegRequired": "Commercial registration is required.",
+    "otherDocLabelRequired": "Please enter the other document name.",
+    "pendingReview": "Your verification request is under admin review.",
+    "approvedMessage": "Your account is verified. The blue badge will appear on your listings and profile.",
+    "rejectedMessage": "Verification request was rejected",
+    "loading": "Loading..."
   },
   "admin": {
     "dashboard": "Admin panel",
@@ -202,6 +270,7 @@
     "storeSubscriptionsActive": "Active subscriptions",
     "storeSubscriptionsTrial": "Trial subscriptions",
     "bannerRequests": "Banner requests",
+    "trustBadges": "Verification requests",
     "bannerRequestsPending": "Pending approval",
     "paymentsPaid": "Successful payments",
     "paymentsPending": "Pending payments",
@@ -262,6 +331,13 @@
     "userDetails": "User details",
     "userDetailsLoadError": "Could not load user details.",
     "backToUsers": "Back to users",
+    "verificationDocuments": "Verification documents",
+    "trustBadgeStatus": "Verification status",
+    "rejectionReason": "Rejection reason",
+    "trustBadgePending": "Pending review",
+    "trustBadgeApproved": "Verified",
+    "trustBadgeRejected": "Rejected",
+    "trustBadgeNone": "Not submitted",
     "personalInfo": "Personal information",
     "accountInfo": "Account information",
     "fullName": "Full name",
@@ -559,6 +635,7 @@
     "ACCOUNT_BLOCKED": "Your account has been blocked. You cannot publish listings or use platform features right now.",
     "ACCOUNT_INACTIVE": "Your account is currently inactive. Contact support to reactivate it.",
     "EMAIL_VERIFICATION_REQUIRED": "Email verification is required before you can continue.",
+    "PROFILE_INCOMPLETE": "Please complete your account profile before continuing.",
     "STORE_LISTING_LIMIT_REACHED": "You have reached the listing limit for your current store plan. Upgrade your plan or publish from your personal account.",
     "STORE_LIMIT_REACHED": "You already have a store on your account. Only one store is allowed per user at this time.",
     "PAYMENT_COMING_SOON": "Paid activation will be available soon. You can start the free trial if available.",
@@ -853,6 +930,183 @@
     "openGallery": "View images",
     "savedArticlesTitle": "Saved articles",
     "savedArticlesEmpty": "No saved articles yet."
+  },
+  "legal": {
+    "privacy": {
+      "title": "Privacy policy",
+      "lastUpdated": "Last updated: June 2026",
+      "intro": "At Oman Sale we take your privacy seriously. This policy explains how we collect, use and protect your information when you use our marketplace in the Sultanate of Oman.",
+      "contactTitle": "Privacy contact",
+      "contactText": "For questions about this policy or to exercise your rights, email us at:",
+      "sections": [
+        {
+          "title": "1. Scope",
+          "paragraphs": [
+            "This policy applies to all visitors and users of the Oman Sale website and app, including sellers, buyers, store owners and guests.",
+            "By using the platform you agree to the collection and use of your data as described here and in accordance with applicable laws in Oman."
+          ]
+        },
+        {
+          "title": "2. Data we collect",
+          "paragraphs": ["We may collect the following types of information when you use the platform:"],
+          "bullets": [
+            "Account data: name, email, phone number and encrypted password.",
+            "Profile and store data: photo, description, location and verification documents when submitted.",
+            "Listing data: title, description, price, images, video, category and location.",
+            "Usage data: browsing history on the platform, searches, interactions and reports.",
+            "Technical data: IP address, browser type, device and cookies.",
+            "Communication data: chat messages between users and support correspondence."
+          ]
+        },
+        {
+          "title": "3. How we use your data",
+          "paragraphs": ["We use your data to:"],
+          "bullets": [
+            "Create and manage your account, sessions and identity verification.",
+            "Publish your listings, manage your store and display your content to other users.",
+            "Enable communication between buyers and sellers via chat and notifications.",
+            "Process promotion requests, subscriptions and billing when payment services are enabled.",
+            "Improve the platform, security, fraud detection and moderation.",
+            "Respond to your enquiries and send important service notifications."
+          ]
+        },
+        {
+          "title": "4. Sharing data",
+          "paragraphs": [
+            "We do not sell your personal data to third parties. We may share limited data with trusted service providers who help us operate the platform (such as hosting, messaging and phone verification), under confidentiality and limited-use obligations.",
+            "We may disclose data when required by law, court order or official request from competent authorities in Oman, or to protect the rights of the platform and its users."
+          ]
+        },
+        {
+          "title": "5. Cookies",
+          "paragraphs": [
+            "We use cookies and similar technologies to remember your preferences (such as language), maintain your session and analyse platform usage.",
+            "You can control cookies through your browser settings, but disabling some cookies may affect certain features."
+          ]
+        },
+        {
+          "title": "6. Data security",
+          "paragraphs": [
+            "We apply reasonable technical and organisational measures to protect your data from unauthorised access, loss or alteration.",
+            "However, absolute internet security cannot be guaranteed. We encourage you to use a strong password and never share your login credentials."
+          ]
+        },
+        {
+          "title": "7. Your rights",
+          "paragraphs": ["Under applicable law you may have the right to:"],
+          "bullets": [
+            "Access and update your personal data from account settings.",
+            "Request correction of inaccurate data or deletion of your account according to our policies.",
+            "Object to certain processing or withdraw consent where applicable.",
+            "Lodge a complaint with the relevant authority if you believe your rights have not been respected."
+          ]
+        },
+        {
+          "title": "8. Data retention",
+          "paragraphs": [
+            "We retain your data while your account is active or as needed to provide the service and comply with legal obligations.",
+            "When an account is deleted, we may keep limited records for a reasonable period for security and compliance purposes."
+          ]
+        },
+        {
+          "title": "9. Changes",
+          "paragraphs": [
+            "We may update this policy from time to time. The revised version will be posted on this page with an updated date.",
+            "Continued use of the platform after changes constitutes acceptance of the updated policy."
+          ]
+        }
+      ]
+    },
+    "terms": {
+      "title": "Terms of use",
+      "lastUpdated": "Last updated: June 2026",
+      "intro": "Welcome to Oman Sale. By using this platform you agree to the following terms and conditions. Please read them carefully before creating an account or posting a listing.",
+      "contactTitle": "Terms contact",
+      "contactText": "For questions about these terms, email us at:",
+      "sections": [
+        {
+          "title": "1. Definitions and acceptance",
+          "paragraphs": [
+            "“Platform” refers to the Oman Sale website, app and all related services.",
+            "By creating an account or using the platform you confirm that you have read and agree to these terms. If you do not agree, please do not use the service."
+          ]
+        },
+        {
+          "title": "2. Eligibility and account",
+          "paragraphs": [
+            "You must be at least 18 years old or have legal capacity to enter into contracts in the Sultanate of Oman.",
+            "You are responsible for the accuracy of your registration details, keeping your password secure and all activity under your account.",
+            "The platform may suspend or terminate accounts that violate these terms or appear fraudulent, without prior notice when necessary."
+          ]
+        },
+        {
+          "title": "3. Use of the platform",
+          "paragraphs": ["You agree to use the platform lawfully and responsibly, and not to:"],
+          "bullets": [
+            "Impersonate any person or entity or provide misleading information.",
+            "Attempt to hack, disrupt or exploit the platform.",
+            "Send spam, abusive messages or threats to other users.",
+            "Harvest user data without permission or use it for unauthorised commercial purposes."
+          ]
+        },
+        {
+          "title": "4. Listings and content",
+          "paragraphs": [
+            "You are solely responsible for your listing content, including text, images, prices and accuracy of information.",
+            "Listings must be genuine, lawful and match the selected category. The platform may review, remove or reject non-compliant listings.",
+            "The platform does not guarantee completion of any transaction between users and is not responsible for the quality of products or services listed."
+          ]
+        },
+        {
+          "title": "5. Stores and subscriptions",
+          "paragraphs": [
+            "Store plans and trial periods are subject to the terms shown on the pricing page for each plan.",
+            "Plan features or prices may change with reasonable notice through the platform.",
+            "When a subscription or trial ends, some features may be restricted until renewal."
+          ]
+        },
+        {
+          "title": "6. Payments and fees",
+          "paragraphs": [
+            "Fees may apply to listing promotions, store subscriptions and other paid services as shown on the pricing page.",
+            "All prices are in Omani Rial (OMR) and include VAT where applicable.",
+            "When payment gateways are enabled, refund and billing policies published at the time of purchase will apply."
+          ]
+        },
+        {
+          "title": "7. Prohibited content",
+          "paragraphs": ["You may not post content that includes or promotes:"],
+          "bullets": [
+            "Illegal, stolen or non-compliant goods under Omani regulations.",
+            "Pornographic, violent, hateful or discriminatory material.",
+            "Fake, fraudulent or misleading products.",
+            "Duplicate or spam listings that violate platform policies."
+          ]
+        },
+        {
+          "title": "8. Intellectual property",
+          "paragraphs": [
+            "All trademarks, design and software rights of Oman Sale belong to the platform or its licensors.",
+            "By posting content on the platform you grant us a non-exclusive licence to display and distribute it within the scope of operating the service."
+          ]
+        },
+        {
+          "title": "9. Disclaimer and limitation of liability",
+          "paragraphs": [
+            "The platform is provided “as is” without express or implied warranties regarding continuous availability or error-free operation.",
+            "Oman Sale is not liable for direct or indirect losses arising from dealings between users or from service interruptions.",
+            "You remain fully responsible for complying with local laws when buying or selling through the platform."
+          ]
+        },
+        {
+          "title": "10. Governing law and changes",
+          "paragraphs": [
+            "These terms are governed by the laws of the Sultanate of Oman. Disputes shall be resolved before the competent courts in Oman unless otherwise agreed.",
+            "We may amend these terms at any time. Continued use of the platform after publication constitutes acceptance of the updated terms."
+          ]
+        }
+      ]
+    }
   },
   "assistant": {
     "title": "Oman Sale Assistant",

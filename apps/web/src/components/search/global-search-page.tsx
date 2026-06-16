@@ -7,6 +7,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { SiteFooter } from '@/components/home/site-footer';
 import { ListingCardsSkeleton } from '@/components/listings/listing-card-skeleton';
 import { ListingMediaCover } from '@/components/listings/listing-media-cover';
+import { ListingTitleWithVerified } from '@/components/trust-badge/listing-verified-badge';
+import { VerifiedBadge } from '@/components/trust-badge/verified-badge';
 import { UserSiteHeader, SiteHeaderSearch } from '@/components/navigation/user-site-header';
 import { StoreCardsSkeleton } from '@/components/stores/store-card-skeleton';
 import { api } from '@/lib/api';
@@ -31,6 +33,7 @@ type Listing = {
   wilayah?: string | null;
   area?: string | null;
   images?: Array<{ imageUrl: string }>;
+  trustBadgeApproved?: boolean;
 };
 
 type Store = {
@@ -43,6 +46,7 @@ type Store = {
   coverUrl?: string | null;
   city?: string | null;
   listingsCount: number;
+  trustBadgeApproved?: boolean;
 };
 
 type Article = {
@@ -147,7 +151,7 @@ export function GlobalSearchPage() {
         <SiteHeaderSearch />
       </UserSiteHeader>
 
-      <main className="mx-auto max-w-7xl px-4 py-8">
+      <main className="site-container site-page-main min-w-0">
         <div className="mb-8">
           <h1 className="mb-2 text-3xl font-black text-gray-900">{text.title}</h1>
           {query ? (
@@ -206,15 +210,23 @@ export function GlobalSearchPage() {
                       href={localizedPath(`/listing/${listing.id}`)}
                       className="overflow-hidden rounded-xl bg-white shadow-sm transition hover:shadow-md"
                     >
-                      <ListingMediaCover
-                        items={listing.images}
-                        alt={listing.title}
-                        fallbackSrc={fallbackImage}
-                        className="h-44 w-full"
-                        imageClassName="h-44 w-full"
-                      />
+                      <div className="relative">
+                        <ListingMediaCover
+                          items={listing.images}
+                          alt={listing.title}
+                          fallbackSrc={fallbackImage}
+                          className="h-44 w-full"
+                          imageClassName="h-44 w-full"
+                        />
+                      </div>
                       <div className="p-4">
-                        <h3 className="mb-2 line-clamp-1 font-bold">{listing.title}</h3>
+                        <ListingTitleWithVerified
+                          title={listing.title}
+                          verified={listing.trustBadgeApproved}
+                          label={m.trustBadge.verifiedLabel}
+                          titleClassName="line-clamp-1 text-sm"
+                          className="mb-2"
+                        />
                         <p className="font-bold text-green-600">
                           {listing.price ? `${listing.price} ${listing.currency}` : '-'}
                         </p>
@@ -309,7 +321,10 @@ export function GlobalSearchPage() {
                           className={`h-36 w-full ${store.coverUrl ? 'object-cover' : 'object-contain bg-slate-100 p-6'}`}
                         />
                         <div className="p-4">
-                          <h3 className="mb-1 font-black text-gray-900">{name}</h3>
+                          <h3 className="mb-1 flex items-center gap-1.5 font-black text-gray-900">
+                            {name}
+                            {store.trustBadgeApproved ? <VerifiedBadge title={m.trustBadge.verifiedLabel} /> : null}
+                          </h3>
                           <p className="line-clamp-2 text-sm text-gray-500">{bio}</p>
                           <p className="mt-2 text-xs font-bold text-gray-400">
                             {getCityLabel(store.city, locale)} · {store.listingsCount} {m.storesBrowse.listings}

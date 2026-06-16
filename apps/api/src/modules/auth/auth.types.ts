@@ -5,4 +5,7 @@ export type AuthTokens = {
   refreshToken: string;
 };
 
-export type AuthUserResponse = Pick<User, 'id' | 'fullName' | 'email' | 'phone' | 'role' | 'avatar'>;
+export type AuthUserResponse = Pick<
+  User,
+  'id' | 'fullName' | 'email' | 'phone' | 'role' | 'avatar' | 'profileCompleted'
+>;

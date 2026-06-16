@@ -24,7 +24,7 @@ export function WhyOmanSaleSection() {
 
   return (
     <section className="bg-slate-50 py-16">
-      <div className="mx-auto max-w-7xl px-4">
+      <div className="site-container">
         <div className="mb-12 text-center">
           <h2 className="mb-3 text-3xl font-black">{m.home.whyTitle}</h2>
           <p className="text-slate-600">{m.home.whySubtitle}</p>

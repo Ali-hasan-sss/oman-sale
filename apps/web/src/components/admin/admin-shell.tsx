@@ -1,6 +1,6 @@
 'use client';
 
-import { BarChart3, Building2, ExternalLink, Flag, FolderTree, Globe, Image, LayoutList, LayoutPanelTop, Lock, LogOut, MapPin, Megaphone, Menu, Newspaper, Store, Users, X } from 'lucide-react';
+import { BadgeCheck, BarChart3, Building2, ExternalLink, Flag, FolderTree, Globe, Image, LayoutList, LayoutPanelTop, Lock, LogOut, MapPin, Megaphone, Menu, Newspaper, Store, Users, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { FormEvent, PropsWithChildren, useEffect, useState } from 'react';
@@ -20,6 +20,7 @@ const navItems = [
   { key: 'ads', href: '/admin/ads', icon: LayoutList },
   { key: 'reports', href: '/admin/reports', icon: Flag },
   { key: 'bannerRequests', href: '/admin/banner-requests', icon: LayoutPanelTop },
+  { key: 'trustBadges', href: '/admin/trust-badges', icon: BadgeCheck },
   { key: 'promotions', href: '/admin/promotions', icon: Megaphone },
   { key: 'storePlans', href: '/admin/store-plans', icon: Store },
   { key: 'tourism', href: '/admin/tourism', icon: MapPin },
@@ -44,15 +45,19 @@ export function AdminShell({ children }: PropsWithChildren) {
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [pendingReports, setPendingReports] = useState(0);
   const [pendingBannerRequests, setPendingBannerRequests] = useState(0);
+  const [pendingTrustBadges, setPendingTrustBadges] = useState(0);
 
   const loadPendingCounts = () => {
-    adminApi()
-      .get<{
+    Promise.all([
+      adminApi().get<{
         data: { pending: { reports: number; bannerRequestsPendingApproval: number } };
-      }>('/admin/statistics')
-      .then((response) => {
-        setPendingReports(response.data.data.pending.reports);
-        setPendingBannerRequests(response.data.data.pending.bannerRequestsPendingApproval);
+      }>('/admin/statistics'),
+      adminApi().get<{ data: { total: number } }>('/admin/trust-badges/pending-count')
+    ])
+      .then(([statisticsResponse, trustBadgesResponse]) => {
+        setPendingReports(statisticsResponse.data.data.pending.reports);
+        setPendingBannerRequests(statisticsResponse.data.data.pending.bannerRequestsPendingApproval);
+        setPendingTrustBadges(trustBadgesResponse.data.data.total);
       })
       .catch(() => undefined);
   };
@@ -173,6 +178,11 @@ export function AdminShell({ children }: PropsWithChildren) {
               {item.key === 'bannerRequests' && pendingBannerRequests > 0 ? (
                 <span className="ms-auto inline-flex min-w-6 items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-black text-white">
                   {pendingBannerRequests > 99 ? '99+' : pendingBannerRequests}
+                </span>
+              ) : null}
+              {item.key === 'trustBadges' && pendingTrustBadges > 0 ? (
+                <span className="ms-auto inline-flex min-w-6 items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-black text-white">
+                  {pendingTrustBadges > 99 ? '99+' : pendingTrustBadges}
                 </span>
               ) : null}
             </Link>

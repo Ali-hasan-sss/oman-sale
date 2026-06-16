@@ -1,6 +1,6 @@
 'use client';
 
-import { Camera, Lock, Mail, Phone, Save, Store, User, X } from 'lucide-react';
+import { Camera, Lock, Mail, Save, Store, User, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChangeEvent, FormEvent, ReactNode, useEffect, useState } from 'react';
@@ -9,11 +9,16 @@ import { VerificationCodeInput } from '@/components/auth/verification-code-input
 import { SiteFooter } from '@/components/home/site-footer';
 import { SiteHeaderSearch, UserSiteHeader } from '@/components/navigation/user-site-header';
 import { AvatarWithBanBadge } from '@/components/ui/avatar-with-ban-badge';
+import { PhoneInput } from '@/components/ui/phone-input';
+import { UserTrustBadgePanel } from '@/components/trust-badge/user-trust-badge-panel';
+import { VerifiedBadge } from '@/components/trust-badge/verified-badge';
 import { api } from '@/lib/api';
+import { isAxiosError } from 'axios';
 import { registerMediaPreviewUrl, resolveMediaUrl } from '@/lib/media-url';
 import { uploadMediaFile } from '@/lib/media-upload';
-import { useI18n } from '@/lib/i18n';
-import { getUserAccessToken, saveUser, saveUserSession, type UserAuthSession, type UserAuthUser } from '@/lib/user-auth';
+import { useI18n, getAuthMessages } from '@/lib/i18n';
+import { isValidPhoneE164 } from '@/lib/phone/phone-utils';
+import { getStoredUser, getUserAccessToken, saveUser, saveUserSession, type UserAuthSession, type UserAuthUser } from '@/lib/user-auth';
 import { useAuthStore } from '@/store/auth-store';
 
 type ProfileMessages = {
@@ -144,6 +149,7 @@ export function ProfilePage() {
   const router = useRouter();
   const { dir, locale, localizedPath, m } = useI18n();
   const profileMessages = messages[locale];
+  const authMessages = getAuthMessages(locale);
   const user = useAuthStore((state) => state.user);
   const setSession = useAuthStore((state) => state.setSession);
   const hydrateFromStorage = useAuthStore((state) => state.hydrateFromStorage);
@@ -191,8 +197,16 @@ export function ProfilePage() {
         saveUser(response.data.data);
         setSession({ accessToken: token, user: response.data.data });
       })
-      .catch(() => {
-        router.replace(localizedPath('/login'));
+      .catch((error) => {
+        const storedUser = getStoredUser();
+        if (storedUser) {
+          applyUser(storedUser);
+          setSession({ accessToken: token, user: storedUser });
+        }
+
+        if (!token || (isAxiosError(error) && error.response?.status === 401)) {
+          router.replace(localizedPath('/login'));
+        }
       });
 
     api
@@ -236,6 +250,11 @@ export function ProfilePage() {
 
   const saveProfile = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (phone.trim() && !isValidPhoneE164(phone.trim())) {
+      setProfileError(authMessages.phoneInvalid);
+      return;
+    }
+
     setProfileError('');
     setProfileMessage('');
     setIsSavingProfile(true);
@@ -328,12 +347,15 @@ export function ProfilePage() {
         <SiteHeaderSearch />
       </UserSiteHeader>
 
-      <main className="mx-auto max-w-6xl px-4 py-10">
+      <main className="site-container site-page-main site-page-main--wide min-w-0">
         <section className="mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-green-700 to-slate-900 p-8 text-white shadow-lg">
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="mb-2 text-sm font-bold text-green-100">Oman Sale</p>
-              <h1 className="mb-3 text-4xl font-black">{profileMessages.title}</h1>
+              <h1 className="mb-3 flex items-center gap-2 text-4xl font-black">
+                {profileMessages.title}
+                {user?.trustBadgeApproved ? <VerifiedBadge size="md" title={m.trustBadge.verifiedLabel} /> : null}
+              </h1>
               <p className="max-w-2xl text-white/80">{profileMessages.subtitle}</p>
             </div>
             <AvatarWithBanBadge
@@ -414,10 +436,13 @@ export function ProfilePage() {
                 <input value={fullName} onChange={(event) => setFullName(event.target.value)} required className={inputClass} />
               </Field>
               <Field label={profileMessages.phone}>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                  <input value={phone} onChange={(event) => setPhone(event.target.value)} className={`${inputClass} pl-10`} dir="ltr" />
-                </div>
+                <PhoneInput
+                  value={phone}
+                  onChange={setPhone}
+                  locale={locale}
+                  disabled={isSavingProfile}
+                  searchPlaceholder={authMessages.searchCountry}
+                />
               </Field>
               <div className="md:col-span-2">
                 <Field label={profileMessages.email}>
@@ -455,6 +480,8 @@ export function ProfilePage() {
           </form>
 
           <div className="space-y-6">
+            <UserTrustBadgePanel />
+
             <form onSubmit={changePassword} className="h-fit rounded-3xl bg-white p-6 shadow-sm md:p-8">
               <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-green-50 text-green-700">
                 <Lock size={24} />

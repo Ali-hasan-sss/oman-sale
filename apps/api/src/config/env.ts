@@ -46,6 +46,20 @@ const envSchema = z.object({
   MEDIA_PROVIDER: z.enum(['local', 'cloudinary', 's3']).default('local'),
   EMAIL_SKIP_SEND: z.preprocess((value) => value === 'true', z.boolean()).default(true),
   EMAIL_SKIP_CODE: z.string().default('000000'),
+  /** When true, phone verification accepts 000000 without sending WhatsApp. */
+  PHONE_SKIP_VERIFY: z.preprocess((value) => value === 'true', z.boolean()).default(false),
+  /** Meta WhatsApp Cloud API — see docs/whatsapp-meta-setup.html */
+  WHATSAPP_ENABLED: z.preprocess((value) => value === 'true', z.boolean()).default(false),
+  WHATSAPP_API_VERSION: z.string().default('v21.0'),
+  WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
+  WHATSAPP_ACCESS_TOKEN: z.string().optional(),
+  WHATSAPP_OTP_TEMPLATE_NAME: z.string().default('oman_sale_otp'),
+  WHATSAPP_OTP_TEMPLATE_LANGUAGE: z.string().default('ar'),
+  WHATSAPP_OTP_TEMPLATE_LANGUAGE_EN: z.string().optional(),
+  /** Set true if the approved OTP template includes a URL/copy button (index 0). */
+  WHATSAPP_OTP_TEMPLATE_HAS_BUTTON: z.preprocess((value) => value === 'true', z.boolean()).default(true),
+  WHATSAPP_NOTIFICATION_TEMPLATE_NAME: z.string().optional(),
+  WHATSAPP_NOTIFICATION_TEMPLATE_LANGUAGE: z.string().default('ar'),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().default(587),
   SMTP_SECURE: z.preprocess((value) => value === 'true', z.boolean()).default(false),
@@ -70,7 +84,10 @@ const envSchema = z.object({
   AWS_S3_PREFIX: z.string().default('oman-sale'),
   MEDIA_PUBLIC_BASE_URL: z.string().url().optional(),
   /** private = serve via API proxy (default, works with blocked public S3). public = direct S3 URLs. */
-  MEDIA_S3_ACCESS: z.enum(['private', 'public']).default('private')
+  MEDIA_S3_ACCESS: z.enum(['private', 'public']).default('private'),
+  FIREBASE_PROJECT_ID: z.string().optional(),
+  /** JSON string of Firebase service account (single line). Required for Google sign-in token verification. */
+  FIREBASE_SERVICE_ACCOUNT_JSON: z.string().optional()
 });
 
 export const env = envSchema.parse(process.env);

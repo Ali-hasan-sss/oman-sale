@@ -7,7 +7,9 @@ import type { UploadMediaQuery } from './media.validation';
 
 const allowedImageMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 const allowedVideoMimeTypes = new Set(['video/mp4', 'video/webm', 'video/quicktime']);
+const allowedDocumentMimeTypes = new Set(['application/pdf']);
 const maxMediaSizeBytes = 10 * 1024 * 1024;
+const maxDocumentSizeBytes = 8 * 1024 * 1024;
 const objectKeyPattern = /^[a-z0-9][a-z0-9/_-]*\.[a-z0-9]+$/i;
 
 export class MediaService {
@@ -51,13 +53,16 @@ export class MediaService {
 
     const isVideo = allowedVideoMimeTypes.has(file.mimetype);
     const isImage = allowedImageMimeTypes.has(file.mimetype);
+    const isDocument = allowedDocumentMimeTypes.has(file.mimetype);
+    const isVerificationUpload = query.folder === 'verification';
 
-    if (!isVideo && !isImage) {
+    if (!isVideo && !isImage && !(isVerificationUpload && isDocument)) {
       throw new ApiError(400, 'Unsupported file type');
     }
 
-    if (file.size > maxMediaSizeBytes) {
-      throw new ApiError(400, isVideo ? 'Video is too large' : 'File is too large');
+    const maxSize = isDocument ? maxDocumentSizeBytes : maxMediaSizeBytes;
+    if (file.size > maxSize) {
+      throw new ApiError(400, isVideo ? 'Video is too large' : isDocument ? 'Document is too large' : 'File is too large');
     }
 
     return mediaStorage.upload({

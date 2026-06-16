@@ -1,18 +1,39 @@
 import { resolveMediaUrl } from './media-reference';
+import { isTrustBadgeApproved, mapTrustBadgePublic } from '../trust-badge/trust-badge.utils';
 
 type ImageRecord = { imageUrl: string };
 
 export function resolveAdMedia<T>(ad: T): T {
-  const record = ad as T & { images?: ImageRecord[] };
-  if (!record.images?.length) return ad;
+  const record = ad as T & {
+    images?: ImageRecord[];
+    store?: { trustBadgeStatus?: string | null } | null;
+    user?: { trustBadgeStatus?: string | null } | null;
+  };
+
+  const withMedia = !record.images?.length
+    ? ad
+    : {
+        ...ad,
+        images: record.images.map((image) => ({
+          ...image,
+          imageUrl: resolveMediaUrl(image.imageUrl)
+        }))
+      };
+
+  const trustBadgeApproved = record.store
+    ? isTrustBadgeApproved(record.store.trustBadgeStatus as never)
+    : isTrustBadgeApproved(record.user?.trustBadgeStatus as never);
+
+  const store =
+    record.store && 'trustBadgeStatus' in record.store
+      ? { ...record.store, ...mapTrustBadgePublic(record.store.trustBadgeStatus as never) }
+      : record.store;
 
   return {
-    ...ad,
-    images: record.images.map((image) => ({
-      ...image,
-      imageUrl: resolveMediaUrl(image.imageUrl)
-    }))
-  };
+    ...withMedia,
+    trustBadgeApproved,
+    ...(store ? { store } : {})
+  } as T;
 }
 
 export function resolveAdsMedia<T>(ads: T[]): T[] {
@@ -20,21 +41,70 @@ export function resolveAdsMedia<T>(ads: T[]): T[] {
 }
 
 export function resolveStoreMedia<T>(store: T): T {
-  const record = store as T & { logoUrl?: string | null; coverUrl?: string | null };
+  const record = store as T & {
+    logoUrl?: string | null;
+    coverUrl?: string | null;
+    trustBadgeStatus?: string | null;
+  };
 
   return {
     ...store,
     logoUrl: record.logoUrl ? resolveMediaUrl(record.logoUrl) : record.logoUrl,
-    coverUrl: record.coverUrl ? resolveMediaUrl(record.coverUrl) : record.coverUrl
+    coverUrl: record.coverUrl ? resolveMediaUrl(record.coverUrl) : record.coverUrl,
+    ...(record.trustBadgeStatus !== undefined
+      ? mapTrustBadgePublic(record.trustBadgeStatus as never)
+      : {})
   };
 }
 
 export function resolveUserMedia<T>(user: T): T {
-  const record = user as T & { avatar?: string | null };
+  const record = user as T & { avatar?: string | null; trustBadgeStatus?: string | null };
 
   return {
     ...user,
-    avatar: record.avatar ? resolveMediaUrl(record.avatar) : record.avatar
+    avatar: record.avatar ? resolveMediaUrl(record.avatar) : record.avatar,
+    ...(record.trustBadgeStatus !== undefined
+      ? mapTrustBadgePublic(record.trustBadgeStatus as never)
+      : {})
+  };
+}
+
+export function resolveUserTrustDocs<T>(user: T): T {
+  const record = user as T & { trustIdentityDocUrl?: string | null };
+
+  if (record.trustIdentityDocUrl === undefined) return user;
+
+  return {
+    ...user,
+    trustIdentityDocUrl: record.trustIdentityDocUrl ? resolveMediaUrl(record.trustIdentityDocUrl) : null
+  };
+}
+
+export function resolveStoreTrustDocs<T>(store: T): T {
+  const record = store as T & {
+    trustCommercialRegDocUrl?: string | null;
+    trustOcciDocUrl?: string | null;
+    trustSmeDocUrl?: string | null;
+    trustOtherDocUrl?: string | null;
+  };
+
+  if (
+    record.trustCommercialRegDocUrl === undefined &&
+    record.trustOcciDocUrl === undefined &&
+    record.trustSmeDocUrl === undefined &&
+    record.trustOtherDocUrl === undefined
+  ) {
+    return store;
+  }
+
+  return {
+    ...store,
+    trustCommercialRegDocUrl: record.trustCommercialRegDocUrl
+      ? resolveMediaUrl(record.trustCommercialRegDocUrl)
+      : record.trustCommercialRegDocUrl ?? null,
+    trustOcciDocUrl: record.trustOcciDocUrl ? resolveMediaUrl(record.trustOcciDocUrl) : record.trustOcciDocUrl ?? null,
+    trustSmeDocUrl: record.trustSmeDocUrl ? resolveMediaUrl(record.trustSmeDocUrl) : record.trustSmeDocUrl ?? null,
+    trustOtherDocUrl: record.trustOtherDocUrl ? resolveMediaUrl(record.trustOtherDocUrl) : record.trustOtherDocUrl ?? null
   };
 }
 

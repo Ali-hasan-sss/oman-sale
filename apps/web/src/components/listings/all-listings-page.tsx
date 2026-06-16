@@ -21,6 +21,7 @@ import { getUserAccessToken } from '@/lib/user-auth';
 import { FavoriteButton } from './favorite-button';
 import { ListingCardsSkeleton } from './listing-card-skeleton';
 import { ListingMediaCover } from './listing-media-cover';
+import { ListingTitleWithVerified } from '@/components/trust-badge/listing-verified-badge';
 
 type Category = {
   id: string;
@@ -58,7 +59,9 @@ type Listing = {
     nameEn: string;
     slug: string;
     logoUrl?: string | null;
+    trustBadgeApproved?: boolean;
   } | null;
+  trustBadgeApproved?: boolean;
 };
 
 type ListingsResponse = {
@@ -418,7 +421,7 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
   ) : displayedListings.length === 0 ? (
     <div className="rounded-xl bg-white p-8 text-center font-bold text-gray-500 shadow-sm">{pageMessages.empty}</div>
   ) : (
-    <div className={`grid grid-cols-1 gap-6 md:grid-cols-2 ${isCategoryPage ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
       {displayedListings.map((listing) => (
         <ListingCard
           key={listing.id}
@@ -505,8 +508,137 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
     </div>
   );
 
+  const subcategoryChipRows = (levels: typeof subcategoryLevels) =>
+    levels.map((level) => (
+      <div
+        key={`${level.parentId}-${level.levelIndex}`}
+        className="filter-chips-shell -mx-4 mb-4 px-4 sm:mx-0 sm:px-0"
+      >
+        <div className="filter-chips-scroll flex gap-2 overflow-x-auto pb-2">
+          <span className="shrink-0 self-center text-sm font-bold text-gray-500">{level.title}:</span>
+          <button
+            onClick={() => handleSubcategorySelect(level.levelIndex, '')}
+            className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 transition ${!level.selectedId ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+          >
+            {pageMessages.all}
+          </button>
+          {level.options.map((category) => (
+            <button
+              key={category.id}
+              onClick={() =>
+                handleSubcategorySelect(level.levelIndex, level.selectedId === category.id ? '' : category.id)
+              }
+              className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 transition ${level.selectedId === category.id ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+            >
+              {category.name}
+            </button>
+          ))}
+        </div>
+      </div>
+    ));
+
+  const secondaryFilterContent = (
+    <>
+      {categoryFilters.map((filter) => (
+        <FilterSection key={filter.id} title={filter.title}>
+          {filter.options.map((option) => (
+            <FilterChip
+              key={option.id}
+              active={selectedFilterOptionIds.includes(option.id)}
+              onClick={() => toggleFilterOption(option.id)}
+            >
+              {option.label}
+            </FilterChip>
+          ))}
+        </FilterSection>
+      ))}
+
+      <FilterSection title={pageMessages.selectCity}>
+        <FilterChip
+          active={!city}
+          onClick={() => {
+            setCity('');
+            setWilayah('');
+          }}
+        >
+          {pageMessages.all}
+        </FilterChip>
+        {omanGovernorates.map((governorate) => (
+          <FilterChip
+            key={governorate.value}
+            active={city === governorate.value}
+            onClick={() => {
+              if (city === governorate.value) {
+                setCity('');
+                setWilayah('');
+              } else {
+                setCity(governorate.value);
+                setWilayah('');
+              }
+            }}
+          >
+            {locale === 'en' ? governorate.en : governorate.ar}
+          </FilterChip>
+        ))}
+      </FilterSection>
+
+      {city && wilayahOptions.length > 0 ? (
+        <FilterSection title={pageMessages.selectWilayah}>
+          <FilterChip active={!wilayah} onClick={() => setWilayah('')}>
+            {pageMessages.allWilayahsInGovernorate}
+          </FilterChip>
+          {wilayahOptions.map((wilayahOption) => (
+            <FilterChip
+              key={wilayahOption.value}
+              active={wilayah === wilayahOption.value}
+              onClick={() => setWilayah(wilayah === wilayahOption.value ? '' : wilayahOption.value)}
+            >
+              {locale === 'en' ? wilayahOption.en : wilayahOption.ar}
+            </FilterChip>
+          ))}
+        </FilterSection>
+      ) : null}
+
+      <FilterSection title={pageMessages.priceRange}>{priceSlider}</FilterSection>
+
+      <div className="flex gap-2 pt-2">
+        <button
+          onClick={applyFilters}
+          className="flex-1 rounded-lg bg-green-600 px-4 py-2 font-bold text-white transition hover:bg-green-700"
+        >
+          {pageMessages.applyFilters}
+        </button>
+        <button
+          onClick={resetFilters}
+          className="rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-50"
+        >
+          {pageMessages.resetFilters}
+        </button>
+      </div>
+    </>
+  );
+
+  const desktopSubcategoryFilters = subcategoryLevels.map((level) => (
+    <FilterSection key={`${level.parentId}-${level.levelIndex}`} title={level.title}>
+      <FilterChip active={!level.selectedId} onClick={() => handleSubcategorySelect(level.levelIndex, '')}>
+        {pageMessages.all}
+      </FilterChip>
+      {level.options.map((category) => (
+        <FilterChip
+          key={category.id}
+          active={level.selectedId === category.id}
+          onClick={() =>
+            handleSubcategorySelect(level.levelIndex, level.selectedId === category.id ? '' : category.id)
+          }
+        >
+          {category.name}
+        </FilterChip>
+      ))}
+    </FilterSection>
+  ));
+
   const filterSidebar = (
-    <aside className="lg:col-span-1">
+    <aside className="hidden min-w-0 lg:col-span-1 lg:block">
       <div className="rounded-lg bg-white p-6 shadow-sm lg:sticky" style={{ top: headerOffset || 16 }}>
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-lg font-bold">{pageMessages.filters}</h2>
@@ -518,104 +650,20 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
           className="filter-sidebar-scrollbar space-y-6 overflow-y-auto"
           style={{ maxHeight: headerOffset ? `calc(100vh - ${headerOffset}px - 1rem)` : 'calc(100vh - 12rem)' }}
         >
-          {subcategoryLevels.map((level) => (
-            <FilterSection key={`${level.parentId}-${level.levelIndex}`} title={level.title}>
-              <FilterChip active={!level.selectedId} onClick={() => handleSubcategorySelect(level.levelIndex, '')}>
-                {pageMessages.all}
-              </FilterChip>
-              {level.options.map((category) => (
-                <FilterChip
-                  key={category.id}
-                  active={level.selectedId === category.id}
-                  onClick={() =>
-                    handleSubcategorySelect(level.levelIndex, level.selectedId === category.id ? '' : category.id)
-                  }
-                >
-                  {category.name}
-                </FilterChip>
-              ))}
-            </FilterSection>
-          ))}
-
-          {categoryFilters.map((filter) => (
-            <FilterSection key={filter.id} title={filter.title}>
-              {filter.options.map((option) => (
-                <FilterChip
-                  key={option.id}
-                  active={selectedFilterOptionIds.includes(option.id)}
-                  onClick={() => toggleFilterOption(option.id)}
-                >
-                  {option.label}
-                </FilterChip>
-              ))}
-            </FilterSection>
-          ))}
-
-          <FilterSection title={pageMessages.selectCity}>
-            <FilterChip
-              active={!city}
-              onClick={() => {
-                setCity('');
-                setWilayah('');
-              }}
-            >
-              {pageMessages.all}
-            </FilterChip>
-            {omanGovernorates.map((governorate) => (
-              <FilterChip
-                key={governorate.value}
-                active={city === governorate.value}
-                onClick={() => {
-                  if (city === governorate.value) {
-                    setCity('');
-                    setWilayah('');
-                  } else {
-                    setCity(governorate.value);
-                    setWilayah('');
-                  }
-                }}
-              >
-                {locale === 'en' ? governorate.en : governorate.ar}
-              </FilterChip>
-            ))}
-          </FilterSection>
-
-          {city && wilayahOptions.length > 0 ? (
-            <FilterSection title={pageMessages.selectWilayah}>
-              <FilterChip active={!wilayah} onClick={() => setWilayah('')}>
-                {pageMessages.allWilayahsInGovernorate}
-              </FilterChip>
-              {wilayahOptions.map((wilayahOption) => (
-                <FilterChip
-                  key={wilayahOption.value}
-                  active={wilayah === wilayahOption.value}
-                  onClick={() => setWilayah(wilayah === wilayahOption.value ? '' : wilayahOption.value)}
-                >
-                  {locale === 'en' ? wilayahOption.en : wilayahOption.ar}
-                </FilterChip>
-              ))}
-            </FilterSection>
-          ) : null}
-
-          <FilterSection title={pageMessages.priceRange}>{priceSlider}</FilterSection>
-
-          <div className="flex gap-2 pt-2">
-            <button
-              onClick={applyFilters}
-              className="flex-1 rounded-lg bg-green-600 px-4 py-2 font-bold text-white transition hover:bg-green-700"
-            >
-              {pageMessages.applyFilters}
-            </button>
-            <button
-              onClick={resetFilters}
-              className="rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-50"
-            >
-              {pageMessages.resetFilters}
-            </button>
-          </div>
+          {desktopSubcategoryFilters}
+          {secondaryFilterContent}
         </div>
       </div>
     </aside>
+  );
+
+  const mobileFiltersPanel = (
+    <div className="mb-6 lg:hidden">
+      <details className="rounded-lg bg-white p-4 shadow-sm">
+        <summary className="cursor-pointer text-sm font-bold text-gray-900">{pageMessages.filters}</summary>
+        <div className="mt-4 space-y-6">{secondaryFilterContent}</div>
+      </details>
+    </div>
   );
 
   return (
@@ -624,7 +672,7 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
         <SiteHeaderSearch />
       </UserSiteHeader>
 
-      <main className="mx-auto max-w-7xl px-4 py-8">
+      <main className="site-container site-page-main min-w-0">
         <div className="mb-8">
           <h1 className="mb-2 text-3xl font-bold">{activeCategory?.name ?? pageMessages.title}</h1>
           <p className="text-gray-600">
@@ -634,65 +682,47 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
 
         {!isCategoryPage ? (
           <>
-            <div className="filter-chips-scroll mb-4 flex gap-2 overflow-x-auto pb-2">
-              <button
-                onClick={clearRootCategory}
-                className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 transition ${!appliedCategoryId ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-              >
-                {pageMessages.all}
-              </button>
-              {isLoadingCategories
-                ? Array.from({ length: 8 }).map((_, index) => (
-                    <div
-                      key={index}
-                      className="h-9 shrink-0 animate-pulse rounded-full bg-slate-200"
-                      style={{ width: 72 + (index % 3) * 16 }}
-                    />
-                  ))
-                : rootCategories.map((category) => (
-                    <button
-                      key={category.id}
-                      onClick={() =>
-                        appliedCategoryId === category.id ? clearRootCategory() : selectRootCategory(category.id)
-                      }
-                      className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 transition ${appliedCategoryId === category.id ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                    >
-                      {category.name}
-                    </button>
-                  ))}
-            </div>
-
-            {allListingsSubcategoryLevels.map((level) => (
-              <div
-                key={`${level.parentId}-${level.levelIndex}`}
-                className="filter-chips-scroll mb-6 flex gap-2 overflow-x-auto pb-2"
-              >
-                <span className="shrink-0 self-center text-sm font-bold text-gray-500">{level.title}:</span>
+            <div className="filter-chips-shell -mx-4 mb-4 px-4 sm:mx-0 sm:px-0">
+              <div className="filter-chips-scroll flex gap-2 overflow-x-auto pb-2">
                 <button
-                  onClick={() => handleSubcategorySelect(level.levelIndex, '')}
-                  className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 transition ${!level.selectedId ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                  onClick={clearRootCategory}
+                  className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 transition ${!appliedCategoryId ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
                 >
                   {pageMessages.all}
                 </button>
-                {level.options.map((category) => (
-                  <button
-                    key={category.id}
-                    onClick={() =>
-                      handleSubcategorySelect(level.levelIndex, level.selectedId === category.id ? '' : category.id)
-                    }
-                    className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 transition ${level.selectedId === category.id ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                  >
-                    {category.name}
-                  </button>
-                ))}
+                {isLoadingCategories
+                  ? Array.from({ length: 8 }).map((_, index) => (
+                      <div
+                        key={index}
+                        className="h-9 shrink-0 animate-pulse rounded-full bg-slate-200"
+                        style={{ width: 72 + (index % 3) * 16 }}
+                      />
+                    ))
+                  : rootCategories.map((category) => (
+                      <button
+                        key={category.id}
+                        onClick={() =>
+                          appliedCategoryId === category.id ? clearRootCategory() : selectRootCategory(category.id)
+                        }
+                        className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 transition ${appliedCategoryId === category.id ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                      >
+                        {category.name}
+                      </button>
+                    ))}
               </div>
-            ))}
-          </>
-        ) : null}
+            </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+            {subcategoryChipRows(allListingsSubcategoryLevels)}
+          </>
+        ) : (
+          subcategoryChipRows(subcategoryLevels)
+        )}
+
+        {mobileFiltersPanel}
+
+        <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-4">
           {filterSidebar}
-          <section className="lg:col-span-3">
+          <section className="min-w-0 lg:col-span-3">
             {sortBar}
             {listingsGrid}
             <LoadMoreButton
@@ -758,7 +788,13 @@ function ListingCard({
         ) : null}
       </div>
       <div className="p-4">
-        <h3 className="mb-2 line-clamp-1 text-base font-bold text-gray-900">{listing.title}</h3>
+        <ListingTitleWithVerified
+          title={listing.title}
+          verified={listing.trustBadgeApproved}
+          label={m.trustBadge.verifiedLabel}
+          titleClassName="line-clamp-1 text-base"
+          className="mb-2"
+        />
         <div className="mb-3 flex items-center justify-between">
           <p className="text-xl font-bold text-green-600">{formatPrice(listing.price, listing.currency)}</p>
         </div>

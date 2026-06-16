@@ -264,17 +264,17 @@ export function ChatConversationPage({ conversationId }: { conversationId: strin
       <UserSiteHeader />
 
       {isLoading ? (
-        <main className="mx-auto max-w-7xl px-4 py-8">
+        <main className="site-container site-page-main min-w-0">
           <div className="rounded-2xl bg-white p-10 text-center font-bold text-gray-500 shadow-sm">{text.loading}</div>
         </main>
       ) : error && !conversation ? (
-        <main className="mx-auto max-w-7xl px-4 py-8">
+        <main className="site-container site-page-main min-w-0">
           <div className="rounded-2xl bg-white p-10 text-center font-bold text-red-600 shadow-sm">{error}</div>
         </main>
       ) : conversation ? (
         <div className="flex max-h-[90vh] flex-col bg-gray-50 lg:h-[calc(100vh-132px)] lg:max-h-none" dir={dir}>
-          <div className="sticky top-[100px] z-30 border-b border-gray-200 bg-white px-4 py-3 lg:static">
-            <div className="mx-auto flex max-w-7xl items-center justify-between">
+          <div className="sticky top-[100px] z-30 border-b border-gray-200 bg-white py-3 lg:static">
+            <div className="site-container flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Link className="rounded-lg p-2 transition hover:bg-gray-100" href={localizedPath('/chats')}>
                   <ArrowRight size={20} />
@@ -307,7 +307,7 @@ export function ChatConversationPage({ conversationId }: { conversationId: strin
             </div>
           </div>
 
-          <div className="mx-auto grid min-h-0 w-full max-w-7xl flex-1 gap-4 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="site-container grid min-h-0 w-full flex-1 gap-4 py-4 lg:grid-cols-[minmax(0,1fr)_320px]">
             <div className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-gray-50">
               <div className="border-b border-gray-200 bg-white lg:hidden">
                 <AdSummaryCard ad={conversation.ad} locale={locale} localizedPath={localizedPath} text={text.aboutAd} />

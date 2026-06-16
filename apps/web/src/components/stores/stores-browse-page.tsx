@@ -7,6 +7,7 @@ import { useSearchParams } from 'next/navigation';
 
 import { SiteFooter } from '@/components/home/site-footer';
 import { FilterChipsSkeleton, StoreCardsSkeleton } from '@/components/stores/store-card-skeleton';
+import { VerifiedBadge } from '@/components/trust-badge/verified-badge';
 import { UserSiteHeader, SiteHeaderSearch } from '@/components/navigation/user-site-header';
 import { useSiteHeaderOffset } from '@/hooks/use-site-header-offset';
 import { api } from '@/lib/api';
@@ -34,6 +35,7 @@ type PublicStore = {
   city?: string | null;
   wilayah?: string | null;
   listingsCount: number;
+  trustBadgeApproved?: boolean;
   rootCategory?: { id: string; nameAr: string; nameEn: string; slug: string };
   storeType?: StoreType | null;
 };
@@ -132,7 +134,7 @@ export function StoresBrowsePage() {
         <SiteHeaderSearch />
       </UserSiteHeader>
 
-      <main className="mx-auto max-w-7xl px-4 py-8">
+      <main className="site-container site-page-main min-w-0">
         <div className="mb-8">
           <h1 className="mb-2 text-3xl font-black text-gray-900">{text.title}</h1>
           <p className="text-gray-600">{text.subtitle}</p>
@@ -141,8 +143,90 @@ export function StoresBrowsePage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
-          <aside className="lg:col-span-1">
+        <div className="filter-chips-shell -mx-4 mb-6 px-4 lg:hidden">
+          {isLoadingStoreTypes ? (
+            <FilterChipsSkeleton count={6} />
+          ) : (
+            <div className="filter-chips-scroll flex gap-2 overflow-x-auto pb-2">
+              <MobileFilterChip active={!storeTypeId} onClick={() => setStoreTypeId('')}>
+                {text.allStoreTypes}
+              </MobileFilterChip>
+              {storeTypes.map((storeType) => (
+                <MobileFilterChip
+                  key={storeType.id}
+                  active={storeTypeId === storeType.id}
+                  onClick={() => setStoreTypeId(storeTypeId === storeType.id ? '' : storeType.id)}
+                >
+                  {locale === 'en' ? storeType.nameEn : storeType.nameAr}
+                </MobileFilterChip>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="mb-6 lg:hidden">
+          <details className="rounded-lg bg-white p-4 shadow-sm">
+            <summary className="cursor-pointer text-sm font-bold text-gray-900">{text.filters}</summary>
+            <div className="filter-chips-shell -mx-4 mt-4 space-y-4 px-4">
+              <FilterSection title={text.governorateFilter} defaultOpen>
+                <SidebarFilterChip
+                  active={!city}
+                  onClick={() => {
+                    setCity('');
+                    setWilayah('');
+                  }}
+                >
+                  {text.allCities}
+                </SidebarFilterChip>
+                {omanGovernorates.map((governorate) => (
+                  <SidebarFilterChip
+                    key={governorate.value}
+                    active={city === governorate.value}
+                    onClick={() => {
+                      if (city === governorate.value) {
+                        setCity('');
+                        setWilayah('');
+                      } else {
+                        setCity(governorate.value);
+                        setWilayah('');
+                      }
+                    }}
+                  >
+                    {locale === 'en' ? governorate.en : governorate.ar}
+                  </SidebarFilterChip>
+                ))}
+              </FilterSection>
+
+              {city && wilayahOptions.length > 0 ? (
+                <FilterSection title={text.allWilayahs} defaultOpen>
+                  <SidebarFilterChip active={!wilayah} onClick={() => setWilayah('')}>
+                    {text.allWilayahsInGovernorate}
+                  </SidebarFilterChip>
+                  {wilayahOptions.map((wilayahOption) => (
+                    <SidebarFilterChip
+                      key={wilayahOption.value}
+                      active={wilayah === wilayahOption.value}
+                      onClick={() => setWilayah(wilayah === wilayahOption.value ? '' : wilayahOption.value)}
+                    >
+                      {locale === 'en' ? wilayahOption.en : wilayahOption.ar}
+                    </SidebarFilterChip>
+                  ))}
+                </FilterSection>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm font-bold transition hover:bg-gray-50"
+              >
+                {text.resetFilters}
+              </button>
+            </div>
+          </details>
+        </div>
+
+        <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-4">
+          <aside className="hidden min-w-0 lg:col-span-1 lg:block">
             <div className="rounded-lg bg-white p-6 shadow-sm lg:sticky" style={{ top: headerOffset || 16 }}>
               <div className="mb-6 flex items-center justify-between">
                 <h2 className="text-lg font-bold">{text.filters}</h2>
@@ -233,7 +317,7 @@ export function StoresBrowsePage() {
             </div>
           </aside>
 
-          <section className="lg:col-span-3">
+          <section className="min-w-0 lg:col-span-3">
             {error ? <p className="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</p> : null}
 
             {showStoreSkeleton ? (
@@ -245,7 +329,7 @@ export function StoresBrowsePage() {
             ) : (
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {stores.map((store) => (
-                  <StoreCard key={store.id} store={store} locale={locale} localizedPath={localizedPath} text={text} />
+                  <StoreCard key={store.id} store={store} locale={locale} localizedPath={localizedPath} text={text} verifiedLabel={m.trustBadge.verifiedLabel} />
                 ))}
               </div>
             )}
@@ -275,12 +359,14 @@ function StoreCard({
   store,
   locale,
   localizedPath,
-  text
+  text,
+  verifiedLabel
 }: {
   store: PublicStore;
   locale: 'ar' | 'en';
   localizedPath: (href: string) => string;
   text: (typeof import('@/lib/locales/en.json'))['storesBrowse'];
+  verifiedLabel: string;
 }) {
   const name = locale === 'en' ? store.nameEn : store.nameAr;
   const bio = locale === 'en' ? store.bioEn : store.bioAr;
@@ -299,12 +385,20 @@ function StoreCard({
           className={`h-full w-full transition-transform duration-500 group-hover:scale-105 ${store.coverUrl ? 'object-cover' : 'object-contain p-8'}`}
         />
         <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/50 to-transparent" />
-        <div className="absolute bottom-3 start-3 flex items-center gap-2">
-          <img
-            src={store.logoUrl || fallbackImage}
-            alt=""
-            className="h-11 w-11 rounded-xl border-2 border-white bg-white object-cover shadow"
-          />
+        <div className="absolute bottom-3 start-3">
+          <div className="relative">
+            <img
+              src={store.logoUrl || fallbackImage}
+              alt=""
+              className="h-11 w-11 rounded-xl border-2 border-white bg-white object-cover shadow"
+            />
+            {store.trustBadgeApproved ? (
+              <VerifiedBadge
+                title={verifiedLabel}
+                className="absolute -bottom-0.5 -end-0.5 border-2 border-white"
+              />
+            ) : null}
+          </div>
         </div>
       </div>
       <div className="p-4">
@@ -333,11 +427,19 @@ function StoreCard({
   );
 }
 
-function FilterSection({ children, title }: { children: ReactNode; title: string }) {
-  const [isOpen, setIsOpen] = useState(false);
+function FilterSection({
+  children,
+  title,
+  defaultOpen = false
+}: {
+  children: ReactNode;
+  title: string;
+  defaultOpen?: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div>
+    <div className="min-w-0">
       <button
         className="mb-3 flex w-full items-center justify-between"
         onClick={() => setIsOpen((current) => !current)}
@@ -346,8 +448,30 @@ function FilterSection({ children, title }: { children: ReactNode; title: string
         <h3 className="text-sm font-bold">{title}</h3>
         <ChevronDown size={18} className={`transition ${isOpen ? 'rotate-180' : ''}`} />
       </button>
-      {isOpen ? <div className="flex flex-wrap gap-2">{children}</div> : null}
+      {isOpen ? <div className="flex min-w-0 flex-wrap gap-2">{children}</div> : null}
     </div>
+  );
+}
+
+function MobileFilterChip({
+  active,
+  onClick,
+  children
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-bold transition ${
+        active ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 shadow-sm hover:bg-gray-100'
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 

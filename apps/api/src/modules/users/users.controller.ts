@@ -23,6 +23,14 @@ export class UsersController {
     res.json({ data: await usersService.verifyEmailChange(req.user!.id, req.body) });
   }
 
+  async requestPhoneVerification(req: Request, res: Response) {
+    res.json({ data: await usersService.requestPhoneVerification(req.user!.id, req.body) });
+  }
+
+  async verifyPhone(req: Request, res: Response) {
+    res.json({ data: await usersService.verifyPhone(req.user!.id, req.body) });
+  }
+
   async list(_req: Request, res: Response) {
     res.json({ data: await usersService.list() });
   }

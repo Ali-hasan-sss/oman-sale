@@ -19,6 +19,11 @@ import {
   updateBannerPricingSchema
 } from '../banner-requests/banner-requests.validation';
 import { heroController } from '../hero/hero.controller';
+import { trustBadgeController } from '../trust-badge/trust-badge.controller';
+import {
+  listTrustBadgeQuerySchema,
+  rejectTrustBadgeSchema
+} from '../trust-badge/trust-badge.validation';
 import {
   createHeaderNavButtonSchema,
   createHeroBannerSchema,
@@ -393,4 +398,43 @@ adminRoutes.delete(
   authorize(UserRole.ADMIN),
   validateRequest({ params: idParams }),
   asyncHandler(storesController.removeForAdmin)
+);
+
+const userIdParams = z.object({ userId: z.string().uuid() });
+const storeIdParams = z.object({ storeId: z.string().uuid() });
+
+adminRoutes.get('/trust-badges/pending-count', asyncHandler(trustBadgeController.countPending));
+adminRoutes.get(
+  '/trust-badges/users',
+  validateRequest({ query: listTrustBadgeQuerySchema }),
+  asyncHandler(trustBadgeController.listUsersForAdmin)
+);
+adminRoutes.get(
+  '/trust-badges/stores',
+  validateRequest({ query: listTrustBadgeQuerySchema }),
+  asyncHandler(trustBadgeController.listStoresForAdmin)
+);
+adminRoutes.post(
+  '/trust-badges/users/:userId/approve',
+  authorize(UserRole.ADMIN, UserRole.MODERATOR),
+  validateRequest({ params: userIdParams }),
+  asyncHandler(trustBadgeController.approveUser)
+);
+adminRoutes.post(
+  '/trust-badges/users/:userId/reject',
+  authorize(UserRole.ADMIN, UserRole.MODERATOR),
+  validateRequest({ params: userIdParams, body: rejectTrustBadgeSchema }),
+  asyncHandler(trustBadgeController.rejectUser)
+);
+adminRoutes.post(
+  '/trust-badges/stores/:storeId/approve',
+  authorize(UserRole.ADMIN, UserRole.MODERATOR),
+  validateRequest({ params: storeIdParams }),
+  asyncHandler(trustBadgeController.approveStore)
+);
+adminRoutes.post(
+  '/trust-badges/stores/:storeId/reject',
+  authorize(UserRole.ADMIN, UserRole.MODERATOR),
+  validateRequest({ params: storeIdParams, body: rejectTrustBadgeSchema }),
+  asyncHandler(trustBadgeController.rejectStore)
 );

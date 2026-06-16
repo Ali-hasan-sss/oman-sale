@@ -94,7 +94,7 @@ export function ArticleDetailsPage({ slug }: ArticleDetailsPageProps) {
     return (
       <div className="site-page-shell bg-slate-50">
         <UserSiteHeader />
-        <main className="mx-auto max-w-7xl px-3 py-5 sm:px-4 sm:py-6 lg:px-5">
+        <main className="site-container site-page-main min-w-0">
           <ArticleDetailSkeleton />
         </main>
         <SiteFooter />
@@ -106,7 +106,7 @@ export function ArticleDetailsPage({ slug }: ArticleDetailsPageProps) {
     return (
       <div className="site-page-shell bg-slate-50">
         <UserSiteHeader />
-        <main className="mx-auto max-w-7xl px-3 py-10 text-center text-slate-500 sm:px-4 lg:px-5">{m.articles.notFound}</main>
+        <main className="site-container site-page-main min-w-0 py-10 text-center text-slate-500">{m.articles.notFound}</main>
         <SiteFooter />
       </div>
     );
@@ -131,7 +131,7 @@ export function ArticleDetailsPage({ slug }: ArticleDetailsPageProps) {
   return (
     <div className="site-page-shell bg-slate-50">
       <UserSiteHeader />
-      <main className="mx-auto max-w-7xl px-3 py-5 sm:px-4 sm:py-6 lg:px-5">
+      <main className="site-container site-page-main min-w-0">
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:items-start lg:gap-6">
           {/* عمود الصور */}
           <div className="lg:sticky lg:top-24">
@@ -193,7 +193,7 @@ export function ArticleDetailsPage({ slug }: ArticleDetailsPageProps) {
                 </span>
               </div>
 
-              <div className="mt-6 flex flex-wrap items-center gap-4 border-y border-slate-100 py-4">
+              <div className="mt-6 flex min-w-0 flex-wrap items-center gap-4 border-y border-slate-100 py-4">
                 <ArticleReactions articleId={article.id} />
                 <ArticleSaveButton
                   articleId={article.id}

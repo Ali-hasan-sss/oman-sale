@@ -140,7 +140,7 @@ export function PricingPage() {
         <SiteHeaderSearch />
       </UserSiteHeader>
 
-      <main className="mx-auto max-w-7xl px-4 py-10">
+      <main className="site-container site-page-main min-w-0">
         <section className="mb-12 overflow-hidden rounded-3xl bg-gradient-to-br from-green-700 via-teal-700 to-slate-900 p-8 text-white shadow-lg md:p-12">
           <div className="max-w-3xl">
             <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1 text-sm font-bold">

@@ -109,7 +109,7 @@ export function TourismDestinationDetailsPage({ destinationId }: { destinationId
   };
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-8">
+    <main className="site-container site-page-main min-w-0">
       <div className="mb-6 flex items-center gap-2 text-sm text-gray-600">
         <Link className="hover:text-green-600" href={localizedPath('/')}>
           {homeLabel}

@@ -47,7 +47,7 @@ export function SiteFooter() {
 
   return (
     <footer className="bg-ink-950 text-white">
-      <div className="mx-auto max-w-7xl px-4 py-12">
+      <div className="site-container py-12">
         <div className="grid grid-cols-1 gap-8 border-b border-slate-800 pb-12 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <div className="mb-4 flex items-center gap-3">
@@ -74,7 +74,9 @@ export function SiteFooter() {
             title={m.footer.news}
             items={[
               [m.articles.pageTitle, '/news'],
-              [m.footer.pricing, '/pricing']
+              [m.footer.pricing, '/pricing'],
+              [m.footer.privacy, '/privacy'],
+              [m.footer.terms, '/terms']
             ]}
           />
           <FooterList title={m.footer.regions} items={footerRegions} />
@@ -82,7 +84,13 @@ export function SiteFooter() {
 
 
         <div className="flex flex-col items-center justify-between gap-4 pt-8 md:flex-row">
-          <p className="text-sm text-slate-400">{m.footer.copyright}</p>
+          <div className="flex flex-col items-center gap-2 text-center md:items-start md:text-start">
+            <p className="text-sm text-slate-400">{m.footer.copyright}</p>
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm md:justify-start">
+              <FooterLink href="/privacy" label={m.footer.privacy} />
+              <FooterLink href="/terms" label={m.footer.terms} />
+            </div>
+          </div>
           <div className="flex items-center gap-4">
             {[Twitter, Instagram, Facebook, Youtube].map((Icon, index) => (
               <Link
@@ -104,6 +112,16 @@ export function SiteFooter() {
         </div>
       </div>
     </footer>
+  );
+}
+
+function FooterLink({ href, label }: { href: string; label: string }) {
+  const { localizedPath } = useI18n();
+
+  return (
+    <Link href={localizedPath(href)} className="text-slate-400 transition hover:text-brand-500">
+      {label}
+    </Link>
   );
 }
 

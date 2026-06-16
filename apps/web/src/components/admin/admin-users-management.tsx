@@ -4,8 +4,8 @@ import { Eye, Power, PowerOff, Search, ShieldCheck, ShieldOff, UserCheck, UserX 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
-import { AdminEntityAvatar } from '@/components/admin/admin-entity-avatar';
 import { AdminTableSkeleton } from '@/components/admin/admin-table-skeleton';
+import { VerifiedEntityAvatar } from '@/components/trust-badge/verified-entity-avatar';
 import { adminApi } from '@/lib/admin-auth';
 import { useI18n } from '@/lib/i18n';
 
@@ -19,6 +19,7 @@ type ManagedUser = {
   isVerified: boolean;
   isActive: boolean;
   isBlocked: boolean;
+  trustBadgeApproved?: boolean;
   createdAt: string;
   _count: {
     ads: number;
@@ -146,7 +147,13 @@ export function AdminUsersManagement() {
                   <tr key={user.id} className="border-b border-slate-100">
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-3">
-                        <AdminEntityAvatar src={user.avatar} name={user.fullName} className="h-11 w-11 rounded-xl" />
+                        <VerifiedEntityAvatar
+                          src={user.avatar}
+                          name={user.fullName}
+                          className="h-11 w-11 rounded-xl"
+                          verified={user.trustBadgeApproved}
+                          verifiedTitle={m.trustBadge.verifiedLabel}
+                        />
                         <div className="min-w-0">
                           <div className="font-bold text-slate-900">{user.fullName}</div>
                           <div className="text-slate-500">{user.email}</div>

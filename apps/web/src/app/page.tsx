@@ -16,7 +16,7 @@ export default function HomePage() {
         <HeroSection />
         <HeroBannersSection />
         <CreateStoreBanner />
-        <main className="mx-auto max-w-7xl px-4 py-10">
+        <main className="site-container site-page-main min-w-0">
           <CategoriesSection />
           <LatestListingsSection />
           <ArticlesSection />

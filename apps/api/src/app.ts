@@ -27,6 +27,7 @@ import { searchRoutes } from './modules/search/search.routes';
 import { assistantRoutes } from './modules/assistant/assistant.routes';
 import { articlesRoutes } from './modules/articles/articles.routes';
 import { tourismRoutes } from './modules/tourism/tourism.routes';
+import { trustBadgeRoutes } from './modules/trust-badge/trust-badge.routes';
 import { usersRoutes } from './modules/users/users.routes';
 import { errorHandler } from './shared/middleware/error-handler';
 import { notFoundHandler } from './shared/middleware/not-found';
@@ -66,6 +67,7 @@ app.get('/api/v1/health', (_req, res) => {
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', usersRoutes);
+app.use('/api/v1/trust-badge', trustBadgeRoutes);
 app.use('/api/v1/ads', adsRoutes);
 app.use('/api/v1/banner-requests', bannerRequestsRoutes);
 app.use('/api/v1/categories', categoriesRoutes);

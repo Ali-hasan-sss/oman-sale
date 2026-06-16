@@ -168,14 +168,14 @@ export function ChatsPage() {
     <div className="site-page-shell bg-gray-50" dir={dir}>
       <UserSiteHeader />
 
-      <main className="mx-auto max-w-7xl px-4 py-8" dir={dir}>
-        <div className="mb-8">
-          <h1 className="mb-2 text-3xl font-bold">{text.title}</h1>
-          <p className="text-gray-600">{text.subtitle}</p>
+      <main className="site-container site-page-main site-page-main--compact min-w-0" dir={dir}>
+        <div className="mb-5 sm:mb-6">
+          <h1 className="mb-1 text-2xl font-bold sm:mb-2 sm:text-3xl">{text.title}</h1>
+          <p className="text-sm text-gray-600 sm:text-base">{text.subtitle}</p>
         </div>
 
-        <div className="overflow-hidden rounded-xl bg-white shadow-sm">
-          <div className="border-b border-gray-200 p-4">
+        <div className="-mx-3 overflow-hidden rounded-none bg-white shadow-sm sm:mx-0 sm:rounded-xl">
+          <div className="border-b border-gray-200 p-3 sm:p-4">
             <div className="relative">
               <Search className={`absolute top-1/2 -translate-y-1/2 text-gray-400 ${dir === 'rtl' ? 'right-3' : 'left-3'}`} size={20} />
               <input
@@ -191,7 +191,7 @@ export function ChatsPage() {
           {isLoading ? (
             <ChatConversationsSkeleton />
           ) : filteredConversations.length === 0 ? (
-            <div className="p-8 text-center font-bold text-gray-500">{text.empty}</div>
+            <div className="p-6 text-center text-sm font-bold text-gray-500 sm:p-8">{text.empty}</div>
           ) : (
             <div className="divide-y divide-gray-200">
               {filteredConversations.map((conversation) => (
@@ -219,7 +219,7 @@ function ChatConversationsSkeleton() {
   return (
     <div className="divide-y divide-gray-200">
       {Array.from({ length: 6 }).map((_, index) => (
-        <div key={index} className="flex items-start gap-4 p-4">
+        <div key={index} className="flex items-start gap-3 p-3 sm:gap-4 sm:p-4">
           <div className="h-16 w-16 flex-shrink-0 animate-pulse rounded-lg bg-slate-200" />
           <div className="min-w-0 flex-1 space-y-3">
             <div className="flex items-start justify-between gap-3">
@@ -262,7 +262,7 @@ function ConversationRow({
   const image = conversation.ad.images?.[0]?.imageUrl ?? fallbackImage;
 
   return (
-    <Link className="flex items-start gap-4 p-4 transition hover:bg-gray-50" href={localizedPath(`/chat/${conversation.id}`)}>
+    <Link className="flex items-start gap-3 p-3 transition hover:bg-gray-50 sm:gap-4 sm:p-4" href={localizedPath(`/chat/${conversation.id}`)}>
       <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg">
         <img src={image} alt={conversation.ad.title} className="h-full w-full object-cover" />
       </div>

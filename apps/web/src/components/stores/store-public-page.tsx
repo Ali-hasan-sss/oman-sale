@@ -11,6 +11,8 @@ import { FavoriteButton } from '@/components/listings/favorite-button';
 import { ListingCardsSkeleton } from '@/components/listings/listing-card-skeleton';
 import { ListingMediaCover } from '@/components/listings/listing-media-cover';
 import { StorePublicPageSkeleton } from '@/components/stores/store-public-page-skeleton';
+import { ListingTitleWithVerified } from '@/components/trust-badge/listing-verified-badge';
+import { VerifiedBadge } from '@/components/trust-badge/verified-badge';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { getListingLocationLabel, getStoreLocationLabel } from '@/lib/oman-locations';
@@ -28,6 +30,7 @@ type PublicStore = {
   city?: string | null;
   wilayah?: string | null;
   listingsCount: number;
+  trustBadgeApproved?: boolean;
   rootCategory?: { id: string; nameAr: string; nameEn: string; slug: string };
   storeType?: { id: string; nameAr: string; nameEn: string; slug: string; icon?: string | null } | null;
   owner?: { id: string; fullName: string; avatar?: string | null } | null;
@@ -44,6 +47,7 @@ type StoreListing = {
   images?: Array<{ imageUrl: string }>;
   category?: { nameAr?: string; nameEn?: string; name?: string };
   promotion?: { plan?: { badgeLabel?: string | null } | null } | null;
+  trustBadgeApproved?: boolean;
 };
 
 type ListingsResponse = {
@@ -128,7 +132,7 @@ export function StorePublicPage({ slug }: { slug: string }) {
       {isLoadingStore ? (
         <StorePublicPageSkeleton />
       ) : !store ? (
-        <div className="mx-auto max-w-3xl px-4 py-24 text-center">
+        <div className="site-container site-page-main site-page-main--narrower min-w-0 py-24 text-center">
           <p className="mb-6 text-gray-600">{error || text.notFound}</p>
           <Link href={localizedPath('/stores')} className="inline-flex rounded-xl bg-green-600 px-6 py-3 font-bold text-white">
             {text.backToStores}
@@ -153,7 +157,7 @@ export function StorePublicPage({ slug }: { slug: string }) {
           </section>
 
           <section className="bg-gray-50 pb-8">
-            <div className="mx-auto max-w-7xl px-4">
+            <div className="site-container">
               <div className="relative z-10 -mt-14 md:-mt-[4.5rem]">
                 <div className="rounded-3xl border border-white/50 bg-white/55 p-6 shadow-xl backdrop-blur-md md:p-8">
                   <div className="flex flex-col gap-6 md:flex-row md:items-start">
@@ -161,17 +165,33 @@ export function StorePublicPage({ slug }: { slug: string }) {
                       <button
                         type="button"
                         onClick={() => setLightboxImage('logo')}
-                        className="-mt-16 h-24 w-24 shrink-0 cursor-zoom-in self-start rounded-2xl border-4 border-white/80 bg-white/70 shadow-lg backdrop-blur-sm md:-mt-20 md:h-28 md:w-28"
+                        className="relative -mt-16 h-24 w-24 shrink-0 cursor-zoom-in self-start rounded-2xl border-4 border-white/80 bg-white/70 shadow-lg backdrop-blur-sm md:-mt-20 md:h-28 md:w-28"
                         aria-label={storeName}
                       >
                         <img src={store.logoUrl} alt={storeName} className="h-full w-full rounded-[0.65rem] object-cover" />
+                        {store.trustBadgeApproved ? (
+                          <VerifiedBadge
+                            size="md"
+                            title={m.trustBadge.verifiedLabel}
+                            className="absolute -bottom-1 -end-1 border-2 border-white"
+                          />
+                        ) : null}
                       </button>
                     ) : (
-                      <img
-                        src={fallbackImage}
-                        alt={storeName}
-                        className="-mt-16 h-24 w-24 shrink-0 self-start rounded-2xl border-4 border-white/80 bg-white/70 object-contain p-3 shadow-lg backdrop-blur-sm md:-mt-20 md:h-28 md:w-28"
-                      />
+                      <div className="relative -mt-16 shrink-0 self-start md:-mt-20">
+                        <img
+                          src={fallbackImage}
+                          alt={storeName}
+                          className="h-24 w-24 rounded-2xl border-4 border-white/80 bg-white/70 object-contain p-3 shadow-lg backdrop-blur-sm md:h-28 md:w-28"
+                        />
+                        {store.trustBadgeApproved ? (
+                          <VerifiedBadge
+                            size="md"
+                            title={m.trustBadge.verifiedLabel}
+                            className="absolute -bottom-1 -end-1 border-2 border-white"
+                          />
+                        ) : null}
+                      </div>
                     )}
                     <div className="min-w-0 flex-1 md:pt-2">
                       <Link
@@ -226,7 +246,7 @@ export function StorePublicPage({ slug }: { slug: string }) {
             </div>
           </section>
 
-          <main className="mx-auto max-w-7xl px-4 pb-12">
+          <main className="site-container pb-12">
             <section className="mb-8">
               <div className="mb-6 flex items-center justify-between gap-4">
                 <h2 className="text-2xl font-black text-gray-900">{text.storeListings}</h2>
@@ -242,7 +262,14 @@ export function StorePublicPage({ slug }: { slug: string }) {
               ) : (
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {listings.map((listing) => (
-                    <ListingCard key={listing.id} listing={listing} locale={locale} localizedPath={localizedPath} featuredLabel={m.common.featured} />
+                    <ListingCard
+                      key={listing.id}
+                      listing={listing}
+                      locale={locale}
+                      localizedPath={localizedPath}
+                      featuredLabel={m.common.featured}
+                      verifiedLabel={m.trustBadge.verifiedLabel}
+                    />
                   ))}
                 </div>
               )}
@@ -280,12 +307,14 @@ function ListingCard({
   listing,
   locale,
   localizedPath,
-  featuredLabel
+  featuredLabel,
+  verifiedLabel
 }: {
   listing: StoreListing;
   locale: 'ar' | 'en';
   localizedPath: (href: string) => string;
   featuredLabel: string;
+  verifiedLabel: string;
 }) {
   const categoryName =
     (locale === 'en' ? listing.category?.nameEn : listing.category?.nameAr) ?? listing.category?.name ?? '';
@@ -319,7 +348,13 @@ function ListingCard({
         ) : null}
       </div>
       <div className="p-4">
-        <h3 className="mb-2 line-clamp-1 font-bold text-gray-900">{listing.title}</h3>
+        <ListingTitleWithVerified
+          title={listing.title}
+          verified={listing.trustBadgeApproved}
+          label={verifiedLabel}
+          titleClassName="line-clamp-1"
+          className="mb-2"
+        />
         <p className="mb-3 text-xl font-black text-green-600">{formatPrice(listing.price, listing.currency)}</p>
         <div className="flex items-center gap-1 text-sm text-gray-500">
           <MapPin size={16} className="text-gray-400" />

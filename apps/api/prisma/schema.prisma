@@ -12,6 +12,18 @@ enum UserRole {
   MODERATOR
 }
 
+enum TrustBadgeStatus {
+  NONE
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum TrustIdentityDocumentType {
+  NATIONAL_ID
+  PASSPORT
+}
+
 enum CategoryType {
   PRODUCT
   SERVICE
@@ -98,6 +110,7 @@ enum BannerRequestStatus {
 enum AuthCodePurpose {
   EMAIL_VERIFICATION
   PASSWORD_RESET
+  PHONE_VERIFICATION
 }
 
 enum StoreBillingPeriod {
@@ -147,11 +160,18 @@ model User {
   phone            String?   @unique
   password         String
   avatar           String?
+  googleId         String?   @unique
+  profileCompleted Boolean   @default(true)
   role             UserRole  @default(USER)
   bio              String?
   isVerified       Boolean   @default(false)
   isActive         Boolean   @default(true)
   isBlocked        Boolean   @default(false)
+  trustBadgeStatus TrustBadgeStatus @default(NONE)
+  trustIdentityDocType TrustIdentityDocumentType?
+  trustIdentityDocUrl String?
+  trustBadgeReviewedAt DateTime?
+  trustBadgeRejectionReason String?
   lastSeenAt       DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
@@ -175,6 +195,7 @@ model User {
 
   @@index([role])
   @@index([isActive, isBlocked])
+  @@index([trustBadgeStatus])
   @@index([createdAt])
   @@index([deletedAt])
 }
@@ -196,6 +217,7 @@ model RefreshToken {
 model AuthVerificationCode {
   id         String          @id @default(uuid())
   email      String
+  phone      String?
   codeHash   String
   purpose    AuthCodePurpose
   expiresAt  DateTime
@@ -206,6 +228,7 @@ model AuthVerificationCode {
   user       User?           @relation(fields: [userId], references: [id])
 
   @@index([email, purpose])
+  @@index([phone, purpose])
   @@index([userId])
   @@index([expiresAt])
 }
@@ -812,6 +835,14 @@ model Store {
   commercialRegistrationNumber String?
   workingHours   Json?
   isActive       Boolean  @default(false)
+  trustBadgeStatus TrustBadgeStatus @default(NONE)
+  trustCommercialRegDocUrl String?
+  trustOcciDocUrl String?
+  trustSmeDocUrl String?
+  trustOtherDocUrl String?
+  trustOtherDocLabel String?
+  trustBadgeReviewedAt DateTime?
+  trustBadgeRejectionReason String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   deletedAt      DateTime?
@@ -831,6 +862,7 @@ model Store {
   @@index([city])
   @@index([wilayah])
   @@index([isActive])
+  @@index([trustBadgeStatus])
   @@index([deletedAt])
 }
 

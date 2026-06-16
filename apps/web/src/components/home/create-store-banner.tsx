@@ -15,7 +15,7 @@ export function CreateStoreBanner() {
   if (hasStore) return null;
 
   return (
-    <section className="mx-auto max-w-7xl px-4 pb-2 pt-8">
+    <section className="site-container pb-2 pt-8">
       <div className="flex flex-col items-start justify-between gap-4 rounded-3xl bg-gradient-to-br from-emerald-600 to-green-700 p-6 text-white shadow-lg sm:flex-row sm:items-center">
         <div className="flex items-start gap-4">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15">

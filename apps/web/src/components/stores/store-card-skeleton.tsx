@@ -30,7 +30,8 @@ function StoreCardSkeleton() {
 
 export function FilterChipsSkeleton({ count = 6 }: { count?: number }) {
   return (
-    <div className="filter-chips-scroll flex gap-2 overflow-x-auto pb-2">
+    <div className="filter-chips-shell -mx-4 px-4 sm:mx-0 sm:px-0">
+      <div className="filter-chips-scroll flex gap-2 overflow-x-auto pb-2">
       {Array.from({ length: count }).map((_, index) => (
         <div
           key={index}
@@ -38,6 +39,7 @@ export function FilterChipsSkeleton({ count = 6 }: { count?: number }) {
           style={{ width: index === 0 ? 88 : 72 + (index % 3) * 16 }}
         />
       ))}
+      </div>
     </div>
   );
 }

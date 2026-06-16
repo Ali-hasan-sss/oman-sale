@@ -28,18 +28,28 @@ type UserTokens = UserAuthSession['tokens'];
 
 let refreshPromise: Promise<UserTokens> | undefined;
 
-const authPassthroughPaths = ['/auth/login', '/auth/register', '/auth/admin/login', '/auth/refresh'];
+const authPassthroughPaths = ['/auth/login', '/auth/register', '/auth/google', '/auth/admin/login', '/auth/refresh'];
 
 const isAuthPassthroughRequest = (url?: string) => {
   if (!url) return false;
   return authPassthroughPaths.some((path) => url.includes(path));
 };
 
-const getUserLoginPath = () => {
+const getUserLocalePath = (suffix: string) => {
   const pathLocale = window.location.pathname.split('/').filter(Boolean)[0];
   const storedLocale = window.localStorage.getItem('oman_sale_locale');
   const locale = pathLocale === 'en' || pathLocale === 'ar' ? pathLocale : storedLocale === 'en' ? 'en' : 'ar';
-  return `/${locale}/login`;
+  return `/${locale}${suffix}`;
+};
+
+const getUserLoginPath = () => getUserLocalePath('/login');
+
+const getCompleteProfilePath = () => getUserLocalePath('/complete-profile');
+
+const isOnCompleteProfilePage = () => {
+  if (typeof window === 'undefined') return false;
+  const path = window.location.pathname.replace(/^\/(ar|en)(?=\/|$)/, '') || '/';
+  return path === '/complete-profile' || path.startsWith('/complete-profile/');
 };
 
 const redirectToUserLogin = () => {
@@ -95,6 +105,11 @@ api.interceptors.response.use(
         useAuthStore.getState().markAccountRestricted('blocked');
       } else if (errorCode === ApiErrorCodes.ACCOUNT_INACTIVE) {
         useAuthStore.getState().markAccountRestricted('inactive');
+      } else if (errorCode === ApiErrorCodes.PROFILE_INCOMPLETE) {
+        if (!isOnCompleteProfilePage()) {
+          window.location.assign(getCompleteProfilePath());
+        }
+        throw error;
       }
     }
 

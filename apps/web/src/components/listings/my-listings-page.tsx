@@ -14,6 +14,7 @@ import { PlanPriceWithVat } from '@/components/pricing/plan-price-with-vat';
 import { getListingLocationLabel, getWilayahsForGovernorate, omanGovernorates } from '@/lib/oman-locations';
 import { getUserAccessToken } from '@/lib/user-auth';
 import { useAuthStore } from '@/store/auth-store';
+import { ListingTitleWithVerified } from '@/components/trust-badge/listing-verified-badge';
 import { ListingCardsSkeleton } from './listing-card-skeleton';
 import { ListingMediaCover } from './listing-media-cover';
 
@@ -54,6 +55,7 @@ type MyListing = {
       color?: string | null;
     } | null;
   } | null;
+  trustBadgeApproved?: boolean;
 };
 
 type PromotionPlan = {
@@ -263,7 +265,7 @@ export function MyListingsPage() {
         <SiteHeaderSearch />
       </UserSiteHeader>
 
-      <main className="mx-auto max-w-7xl px-4 py-8" dir={dir}>
+      <main className="site-container site-page-main min-w-0" dir={dir}>
         <div className="mb-8">
           <h1 className="mb-2 text-3xl font-bold">{text.title}</h1>
           <p className="text-gray-600">{text.subtitle}</p>
@@ -349,7 +351,7 @@ function ListingCard({
   onToggleSold: () => void;
   text: (typeof labels)['ar'];
 }) {
-  const { locale, localizedPath } = useI18n();
+  const { locale, localizedPath, m } = useI18n();
   const categoryName = (locale === 'en' ? listing.category?.nameEn : listing.category?.nameAr) || listing.category?.name || '';
   const area = getListingLocationLabel(listing.city, listing.wilayah, listing.area, locale) || '-';
   const promotionLabel =
@@ -373,7 +375,13 @@ function ListingCard({
         <div className="flex-1">
           <div className="mb-3 flex items-start justify-between gap-4">
             <div>
-              <h3 className="mb-1 text-xl font-bold">{listing.title}</h3>
+              <ListingTitleWithVerified
+                title={listing.title}
+                verified={listing.trustBadgeApproved}
+                label={m.trustBadge.verifiedLabel}
+                titleClassName="line-clamp-1 text-xl"
+                className="mb-1"
+              />
               <p className="mb-2 text-sm text-gray-600">
                 {categoryName} {categoryName ? '•' : ''} {area}
               </p>

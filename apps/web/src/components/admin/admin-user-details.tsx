@@ -4,10 +4,11 @@ import { ArrowLeft, Calendar, Eye, Mail, Phone, Power, PowerOff, RotateCcw, Sear
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 
-import { AdminEntityAvatar } from '@/components/admin/admin-entity-avatar';
+import { AdminUserVerificationDocs } from '@/components/admin/admin-verification-docs';
 import { adminApi } from '@/lib/admin-auth';
 import { resolveMediaUrl } from '@/lib/media-url';
 import { useI18n } from '@/lib/i18n';
+import { VerifiedEntityAvatar } from '@/components/trust-badge/verified-entity-avatar';
 
 type AdminUserAd = {
   id: string;
@@ -56,6 +57,11 @@ type AdminUserDetailsData = {
   isVerified: boolean;
   isActive: boolean;
   isBlocked: boolean;
+  trustBadgeApproved?: boolean;
+  trustBadgeStatus?: string;
+  trustIdentityDocType?: 'NATIONAL_ID' | 'PASSPORT' | null;
+  trustIdentityDocUrl?: string | null;
+  trustBadgeRejectionReason?: string | null;
   lastSeenAt?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -215,7 +221,13 @@ export function AdminUserDetails({ userId }: { userId: string }) {
       <section className="rounded-3xl bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-start gap-4">
-            <AdminEntityAvatar src={user.avatar} name={user.fullName} className="h-20 w-20 rounded-3xl text-lg" />
+            <VerifiedEntityAvatar
+              src={user.avatar}
+              name={user.fullName}
+              className="h-20 w-20 rounded-3xl text-lg"
+              verified={user.trustBadgeApproved}
+              verifiedTitle={m.trustBadge.verifiedLabel}
+            />
             <div>
               <h3 className="text-2xl font-black text-slate-900">{user.fullName}</h3>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -223,6 +235,9 @@ export function AdminUserDetails({ userId }: { userId: string }) {
                 <StateBadge active={user.isActive} label={user.isActive ? m.admin.active : m.admin.inactive} />
                 <StateBadge active={!user.isBlocked} label={user.isBlocked ? m.admin.blocked : m.admin.notBlocked} />
                 <StateBadge active={user.isVerified} label={user.isVerified ? m.admin.verified : m.admin.notVerified} />
+                {user.trustBadgeApproved ? (
+                  <StateBadge active label={m.trustBadge.verifiedLabel} />
+                ) : null}
               </div>
             </div>
           </div>
@@ -251,6 +266,15 @@ export function AdminUserDetails({ userId }: { userId: string }) {
           <InfoRow icon={<Tag size={18} />} label={m.admin.role} value={roleLabel(user.role, m.admin)} />
         </InfoCard>
       </div>
+
+      {user.role === 'USER' ? (
+        <AdminUserVerificationDocs
+          trustIdentityDocType={user.trustIdentityDocType}
+          trustIdentityDocUrl={user.trustIdentityDocUrl}
+          trustBadgeStatus={user.trustBadgeStatus}
+          trustBadgeRejectionReason={user.trustBadgeRejectionReason}
+        />
+      ) : null}
 
       <section className="rounded-3xl bg-white p-6 shadow-sm">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">

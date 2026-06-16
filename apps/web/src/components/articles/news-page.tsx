@@ -119,7 +119,7 @@ export function NewsPage() {
       <UserSiteHeader>
         <SiteHeaderSearch />
       </UserSiteHeader>
-      <main className="mx-auto max-w-7xl px-4 py-8">
+      <main className="site-container site-page-main min-w-0">
         <div className="mb-6">
           <h1 className="mb-2 text-3xl font-black text-slate-900">{m.articles.pageTitle}</h1>
           {!showInitialLoading ? (
@@ -129,7 +129,7 @@ export function NewsPage() {
           ) : null}
         </div>
 
-        <div className="mb-6">
+        <div className="filter-chips-shell -mx-3 mb-6 px-3 sm:mx-0 sm:px-0">
           {loadingCategories ? (
             <FilterChipsSkeleton count={6} />
           ) : (

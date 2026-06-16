@@ -107,6 +107,8 @@ const labels = {
     publishFromStoreHint: 'يُعرض الإعلان باسم المتجر ويستفيد من مزايا خطة المتجر',
     publishFromPersonal: 'النشر من حسابي الشخصي',
     publishFromPersonalHint: 'يُعرض الإعلان باسمك ويتطلب الدفع للتمييز مثل أي مستخدم',
+    paymentComingSoon: 'سيتم إعداد الدفع قريباً. يمكنك اختيار إعلان مجاني أو النشر من متجرك.',
+    submitPaymentComingSoon: 'الدفع قريباً',
     vatShort: 'ضريبة القيمة المضافة'
   },
   en: {
@@ -156,6 +158,8 @@ const labels = {
     publishFromStoreHint: 'Listing appears under your store name with plan benefits',
     publishFromPersonal: 'Publish from personal account',
     publishFromPersonalHint: 'Listing appears under your name and paid promotion applies',
+    paymentComingSoon: 'Payment will be available soon. Choose a free ad type or publish from your store.',
+    submitPaymentComingSoon: 'Payment coming soon',
     vatShort: 'VAT'
   }
 };
@@ -188,6 +192,7 @@ export function AddListingPage() {
   const [duration, setDuration] = useState(7);
   const [ownerStore, setOwnerStore] = useState<OwnerStore | null>(null);
   const [publishSource, setPublishSource] = useState<PublishSource>('personal');
+  const [isPageDataLoading, setIsPageDataLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -255,6 +260,8 @@ export function AddListingPage() {
       (ownerStore.accessStatus === 'ACTIVE' || ownerStore.accessStatus === 'TRIAL')
   );
   const isStorePublish = canPublishFromStore && publishSource === 'store';
+  const selectedPromotionPrice = selectedPlan ? getPlanPrice(selectedPlan, duration) : 0;
+  const paymentBlocked = !isStorePublish && Boolean(selectedPlan) && selectedPromotionPrice > 0;
   const authHeaders = useMemo(() => {
     const token = getUserAccessToken();
     return token ? { Authorization: `Bearer ${token}` } : undefined;
@@ -297,7 +304,8 @@ export function AddListingPage() {
           setSelectedPlanId((current) => current || promotionPlans[0]?.id || '');
         }
       })
-      .catch(() => setError(text.loadError));
+      .catch(() => setError(text.loadError))
+      .finally(() => setIsPageDataLoading(false));
   }, [locale]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -316,6 +324,12 @@ export function AddListingPage() {
     }
 
     if (!selectedCategory) return;
+
+    if (paymentBlocked) {
+      setError(text.paymentComingSoon);
+      setMessage('');
+      return;
+    }
 
     setError('');
     setMessage('');
@@ -368,22 +382,22 @@ export function AddListingPage() {
         <SiteHeaderSearch />
       </UserSiteHeader>
 
-      <main className="mx-auto max-w-4xl px-4 py-8">
+      <main className="site-container site-page-main site-page-main--narrow min-w-0">
         <div ref={errorBannerRef} className="scroll-mt-56">
           {error ? (
-            <p className="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{error}</p>
+            <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-600 sm:mb-6">{error}</p>
           ) : null}
           {message ? (
-            <p className="mb-6 rounded-xl bg-green-50 px-4 py-3 text-sm font-bold text-green-700">{message}</p>
+            <p className="mb-4 rounded-xl bg-green-50 px-4 py-3 text-sm font-bold text-green-700 sm:mb-6">{message}</p>
           ) : null}
         </div>
 
-        <div className="mb-8">
-          <h1 className="mb-2 text-3xl font-bold">{text.title}</h1>
-          <p className="text-gray-600">{text.subtitle}</p>
+        <div className="mb-6 sm:mb-8">
+          <h1 className="mb-2 text-2xl font-bold sm:text-3xl">{text.title}</h1>
+          <p className="text-sm text-gray-600 sm:text-base">{text.subtitle}</p>
         </div>
 
-        <form onSubmit={submit} className="rounded-2xl bg-white p-8 shadow-sm">
+        <form onSubmit={submit} className="min-w-0 rounded-2xl bg-white p-4 shadow-sm sm:p-6 lg:p-8">
           <Field error={fieldErrors.title} label={text.adTitle}>
             <input
               value={title}
@@ -505,8 +519,10 @@ export function AddListingPage() {
             />
           </div>
 
-          {canPublishFromStore ? (
-            <div className="mb-6 rounded-lg bg-gray-50 p-6">
+          {isPageDataLoading ? (
+            <AddListingPublishSectionSkeleton />
+          ) : canPublishFromStore ? (
+            <div className="mb-6 rounded-lg bg-gray-50 p-4 sm:p-6">
               <h3 className="mb-2 text-xl font-bold">{text.publishAs}</h3>
               <p className="mb-4 text-gray-600">{text.publishAsHint}</p>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -533,11 +549,11 @@ export function AddListingPage() {
             </div>
           ) : null}
 
-          {!isStorePublish ? (
-          <div className="mb-6 rounded-lg bg-gray-50 p-6">
+          {isPageDataLoading ? null : !isStorePublish ? (
+          <div className="mb-6 min-w-0 rounded-lg bg-gray-50 p-4 sm:p-6">
             <h3 className="mb-2 text-xl font-bold">{text.adType}</h3>
             <p className="mb-4 text-gray-600">{text.adTypeSubtitle}</p>
-            <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="mb-6 grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {plans.map((plan) => (
                 <PlanCard
                   key={plan.id}
@@ -589,17 +605,27 @@ export function AddListingPage() {
                 </div>
               </div>
             ) : null}
+
+            {paymentBlocked ? (
+              <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                {text.paymentComingSoon}
+              </p>
+            ) : null}
           </div>
           ) : (
-            <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-6">
+            <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 sm:p-6">
               <h3 className="mb-2 text-xl font-bold">{text.publishFromStore}</h3>
               <p className="text-gray-700">{text.publishFromStoreHint}</p>
             </div>
           )}
 
           <div className="flex gap-4">
-            <button type="submit" disabled={isSubmitting} className="flex-1 rounded-lg bg-green-600 px-6 py-3 font-bold text-white transition hover:bg-green-700 disabled:opacity-70">
-              {isSubmitting ? text.publishing : text.publish}
+            <button
+              type="submit"
+              disabled={isSubmitting || paymentBlocked}
+              className="flex-1 rounded-lg bg-green-600 px-6 py-3 font-bold text-white transition hover:bg-green-700 disabled:opacity-70"
+            >
+              {isSubmitting ? text.publishing : paymentBlocked ? text.submitPaymentComingSoon : text.publish}
             </button>
             <button type="button" onClick={() => router.push(localizedPath('/my-listings'))} className="rounded-lg border border-gray-300 px-6 py-3 transition hover:bg-gray-50">
               {text.cancel}
@@ -609,6 +635,25 @@ export function AddListingPage() {
       </main>
 
       <SiteFooter />
+    </div>
+  );
+}
+
+function AddListingPublishSectionSkeleton() {
+  return (
+    <div className="mb-6 min-w-0 rounded-lg bg-gray-50 p-4 sm:p-6" aria-hidden="true">
+      <div className="mb-4 h-6 w-40 animate-pulse rounded-full bg-slate-200" />
+      <div className="mb-6 h-4 w-full max-w-md animate-pulse rounded-full bg-slate-200" />
+      <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="h-36 animate-pulse rounded-lg border-2 border-gray-200 bg-white" />
+        ))}
+      </div>
+      <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div key={index} className="h-14 animate-pulse rounded-lg border-2 border-gray-200 bg-white" />
+        ))}
+      </div>
     </div>
   );
 }
@@ -683,7 +728,7 @@ function PlanCard({
     <button
       type="button"
       onClick={onClick}
-      className={`relative rounded-lg border-2 p-4 text-start transition ${
+      className={`relative min-w-0 rounded-lg border-2 p-4 text-start transition ${
         active ? 'border-green-600 bg-green-50' : 'border-gray-200 bg-white hover:border-green-300'
       }`}
     >
@@ -701,7 +746,7 @@ function PlanCard({
         ) : null}
       </div>
       <p className="mb-2 line-clamp-2 min-h-10 text-sm text-gray-600">{description}</p>
-      <div className={active ? 'text-green-600' : 'text-gray-900'}>
+      <div className={`min-w-0 ${active ? 'text-green-600' : 'text-gray-900'}`}>
         <PlanPriceWithVat
           basePrice={basePrice}
           locale={locale}

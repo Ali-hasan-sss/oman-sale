@@ -1,5 +1,4 @@
 import { prisma } from '../../shared/prisma/client';
-import type { RegisterDto } from './auth.validation';
 import type { AuthCodePurpose } from '@prisma/client';
 
 export class AuthRepository {
@@ -7,17 +6,68 @@ export class AuthRepository {
     return prisma.user.findUnique({ where: { email } });
   }
 
+  findByPhone(phone: string) {
+    return prisma.user.findFirst({ where: { phone, deletedAt: null } });
+  }
+
   findById(id: string) {
     return prisma.user.findUnique({ where: { id } });
   }
 
-  createUser(data: RegisterDto & { password: string }) {
+  findByGoogleId(googleId: string) {
+    return prisma.user.findFirst({ where: { googleId, deletedAt: null } });
+  }
+
+  createUser(data: { fullName: string; email: string; phone: string; password: string }) {
     return prisma.user.create({
       data: {
         fullName: data.fullName,
         email: data.email,
         phone: data.phone,
         password: data.password
+      }
+    });
+  }
+
+  createGoogleUser(data: {
+    fullName: string;
+    email: string;
+    googleId: string;
+    password: string;
+    avatar?: string | null;
+  }) {
+    return prisma.user.create({
+      data: {
+        fullName: data.fullName,
+        email: data.email,
+        googleId: data.googleId,
+        password: data.password,
+        avatar: data.avatar,
+        isVerified: true,
+        profileCompleted: false
+      }
+    });
+  }
+
+  linkGoogleAccount(userId: string, data: { googleId: string; avatar?: string | null }) {
+    return prisma.user.update({
+      where: { id: userId },
+      data: {
+        googleId: data.googleId,
+        ...(data.avatar ? { avatar: data.avatar } : {}),
+        isVerified: true
+      }
+    });
+  }
+
+  completeUserProfile(userId: string, data: { fullName: string; phone: string; password: string }) {
+    return prisma.user.update({
+      where: { id: userId },
+      data: {
+        fullName: data.fullName,
+        phone: data.phone,
+        password: data.password,
+        profileCompleted: true
       }
     });
   }
@@ -52,13 +102,27 @@ export class AuthRepository {
     });
   }
 
-  createAuthCode(data: { email: string; codeHash: string; purpose: AuthCodePurpose; expiresAt: Date; userId?: string }) {
+  createAuthCode(data: {
+    email: string;
+    phone?: string;
+    codeHash: string;
+    purpose: AuthCodePurpose;
+    expiresAt: Date;
+    userId?: string;
+  }) {
     return prisma.authVerificationCode.create({ data });
   }
 
   findActiveAuthCodes(email: string, purpose: AuthCodePurpose) {
     return prisma.authVerificationCode.findMany({
       where: { email, purpose, consumedAt: null, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  findActivePhoneAuthCodes(phone: string, purpose: AuthCodePurpose) {
+    return prisma.authVerificationCode.findMany({
+      where: { phone, purpose, consumedAt: null, expiresAt: { gt: new Date() } },
       orderBy: { createdAt: 'desc' }
     });
   }

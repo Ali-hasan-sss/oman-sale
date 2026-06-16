@@ -8,6 +8,7 @@ import { categoriesRepository } from '../categories/categories.repository';
 import { computeStorePlanFinalPrice } from '../store-plans/store-plan-pricing.utils';
 import { storePlansRepository } from '../store-plans/store-plans.repository';
 import { storeTypesRepository } from '../store-types/store-types.repository';
+import { usersService } from '../users/users.service';
 import {
   assertAdminFreeBillingPeriod,
   assertValidUpgradeTarget,
@@ -37,7 +38,7 @@ import type {
   UpdateStoreDto
 } from './stores.validation';
 import { resolveMediaUrl } from '../../shared/utils/media-reference';
-import { resolveStoreMedia, resolveUserMedia } from '../../shared/utils/resolve-entity-media';
+import { resolveStoreMedia, resolveStoreTrustDocs, resolveUserMedia } from '../../shared/utils/resolve-entity-media';
 import type { ListAdsQuery } from '../ads/ads.validation';
 
 export class StoresService {
@@ -57,6 +58,7 @@ export class StoresService {
       rootCategory: { id: string; nameAr: string; nameEn: string; slug: string };
       storeType?: { id: string; nameAr: string; nameEn: string; slug: string; icon: string | null } | null;
       _count?: { ads: number };
+      trustBadgeStatus?: string | null;
     }
   >(store: T) {
     return resolveStoreMedia({
@@ -73,7 +75,8 @@ export class StoresService {
       wilayah: store.wilayah,
       rootCategory: store.rootCategory,
       storeType: store.storeType ?? null,
-      listingsCount: store._count?.ads ?? 0
+      listingsCount: store._count?.ads ?? 0,
+      ...(store.trustBadgeStatus !== undefined ? { trustBadgeStatus: store.trustBadgeStatus } : {})
     });
   }
 
@@ -91,6 +94,7 @@ export class StoresService {
       rootCategory: { id: string; nameAr: string; nameEn: string; slug: string };
       user?: { id: string; fullName: string; avatar: string | null; isBlocked: boolean } | null;
       _count?: { ads: number };
+      trustBadgeStatus?: string | null;
     }
   >(store: T) {
     return {
@@ -242,6 +246,9 @@ export class StoresService {
 
   async create(userId: string, dto: CreateStoreDto, locale: 'ar' | 'en' = 'ar') {
     await this.assertCanCreateStore(userId);
+    if (dto.phone) {
+      await usersService.assertPhoneVerifiedForAction(userId, dto.phone);
+    }
     await this.assertRootCategory(dto.rootCategoryId);
     await this.assertStoreType(dto.storeTypeId);
     const resolved = await this.resolvePricing(dto.planId, dto.rootCategoryId, dto.billingPeriod);
@@ -524,12 +531,12 @@ export class StoresService {
     const accessStatus = getStoreAccessStatus(store);
     const resolved = resolveStoreMedia(store);
 
-    return {
+    return resolveStoreTrustDocs({
       ...resolved,
       accessStatus,
       listingsCount: store._count?.ads ?? 0,
       user: store.user ? resolveUserMedia(store.user) : store.user
-    };
+    });
   }
 
   async listForAdmin(query: ListAdminStoresQuery) {

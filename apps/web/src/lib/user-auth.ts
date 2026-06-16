@@ -11,6 +11,8 @@ export type UserAuthUser = {
   avatar?: string | null;
   bio?: string | null;
   isVerified?: boolean;
+  trustBadgeApproved?: boolean;
+  profileCompleted?: boolean;
   isActive?: boolean;
   isBlocked?: boolean;
   lastSeenAt?: string | null;

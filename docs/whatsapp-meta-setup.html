@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>دليل إعداد واتساب Meta — Oman Sale</title>
+  <style>
+    :root {
+      --bg: #f0fdf4;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #475569;
+      --brand: #0f766e;
+      --brand-dark: #115e59;
+      --accent: #ecfdf5;
+      --border: #d1fae5;
+      --warn: #fef3c7;
+      --warn-border: #fcd34d;
+      --code-bg: #0f172a;
+      --code-text: #e2e8f0;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+      background: linear-gradient(180deg, var(--bg) 0%, #f8fafc 100%);
+      color: var(--text);
+      line-height: 1.75;
+    }
+
+    .wrap {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 4rem;
+    }
+
+    header {
+      background: linear-gradient(135deg, var(--brand) 0%, #14b8a6 100%);
+      color: white;
+      border-radius: 24px;
+      padding: 2rem 2rem 1.75rem;
+      box-shadow: 0 20px 40px rgba(15, 118, 110, 0.18);
+      margin-bottom: 2rem;
+    }
+
+    header h1 {
+      margin: 0 0 0.5rem;
+      font-size: 1.9rem;
+      line-height: 1.3;
+    }
+
+    header p {
+      margin: 0;
+      opacity: 0.95;
+      max-width: 52rem;
+    }
+
+    .badge {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.18);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
+    }
+
+    section {
+      background: var(--card);
+      border: 1px solid #e2e8f0;
+      border-radius: 20px;
+      padding: 1.5rem 1.5rem 1.25rem;
+      margin-bottom: 1.25rem;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+    }
+
+    h2 {
+      margin: 0 0 1rem;
+      color: var(--brand-dark);
+      font-size: 1.35rem;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 0.5rem;
+    }
+
+    h3 {
+      margin: 1.25rem 0 0.5rem;
+      font-size: 1.05rem;
+      color: #134e4a;
+    }
+
+    p, li { color: var(--text); }
+    .muted { color: var(--muted); }
+
+    ol, ul { padding-right: 1.25rem; }
+    li { margin-bottom: 0.45rem; }
+
+    a { color: var(--brand); font-weight: 600; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .note, .warn, .ok {
+      border-radius: 14px;
+      padding: 1rem 1.1rem;
+      margin: 1rem 0;
+    }
+
+    .note {
+      background: var(--accent);
+      border: 1px solid var(--border);
+    }
+
+    .warn {
+      background: var(--warn);
+      border: 1px solid var(--warn-border);
+    }
+
+    .ok {
+      background: #ecfdf5;
+      border: 1px solid #6ee7b7;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.95rem;
+    }
+
+    th, td {
+      border: 1px solid #e2e8f0;
+      padding: 0.75rem 0.85rem;
+      text-align: right;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f8fafc;
+      color: #334155;
+      width: 34%;
+    }
+
+    code {
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 0.1rem 0.35rem;
+      border-radius: 6px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.92em;
+      direction: ltr;
+      unicode-bidi: embed;
+    }
+
+    pre {
+      background: var(--code-bg);
+      color: var(--code-text);
+      border-radius: 14px;
+      padding: 1rem 1.1rem;
+      overflow-x: auto;
+      direction: ltr;
+      text-align: left;
+      font-size: 0.88rem;
+      line-height: 1.55;
+      margin: 1rem 0;
+    }
+
+    .steps {
+      counter-reset: step;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .steps li {
+      position: relative;
+      padding: 1rem 3.25rem 1rem 0;
+      border-bottom: 1px dashed #e2e8f0;
+    }
+
+    .steps li:last-child { border-bottom: none; }
+
+    .steps li::before {
+      counter-increment: step;
+      content: counter(step);
+      position: absolute;
+      right: 0;
+      top: 1rem;
+      width: 2rem;
+      height: 2rem;
+      border-radius: 999px;
+      background: var(--brand);
+      color: white;
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .checklist {
+      list-style: none;
+      padding: 0;
+    }
+
+    .checklist li::before {
+      content: "☐ ";
+      font-weight: 700;
+      color: var(--brand);
+    }
+
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-top: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="badge">Oman Sale — WhatsApp OTP</div>
+      <h1>دليل إعداد حساب Meta وربط واتساب للتحقق من الهاتف</h1>
+      <p>
+        يشرح هذا الدليل كيفية إنشاء تطبيق Meta، تجهيز WhatsApp Business API، إنشاء قالب رمز التحقق (OTP)،
+        ثم إدخال القيم في ملف <code>.env</code> ليعمل النظام تلقائياً مع التسجيل وإنشاء المتجر.
+      </p>
+    </header>
+
+    <section>
+      <h2>كيف يعمل النظام عندك؟</h2>
+      <ol>
+        <li>المستخدم يطلب رمز تحقق للهاتف (تسجيل حساب أو رقم متجر جديد).</li>
+        <li>الـ API يولّد رمزاً من 6 أرقام ويضعه في طابور Redis (<code>notifications</code>).</li>
+        <li>عملية الـ Worker (<code>npm run dev:worker</code>) تستلم المهمة وترسلها إلى Meta Graph API.</li>
+        <li>Meta يرسل رسالة واتساب باستخدام <strong>قالب OTP معتمد</strong>.</li>
+        <li>المستخدم يدخل الرمز في الواجهة، والـ API يتحقق منه.</li>
+      </ol>
+      <div class="warn">
+        <strong>مهم:</strong> بدون تشغيل Worker + Redis لن تُرسل رسائل واتساب حتى لو كانت إعدادات Meta صحيحة.
+      </div>
+    </section>
+
+    <section>
+      <h2>المرحلة 1 — إنشاء حساب Meta للمطورين</h2>
+      <ol class="steps">
+        <li>
+          ادخل إلى <a href="https://developers.facebook.com/" target="_blank" rel="noopener">Meta for Developers</a>
+          وسجّل الدخول بحساب فيسبوك/إنستغرام.
+        </li>
+        <li>
+          من القائمة: <strong>My Apps → Create App</strong>.
+          اختر نوع التطبيق <strong>Business</strong> (أو Other إذا لم يظهر Business).
+        </li>
+        <li>
+          أدخل اسم التطبيق، مثلاً: <code>Oman Sale WhatsApp</code>، واربطه بـ
+          <strong>Business Portfolio</strong> (أنشئ واحداً إن لم يكن موجوداً).
+        </li>
+        <li>
+          بعد الإنشاء، من لوحة التطبيق اضغط <strong>Add Product</strong> واختر <strong>WhatsApp</strong>.
+        </li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>المرحلة 2 — ربط WhatsApp Business</h2>
+      <ol class="steps">
+        <li>
+          من القائمة الجانبية: <strong>WhatsApp → API Setup</strong>.
+        </li>
+        <li>
+          أنشئ أو اختر <strong>WhatsApp Business Account (WABA)</strong>.
+        </li>
+        <li>
+          أضف <strong>رقم هاتف للإرسال</strong>:
+          <ul>
+            <li>للاختبار: يمكن استخدام الرقم التجريبي الذي توفره Meta.</li>
+            <li>للإنتاج: استخدم رقم أعمال حقيقي (+968...) غير مرتبط بواتساب شخصي.</li>
+          </ul>
+        </li>
+        <li>
+          في وضع التطوير، أضف أرقام الاختبار من
+          <strong>API Setup → To</strong> (حتى 5 أرقام). لن يصل الرمز لأرقام غير مسجلة في الاختبار.
+        </li>
+        <li>
+          انسخ <strong>Phone number ID</strong> — ستحتاجه في متغير البيئة
+          <code>WHATSAPP_PHONE_NUMBER_ID</code>.
+        </li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>المرحلة 3 — إنشاء Access Token دائم</h2>
+      <p class="muted">لا تستخدم التوكن المؤقت (24 ساعة) في الإنتاج.</p>
+      <ol class="steps">
+        <li>
+          افتح <a href="https://business.facebook.com/settings" target="_blank" rel="noopener">Meta Business Settings</a>.
+        </li>
+        <li>
+          <strong>Users → System Users</strong> → أنشئ System User (مثلاً: <code>oman-sale-api</code>).
+        </li>
+        <li>
+          امنحه صلاحية على حساب WhatsApp Business الخاص بك (Assets → WhatsApp accounts).
+        </li>
+        <li>
+          أنشئ <strong>Token</strong> مع الصلاحية:
+          <code>whatsapp_business_messaging</code>
+          (ويفضل أيضاً <code>whatsapp_business_management</code> للإدارة).
+        </li>
+        <li>
+          انسخ التوكن واحفظه في <code>WHATSAPP_ACCESS_TOKEN</code> — لا ترفعه إلى Git.
+        </li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>المرحلة 4 — إنشاء قالب OTP (Authentication)</h2>
+      <p>
+        واتساب لا يسمح بإرسال نص حر لأول مرة. رموز التحقق تُرسل عبر
+        <strong>Message Template</strong> من فئة <strong>Authentication</strong>.
+      </p>
+      <ol class="steps">
+        <li>
+          من <a href="https://business.facebook.com/wa/manage/message-templates/" target="_blank" rel="noopener">WhatsApp Manager → Message templates</a>
+          اضغط <strong>Create template</strong>.
+        </li>
+        <li>
+          اختر الفئة: <strong>Authentication</strong>.
+        </li>
+        <li>
+          الاسم (بالإنجليزية فقط، بدون مسافات): <code>oman_sale_otp</code>
+          — يجب أن يطابق <code>WHATSAPP_OTP_TEMPLATE_NAME</code>.
+        </li>
+        <li>
+          اللغة: <strong>Arabic</strong> (الكود <code>ar</code>) — يطابق <code>WHATSAPP_OTP_TEMPLATE_LANGUAGE</code>.
+        </li>
+        <li>
+          نص مقترح للجسم:
+          <pre>رمز التحقق الخاص بك في Oman Sale هو {{1}}
+لا تشارك هذا الرمز مع أحد.</pre>
+          المتغير <code>{{1}}</code> هو رمز الـ 6 أرقام.
+        </li>
+        <li>
+          إذا أضاف Meta زراً (URL / Copy code) في القالب، اترك
+          <code>WHATSAPP_OTP_TEMPLATE_HAS_BUTTON=true</code>.
+          إذا كان القالب نصاً فقط بدون زر، عيّنه <code>false</code>.
+        </li>
+        <li>
+          أرسل القالب للمراجعة وانتظر الحالة <strong>Approved</strong>.
+        </li>
+      </ol>
+      <div class="note">
+        يمكنك إنشاء نسخة إنجليزية أيضاً وتعيين <code>WHATSAPP_OTP_TEMPLATE_LANGUAGE_EN=en</code>.
+      </div>
+    </section>
+
+    <section>
+      <h2>المرحلة 5 — متغيرات البيئة في المشروع</h2>
+      <p>أضف القيم التالية في ملف <code>.env</code> في جذر المشروع:</p>
+      <pre># تطوير بدون إرسال فعلي (يدخل المستخدم 000000)
+# PHONE_SKIP_VERIFY=true
+
+# تفعيل واتساب الحقيقي
+WHATSAPP_ENABLED=true
+WHATSAPP_API_VERSION=v21.0
+WHATSAPP_PHONE_NUMBER_ID=ضع_phone_number_id_هنا
+WHATSAPP_ACCESS_TOKEN=ضع_access_token_هنا
+WHATSAPP_OTP_TEMPLATE_NAME=oman_sale_otp
+WHATSAPP_OTP_TEMPLATE_LANGUAGE=ar
+WHATSAPP_OTP_TEMPLATE_HAS_BUTTON=true
+PHONE_SKIP_VERIFY=false</pre>
+
+      <table>
+        <thead>
+          <tr>
+            <th>المتغير</th>
+            <th>من أين تحصل عليه في Meta</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>WHATSAPP_PHONE_NUMBER_ID</code></td>
+            <td>WhatsApp → API Setup → Phone number ID</td>
+          </tr>
+          <tr>
+            <td><code>WHATSAPP_ACCESS_TOKEN</code></td>
+            <td>Business Settings → System Users → Generate token</td>
+          </tr>
+          <tr>
+            <td><code>WHATSAPP_OTP_TEMPLATE_NAME</code></td>
+            <td>اسم القالب المعتمد (مثل oman_sale_otp)</td>
+          </tr>
+          <tr>
+            <td><code>WHATSAPP_OTP_TEMPLATE_LANGUAGE</code></td>
+            <td>كود لغة القالب (ar / en)</td>
+          </tr>
+          <tr>
+            <td><code>WHATSAPP_OTP_TEMPLATE_HAS_BUTTON</code></td>
+            <td>true إذا القالب يحتوي زر URL/Copy، وإلا false</td>
+          </tr>
+          <tr>
+            <td><code>PHONE_SKIP_VERIFY</code></td>
+            <td>true محلياً لتخطي الإرسال وقبول 000000</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>المرحلة 6 — تشغيل الخدمات</h2>
+      <ol class="steps">
+        <li>
+          تأكد أن <strong>Redis</strong> يعمل (<code>REDIS_URL</code> في .env).
+        </li>
+        <li>
+          شغّل الـ API:
+          <pre>npm run dev</pre>
+        </li>
+        <li>
+          في طرفية ثانية، شغّل الـ Worker:
+          <pre>cd apps/api
+npm run dev:worker</pre>
+        </li>
+        <li>
+          جرّب التسجيل أو إنشاء متجر برقم مسجّل في قائمة اختبار Meta.
+        </li>
+        <li>
+          راقب سجلات Worker — عند النجاح ستظهر:
+          <code>[whatsapp] OTP sent</code>
+        </li>
+      </ol>
+      <div class="ok">
+        <strong>للإنتاج:</strong> استخدم <code>npm run start:worker</code> كخدمة دائمة (systemd / PM2 / Docker).
+      </div>
+    </section>
+
+    <section>
+      <h2>استكشاف الأخطاء الشائعة</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>المشكلة</th>
+            <th>الحل</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>لا تصل الرسالة</td>
+            <td>تأكد من تشغيل Worker، وتسجيل الرقم في قائمة الاختبار، وموافقة القالب.</td>
+          </tr>
+          <tr>
+            <td><code>Template name does not exist</code></td>
+            <td>اسم القالب أو اللغة في .env لا يطابق القالب المعتمد في Meta.</td>
+          </tr>
+          <tr>
+            <td><code>Invalid parameter</code> على الزر</td>
+            <td>غيّر <code>WHATSAPP_OTP_TEMPLATE_HAS_BUTTON</code> ليطابق تصميم القالب.</td>
+          </tr>
+          <tr>
+            <td><code>WhatsApp is enabled but missing...</code></td>
+            <td>أكمل <code>WHATSAPP_PHONE_NUMBER_ID</code> و <code>WHATSAPP_ACCESS_TOKEN</code>.</td>
+          </tr>
+          <tr>
+            <td>الرمز لا يُقبل</td>
+            <td>تأكد أن <code>PHONE_SKIP_VERIFY=false</code> في الإنتاج.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>قائمة تحقق سريعة</h2>
+      <ul class="checklist">
+        <li>تطبيق Meta + منتج WhatsApp</li>
+        <li>WhatsApp Business Account + رقم إرسال</li>
+        <li>قالب OTP معتمد (Authentication)</li>
+        <li>Phone Number ID + Access Token في .env</li>
+        <li>WHATSAPP_ENABLED=true و PHONE_SKIP_VERIFY=false</li>
+        <li>Redis يعمل</li>
+        <li>Worker يعمل (<code>dev:worker</code> أو <code>start:worker</code>)</li>
+        <li>أرقام الاختبار مسجلة في Meta (وضع التطوير)</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>ملفات الكود ذات الصلة</h2>
+      <ul>
+        <li><code>apps/api/src/shared/whatsapp/whatsapp-client.ts</code> — إرسال Graph API</li>
+        <li><code>apps/api/src/shared/whatsapp/send-auth-code.ts</code> — إضافة المهمة للطابور</li>
+        <li><code>apps/api/src/workers/index.ts</code> — معالجة <code>deliver-whatsapp-auth-code</code></li>
+        <li><code>apps/api/src/config/env.ts</code> — تعريف متغيرات البيئة</li>
+      </ul>
+    </section>
+
+    <footer>
+      Oman Sale — WhatsApp Cloud API Integration Guide
+    </footer>
+  </div>
+</body>
+</html>

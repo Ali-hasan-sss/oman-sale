@@ -17,6 +17,7 @@ import { resolveMediaUrl } from '@/lib/media-url';
 
 import { FavoriteButton } from './favorite-button';
 import { ListingMediaCover } from './listing-media-cover';
+import { ListingTitleWithVerified } from '@/components/trust-badge/listing-verified-badge';
 
 type FavoriteListing = {
   id: string;
@@ -37,6 +38,7 @@ type FavoriteListing = {
       badgeLabel?: string | null;
     } | null;
   } | null;
+  trustBadgeApproved?: boolean;
 };
 
 const fallbackImage = 'https://images.unsplash.com/photo-1521791136064-7986c2920216?w=600&h=400&fit=crop';
@@ -106,7 +108,7 @@ export function FavoritesPage() {
         <SiteHeaderSearch />
       </UserSiteHeader>
 
-      <main className="mx-auto max-w-7xl px-4 py-8">
+      <main className="site-container site-page-main min-w-0">
         <div className="mb-8">
           <h1 className="mb-2 text-3xl font-bold">{text.title}</h1>
           <p className="text-gray-600">{text.subtitle}</p>
@@ -177,7 +179,7 @@ export function FavoritesPage() {
 }
 
 function FavoriteCard({ listing, onRemoved, text }: { listing: FavoriteListing; onRemoved: () => void; text: (typeof labels)['ar'] }) {
-  const { locale, localizedPath } = useI18n();
+  const { locale, localizedPath, m } = useI18n();
   const category = (locale === 'en' ? listing.category?.nameEn : listing.category?.nameAr) || listing.category?.name || '';
   const badgeLabel = listing.promotion?.plan?.badgeLabel || text.featured;
 
@@ -203,7 +205,13 @@ function FavoriteCard({ listing, onRemoved, text }: { listing: FavoriteListing; 
         {category ? <span className="absolute bottom-3 right-3 rounded-md bg-black/60 px-3 py-1 text-xs text-white">{category}</span> : null}
       </div>
       <div className="p-4">
-        <h3 className="mb-2 line-clamp-1 text-base font-bold text-gray-900">{listing.title}</h3>
+        <ListingTitleWithVerified
+          title={listing.title}
+          verified={listing.trustBadgeApproved}
+          label={m.trustBadge.verifiedLabel}
+          titleClassName="line-clamp-1 text-base"
+          className="mb-2"
+        />
         <p className="mb-3 text-xl font-bold text-green-600">{formatPrice(listing.price, listing.currency, locale)}</p>
         <div className="flex items-center gap-1 text-sm text-gray-500">
           <MapPin size={16} className="text-gray-400" />

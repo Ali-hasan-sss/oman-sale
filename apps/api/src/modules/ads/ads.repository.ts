@@ -9,8 +9,15 @@ const storeSummarySelect = {
   nameAr: true,
   nameEn: true,
   slug: true,
-  logoUrl: true
+  logoUrl: true,
+  trustBadgeStatus: true
 } satisfies Prisma.StoreSelect;
+
+const userSummarySelect = {
+  id: true,
+  fullName: true,
+  trustBadgeStatus: true
+} satisfies Prisma.UserSelect;
 
 type PublicAdListMode = 'all' | 'latest' | 'featured';
 
@@ -99,7 +106,8 @@ export class AdsRepository {
       images: { where: { deletedAt: null }, orderBy: { sortOrder: 'asc' } },
       promotion: { include: { plan: true, dailyStats: { where: { date: today } } } },
       category: true,
-      store: { select: storeSummarySelect }
+      store: { select: storeSummarySelect },
+      user: { select: userSummarySelect }
     } satisfies Prisma.AdInclude;
     const categoryFilter = await this.buildCategoryFilter(query.categoryId);
     const where = this.buildWhere(query, true, categoryFilter);
@@ -205,7 +213,8 @@ export class AdsRepository {
           images: { where: { deletedAt: null }, orderBy: { sortOrder: 'asc' } },
           promotion: { include: { plan: true } },
           category: true,
-          store: { select: storeSummarySelect }
+          store: { select: storeSummarySelect },
+      user: { select: userSummarySelect }
         },
         orderBy: [{ createdAt: 'desc' }]
       }),
@@ -237,9 +246,9 @@ export class AdsRepository {
       include: {
         images: { where: { deletedAt: null }, orderBy: { sortOrder: 'asc' } },
         category: true,
-        user: true,
         promotion: { include: { plan: true } },
-        store: { select: storeSummarySelect }
+        store: { select: storeSummarySelect },
+        user: { select: userSummarySelect }
       }
     });
   }

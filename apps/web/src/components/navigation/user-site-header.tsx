@@ -33,7 +33,7 @@ export function UserSiteHeader({ variant = 'default', sticky = true, children }:
 
   return (
     <header id="site-header" className={headerClass}>
-      <div className="mx-auto max-w-7xl px-4 py-3 sm:py-4">
+      <div className="site-container py-3 sm:py-4">
         <div className={`flex items-center justify-between gap-2 sm:gap-3 md:gap-4 ${children ? 'mb-3 sm:mb-4' : ''}`}>
           <Link href={localizedPath('/')} className="flex shrink-0 items-center gap-2 sm:gap-3">
             {variant === 'hero' ? (

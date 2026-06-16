@@ -6,8 +6,10 @@ import { FormEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from
 import { createPortal } from 'react-dom';
 
 import { AdminEntityAvatar } from '@/components/admin/admin-entity-avatar';
+import { AdminStoreVerificationDocs } from '@/components/admin/admin-verification-docs';
 import { AdminStoresTableSkeleton } from '@/components/admin/admin-stores-table-skeleton';
 import { SubscriptionRingGauge } from '@/components/stores/subscription-ring-gauge';
+import { VerifiedEntityAvatar } from '@/components/trust-badge/verified-entity-avatar';
 import { adminApi } from '@/lib/admin-auth';
 import { resolveMediaUrl } from '@/lib/media-url';
 import { useI18n } from '@/lib/i18n';
@@ -66,6 +68,14 @@ type AdminStore = {
   accessStatus: 'ACTIVE' | 'TRIAL' | 'TRIAL_EXPIRED' | 'SUBSCRIPTION_EXPIRED' | 'DISABLED';
   listingsCount: number;
   createdAt: string;
+  trustBadgeApproved?: boolean;
+  trustBadgeStatus?: string;
+  trustBadgeRejectionReason?: string | null;
+  trustCommercialRegDocUrl?: string | null;
+  trustOcciDocUrl?: string | null;
+  trustSmeDocUrl?: string | null;
+  trustOtherDocUrl?: string | null;
+  trustOtherDocLabel?: string | null;
   user?: { id: string; fullName: string; email: string; phone?: string | null; avatar?: string | null } | null;
   rootCategory?: { id: string; nameAr: string; nameEn: string } | null;
   subscriptions: Array<{
@@ -522,7 +532,13 @@ export function AdminStoresManagement() {
                     <tr key={store.id} className="border-b border-slate-100">
                       <td className={tdClass}>
                         <div className="flex items-center gap-2">
-                          <AdminEntityAvatar src={store.logoUrl} name={storeName} className="h-9 w-9 rounded-lg" />
+                          <VerifiedEntityAvatar
+                            src={store.logoUrl}
+                            name={storeName}
+                            className="h-9 w-9 rounded-lg"
+                            verified={store.trustBadgeApproved}
+                            verifiedTitle={m.trustBadge.verifiedLabel}
+                          />
                           <div className="min-w-0 text-start">
                             <p className="truncate text-xs font-bold">{storeName}</p>
                             <p className="truncate text-[11px] text-slate-500" dir="ltr">
@@ -714,10 +730,12 @@ export function AdminStoresManagement() {
                 </div>
 
                 <div className="flex flex-wrap items-start gap-4">
-                  <AdminEntityAvatar
+                  <VerifiedEntityAvatar
                     src={storeDetail.logoUrl}
                     name={locale === 'en' ? storeDetail.nameEn : storeDetail.nameAr}
                     className="h-20 w-20 rounded-2xl border-4 border-white shadow-md"
+                    verified={storeDetail.trustBadgeApproved}
+                    verifiedTitle={m.trustBadge.verifiedLabel}
                   />
                   <div className="min-w-0 flex-1 space-y-2">
                     <div className="flex flex-wrap gap-2">
@@ -767,6 +785,16 @@ export function AdminStoresManagement() {
                 {storeDetail.bioEn ? (
                   <DetailBlock label={text.bioEn} value={storeDetail.bioEn} dir="ltr" />
                 ) : null}
+
+                <AdminStoreVerificationDocs
+                  trustBadgeStatus={storeDetail.trustBadgeStatus}
+                  trustBadgeRejectionReason={storeDetail.trustBadgeRejectionReason}
+                  trustCommercialRegDocUrl={storeDetail.trustCommercialRegDocUrl}
+                  trustOcciDocUrl={storeDetail.trustOcciDocUrl}
+                  trustSmeDocUrl={storeDetail.trustSmeDocUrl}
+                  trustOtherDocUrl={storeDetail.trustOtherDocUrl}
+                  trustOtherDocLabel={storeDetail.trustOtherDocLabel}
+                />
 
                 {storeDetail.user ? (
                   <div className="rounded-2xl border border-slate-100 p-4">

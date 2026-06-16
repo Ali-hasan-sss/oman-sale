@@ -156,7 +156,7 @@ export function BannerAdRequestPage() {
     <div className="site-page-shell bg-slate-50" dir={dir}>
       <UserSiteHeader />
 
-      <main className="mx-auto max-w-3xl px-4 py-10">
+      <main className="site-container site-page-main site-page-main--narrower min-w-0">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-100 text-brand-700">
             <Megaphone size={28} />

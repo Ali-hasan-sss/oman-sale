@@ -63,7 +63,7 @@ export function TourismLandmarksPage() {
   }, [destinations, locale, query]);
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-8">
+    <main className="site-container site-page-main min-w-0">
       <div className="mb-8">
         <h1 className="mb-2 text-3xl font-bold text-slate-900">{content.title}</h1>
         <p className="text-gray-600">{content.subtitle}</p>

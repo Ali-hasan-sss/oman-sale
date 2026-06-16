@@ -24,7 +24,19 @@ export const verifyEmailChangeSchema = z.object({
   code: z.string().regex(/^\d{6}$/)
 });
 
+export const requestPhoneVerificationSchema = z.object({
+  phone: z.string().min(6),
+  locale: z.enum(['ar', 'en']).default('ar')
+});
+
+export const verifyPhoneSchema = z.object({
+  phone: z.string().min(6),
+  code: z.string().regex(/^\d{6}$/)
+});
+
 export type UpdateProfileDto = z.infer<typeof updateProfileSchema>;
 export type ChangePasswordDto = z.infer<typeof changePasswordSchema>;
 export type RequestEmailChangeDto = z.infer<typeof requestEmailChangeSchema>;
 export type VerifyEmailChangeDto = z.infer<typeof verifyEmailChangeSchema>;
+export type RequestPhoneVerificationDto = z.infer<typeof requestPhoneVerificationSchema>;
+export type VerifyPhoneDto = z.infer<typeof verifyPhoneSchema>;

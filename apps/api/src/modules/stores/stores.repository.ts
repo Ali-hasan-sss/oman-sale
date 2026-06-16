@@ -52,6 +52,7 @@ export class StoresRepository {
           phone: true,
           city: true,
           wilayah: true,
+          trustBadgeStatus: true,
           rootCategory: { select: { id: true, nameAr: true, nameEn: true, slug: true } },
           storeType: { select: storeTypeSelect },
           _count: { select: { ads: { where: { deletedAt: null, isActive: true } } } }

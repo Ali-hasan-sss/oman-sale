@@ -16,6 +16,12 @@ export class UsersRepository {
         isVerified: true,
         isActive: true,
         isBlocked: true,
+        profileCompleted: true,
+        trustBadgeStatus: true,
+        trustIdentityDocType: true,
+        trustIdentityDocUrl: true,
+        trustBadgeReviewedAt: true,
+        trustBadgeRejectionReason: true,
         lastSeenAt: true,
         createdAt: true
       }
@@ -50,6 +56,12 @@ export class UsersRepository {
         isVerified: true,
         isActive: true,
         isBlocked: true,
+        profileCompleted: true,
+        trustBadgeStatus: true,
+        trustIdentityDocType: true,
+        trustIdentityDocUrl: true,
+        trustBadgeReviewedAt: true,
+        trustBadgeRejectionReason: true,
         lastSeenAt: true,
         createdAt: true
       }
@@ -78,6 +90,12 @@ export class UsersRepository {
         isVerified: true,
         isActive: true,
         isBlocked: true,
+        profileCompleted: true,
+        trustBadgeStatus: true,
+        trustIdentityDocType: true,
+        trustIdentityDocUrl: true,
+        trustBadgeReviewedAt: true,
+        trustBadgeRejectionReason: true,
         lastSeenAt: true,
         createdAt: true
       }

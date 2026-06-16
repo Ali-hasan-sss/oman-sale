@@ -186,8 +186,9 @@ function UserMenu() {
   const logoutText = logoutDialogLabels[locale];
 
   useEffect(() => {
+    if (user?.profileCompleted === false) return;
     connect();
-  }, [connect]);
+  }, [connect, user?.profileCompleted]);
 
   useEffect(() => {
     if (!isOpen) return;

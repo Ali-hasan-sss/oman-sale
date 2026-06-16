@@ -18,6 +18,7 @@ import { FavoriteButton } from './favorite-button';
 import { ListingDetailSkeleton } from './listing-detail-skeleton';
 import { ListingMediaCover } from './listing-media-cover';
 import { ListingMediaGalleryModal } from './listing-media-gallery-modal';
+import { ListingTitleWithVerified, SellerVerifiedBanner } from '@/components/trust-badge/listing-verified-badge';
 
 type ListingImage = {
   imageUrl: string;
@@ -61,7 +62,9 @@ type ListingDetails = {
     nameEn: string;
     slug: string;
     logoUrl?: string | null;
+    trustBadgeApproved?: boolean;
   } | null;
+  trustBadgeApproved?: boolean;
 };
 
 const fallbackImage = '/logo.png';
@@ -387,7 +390,7 @@ export function ListingDetailsPage({ id }: { id: string }) {
         <SiteHeaderSearch />
       </UserSiteHeader>
 
-      <main className="mx-auto max-w-7xl px-4 py-8">
+      <main className="site-container site-page-main min-w-0">
         {isLoading ? (
           <ListingDetailSkeleton />
         ) : error || !listing ? (
@@ -461,7 +464,14 @@ export function ListingDetailsPage({ id }: { id: string }) {
                       {categoryName ? <span className="inline-block rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-700">{categoryName}</span> : null}
                       {listing.isSold ? <span className="inline-block rounded-full bg-amber-100 px-3 py-1 text-sm font-bold text-amber-800">{text.soldBadge}</span> : null}
                     </div>
-                    <h1 className="mb-3 text-3xl font-bold">{listing.title}</h1>
+                    <ListingTitleWithVerified
+                      title={listing.title}
+                      verified={listing.trustBadgeApproved}
+                      label={m.trustBadge.verifiedLabel}
+                      as="h1"
+                      titleClassName="text-3xl"
+                      className="mb-3"
+                    />
                     {listing.isActive === false ? <p className="mb-3 text-sm font-bold text-red-600">{text.inactiveNotice}</p> : null}
                     <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
                       <Meta icon={<MapPin size={16} />} label={getListingLocationLabel(listing.city, listing.wilayah, listing.area, locale) || '-'} />
@@ -582,6 +592,12 @@ export function ListingDetailsPage({ id }: { id: string }) {
                       </div>
                     </div>
                   )}
+                  {listing.trustBadgeApproved ? (
+                    <SellerVerifiedBanner
+                      label={m.trustBadge.verifiedLabel}
+                      description={m.trustBadge.verifiedSellerDescription}
+                    />
+                  ) : null}
                 </div>
 
                 <div className="mb-6 space-y-3">
@@ -685,7 +701,7 @@ export function ListingDetailsPage({ id }: { id: string }) {
 }
 
 function SimilarCard({ item }: { item: ListingDetails }) {
-  const { locale, localizedPath } = useI18n();
+  const { locale, localizedPath, m } = useI18n();
 
   return (
     <Link className="cursor-pointer overflow-hidden rounded-lg border border-gray-200 transition hover:shadow-md" href={localizedPath(`/listing/${item.id}`)}>
@@ -697,7 +713,13 @@ function SimilarCard({ item }: { item: ListingDetails }) {
         imageClassName="h-32 w-full"
       />
       <div className="p-3">
-        <h3 className="mb-2 line-clamp-1 text-sm font-bold">{item.title}</h3>
+        <ListingTitleWithVerified
+          title={item.title}
+          verified={item.trustBadgeApproved}
+          label={m.trustBadge.verifiedLabel}
+          titleClassName="line-clamp-1 text-sm"
+          className="mb-2"
+        />
         <p className="mb-1 font-bold text-green-600">{formatPrice(item.price, item.currency, locale)}</p>
         <p className="text-xs text-gray-500">{getListingLocationLabel(item.city, item.wilayah, item.area, locale) || '-'}</p>
       </div>

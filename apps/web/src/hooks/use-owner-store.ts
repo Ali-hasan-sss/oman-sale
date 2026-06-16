@@ -16,6 +16,7 @@ export type OwnerStoreSummary = {
 export function useOwnerStore() {
   const hydrateFromStorage = useAuthStore((state) => state.hydrateFromStorage);
   const accessToken = useAuthStore((state) => state.accessToken);
+  const user = useAuthStore((state) => state.user);
   const [store, setStore] = useState<OwnerStoreSummary | null>(null);
   const [loaded, setLoaded] = useState(false);
 
@@ -26,7 +27,7 @@ export function useOwnerStore() {
   useEffect(() => {
     const token = accessToken ?? getUserAccessToken();
 
-    if (!token) {
+    if (!token || user?.profileCompleted === false) {
       setStore(null);
       setLoaded(true);
       return;
@@ -52,7 +53,7 @@ export function useOwnerStore() {
     return () => {
       active = false;
     };
-  }, [accessToken]);
+  }, [accessToken, user?.profileCompleted]);
 
   return { store, hasStore: Boolean(store), loaded };
 }

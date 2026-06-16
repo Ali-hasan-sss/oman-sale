@@ -9,11 +9,15 @@ import { SiteHeaderSearch, UserSiteHeader } from '@/components/navigation/user-s
 import { CreateStoreBillingPeriodCards } from '@/components/stores/create-store-billing-period-cards';
 import { CreateStorePlanSelectCard } from '@/components/stores/create-store-plan-select-card';
 import { CreateStorePlansSkeleton } from '@/components/stores/create-store-plans-skeleton';
+import { ResendCodeButton } from '@/components/auth/resend-code-button';
+import { VerificationCodeInput } from '@/components/auth/verification-code-input';
 import { PlanPriceWithVat } from '@/components/pricing/plan-price-with-vat';
+import { PhoneInput } from '@/components/ui/phone-input';
 import { api } from '@/lib/api';
 import { resolveApiErrorMessage } from '@/lib/api-errors';
 import { buildCategoryTree } from '@/lib/category-tree';
-import { useI18n } from '@/lib/i18n';
+import { useI18n, getAuthMessages } from '@/lib/i18n';
+import { isValidPhoneE164 } from '@/lib/phone/phone-utils';
 import { getWilayahsForGovernorate, omanGovernorates } from '@/lib/oman-locations';
 import { getUserAccessToken } from '@/lib/user-auth';
 import { canActivateStorePlanWithoutPayment } from '@/lib/store-plan-activation';
@@ -102,7 +106,14 @@ const labels = {
     vatShort: 'ضريبة القيمة المضافة',
     adminFreeBadge: 'مجانية (شهر واحد)',
     paymentComingSoon: 'سيتم توفر التفعيل المدفوع قريباً. يمكنك استخدام الفترة التجريبية إن كانت متاحة.',
-    submitPaymentComingSoon: 'التفعيل المدفوع قريباً'
+    submitPaymentComingSoon: 'التفعيل المدفوع قريباً',
+    classificationAndLocation: 'التصنيف والموقع',
+    phoneVerifyTitle: 'تأكيد رقم التواصل',
+    phoneVerifySubtitle: 'أدخل رمز التحقق المرسل عبر واتساب لهذا الرقم.',
+    sendPhoneCode: 'إرسال رمز التحقق',
+    verifyPhoneButton: 'تأكيد الرقم',
+    phoneVerificationRequired: 'يجب تأكيد رقم التواصل الجديد قبل إنشاء المتجر.',
+    phoneVerifiedSuccess: 'تم تأكيد رقم التواصل بنجاح.'
   },
   en: {
     title: 'Create a store',
@@ -156,14 +167,24 @@ const labels = {
     vatShort: 'VAT',
     adminFreeBadge: 'Free (1 month)',
     paymentComingSoon: 'Paid activation will be available soon. You can start the free trial if available.',
-    submitPaymentComingSoon: 'Paid activation coming soon'
+    submitPaymentComingSoon: 'Paid activation coming soon',
+    classificationAndLocation: 'Classification & location',
+    phoneVerifyTitle: 'Verify contact phone',
+    phoneVerifySubtitle: 'Enter the verification code we sent via WhatsApp for this number.',
+    sendPhoneCode: 'Send verification code',
+    verifyPhoneButton: 'Verify number',
+    phoneVerificationRequired: 'You must verify the new contact phone before creating the store.',
+    phoneVerifiedSuccess: 'Contact phone verified successfully.'
   }
 } as const;
+
+const phonesMatch = (left: string, right: string) => left.replace(/[\s()-]/g, '') === right.replace(/[\s()-]/g, '');
 
 export function CreateStorePage() {
   const router = useRouter();
   const { dir, locale, localizedPath, m } = useI18n();
   const text = labels[locale];
+  const authMessages = getAuthMessages(locale);
 
   const [categories, setCategories] = useState<RootCategory[]>([]);
   const [storeTypes, setStoreTypes] = useState<Array<{ id: string; nameAr: string; nameEn: string }>>([]);
@@ -179,6 +200,12 @@ export function CreateStorePage() {
   const [bioAr, setBioAr] = useState('');
   const [bioEn, setBioEn] = useState('');
   const [phone, setPhone] = useState('');
+  const [userPhone, setUserPhone] = useState('');
+  const [phoneCode, setPhoneCode] = useState('');
+  const [phoneCodeSent, setPhoneCodeSent] = useState(false);
+  const [phoneVerified, setPhoneVerified] = useState(true);
+  const [isSendingPhoneCode, setIsSendingPhoneCode] = useState(false);
+  const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
   const [businessType, setBusinessType] = useState<'COMMERCIAL' | 'HOME' | ''>('');
   const [nationalId, setNationalId] = useState('');
   const [commercialRegistrationNumber, setCommercialRegistrationNumber] = useState('');
@@ -205,6 +232,15 @@ export function CreateStorePage() {
   const planActivationBlocked = Boolean(selectedPlan && billingPeriod && !canActivateFree);
   const selectedPlanName = selectedPlan ? (locale === 'en' ? selectedPlan.nameEn : selectedPlan.nameAr) : '';
   const displayPrice = canActivateFree ? 0 : finalPrice;
+  const trimmedPhone = phone.trim();
+  const needsPhoneVerification = Boolean(trimmedPhone && (!userPhone || !phonesMatch(trimmedPhone, userPhone)));
+
+  const handlePhoneChange = (value: string) => {
+    setPhone(value);
+    setPhoneCode('');
+    setPhoneCodeSent(false);
+    setPhoneVerified(Boolean(userPhone && value.trim() && phonesMatch(value.trim(), userPhone)));
+  };
 
   const isFormComplete = Boolean(
     planId &&
@@ -217,6 +253,7 @@ export function CreateStorePage() {
       nameAr.trim() &&
       nameEn.trim() &&
       phone.trim() &&
+      (!needsPhoneVerification || phoneVerified) &&
       nationalId.trim() &&
       (businessType !== 'COMMERCIAL' || commercialRegistrationNumber.trim()) &&
       plans.length > 0 &&
@@ -255,6 +292,16 @@ export function CreateStorePage() {
         }
       })
       .catch(() => undefined);
+
+    api
+      .get<{ data: { phone?: string | null } }>('/users/me', { headers: { Authorization: `Bearer ${token}` } })
+      .then((response) => {
+        const nextPhone = response.data.data.phone?.trim() ?? '';
+        setUserPhone(nextPhone);
+        setPhone(nextPhone);
+        setPhoneVerified(Boolean(nextPhone));
+      })
+      .catch(() => undefined);
   }, [locale, localizedPath, router, text.loadError]);
 
   useEffect(() => {
@@ -278,8 +325,48 @@ export function CreateStorePage() {
       .finally(() => setIsLoadingPlans(false));
   }, [rootCategoryId, text.loadError]);
 
+  const sendPhoneVerificationCode = async () => {
+    if (!isValidPhoneE164(trimmedPhone)) {
+      setError(authMessages.phoneInvalid);
+      return;
+    }
+
+    setError('');
+    setIsSendingPhoneCode(true);
+    try {
+      await api.post('/users/me/phone-verification', { phone: trimmedPhone, locale });
+      setPhoneCode('');
+      setPhoneCodeSent(true);
+    } catch (sendError) {
+      setError(resolveApiErrorMessage(sendError, {}, authMessages.registerError));
+    } finally {
+      setIsSendingPhoneCode(false);
+    }
+  };
+
+  const verifyStorePhone = async () => {
+    setError('');
+    setIsVerifyingPhone(true);
+    try {
+      await api.post('/users/me/phone-verification/verify', { phone: trimmedPhone, code: phoneCode });
+      setPhoneVerified(true);
+    } catch {
+      setError(authMessages.verifyError);
+    } finally {
+      setIsVerifyingPhone(false);
+    }
+  };
+
   const submitStore = async (activationMode: 'trial' | 'plan') => {
     if (!isFormComplete) return;
+    if (!isValidPhoneE164(trimmedPhone)) {
+      setError(authMessages.phoneInvalid);
+      return;
+    }
+    if (needsPhoneVerification && !phoneVerified) {
+      setError(text.phoneVerificationRequired);
+      return;
+    }
 
     setError('');
     setIsSubmitting(true);
@@ -293,7 +380,7 @@ export function CreateStorePage() {
           nameEn: nameEn.trim(),
           bioAr: bioAr.trim(),
           bioEn: bioEn.trim(),
-          phone: phone.trim(),
+          phone: trimmedPhone,
           nationalId: nationalId.trim(),
           businessType,
           ...(businessType === 'COMMERCIAL'
@@ -325,7 +412,8 @@ export function CreateStorePage() {
             ACCOUNT_BLOCKED: m.errors.ACCOUNT_BLOCKED,
             ACCOUNT_INACTIVE: m.errors.ACCOUNT_INACTIVE,
             STORE_LIMIT_REACHED: m.errors.STORE_LIMIT_REACHED,
-            PAYMENT_COMING_SOON: m.errors.PAYMENT_COMING_SOON
+            PAYMENT_COMING_SOON: m.errors.PAYMENT_COMING_SOON,
+            PHONE_VERIFICATION_REQUIRED: text.phoneVerificationRequired
           },
           text.createError
         )
@@ -350,7 +438,7 @@ export function CreateStorePage() {
         </div>
       </UserSiteHeader>
 
-      <main className="mx-auto max-w-6xl px-4 py-10">
+      <main className="site-container site-page-main min-w-0">
         {hasExistingStore ? (
           <div className="rounded-3xl bg-white p-10 text-center shadow-sm">
             <p className="text-gray-600">{text.alreadyHasStore}</p>
@@ -373,71 +461,76 @@ export function CreateStorePage() {
           <p className="text-gray-500">{text.submitting}</p>
         ) : (
           <form onSubmit={preventFormSubmit} className="space-y-6">
-            <section className="space-y-4 rounded-2xl bg-white p-8 shadow-sm">
-              <label className="block">
-                <span className="mb-1 block text-sm font-bold">{text.category}</span>
-                <select className={inputClass} value={rootCategoryId} onChange={(e) => setRootCategoryId(e.target.value)} required>
-                  <option value="">{text.selectCategory}</option>
-                  {rootCategories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {locale === 'en' ? category.nameEn || category.name : category.nameAr || category.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+            <section className="rounded-2xl bg-white p-8 shadow-sm">
+              <h2 className="mb-5 text-lg font-black">{text.classificationAndLocation}</h2>
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="block">
+                  <span className="mb-1 block text-sm font-bold">{text.category}</span>
+                  <select className={inputClass} value={rootCategoryId} onChange={(e) => setRootCategoryId(e.target.value)} required>
+                    <option value="">{text.selectCategory}</option>
+                    {rootCategories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {locale === 'en' ? category.nameEn || category.name : category.nameAr || category.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-              <label className="block">
-                <span className="mb-1 block text-sm font-bold">{text.storeType}</span>
-                <select className={inputClass} value={storeTypeId} onChange={(e) => setStoreTypeId(e.target.value)} required>
-                  <option value="">{text.selectStoreType}</option>
-                  {storeTypes.map((storeType) => (
-                    <option key={storeType.id} value={storeType.id}>
-                      {locale === 'en' ? storeType.nameEn : storeType.nameAr}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                <label className="block">
+                  <span className="mb-1 block text-sm font-bold">{text.storeType}</span>
+                  <select className={inputClass} value={storeTypeId} onChange={(e) => setStoreTypeId(e.target.value)} required>
+                    <option value="">{text.selectStoreType}</option>
+                    {storeTypes.map((storeType) => (
+                      <option key={storeType.id} value={storeType.id}>
+                        {locale === 'en' ? storeType.nameEn : storeType.nameAr}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-              <label className="block">
-                <span className="mb-1 block text-sm font-bold">{text.city}</span>
-                <select
-                  className={inputClass}
-                  value={city}
-                  onChange={(e) => {
-                    setCity(e.target.value);
-                    setWilayah('');
-                  }}
-                  required
-                >
-                  <option value="">{text.selectCity}</option>
-                  {omanGovernorates.map((governorate) => (
-                    <option key={governorate.value} value={governorate.value}>
-                      {locale === 'en' ? governorate.en : governorate.ar}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                <label className="block">
+                  <span className="mb-1 block text-sm font-bold">{text.city}</span>
+                  <select
+                    className={inputClass}
+                    value={city}
+                    onChange={(e) => {
+                      setCity(e.target.value);
+                      setWilayah('');
+                    }}
+                    required
+                  >
+                    <option value="">{text.selectCity}</option>
+                    {omanGovernorates.map((governorate) => (
+                      <option key={governorate.value} value={governorate.value}>
+                        {locale === 'en' ? governorate.en : governorate.ar}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-              <label className="block">
-                <span className="mb-1 block text-sm font-bold">{text.wilayah}</span>
-                <select
-                  className={inputClass}
-                  value={wilayah}
-                  onChange={(e) => setWilayah(e.target.value)}
-                  required
-                  disabled={!city}
-                >
-                  <option value="">{text.selectWilayah}</option>
-                  {wilayahOptions.map((wilayahOption) => (
-                    <option key={wilayahOption.value} value={wilayahOption.value}>
-                      {locale === 'en' ? wilayahOption.en : wilayahOption.ar}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                <label className="block">
+                  <span className="mb-1 block text-sm font-bold">{text.wilayah}</span>
+                  <select
+                    className={inputClass}
+                    value={wilayah}
+                    onChange={(e) => setWilayah(e.target.value)}
+                    required
+                    disabled={!city}
+                  >
+                    <option value="">{text.selectWilayah}</option>
+                    {wilayahOptions.map((wilayahOption) => (
+                      <option key={wilayahOption.value} value={wilayahOption.value}>
+                        {locale === 'en' ? wilayahOption.en : wilayahOption.ar}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </section>
 
-              <div>
-                <h2 className="mb-3 text-lg font-black">{text.plan}</h2>
+            <section className="rounded-2xl bg-white p-8 shadow-sm">
+              <h2 className="mb-5 text-lg font-black">{text.plan}</h2>
+              <div className="min-h-[18rem]">
                 {!rootCategoryId ? (
                   <p className="rounded-xl border border-dashed border-gray-200 px-4 py-6 text-sm text-gray-500">{text.selectCategoryFirst}</p>
                 ) : isLoadingPlans ? (
@@ -552,10 +645,61 @@ export function CreateStorePage() {
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
-                <label className="block">
+                <div className="block md:col-span-2">
                   <span className="mb-1 block text-sm font-bold">{text.phone}</span>
-                  <input dir="ltr" className={inputClass} value={phone} onChange={(e) => setPhone(e.target.value)} required />
-                </label>
+                  <PhoneInput
+                    value={phone}
+                    onChange={handlePhoneChange}
+                    locale={locale}
+                    disabled={isSubmitting}
+                    required
+                    searchPlaceholder={authMessages.searchCountry}
+                  />
+                  {needsPhoneVerification ? (
+                    <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/70 p-5">
+                      <h3 className="text-base font-black text-gray-900">{text.phoneVerifyTitle}</h3>
+                      <p className="mt-1 text-sm text-gray-600">{text.phoneVerifySubtitle}</p>
+                      {phoneVerified ? (
+                        <p className="mt-4 text-sm font-bold text-green-700">{text.phoneVerifiedSuccess}</p>
+                      ) : phoneCodeSent ? (
+                        <div className="mt-4">
+                          <VerificationCodeInput
+                            value={phoneCode}
+                            onChange={setPhoneCode}
+                            disabled={isVerifyingPhone || isSendingPhoneCode}
+                          />
+                          <button
+                            type="button"
+                            onClick={verifyStorePhone}
+                            disabled={isVerifyingPhone || phoneCode.length !== 6}
+                            className="mt-4 w-full rounded-lg bg-green-600 px-6 py-3 font-bold text-white transition hover:bg-green-700 disabled:opacity-70"
+                          >
+                            {isVerifyingPhone ? text.submitting : text.verifyPhoneButton}
+                          </button>
+                          <div className="mt-3">
+                            <ResendCodeButton
+                              disabled={isVerifyingPhone || isSendingPhoneCode}
+                              label={authMessages.resendCode}
+                              countdownLabel={(seconds) => authMessages.resendInSeconds.replace('{seconds}', String(seconds))}
+                              onResend={async () => {
+                                await api.post('/users/me/phone-verification', { phone: trimmedPhone, locale });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={sendPhoneVerificationCode}
+                          disabled={isSendingPhoneCode || !isValidPhoneE164(trimmedPhone)}
+                          className="mt-4 rounded-lg border border-green-600 bg-white px-5 py-2.5 text-sm font-bold text-green-700 transition hover:bg-green-50 disabled:opacity-70"
+                        >
+                          {isSendingPhoneCode ? text.submitting : text.sendPhoneCode}
+                        </button>
+                      )}
+                    </div>
+                  ) : null}
+                </div>
                 <label className="block">
                   <span className="mb-1 block text-sm font-bold">{text.nationalId}</span>
                   <input dir="ltr" className={inputClass} value={nationalId} onChange={(e) => setNationalId(e.target.value)} required />

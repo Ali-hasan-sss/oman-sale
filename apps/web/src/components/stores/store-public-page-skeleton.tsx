@@ -6,7 +6,7 @@ export function StorePublicPageSkeleton() {
       <section className="h-52 animate-pulse bg-slate-200 md:h-72" aria-hidden="true" />
 
       <section className="bg-gray-50 pb-8">
-        <div className="mx-auto max-w-7xl px-4">
+        <div className="site-container">
           <div className="relative z-10 -mt-14 md:-mt-[4.5rem]">
             <div className="rounded-3xl border border-white/50 bg-white/55 p-6 shadow-xl backdrop-blur-md md:p-8">
               <div className="flex flex-col gap-6 md:flex-row md:items-start">
@@ -36,7 +36,7 @@ export function StorePublicPageSkeleton() {
         </div>
       </section>
 
-      <main className="mx-auto max-w-7xl px-4 pb-12">
+      <main className="site-container pb-12">
         <section className="mb-8">
           <div className="mb-6 flex items-center justify-between gap-4">
             <div className="h-8 w-40 animate-pulse rounded-full bg-slate-200" />

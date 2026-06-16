@@ -12,6 +12,7 @@ import { SiteHeaderSearch, UserSiteHeader } from '@/components/navigation/user-s
 import { MyStorePageSkeleton } from '@/components/stores/my-store-page-skeleton';
 import { StorePlanPickerModal, type StorePlanPickerPlan } from '@/components/stores/store-plan-picker-modal';
 import { StoreSubscriptionHistory } from '@/components/stores/store-subscription-history';
+import { StoreTrustBadgePanel } from '@/components/trust-badge/store-trust-badge-panel';
 import { SubscriptionRingGauge } from '@/components/stores/subscription-ring-gauge';
 import { api } from '@/lib/api';
 import { resolveApiErrorMessage } from '@/lib/api-errors';
@@ -603,7 +604,7 @@ export function MyStorePage() {
         <SiteHeaderSearch />
       </UserSiteHeader>
 
-      <main className="mx-auto max-w-6xl px-4 py-10">
+      <main className="site-container site-page-main site-page-main--wide min-w-0">
         <section className="mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-green-700 to-slate-900 p-8 text-white shadow-lg">
           <div className="flex items-center gap-4">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/15">
@@ -850,6 +851,8 @@ export function MyStorePage() {
                   ) : null}
                 </div>
               </div>
+
+              <StoreTrustBadgePanel storeId={store.id} />
 
               <StoreSubscriptionHistory
                 storeId={store.id}
