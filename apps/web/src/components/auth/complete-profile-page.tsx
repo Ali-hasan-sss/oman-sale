@@ -4,7 +4,8 @@ import { useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useState } from 'react';
 
 import { RegisterStepper } from '@/components/auth/register-stepper';
-import { ResendCodeButton } from '@/components/auth/resend-code-button';
+import { PhoneVerificationResend, type PhoneVerificationChannel } from '@/components/auth/phone-verification-resend';
+import { PhoneVerificationSentNotice } from '@/components/auth/phone-verification-sent-notice';
 import { VerificationCodeInput } from '@/components/auth/verification-code-input';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { SiteFooter } from '@/components/home/site-footer';
@@ -29,6 +30,7 @@ export function CompleteProfilePage() {
   const [fullName, setFullName] = useState(() => getStoredUser()?.fullName ?? '');
   const [phone, setPhone] = useState('');
   const [phoneCode, setPhoneCode] = useState('');
+  const [phoneVerificationChannel, setPhoneVerificationChannel] = useState<PhoneVerificationChannel>('whatsapp');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -79,7 +81,12 @@ export function CompleteProfilePage() {
 
     setIsSubmitting(true);
     try {
-      await api.post('/auth/complete-profile/send-phone', { phone: phone.trim(), locale });
+      await api.post('/auth/complete-profile/send-phone', {
+        phone: phone.trim(),
+        locale,
+        channel: 'whatsapp'
+      });
+      setPhoneVerificationChannel('whatsapp');
       setPhoneCode('');
       setStep('phone-code');
     } catch (sendError) {
@@ -198,7 +205,25 @@ export function CompleteProfilePage() {
             {step === 'phone-code' ? (
               <div>
                 <h2 className="mb-2 text-center text-2xl font-black">{authMessages.phoneVerifyTitle}</h2>
-                <p className="mb-6 text-center text-sm text-gray-600">{authMessages.phoneVerifySubtitle}</p>
+                <PhoneVerificationSentNotice
+                  phone={phone.trim()}
+                  channel={phoneVerificationChannel}
+                  sentToLabel={() => authMessages.phoneCodeSentTo}
+                  changePhoneLabel={authMessages.changePhoneNumber}
+                  channelHintWhatsapp={authMessages.phoneCodeChannelHintWhatsapp}
+                  channelHintSms={authMessages.phoneCodeChannelHintSms}
+                  onChangePhone={() => {
+                    setError('');
+                    setPhoneCode('');
+                    setStep('details');
+                  }}
+                  disabled={isSubmitting}
+                />
+                <p className="mb-6 text-center text-sm text-gray-600">
+                  {phoneVerificationChannel === 'whatsapp'
+                    ? authMessages.phoneVerifySubtitleWhatsapp
+                    : authMessages.phoneVerifySubtitleSms}
+                </p>
                 <VerificationCodeInput value={phoneCode} onChange={setPhoneCode} disabled={isSubmitting} />
                 {error ? <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{error}</p> : null}
                 <button
@@ -209,13 +234,19 @@ export function CompleteProfilePage() {
                 >
                   {isSubmitting ? authMessages.submitting : authMessages.nextButton}
                 </button>
-                <div className="mt-3">
-                  <ResendCodeButton
+                <div className="mt-4">
+                  <PhoneVerificationResend
                     disabled={isSubmitting}
-                    label={authMessages.resendCode}
+                    onChannelChange={setPhoneVerificationChannel}
                     countdownLabel={(seconds) => authMessages.resendInSeconds.replace('{seconds}', String(seconds))}
-                    onResend={async () => {
-                      await api.post('/auth/complete-profile/send-phone', { phone: phone.trim(), locale });
+                    resendViaWhatsappLabel={authMessages.resendViaWhatsapp}
+                    resendViaSmsLabel={authMessages.resendViaSms}
+                    onSend={async (channel) => {
+                      await api.post('/auth/complete-profile/send-phone', {
+                        phone: phone.trim(),
+                        locale,
+                        channel
+                      });
                     }}
                   />
                 </div>

@@ -9,7 +9,8 @@ import { SiteHeaderSearch, UserSiteHeader } from '@/components/navigation/user-s
 import { CreateStoreBillingPeriodCards } from '@/components/stores/create-store-billing-period-cards';
 import { CreateStorePlanSelectCard } from '@/components/stores/create-store-plan-select-card';
 import { CreateStorePlansSkeleton } from '@/components/stores/create-store-plans-skeleton';
-import { ResendCodeButton } from '@/components/auth/resend-code-button';
+import { PhoneVerificationResend, type PhoneVerificationChannel } from '@/components/auth/phone-verification-resend';
+import { PhoneVerificationSentNotice } from '@/components/auth/phone-verification-sent-notice';
 import { VerificationCodeInput } from '@/components/auth/verification-code-input';
 import { PlanPriceWithVat } from '@/components/pricing/plan-price-with-vat';
 import { PhoneInput } from '@/components/ui/phone-input';
@@ -109,7 +110,14 @@ const labels = {
     submitPaymentComingSoon: 'التفعيل المدفوع قريباً',
     classificationAndLocation: 'التصنيف والموقع',
     phoneVerifyTitle: 'تأكيد رقم التواصل',
-    phoneVerifySubtitle: 'أدخل رمز التحقق المرسل عبر واتساب لهذا الرقم.',
+    phoneVerifySubtitleWhatsapp: 'أدخل رمز التحقق المكوّن من 6 أرقام.',
+    phoneVerifySubtitleSms: 'أدخل رمز التحقق المكوّن من 6 أرقام.',
+    phoneCodeSentTo: 'تم إرسال رمز التحقق إلى',
+    phoneCodeChannelHintWhatsapp: 'تحقق من رسائل واتساب على هذا الرقم.',
+    phoneCodeChannelHintSms: 'تحقق من الرسائل النصية على هذا الرقم.',
+    changePhoneNumber: 'تغيير الرقم',
+    resendViaWhatsapp: 'إعادة الإرسال عبر واتساب',
+    resendViaSms: 'إعادة الإرسال عبر رسالة نصية',
     sendPhoneCode: 'إرسال رمز التحقق',
     verifyPhoneButton: 'تأكيد الرقم',
     phoneVerificationRequired: 'يجب تأكيد رقم التواصل الجديد قبل إنشاء المتجر.',
@@ -170,7 +178,14 @@ const labels = {
     submitPaymentComingSoon: 'Paid activation coming soon',
     classificationAndLocation: 'Classification & location',
     phoneVerifyTitle: 'Verify contact phone',
-    phoneVerifySubtitle: 'Enter the verification code we sent via WhatsApp for this number.',
+    phoneVerifySubtitleWhatsapp: 'Enter the 6-digit verification code.',
+    phoneVerifySubtitleSms: 'Enter the 6-digit verification code.',
+    phoneCodeSentTo: 'Verification code sent to',
+    phoneCodeChannelHintWhatsapp: 'Check WhatsApp messages on this number.',
+    phoneCodeChannelHintSms: 'Check SMS messages on this number.',
+    changePhoneNumber: 'Change number',
+    resendViaWhatsapp: 'Resend via WhatsApp',
+    resendViaSms: 'Resend via SMS',
     sendPhoneCode: 'Send verification code',
     verifyPhoneButton: 'Verify number',
     phoneVerificationRequired: 'You must verify the new contact phone before creating the store.',
@@ -203,6 +218,7 @@ export function CreateStorePage() {
   const [userPhone, setUserPhone] = useState('');
   const [phoneCode, setPhoneCode] = useState('');
   const [phoneCodeSent, setPhoneCodeSent] = useState(false);
+  const [phoneVerificationChannel, setPhoneVerificationChannel] = useState<PhoneVerificationChannel>('whatsapp');
   const [phoneVerified, setPhoneVerified] = useState(true);
   const [isSendingPhoneCode, setIsSendingPhoneCode] = useState(false);
   const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
@@ -334,7 +350,8 @@ export function CreateStorePage() {
     setError('');
     setIsSendingPhoneCode(true);
     try {
-      await api.post('/users/me/phone-verification', { phone: trimmedPhone, locale });
+      await api.post('/users/me/phone-verification', { phone: trimmedPhone, locale, channel: 'whatsapp' });
+      setPhoneVerificationChannel('whatsapp');
       setPhoneCode('');
       setPhoneCodeSent(true);
     } catch (sendError) {
@@ -658,11 +675,29 @@ export function CreateStorePage() {
                   {needsPhoneVerification ? (
                     <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/70 p-5">
                       <h3 className="text-base font-black text-gray-900">{text.phoneVerifyTitle}</h3>
-                      <p className="mt-1 text-sm text-gray-600">{text.phoneVerifySubtitle}</p>
                       {phoneVerified ? (
                         <p className="mt-4 text-sm font-bold text-green-700">{text.phoneVerifiedSuccess}</p>
                       ) : phoneCodeSent ? (
                         <div className="mt-4">
+                          <PhoneVerificationSentNotice
+                            phone={trimmedPhone}
+                            channel={phoneVerificationChannel}
+                            sentToLabel={() => text.phoneCodeSentTo}
+                            changePhoneLabel={text.changePhoneNumber}
+                            channelHintWhatsapp={text.phoneCodeChannelHintWhatsapp}
+                            channelHintSms={text.phoneCodeChannelHintSms}
+                            onChangePhone={() => {
+                              setError('');
+                              setPhoneCode('');
+                              setPhoneCodeSent(false);
+                            }}
+                            disabled={isVerifyingPhone || isSendingPhoneCode}
+                          />
+                          <p className="mb-4 text-sm text-gray-600">
+                            {phoneVerificationChannel === 'whatsapp'
+                              ? text.phoneVerifySubtitleWhatsapp
+                              : text.phoneVerifySubtitleSms}
+                          </p>
                           <VerificationCodeInput
                             value={phoneCode}
                             onChange={setPhoneCode}
@@ -676,13 +711,19 @@ export function CreateStorePage() {
                           >
                             {isVerifyingPhone ? text.submitting : text.verifyPhoneButton}
                           </button>
-                          <div className="mt-3">
-                            <ResendCodeButton
+                          <div className="mt-4">
+                            <PhoneVerificationResend
                               disabled={isVerifyingPhone || isSendingPhoneCode}
-                              label={authMessages.resendCode}
+                              onChannelChange={setPhoneVerificationChannel}
                               countdownLabel={(seconds) => authMessages.resendInSeconds.replace('{seconds}', String(seconds))}
-                              onResend={async () => {
-                                await api.post('/users/me/phone-verification', { phone: trimmedPhone, locale });
+                              resendViaWhatsappLabel={text.resendViaWhatsapp}
+                              resendViaSmsLabel={text.resendViaSms}
+                              onSend={async (channel) => {
+                                await api.post('/users/me/phone-verification', {
+                                  phone: trimmedPhone,
+                                  locale,
+                                  channel
+                                });
                               }}
                             />
                           </div>

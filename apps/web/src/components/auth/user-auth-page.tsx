@@ -7,6 +7,8 @@ import { FormEvent, useState } from 'react';
 
 import { GoogleSignInButton } from '@/components/auth/google-sign-in-button';
 import { ResendCodeButton } from '@/components/auth/resend-code-button';
+import { PhoneVerificationResend, type PhoneVerificationChannel } from '@/components/auth/phone-verification-resend';
+import { PhoneVerificationSentNotice } from '@/components/auth/phone-verification-sent-notice';
 import { RegisterStepper } from '@/components/auth/register-stepper';
 import { VerificationCodeInput } from '@/components/auth/verification-code-input';
 import { PhoneInput } from '@/components/ui/phone-input';
@@ -56,6 +58,7 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
   const [rememberMe, setRememberMe] = useState(true);
   const [emailCode, setEmailCode] = useState('');
   const [phoneCode, setPhoneCode] = useState('');
+  const [phoneVerificationChannel, setPhoneVerificationChannel] = useState<PhoneVerificationChannel>('whatsapp');
   const [registerStep, setRegisterStep] = useState<RegisterStep>('info');
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -201,7 +204,13 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
     setIsSubmitting(true);
 
     try {
-      await api.post('/auth/register/send-phone-code', { email: submittedEmail, phone: submittedPhone, locale });
+      await api.post('/auth/register/send-phone-code', {
+        email: submittedEmail,
+        phone: submittedPhone,
+        locale,
+        channel: 'whatsapp'
+      });
+      setPhoneVerificationChannel('whatsapp');
       setPhoneCode('');
       setRegisterStep('phone-code');
     } catch (sendError) {
@@ -371,7 +380,25 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
       return (
         <div>
           <h2 className="mb-2 text-center text-2xl font-black">{authMessages.phoneVerifyTitle}</h2>
-          <p className="mb-6 text-center text-sm text-gray-600">{authMessages.phoneVerifySubtitle}</p>
+          <PhoneVerificationSentNotice
+            phone={submittedPhone}
+            channel={phoneVerificationChannel}
+            sentToLabel={() => authMessages.phoneCodeSentTo}
+            changePhoneLabel={authMessages.changePhoneNumber}
+            channelHintWhatsapp={authMessages.phoneCodeChannelHintWhatsapp}
+            channelHintSms={authMessages.phoneCodeChannelHintSms}
+            onChangePhone={() => {
+              setError('');
+              setPhoneCode('');
+              setRegisterStep('phone');
+            }}
+            disabled={isSubmitting}
+          />
+          <p className="mb-6 text-center text-sm text-gray-600">
+            {phoneVerificationChannel === 'whatsapp'
+              ? authMessages.phoneVerifySubtitleWhatsapp
+              : authMessages.phoneVerifySubtitleSms}
+          </p>
           <VerificationCodeInput value={phoneCode} onChange={setPhoneCode} disabled={isSubmitting} />
           {error ? <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{error}</p> : null}
           <button
@@ -382,16 +409,19 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
           >
             {isSubmitting ? authMessages.submitting : authMessages.nextButton}
           </button>
-          <div className="mt-3">
-            <ResendCodeButton
+          <div className="mt-4">
+            <PhoneVerificationResend
               disabled={isSubmitting}
-              label={authMessages.resendCode}
+              onChannelChange={setPhoneVerificationChannel}
               countdownLabel={(seconds) => authMessages.resendInSeconds.replace('{seconds}', String(seconds))}
-              onResend={async () => {
+              resendViaWhatsappLabel={authMessages.resendViaWhatsapp}
+              resendViaSmsLabel={authMessages.resendViaSms}
+              onSend={async (channel) => {
                 await api.post('/auth/register/resend-phone', {
                   email: submittedEmail,
                   phone: submittedPhone,
-                  locale
+                  locale,
+                  channel
                 });
               }}
             />

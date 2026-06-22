@@ -6,10 +6,13 @@ export const registerStartSchema = z.object({
   locale: z.enum(['ar', 'en']).default('ar')
 });
 
+export const verificationChannelSchema = z.enum(['whatsapp', 'sms']);
+
 export const registerPhoneSchema = z.object({
   email: z.string().email(),
   phone: z.string().min(6),
-  locale: z.enum(['ar', 'en']).default('ar')
+  locale: z.enum(['ar', 'en']).default('ar'),
+  channel: verificationChannelSchema.optional()
 });
 
 export const phoneCodeSchema = z.object({
@@ -61,7 +64,8 @@ export const googleAuthSchema = z.object({
 
 export const completeProfilePhoneSchema = z.object({
   phone: z.string().min(6),
-  locale: z.enum(['ar', 'en']).default('ar')
+  locale: z.enum(['ar', 'en']).default('ar'),
+  channel: verificationChannelSchema.optional()
 });
 
 export const completeProfilePhoneVerifySchema = z.object({

@@ -5,7 +5,9 @@ import { redis } from '../config/redis';
 import { expireDueStoreSubscriptions } from '../modules/stores/store-subscription-expiry.service';
 import { prisma } from '../shared/prisma/client';
 import { sendNotificationEmail } from '../shared/email/mailer';
-import { sendWhatsAppNotificationTemplate, sendWhatsAppOtpTemplate } from '../shared/whatsapp/whatsapp-client';
+import { startPhoneVerification } from '../shared/sms/twilio-verify-client';
+import { isTwilioConfigured } from '../shared/sms/twilio-config';
+import { sendWhatsAppNotificationTemplate } from '../shared/whatsapp/whatsapp-client';
 import { isWhatsAppConfigured } from '../shared/whatsapp/whatsapp-config';
 
 const createWorker = (queueName: string) =>
@@ -65,17 +67,14 @@ const createWorker = (queueName: string) =>
           return;
         }
 
-        if (job.name === 'deliver-whatsapp-auth-code') {
-          if (!isWhatsAppConfigured()) {
-            console.error('[whatsapp] auth code job skipped — WhatsApp is not configured');
+        if (job.name === 'start-twilio-verify') {
+          if (!isTwilioConfigured()) {
+            console.error('[twilio-verify] job skipped — Twilio Verify is not configured');
             return;
           }
 
-          await sendWhatsAppOtpTemplate({
-            phone: job.data.phone as string,
-            code: job.data.code as string,
-            locale: (job.data.locale as 'ar' | 'en' | undefined) ?? 'ar'
-          });
+          const channel = (job.data.channel as 'whatsapp' | 'sms' | undefined) ?? 'whatsapp';
+          await startPhoneVerification(job.data.phone as string, channel);
           return;
         }
       }

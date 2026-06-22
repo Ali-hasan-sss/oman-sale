@@ -24,9 +24,12 @@ export const verifyEmailChangeSchema = z.object({
   code: z.string().regex(/^\d{6}$/)
 });
 
+import { verificationChannelSchema } from '../auth/auth.validation';
+
 export const requestPhoneVerificationSchema = z.object({
   phone: z.string().min(6),
-  locale: z.enum(['ar', 'en']).default('ar')
+  locale: z.enum(['ar', 'en']).default('ar'),
+  channel: verificationChannelSchema.optional()
 });
 
 export const verifyPhoneSchema = z.object({

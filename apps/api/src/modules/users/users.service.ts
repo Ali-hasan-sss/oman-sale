@@ -3,7 +3,8 @@ import { AuthCodePurpose, Prisma } from '@prisma/client';
 import { env } from '../../config/env';
 import { ErrorCodes } from '../../shared/constants/error-codes';
 import { sendAuthCodeEmail } from '../../shared/email/mailer';
-import { sendAuthCodeWhatsApp } from '../../shared/whatsapp/send-auth-code';
+import { requestPhoneVerification } from '../../shared/sms/send-auth-code';
+import { checkPhoneVerification } from '../../shared/sms/twilio-verify-client';
 import { getResendCooldownRemaining, setResendCooldown } from '../auth/registration-pending';
 import { normalizePhone, setUserVerifiedPhone, getUserVerifiedPhone } from '../../shared/phone/verified-phone';
 import { ApiError } from '../../shared/utils/api-error';
@@ -109,7 +110,7 @@ export class UsersService {
       throw new ApiError(429, `Please wait ${cooldown} seconds before requesting a new code`, ErrorCodes.RESEND_COOLDOWN);
     }
 
-    await this.issuePhoneVerificationCode(user.email, phone, dto.locale, userId);
+    await this.issuePhoneVerificationCode(user.email, phone, dto.locale, userId, dto.channel);
     await setResendCooldown('phone', phone);
 
     return { sent: true };
@@ -145,32 +146,18 @@ export class UsersService {
     }
   }
 
-  private generatePhoneCode() {
-    return env.PHONE_SKIP_VERIFY ? '000000' : Math.floor(100000 + Math.random() * 900000).toString();
+  private async issuePhoneVerificationCode(
+    _email: string,
+    phone: string,
+    locale: 'ar' | 'en',
+    _userId: string,
+    channel: 'whatsapp' | 'sms' = 'whatsapp'
+  ) {
+    await requestPhoneVerification(phone, locale, channel);
   }
 
-  private async issuePhoneVerificationCode(email: string, phone: string, locale: 'ar' | 'en', userId: string) {
-    const code = this.generatePhoneCode();
-    await authRepository.createAuthCode({
-      email,
-      phone,
-      codeHash: await hashPassword(code),
-      purpose: AuthCodePurpose.PHONE_VERIFICATION,
-      userId,
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000)
-    });
-    await sendAuthCodeWhatsApp(phone, code, locale);
-  }
-
-  private async consumePhoneVerificationCode(phone: string, code: string, userId: string) {
-    const codes = await authRepository.findActivePhoneAuthCodes(phone, AuthCodePurpose.PHONE_VERIFICATION);
-    for (const item of codes) {
-      if (item.userId === userId && (await verifyPassword(code, item.codeHash))) {
-        await authRepository.consumeAuthCode(item.id);
-        return;
-      }
-    }
-    throw new ApiError(400, 'Invalid or expired verification code');
+  private async consumePhoneVerificationCode(phone: string, code: string, _userId: string) {
+    await checkPhoneVerification(phone, code);
   }
 
   private generateCode() {

@@ -46,9 +46,15 @@ const envSchema = z.object({
   MEDIA_PROVIDER: z.enum(['local', 'cloudinary', 's3']).default('local'),
   EMAIL_SKIP_SEND: z.preprocess((value) => value === 'true', z.boolean()).default(true),
   EMAIL_SKIP_CODE: z.string().default('000000'),
-  /** When true, phone verification accepts 000000 without sending WhatsApp. */
+  /** When true, phone verification accepts 000000 without sending SMS. */
   PHONE_SKIP_VERIFY: z.preprocess((value) => value === 'true', z.boolean()).default(false),
-  /** Meta WhatsApp Cloud API — see docs/whatsapp-meta-setup.html */
+  /** Twilio Verify for phone OTP (registration, store creation) — no Twilio phone number needed. */
+  TWILIO_ENABLED: z.preprocess((value) => value === 'true', z.boolean()).default(false),
+  TWILIO_ACCOUNT_SID: z.string().optional(),
+  TWILIO_AUTH_TOKEN: z.string().optional(),
+  /** Verify Service SID from Twilio Console (starts with VA...). */
+  TWILIO_VERIFY_SERVICE_SID: z.string().optional(),
+  /** Meta WhatsApp Cloud API (optional notifications only) — see docs/whatsapp-meta-setup.html */
   WHATSAPP_ENABLED: z.preprocess((value) => value === 'true', z.boolean()).default(false),
   WHATSAPP_API_VERSION: z.string().default('v21.0'),
   WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),

@@ -7,7 +7,8 @@ import { ErrorCodes } from '../../shared/constants/error-codes';
 import { verifyGoogleIdToken } from '../../shared/firebase/firebase-admin';
 import { sendAuthCodeEmail } from '../../shared/email/mailer';
 import { getUserVerifiedPhone, clearUserVerifiedPhone, normalizePhone, setUserVerifiedPhone } from '../../shared/phone/verified-phone';
-import { sendAuthCodeWhatsApp } from '../../shared/whatsapp/send-auth-code';
+import { requestPhoneVerification } from '../../shared/sms/send-auth-code';
+import { checkPhoneVerification, type VerificationChannel } from '../../shared/sms/twilio-verify-client';
 import { ApiError } from '../../shared/utils/api-error';
 import { hashPassword, verifyPassword } from '../../shared/utils/password';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../../shared/utils/tokens';
@@ -121,7 +122,7 @@ export class AuthService {
     pending.phoneVerified = false;
     await savePendingRegistration(email, pending);
 
-    await this.issuePhoneCode(email, phone, dto.locale);
+    await this.issuePhoneCode(email, phone, dto.locale, undefined, dto.channel);
     await setResendCooldown('phone', phone);
 
     return { sent: true };
@@ -156,7 +157,7 @@ export class AuthService {
       throw new ApiError(429, `Please wait ${cooldown} seconds before requesting a new code`, ErrorCodes.RESEND_COOLDOWN);
     }
 
-    await this.issuePhoneCode(email, phone, dto.locale);
+    await this.issuePhoneCode(email, phone, dto.locale, undefined, dto.channel);
     await setResendCooldown('phone', phone);
 
     return { sent: true };
@@ -265,7 +266,7 @@ export class AuthService {
       throw new ApiError(429, `Please wait ${cooldown} seconds before requesting a new code`, ErrorCodes.RESEND_COOLDOWN);
     }
 
-    await this.issuePhoneCode(user.email, phone, dto.locale, userId);
+    await this.issuePhoneCode(user.email, phone, dto.locale, userId, dto.channel);
     await setResendCooldown('phone', phone);
 
     return { sent: true };
@@ -417,18 +418,14 @@ export class AuthService {
     );
   }
 
-  private async issuePhoneCode(email: string, phone: string, locale: 'ar' | 'en', userId?: string) {
-    const code = env.PHONE_SKIP_VERIFY ? '000000' : Math.floor(100000 + Math.random() * 900000).toString();
-    const codeHash = await hashPassword(code);
-    await authRepository.createAuthCode({
-      email,
-      phone,
-      codeHash,
-      purpose: AuthCodePurpose.PHONE_VERIFICATION,
-      userId,
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000)
-    });
-    await sendAuthCodeWhatsApp(phone, code, locale);
+  private async issuePhoneCode(
+    _email: string,
+    phone: string,
+    locale: 'ar' | 'en',
+    _userId?: string,
+    channel: VerificationChannel = 'whatsapp'
+  ) {
+    await requestPhoneVerification(phone, locale, channel);
   }
 
   private async consumeEmailCode(email: string, code: string, purpose: AuthCodePurpose) {
@@ -442,15 +439,8 @@ export class AuthService {
     throw new ApiError(400, 'Invalid or expired verification code');
   }
 
-  private async consumePhoneCode(phone: string, code: string, purpose: AuthCodePurpose) {
-    const codes = await authRepository.findActivePhoneAuthCodes(phone, purpose);
-    for (const item of codes) {
-      if (await verifyPassword(code, item.codeHash)) {
-        await authRepository.consumeAuthCode(item.id);
-        return;
-      }
-    }
-    throw new ApiError(400, 'Invalid or expired verification code');
+  private async consumePhoneCode(phone: string, code: string, _purpose: AuthCodePurpose) {
+    await checkPhoneVerification(phone, code);
   }
 
   private async createTokens(userId: string, email: string, role: string): Promise<AuthTokens> {

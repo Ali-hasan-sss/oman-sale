@@ -49,7 +49,15 @@ type AuthMessages = {
   confirmPassword: string;
   passwordMismatch: string;
   phoneVerifyTitle: string;
-  phoneVerifySubtitle: string;
+  phoneVerifySubtitleWhatsapp: string;
+  phoneVerifySubtitleSms: string;
+  phoneCodeSentTo: string;
+  phoneCodeChannelHintWhatsapp: string;
+  phoneCodeChannelHintSms: string;
+  changePhoneNumber: string;
+  resendViaWhatsapp: string;
+  resendViaSms: string;
+  sendViaSms: string;
   resendInSeconds: string;
   registerStepInfo: string;
   registerStepEmail: string;
