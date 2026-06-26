@@ -1,5 +1,6 @@
 import { ArticlesSection } from '@/components/articles/articles-section';
 import { CategoriesSection } from '@/components/home/categories-section';
+import { CategoryBar } from '@/components/home/category-bar';
 import { CreateStoreBanner } from '@/components/home/create-store-banner';
 import { HeroBannersSection } from '@/components/home/hero-banners-section';
 import { HeroSection } from '@/components/home/hero-section';
@@ -14,6 +15,7 @@ export default function HomePage() {
     <HomeScrollRestoration>
       <div id="top" className="site-page-shell bg-slate-50">
         <HeroSection />
+        <CategoryBar />
         <HeroBannersSection />
         <CreateStoreBanner />
         <main className="site-container site-page-main min-w-0">

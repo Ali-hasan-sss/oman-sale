@@ -13,8 +13,8 @@ export class PromotionsRepository {
     });
   }
 
-  createPlan(dto: CreatePromotionPlanDto) {
-    const name = createSlug(dto.nameEn || dto.nameAr);
+  async createPlan(dto: CreatePromotionPlanDto) {
+    const name = await this.generateUniqueName(dto.nameEn || dto.nameAr);
 
     return prisma.promotionPlan.create({
       data: {
@@ -27,6 +27,24 @@ export class PromotionsRepository {
     });
   }
 
+  /** Build a unique slug for `name`, avoiding collisions with any existing plan (including soft-deleted ones). */
+  private async generateUniqueName(source: string, excludeId?: string) {
+    const base = createSlug(source) || 'plan';
+    let candidate = base;
+    let suffix = 1;
+
+    // The `name` column is globally unique, so soft-deleted plans still reserve their slug.
+    while (true) {
+      const existing = await prisma.promotionPlan.findFirst({
+        where: { name: candidate, ...(excludeId && { id: { not: excludeId } }) },
+        select: { id: true }
+      });
+      if (!existing) return candidate;
+      suffix += 1;
+      candidate = `${base}-${suffix}`;
+    }
+  }
+
   findPlanById(id: string) {
     return prisma.promotionPlan.findFirst({ where: { id, deletedAt: null } });
   }
@@ -35,10 +53,12 @@ export class PromotionsRepository {
     return prisma.ad.findFirst({ where: { id, deletedAt: null }, select: { id: true, userId: true } });
   }
 
-  updatePlan(id: string, dto: UpdatePromotionPlanDto) {
+  async updatePlan(id: string, dto: UpdatePromotionPlanDto) {
     const data = {
       ...dto,
-      ...(dto.nameEn || dto.nameAr ? { name: createSlug(dto.nameEn || dto.nameAr || '') } : {}),
+      ...(dto.nameEn || dto.nameAr
+        ? { name: await this.generateUniqueName(dto.nameEn || dto.nameAr || '', id) }
+        : {}),
       ...(dto.descriptionAr && { description: dto.descriptionAr }),
       ...(dto.monthPrice !== undefined && { pricePerDay: dto.monthPrice / 30 }),
       ...(dto.badgeLabel !== undefined ? { badgeLabel: dto.badgeLabel || dto.nameAr } : {})
