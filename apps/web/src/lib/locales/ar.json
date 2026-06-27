@@ -2,6 +2,10 @@
   "common": {
     "languageSwitch": "EN",
     "chats": "دردشاتي",
+    "notifications": "الإشعارات",
+    "noNotifications": "لا توجد إشعارات حالياً",
+    "markAllRead": "تعيين الكل كمقروء",
+    "viewAllNotifications": "عرض كل الإشعارات",
     "myListings": "إعلاناتي",
     "addListing": "بيع سريع",
     "createStore": "إنشاء متجر",

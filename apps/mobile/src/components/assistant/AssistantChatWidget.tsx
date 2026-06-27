@@ -135,7 +135,7 @@ export function AssistantChatWidget({
                 <View style={styles.headerBrandIcons}>
                   <View style={styles.logoImageWrap}>
                     <Image
-                      source={require('../../assets/nav-logo.png')}
+                      source={require('../../../assets/nav-logo.png')}
                       style={styles.logoImage}
                       resizeMode="contain"
                       {...(Platform.OS === 'android' ? { resizeMethod: 'resize' as const } : {})}

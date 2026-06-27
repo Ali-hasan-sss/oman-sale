@@ -1,8 +1,10 @@
-import { TrustBadgeStatus } from '@prisma/client';
+import { NotificationType, TrustBadgeStatus } from '@prisma/client';
 
 import { ApiError } from '../../shared/utils/api-error';
 import { resolveMediaUrl } from '../../shared/utils/media-reference';
 import { mapTrustBadgePublic } from '../../shared/trust-badge/trust-badge.utils';
+import { sendAdminNotification } from '../notifications/send-admin-notification';
+import { sendUserNotification } from '../notifications/send-user-notification';
 import { trustBadgeRepository } from './trust-badge.repository';
 import type {
   ListTrustBadgeQuery,
@@ -60,6 +62,15 @@ export class TrustBadgeService {
     }
 
     const updated = await trustBadgeRepository.submitUserTrustBadge(userId, dto);
+    await sendAdminNotification({
+      type: NotificationType.ADMIN_TRUST_BADGE_REQUEST,
+      title: { ar: 'طلب توثيق حساب جديد', en: 'New account verification request' },
+      body: {
+        ar: `المستخدم "${user.fullName}" قدّم طلب توثيق حساب.`,
+        en: `User "${user.fullName}" submitted an account verification request.`
+      },
+      metadata: { userId, kind: 'user' }
+    }).catch(() => undefined);
     return mapUserTrustBadge(updated);
   }
 
@@ -79,6 +90,15 @@ export class TrustBadgeService {
     }
 
     const updated = await trustBadgeRepository.submitStoreTrustBadge(storeId, dto);
+    await sendAdminNotification({
+      type: NotificationType.ADMIN_TRUST_BADGE_REQUEST,
+      title: { ar: 'طلب توثيق متجر جديد', en: 'New store verification request' },
+      body: {
+        ar: `متجر "${store.nameAr}" قدّم طلب توثيق.`,
+        en: `Store "${store.nameEn}" submitted a verification request.`
+      },
+      metadata: { storeId, kind: 'store' }
+    }).catch(() => undefined);
     return mapStoreTrustBadge(updated);
   }
 
@@ -103,6 +123,16 @@ export class TrustBadgeService {
       throw new ApiError(400, 'Only pending trust badge requests can be approved');
     }
     await trustBadgeRepository.approveUser(userId);
+    await sendUserNotification({
+      userId,
+      type: NotificationType.TRUST_BADGE_APPROVED,
+      title: { ar: 'تم قبول توثيق حسابك', en: 'Account verification approved' },
+      body: {
+        ar: 'تهانينا! تم قبول طلب توثيق حسابك. سيظهر شارة التوثيق على ملفك.',
+        en: 'Congratulations! Your account verification was approved. The verified badge will appear on your profile.'
+      },
+      channels: { inApp: true, email: true, whatsapp: false, push: true }
+    }).catch(() => undefined);
     return { approved: true };
   }
 
@@ -113,6 +143,17 @@ export class TrustBadgeService {
       throw new ApiError(400, 'Only pending trust badge requests can be rejected');
     }
     await trustBadgeRepository.rejectUser(userId, dto.reason);
+    await sendUserNotification({
+      userId,
+      type: NotificationType.TRUST_BADGE_REJECTED,
+      title: { ar: 'تم رفض طلب توثيق حسابك', en: 'Account verification rejected' },
+      body: {
+        ar: `تم رفض طلب توثيق حسابك. السبب: ${dto.reason}`,
+        en: `Your account verification request was rejected. Reason: ${dto.reason}`
+      },
+      metadata: { reason: dto.reason },
+      channels: { inApp: true, email: true, whatsapp: false, push: true }
+    }).catch(() => undefined);
     return { rejected: true };
   }
 
@@ -123,6 +164,17 @@ export class TrustBadgeService {
       throw new ApiError(400, 'Only pending trust badge requests can be approved');
     }
     await trustBadgeRepository.approveStore(storeId);
+    await sendUserNotification({
+      userId: store.userId,
+      type: NotificationType.TRUST_BADGE_APPROVED,
+      title: { ar: 'تم قبول توثيق متجرك', en: 'Store verification approved' },
+      body: {
+        ar: `تهانينا! تم قبول توثيق متجر "${store.nameAr}".`,
+        en: `Congratulations! Verification for store "${store.nameEn}" was approved.`
+      },
+      metadata: { storeId },
+      channels: { inApp: true, email: true, whatsapp: false, push: true }
+    }).catch(() => undefined);
     return { approved: true };
   }
 
@@ -133,6 +185,17 @@ export class TrustBadgeService {
       throw new ApiError(400, 'Only pending trust badge requests can be rejected');
     }
     await trustBadgeRepository.rejectStore(storeId, dto.reason);
+    await sendUserNotification({
+      userId: store.userId,
+      type: NotificationType.TRUST_BADGE_REJECTED,
+      title: { ar: 'تم رفض توثيق متجرك', en: 'Store verification rejected' },
+      body: {
+        ar: `تم رفض توثيق متجر "${store.nameAr}". السبب: ${dto.reason}`,
+        en: `Verification for store "${store.nameEn}" was rejected. Reason: ${dto.reason}`
+      },
+      metadata: { storeId, reason: dto.reason },
+      channels: { inApp: true, email: true, whatsapp: false, push: true }
+    }).catch(() => undefined);
     return { rejected: true };
   }
 

@@ -18,7 +18,10 @@ export type ScreenName =
   | 'categoryOffers'
   | 'storesBrowse'
   | 'storeDetail'
-  | 'search';
+  | 'search'
+  | 'notifications'
+  | 'news'
+  | 'articleDetail';
 
 export type User = {
   id: string;
@@ -30,6 +33,8 @@ export type User = {
   avatar?: string | null;
   isBlocked?: boolean;
   isActive?: boolean;
+  trustBadgeApproved?: boolean;
+  trustBadgeStatus?: 'NONE' | 'PENDING' | 'APPROVED' | 'REJECTED';
 };
 
 export type AuthSession = {
@@ -54,6 +59,7 @@ export type Listing = {
   contactPhone?: string | null;
   isSold?: boolean;
   isActive?: boolean;
+  trustBadgeApproved?: boolean;
   images?: Array<{ imageUrl: string }>;
   category?: {
     name?: string;
@@ -68,6 +74,7 @@ export type Listing = {
     avatar?: string | null;
     createdAt?: string;
     isBlocked?: boolean;
+    trustBadgeApproved?: boolean;
   } | null;
   promotion?: {
     plan?: {
@@ -80,6 +87,7 @@ export type Listing = {
     nameEn: string;
     slug: string;
     logoUrl?: string | null;
+    trustBadgeApproved?: boolean;
   } | null;
 };
 

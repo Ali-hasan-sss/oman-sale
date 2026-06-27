@@ -116,7 +116,7 @@ export async function notifyStoreSubscriptionExpired(input: {
           ar: `انتهى اشتراك متجر "${input.storeNameAr}" (${input.planNameAr}). تم تعطيل المتجر وإخفاء إعلاناته. جدّد الاشتراك للاستمرار.`,
           en: `The subscription for store "${input.storeNameEn}" (${input.planNameEn}) has expired. The store and its listings are disabled. Renew to continue.`
         },
-    channels: { inApp: true, email: true, whatsapp: true }
+    channels: { inApp: true, email: true, whatsapp: true, push: true }
   });
 }
 

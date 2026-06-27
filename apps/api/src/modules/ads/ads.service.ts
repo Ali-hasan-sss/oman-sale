@@ -1,9 +1,12 @@
+import { NotificationType } from '@prisma/client';
+
 import { AppEvents } from '../../shared/constants/events';
 import { ApiError } from '../../shared/utils/api-error';
 import { eventBus } from '../../shared/utils/event-bus';
 import { resolveAdMedia, resolveAdsMedia } from '../../shared/utils/resolve-entity-media';
 import { createSlug } from '../../shared/utils/slug';
 import type { ViewerContext } from '../../shared/utils/viewer-context';
+import { sendAdminNotification } from '../notifications/send-admin-notification';
 import { storesService } from '../stores/stores.service';
 import { adsRepository } from './ads.repository';
 import type { AdminListAdsQuery, CreateAdDto, ListAdsQuery, ReportAdDto, UpdateAdDto } from './ads.validation';
@@ -185,7 +188,19 @@ export class AdsService {
     const existing = await adsRepository.findReportByReporter(id, userId);
     if (existing) throw new ApiError(409, 'You have already reported this listing');
 
-    return adsRepository.report(id, userId, dto);
+    const report = await adsRepository.report(id, userId, dto);
+
+    await sendAdminNotification({
+      type: NotificationType.ADMIN_REPORT,
+      title: { ar: 'بلاغ جديد على إعلان', en: 'New listing report' },
+      body: {
+        ar: `تم تقديم بلاغ جديد على الإعلان "${ad.title}".`,
+        en: `A new report was submitted for listing "${ad.title}".`
+      },
+      metadata: { adId: id, reportId: report.id, reason: dto.reason }
+    }).catch(() => undefined);
+
+    return report;
   }
 }
 

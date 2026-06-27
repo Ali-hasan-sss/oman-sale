@@ -81,10 +81,24 @@ enum NotificationType {
   AD_REJECTED
   PAYMENT_SUCCESS
   PROMOTION_ACTIVE
+  PROMOTION_EXPIRING
   ACCOUNT_BLOCKED
+  ACCOUNT_DISABLED
   STORE_TRIAL_EXPIRED
   STORE_SUBSCRIPTION_EXPIRED
+  STORE_SUBSCRIPTION_EXPIRING
+  TRUST_BADGE_APPROVED
+  TRUST_BADGE_REJECTED
+  ADMIN_BANNER_REQUEST
+  ADMIN_TRUST_BADGE_REQUEST
+  ADMIN_REPORT
   SYSTEM
+}
+
+enum PushPlatform {
+  WEB
+  ANDROID
+  IOS
 }
 
 enum ViewSource {
@@ -185,6 +199,7 @@ model User {
   receivedMessages Message[] @relation("MessageReceiver")
   chatParticipants ConversationParticipant[]
   notifications    Notification[]
+  pushTokens       PushToken[]
   refreshTokens    RefreshToken[]
   authCodes        AuthVerificationCode[]
   stores           Store[]
@@ -489,6 +504,7 @@ model AdPromotion {
   totalPrice      Decimal       @db.Decimal(12, 3)
   impressionsUsed Int           @default(0)
   isActive        Boolean       @default(true)
+  expiryWarningNotifiedAt DateTime?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   deletedAt       DateTime?
@@ -631,6 +647,20 @@ model Notification {
   @@index([isRead])
   @@index([createdAt])
   @@index([deletedAt])
+}
+
+model PushToken {
+  id        String       @id @default(uuid())
+  token     String
+  platform  PushPlatform
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, token])
+  @@index([userId])
 }
 
 model HeaderNavButton {
@@ -880,6 +910,7 @@ model StoreSubscription {
   endsAt         DateTime?
   isActive       Boolean                 @default(false)
   expiredNotifiedAt DateTime?
+  expiryWarningNotifiedAt DateTime?
   createdAt      DateTime                @default(now())
   updatedAt      DateTime                @updatedAt
   deletedAt      DateTime?

@@ -9,6 +9,7 @@ import {
 } from '../../shared/payments/thawani.client';
 import { ApiError } from '../../shared/utils/api-error';
 import { bannerRequestsRepository } from './banner-requests.repository';
+import { notifyAdminBannerRequestPending } from './banner-admin-notifications';
 
 type CheckoutInput = {
   userId: string;
@@ -24,14 +25,19 @@ export type BannerCheckoutResult = {
   paymentUrl?: string;
 };
 
+async function moveToPendingApproval(requestId: string) {
+  await bannerRequestsRepository.updateStatus(requestId, { status: BannerRequestStatus.PENDING_APPROVAL });
+  await notifyAdminBannerRequestPending(requestId).catch(() => undefined);
+}
+
 export async function checkoutBannerRequest(input: CheckoutInput): Promise<BannerCheckoutResult> {
   if (input.totalPrice <= 0) {
-    await bannerRequestsRepository.updateStatus(input.requestId, { status: BannerRequestStatus.PENDING_APPROVAL });
+    await moveToPendingApproval(input.requestId);
     return { paid: true };
   }
 
   if (shouldSkipThawaniCheckout()) {
-    await bannerRequestsRepository.updateStatus(input.requestId, { status: BannerRequestStatus.PENDING_APPROVAL });
+    await moveToPendingApproval(input.requestId);
     return { paid: true };
   }
 
@@ -95,7 +101,7 @@ export async function confirmThawaniBannerPayment(userId: string, sessionId: str
 
   if (shouldSkipThawaniCheckout()) {
     await bannerRequestsRepository.markPaymentPaid(payment.id, sessionId);
-    await bannerRequestsRepository.updateStatus(requestId, { status: BannerRequestStatus.PENDING_APPROVAL });
+    await moveToPendingApproval(requestId);
     const request = await bannerRequestsRepository.findById(requestId);
     return { payment: { ...payment, status: PaymentStatus.PAID }, request, alreadyPaid: false };
   }
@@ -108,7 +114,7 @@ export async function confirmThawaniBannerPayment(userId: string, sessionId: str
   }
 
   await bannerRequestsRepository.markPaymentPaid(payment.id, sessionId);
-  await bannerRequestsRepository.updateStatus(requestId, { status: BannerRequestStatus.PENDING_APPROVAL });
+  await moveToPendingApproval(requestId);
   const request = await bannerRequestsRepository.findById(requestId);
   return { payment: { ...payment, status: PaymentStatus.PAID }, request, alreadyPaid: false };
 }

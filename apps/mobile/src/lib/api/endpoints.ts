@@ -48,7 +48,10 @@ export const API_ENDPOINTS = {
   },
   notifications: {
     list: '/notifications',
-    readAll: '/notifications/read-all'
+    readAll: '/notifications/read-all',
+    unreadCount: '/notifications/unread-count',
+    pushToken: '/notifications/push-token',
+    read: (id: string) => `/notifications/${id}/read`
   },
   hero: {
     slides: '/hero/slides',
@@ -79,6 +82,21 @@ export const API_ENDPOINTS = {
   assistant: {
     chat: '/assistant/chat',
     quickReply: '/assistant/quick-reply'
+  },
+  articles: {
+    list: '/articles',
+    categories: '/articles/categories',
+    bySlug: (slug: string) => `/articles/${slug}`,
+    comments: (articleId: string) => `/articles/${articleId}/comments`,
+    comment: (articleId: string, commentId: string) => `/articles/${articleId}/comments/${commentId}`,
+    reactions: (articleId: string) => `/articles/${articleId}/reactions`
+  },
+  trustBadge: {
+    userMe: '/trust-badge/users/me',
+    store: (storeId: string) => `/trust-badge/stores/${storeId}`
+  },
+  media: {
+    upload: '/media/upload'
   }
 } as const;
 

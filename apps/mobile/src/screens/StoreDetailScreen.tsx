@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 
 import { AppText } from '../components/AppText';
+import { VerifiedBadge } from '../components/VerifiedBadge';
 import { EmptyState } from '../components/EmptyState';
 import { ListingCard } from '../components/ListingCard';
 import { StoreDetailSkeleton } from '../components/skeleton';
@@ -163,7 +164,10 @@ export function StoreDetailScreen({ slug, onListingPress }: StoreDetailScreenPro
             <Image source={fallbackLogo} style={styles.logoFallback} resizeMode="contain" />
           )}
         </View>
-        <AppText style={[styles.storeName, textAlign]}>{storeName}</AppText>
+        <View style={[styles.nameRow, isRtl && styles.nameRowRtl]}>
+          <AppText style={[styles.storeName, textAlign]}>{storeName}</AppText>
+          {store.trustBadgeApproved ? <VerifiedBadge size="md" /> : null}
+        </View>
         {typeName ? (
           <View style={styles.typeBadge}>
             <AppText style={styles.typeBadgeText}>{typeName}</AppText>
@@ -294,8 +298,16 @@ const styles = StyleSheet.create({
   storeName: {
     fontSize: 24,
     fontWeight: '900',
-    color: colors.ink,
+    color: colors.ink
+  },
+  nameRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 8,
     marginBottom: 4
+  },
+  nameRowRtl: {
+    flexDirection: 'row'
   },
   category: {
     color: colors.brandDark,

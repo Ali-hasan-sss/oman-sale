@@ -23,7 +23,8 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { NetworkStatusBar } from '../components/NetworkStatusBar';
 import { SideDrawer } from '../components/SideDrawer';
 import { AssistantChatWidget } from '../components/assistant/AssistantChatWidget';
-import { connectChatRealtime, disconnectChatRealtime, useAuthStore, useChatStore } from '../stores';
+import { connectChatRealtime, connectNotificationsRealtime, disconnectChatRealtime, useAuthStore, useChatStore, useNotificationsStore } from '../stores';
+import { registerMobilePushToken } from '../lib/push-registration';
 import { useI18n } from '../i18n';
 import { AddOfferScreen } from '../screens/AddOfferScreen';
 import { AddStoreScreen } from '../screens/AddStoreScreen';
@@ -39,6 +40,9 @@ import { CategoryOffersScreen } from '../screens/CategoryOffersScreen';
 import { OffersScreen } from '../screens/OffersScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { ListingDetailScreen } from '../screens/ListingDetailScreen';
+import { NotificationsScreen } from '../screens/NotificationsScreen';
+import { NewsScreen } from '../screens/NewsScreen';
+import { ArticleDetailScreen } from '../screens/ArticleDetailScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { StoreDetailScreen } from '../screens/StoreDetailScreen';
 import { StoresBrowseScreen } from '../screens/StoresBrowseScreen';
@@ -47,7 +51,7 @@ import { CHAT_THREAD_BAR_BODY_HEIGHT } from '../constants/chat-layout';
 import { colors } from '../theme';
 
 const tabScreens: ScreenName[] = ['home', 'offers', 'myOffers', 'chat'];
-const protectedScreens: ScreenName[] = ['myOffers', 'chat', 'addOffer', 'addStore', 'myStore'];
+const protectedScreens: ScreenName[] = ['myOffers', 'chat', 'addOffer', 'addStore', 'myStore', 'notifications'];
 const edgeSwipeWidth = 40;
 const openSwipeThreshold = 56;
 const chatEdgeSwipeBottomInset = 100;
@@ -61,6 +65,7 @@ export function MainShell() {
   const accessToken = useAuthStore((state) => state.accessToken);
   const logout = useAuthStore((state) => state.logout);
   const chatUnreadCount = useChatStore((state) => state.unreadCount);
+  const notificationUnreadCount = useNotificationsStore((state) => state.unreadCount);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [screen, setScreen] = useState<ScreenName>('home');
   const [lastTab, setLastTab] = useState<TabKey>('home');
@@ -71,6 +76,7 @@ export function MainShell() {
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedStoreSlug, setSelectedStoreSlug] = useState<string | null>(null);
+  const [selectedArticleSlug, setSelectedArticleSlug] = useState<string | null>(null);
   const [navTransition, setNavTransition] = useState<ScreenTransitionKind>('tab');
   const drawerOpenRef = useRef(drawerOpen);
   const screenHistoryRef = useRef<ScreenName[]>(['home']);
@@ -129,6 +135,13 @@ export function MainShell() {
     }
   };
 
+  const openArticleDetail = (slug: string) => {
+    setSelectedArticleSlug(slug);
+    if (screen !== 'articleDetail') {
+      pushScreen('articleDetail');
+    }
+  };
+
   const openStoreDetail = (slug: string) => {
     if (screen === 'storeDetail' && selectedStoreSlug !== slug) {
       setNavTransition('push');
@@ -170,10 +183,18 @@ export function MainShell() {
   useEffect(() => {
     if (accessToken) {
       connectChatRealtime();
+      connectNotificationsRealtime();
+      void registerMobilePushToken();
     } else {
       disconnectChatRealtime();
     }
   }, [accessToken]);
+
+  useEffect(() => {
+    if (screen === 'notifications' && accessToken) {
+      void useNotificationsStore.getState().refresh();
+    }
+  }, [screen, accessToken]);
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -224,6 +245,9 @@ export function MainShell() {
     screen === 'addStore' ||
     screen === 'profile' ||
     screen === 'settings' ||
+    screen === 'notifications' ||
+    screen === 'news' ||
+    screen === 'articleDetail' ||
     screen === 'favorites' ||
     screen === 'storesBrowse' ||
     screen === 'storeDetail' ||
@@ -322,6 +346,22 @@ export function MainShell() {
         );
       case 'settings':
         return <SettingsScreen />;
+      case 'notifications':
+        return <NotificationsScreen />;
+      case 'news':
+        return <NewsScreen onOpenArticle={openArticleDetail} />;
+      case 'articleDetail':
+        return selectedArticleSlug ? (
+          <ArticleDetailScreen
+            slug={selectedArticleSlug}
+            onLoginRequired={() => {
+              setPendingScreen('articleDetail');
+              setAuthGateOpen(true);
+            }}
+          />
+        ) : (
+          <NewsScreen onOpenArticle={openArticleDetail} />
+        );
       case 'favorites':
         return <FavoritesScreen onListingPress={openListingDetail} />;
       case 'search':
@@ -415,6 +455,8 @@ export function MainShell() {
             showBack={showHeaderBack}
             onBackPress={goBack}
             onSearchPress={showHeaderSearch ? () => pushScreen('search') : undefined}
+            onNotificationsPress={user ? () => navigate('notifications') : undefined}
+            notificationUnreadCount={notificationUnreadCount}
           />
         ) : null}
 
@@ -423,7 +465,7 @@ export function MainShell() {
             <View style={styles.chatStage}>
               <View style={styles.body}>
                 <ScreenTransition
-                  screenKey={`${screen}-${selectedListingId ?? ''}-${selectedConversationId ?? ''}-${selectedCategoryId ?? ''}-${selectedStoreSlug ?? ''}`}
+                  screenKey={`${screen}-${selectedListingId ?? ''}-${selectedConversationId ?? ''}-${selectedCategoryId ?? ''}-${selectedStoreSlug ?? ''}-${selectedArticleSlug ?? ''}`}
                   transition={navTransition}
                   isRtl={isRtl}
                 >
@@ -435,7 +477,7 @@ export function MainShell() {
           ) : (
             <View style={styles.body}>
               <ScreenTransition
-                screenKey={`${screen}-${selectedListingId ?? ''}-${selectedConversationId ?? ''}-${selectedCategoryId ?? ''}-${selectedStoreSlug ?? ''}`}
+                screenKey={`${screen}-${selectedListingId ?? ''}-${selectedConversationId ?? ''}-${selectedCategoryId ?? ''}-${selectedStoreSlug ?? ''}-${selectedArticleSlug ?? ''}`}
                 transition={navTransition}
                 isRtl={isRtl}
               >

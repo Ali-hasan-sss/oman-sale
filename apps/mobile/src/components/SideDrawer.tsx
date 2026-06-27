@@ -42,10 +42,11 @@ export function SideDrawer({ visible, onClose, onNavigate, onLogoutRequest }: Si
       { screen: 'addStore', label: t.common.createStore, icon: 'storefront-outline' },
       { screen: 'profile', label: t.common.profile, icon: 'person-circle-outline' },
       { screen: 'favorites', label: t.common.favorites, icon: 'heart-outline' },
+      { screen: 'news', label: t.common.news, icon: 'newspaper-outline' },
       { screen: 'settings', label: t.common.settings, icon: 'settings-outline' }
     ];
     return hasStore ? base.filter((item) => item.screen !== 'addStore') : base;
-  }, [hasStore, t.common.browseStores, t.common.createStore, t.common.favorites, t.common.myStore, t.common.profile, t.common.settings]);
+  }, [hasStore, t.common.browseStores, t.common.createStore, t.common.favorites, t.common.myStore, t.common.news, t.common.profile, t.common.settings]);
 
   useEffect(() => {
     if (!visible || !user) {

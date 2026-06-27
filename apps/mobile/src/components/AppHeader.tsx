@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useI18n } from '../i18n';
 import { colors } from '../theme';
@@ -13,9 +13,18 @@ type AppHeaderProps = {
   showBack?: boolean;
   onBackPress?: () => void;
   onSearchPress?: () => void;
+  onNotificationsPress?: () => void;
+  notificationUnreadCount?: number;
 };
 
-export function AppHeader({ onMenuPress, showBack, onBackPress, onSearchPress }: AppHeaderProps) {
+export function AppHeader({
+  onMenuPress,
+  showBack,
+  onBackPress,
+  onSearchPress,
+  onNotificationsPress,
+  notificationUnreadCount = 0
+}: AppHeaderProps) {
   const { isRtl } = useI18n();
 
   return (
@@ -33,6 +42,16 @@ export function AppHeader({ onMenuPress, showBack, onBackPress, onSearchPress }:
             {onSearchPress ? (
               <Pressable style={styles.iconButton} onPress={onSearchPress} accessibilityRole="button">
                 <Ionicons name="search" size={22} color={colors.ink} />
+              </Pressable>
+            ) : null}
+            {onNotificationsPress ? (
+              <Pressable style={styles.iconButton} onPress={onNotificationsPress} accessibilityRole="button">
+                <Ionicons name="notifications-outline" size={22} color={colors.ink} />
+                {notificationUnreadCount > 0 ? (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{notificationUnreadCount > 9 ? '9+' : notificationUnreadCount}</Text>
+                  </View>
+                ) : null}
               </Pressable>
             ) : null}
           </>
@@ -84,5 +103,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.background
+  },
+  badge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#dc2626',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '800'
   }
 });

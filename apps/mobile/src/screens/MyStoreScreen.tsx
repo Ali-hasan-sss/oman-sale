@@ -13,6 +13,9 @@ import {
 import { AppText } from '../components/AppText';
 import { AppTextInput } from '../components/AppTextInput';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { StoreTrustBadgePanel } from '../components/trust-badge/StoreTrustBadgePanel';
+import { SubscriptionRingGauge } from '../components/SubscriptionRingGauge';
+import { VerifiedBadge } from '../components/VerifiedBadge';
 import { ErrorNotice } from '../components/ErrorNotice';
 import { KeyboardAwareScrollView } from '../components/KeyboardAwareScrollView';
 import { MyStoreScreenSkeleton } from '../components/skeleton';
@@ -20,7 +23,14 @@ import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
 import { formatPlanVatBreakdown } from '../lib/plan-pricing';
 import { canActivateStorePlanWithoutPayment } from '../lib/store-plan-activation';
-import { canRenewActiveSubscriptionWithinWindow } from '../lib/subscription-usage';
+import {
+  canRenewActiveSubscriptionWithinWindow,
+  getEffectiveSubscriptionMaxListings,
+  getListingsUsageColor,
+  getSubscriptionPlanListingAllowance,
+  getSubscriptionTimeUsage,
+  getTimeUsageColor
+} from '../lib/subscription-usage';
 import { filterPlansForUpgrade, isPaidBillingOption } from '../lib/store-plan-upgrade';
 import {
   activateStorePaidRequest,
@@ -85,10 +95,32 @@ export function MyStoreScreen({ onCreateStore, onOpenListing }: MyStoreScreenPro
 
   const effectiveMaxListings = useMemo(() => {
     if (!activeSubscription) return 0;
-    if (activeSubscription.isTrial && (activeSubscription.plan?.trialMaxListings ?? 0) > 0) {
-      return activeSubscription.plan!.trialMaxListings!;
-    }
-    return activeSubscription.maxListings;
+    return getEffectiveSubscriptionMaxListings({
+      isTrial: activeSubscription.isTrial,
+      maxListings: activeSubscription.maxListings,
+      baselineListings: activeSubscription.baselineListings,
+      trialMaxListings: activeSubscription.plan?.trialMaxListings
+    });
+  }, [activeSubscription]);
+
+  const planListingAllowance = useMemo(() => {
+    if (!activeSubscription) return 0;
+    return getSubscriptionPlanListingAllowance({
+      isTrial: activeSubscription.isTrial,
+      maxListings: activeSubscription.maxListings,
+      trialMaxListings: activeSubscription.plan?.trialMaxListings
+    });
+  }, [activeSubscription]);
+
+  const carriedOverListings = activeSubscription?.baselineListings ?? 0;
+
+  const subscriptionTimeUsage = useMemo(() => {
+    if (!activeSubscription) return null;
+    return getSubscriptionTimeUsage({
+      startsAt: activeSubscription.startsAt,
+      endsAt: activeSubscription.endsAt,
+      billingPeriod: activeSubscription.billingPeriod
+    });
   }, [activeSubscription]);
 
   const isOnActiveTrial = Boolean(store?.accessStatus === 'TRIAL' && activeSubscription?.isTrial);
@@ -330,7 +362,10 @@ export function MyStoreScreen({ onCreateStore, onOpenListing }: MyStoreScreenPro
         </Pressable>
       </View>
 
-      <AppText style={[styles.storeName, textAlign]}>{storeName}</AppText>
+      <View style={[styles.nameRow, isRtl && styles.nameRowRtl]}>
+        <AppText style={[styles.storeName, textAlign]}>{storeName}</AppText>
+        {store.trustBadgeApproved ? <VerifiedBadge size="md" /> : null}
+      </View>
 
       <AppText style={[styles.fieldLabel, textAlign]}>{text.bioAr}</AppText>
       <AppTextInput value={bioAr} onChangeText={setBioAr} multiline style={[styles.input, styles.textArea, textAlign]} />
@@ -362,12 +397,38 @@ export function MyStoreScreen({ onCreateStore, onOpenListing }: MyStoreScreenPro
             </AppText>
             {activeSubscription.isTrial ? (
               <AppText style={[styles.trialHint, textAlign]}>
-                {text.trialLimitHint}: {effectiveMaxListings} • {text.paidLimitHint}: {activeSubscription.maxListings}
+                {text.trialLimitHint}: {planListingAllowance} • {text.paidLimitHint}: {activeSubscription.maxListings}
               </AppText>
             ) : null}
-            <AppText style={[styles.meta, textAlign]}>
-              {text.listingsUsed}: {listings.length}
-            </AppText>
+            {carriedOverListings > 0 ? (
+              <AppText style={[styles.trialHint, textAlign]}>
+                {text.listingsBaselineHint}: {carriedOverListings} + {text.listingsPlanAllowanceHint}: {planListingAllowance} = {text.listingsTotalHint}: {effectiveMaxListings}
+              </AppText>
+            ) : null}
+            <View style={styles.gaugeRow}>
+              <SubscriptionRingGauge
+                title={text.listingsUsage}
+                used={listings.length}
+                total={effectiveMaxListings}
+                usedLabel={text.listingsConsumed}
+                remainingLabel={text.listingsRemaining}
+                centerValue={`${Math.max(effectiveMaxListings - listings.length, 0)}`}
+                centerSub={text.listingsRemaining}
+                accentColor={getListingsUsageColor(listings.length, effectiveMaxListings)}
+              />
+              {subscriptionTimeUsage ? (
+                <SubscriptionRingGauge
+                  title={text.subscriptionTime}
+                  used={subscriptionTimeUsage.elapsedDays}
+                  total={subscriptionTimeUsage.totalDays}
+                  usedLabel={text.daysConsumed}
+                  remainingLabel={text.daysRemaining}
+                  centerValue={`${subscriptionTimeUsage.remainingDays}`}
+                  centerSub={text.dayUnit}
+                  accentColor={getTimeUsageColor(subscriptionTimeUsage.elapsedRatio)}
+                />
+              ) : null}
+            </View>
           </>
         ) : null}
         {showPayButton || showRenewButton || showUpgradeButton ? (
@@ -521,6 +582,8 @@ export function MyStoreScreen({ onCreateStore, onOpenListing }: MyStoreScreenPro
         </Pressable>
       </View>
 
+      <StoreTrustBadgePanel storeId={store.id} />
+
       <View style={styles.card}>
         <AppText style={[styles.cardTitle, textAlign]}>{text.storeListings}</AppText>
         {listings.length === 0 ? (
@@ -591,6 +654,9 @@ const styles = StyleSheet.create({
   },
   logo: { width: '100%', height: '100%' },
   storeName: { fontSize: 20, fontWeight: '800', color: colors.ink, marginTop: 8 },
+  nameRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginTop: 8 },
+  nameRowRtl: { flexDirection: 'row' },
+  gaugeRow: { flexDirection: 'row-reverse', gap: 10, marginTop: 12 },
   fieldLabel: { fontWeight: '700', color: colors.ink, marginTop: 8 },
   input: {
     borderWidth: 1,

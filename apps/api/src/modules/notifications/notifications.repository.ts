@@ -4,10 +4,17 @@ import { prisma } from '../../shared/prisma/client';
 import type { CreateNotificationDto } from './notifications.validation';
 
 export class NotificationsRepository {
-  listForUser(userId: string) {
+  listForUser(userId: string, limit = 50) {
     return prisma.notification.findMany({
       where: { userId, deletedAt: null },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      take: limit
+    });
+  }
+
+  unreadCount(userId: string) {
+    return prisma.notification.count({
+      where: { userId, deletedAt: null, isRead: false }
     });
   }
 
@@ -24,6 +31,13 @@ export class NotificationsRepository {
   markRead(id: string, userId: string) {
     return prisma.notification.updateMany({
       where: { id, userId },
+      data: { isRead: true, readAt: new Date() }
+    });
+  }
+
+  markAllRead(userId: string) {
+    return prisma.notification.updateMany({
+      where: { userId, isRead: false, deletedAt: null },
       data: { isRead: true, readAt: new Date() }
     });
   }

@@ -12,7 +12,29 @@ export async function registerScheduledJobs() {
     }
   );
 
-  console.log('[scheduler] store subscription expiry job registered (every 15 minutes)');
+  await storeSubscriptionsQueue.add(
+    'warn-expiring-subscriptions',
+    {},
+    {
+      jobId: 'warn-expiring-store-subscriptions',
+      repeat: { pattern: '0 */6 * * *' },
+      removeOnComplete: true,
+      removeOnFail: 100
+    }
+  );
+
+  await storeSubscriptionsQueue.add(
+    'warn-expiring-promotions',
+    {},
+    {
+      jobId: 'warn-expiring-promotions',
+      repeat: { pattern: '0 */6 * * *' },
+      removeOnComplete: true,
+      removeOnFail: 100
+    }
+  );
+
+  console.log('[scheduler] store subscription & promotion warning jobs registered');
 }
 
 export async function safeQueueNotificationJob(name: string, data: Record<string, unknown>) {

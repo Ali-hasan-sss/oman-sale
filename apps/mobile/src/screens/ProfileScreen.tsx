@@ -15,6 +15,8 @@ import {
 import { AppText } from '../components/AppText';
 import { AppTextInput } from '../components/AppTextInput';
 import { AvatarWithBanBadge } from '../components/AvatarWithBanBadge';
+import { UserTrustBadgePanel } from '../components/trust-badge/UserTrustBadgePanel';
+import { VerifiedBadge } from '../components/VerifiedBadge';
 import { KeyboardAwareScrollView } from '../components/KeyboardAwareScrollView';
 import { ProfileSkeleton } from '../components/skeleton';
 import { VerificationCodeInput } from '../components/VerificationCodeInput';
@@ -336,7 +338,10 @@ export function ProfileScreen({ onLogin, onManageStore, onCreateStore }: Profile
         </View>
 
         <View style={styles.card}>
-          <AppText style={[styles.cardTitle, textAlign]}>{t.profile.personalInfo}</AppText>
+          <View style={[styles.titleWithBadge, isRtl && styles.titleWithBadgeRtl]}>
+            <AppText style={[styles.cardTitle, textAlign]}>{t.profile.personalInfo}</AppText>
+            {user?.trustBadgeApproved ? <VerifiedBadge size="md" /> : null}
+          </View>
 
           <View style={[styles.avatarRow, isRtl && styles.avatarRowRtl]}>
             <AvatarWithBanBadge
@@ -414,6 +419,8 @@ export function ProfileScreen({ onLogin, onManageStore, onCreateStore }: Profile
             )}
           </Pressable>
         </View>
+
+        <UserTrustBadgePanel />
 
         <SectionCard icon="lock-closed-outline">
           <AppText style={[styles.cardTitle, textAlign]}>{t.profile.passwordTitle}</AppText>
@@ -601,6 +608,15 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: colors.ink,
     marginBottom: 12
+  },
+  titleWithBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12
+  },
+  titleWithBadgeRtl: {
+    flexDirection: 'row-reverse'
   },
   avatarRow: {
     flexDirection: 'row',

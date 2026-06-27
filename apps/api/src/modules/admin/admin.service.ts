@@ -50,6 +50,12 @@ export class AdminService {
       return bannedUser;
     }
 
+    if (dto.isActive === false && user.isActive) {
+      const updated = await adminRepository.updateUser(id, dto);
+      await notificationsService.sendAccountDisabledNotification(id).catch(() => undefined);
+      return updated;
+    }
+
     return adminRepository.updateUser(id, dto);
   }
 

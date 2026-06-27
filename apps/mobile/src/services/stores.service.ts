@@ -67,7 +67,9 @@ export type PublicStore = {
   listingsCount?: number;
   rootCategory?: { id: string; nameAr: string; nameEn: string; slug: string };
   storeType?: { id: string; nameAr: string; nameEn: string; slug: string; icon?: string | null } | null;
-  owner?: { id: string; fullName: string; avatar?: string | null } | null;
+  owner?: { id: string; fullName: string; avatar?: string | null; trustBadgeApproved?: boolean } | null;
+  trustBadgeApproved?: boolean;
+  trustBadgeStatus?: string;
 };
 
 export type StoreType = {
@@ -95,6 +97,7 @@ export type OwnerStore = {
   logoUrl?: string | null;
   coverUrl?: string | null;
   isActive: boolean;
+  trustBadgeApproved?: boolean;
   accessStatus: 'ACTIVE' | 'TRIAL' | 'TRIAL_EXPIRED' | 'SUBSCRIPTION_EXPIRED' | 'DISABLED';
   requiresPayment: boolean;
   rootCategory?: { id?: string; nameAr?: string; nameEn?: string };
@@ -107,6 +110,7 @@ export type OwnerStore = {
     startsAt?: string | null;
     endsAt?: string | null;
     maxListings: number;
+    baselineListings?: number;
     finalPrice?: string | number;
     billingPeriod: StoreBillingPeriod;
     plan?: { id: string; nameAr: string; nameEn: string; trialMaxListings?: number; isAdminFree?: boolean; sortOrder?: number };

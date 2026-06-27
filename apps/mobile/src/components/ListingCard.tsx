@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from './AppText';
 import { ListingCoverImage } from './ListingCoverImage';
+import { VerifiedBadge } from './VerifiedBadge';
 import { formatPrice, getCategoryName } from '../data';
 import { getListingLocationLabel } from '../lib/oman-locations';
 import type { Listing, Locale } from '../types';
@@ -54,9 +55,12 @@ export function ListingCard({ listing, locale, featuredLabel, layout = 'vertical
         ) : null}
       </View>
       <View style={[styles.body, isHorizontal && styles.bodyHorizontal]}>
-        <AppText style={[styles.title, contentRtl ? styles.textRtl : styles.textLtr]} numberOfLines={1}>
-          {listing.title}
-        </AppText>
+        <View style={[styles.titleRow, contentRtl ? styles.titleRowRtl : styles.titleRowLtr]}>
+          <AppText style={[styles.title, contentRtl ? styles.textRtl : styles.textLtr, styles.titleFlex]} numberOfLines={1}>
+            {listing.title}
+          </AppText>
+          {listing.trustBadgeApproved ? <VerifiedBadge /> : null}
+        </View>
         <AppText style={[styles.price, contentRtl ? styles.textRtl : styles.textLtr]}>{formatPrice(listing.price, listing.currency, locale)}</AppText>
         <AppText style={[styles.location, contentRtl ? styles.textRtl : styles.textLtr]} numberOfLines={1}>
           {getListingLocationLabel(listing.city, listing.wilayah, listing.area, locale) || '-'}
@@ -167,6 +171,21 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.ink,
     marginBottom: 6
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6
+  },
+  titleRowRtl: {
+    flexDirection: 'row-reverse'
+  },
+  titleRowLtr: {
+    flexDirection: 'row'
+  },
+  titleFlex: {
+    flex: 1
   },
   price: {
     fontSize: 18,

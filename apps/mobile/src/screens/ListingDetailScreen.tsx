@@ -14,6 +14,7 @@ import {
 import { AppTextInput } from '../components/AppTextInput';
 import { AppText } from '../components/AppText';
 import { AvatarWithBanBadge } from '../components/AvatarWithBanBadge';
+import { VerifiedBadge } from '../components/VerifiedBadge';
 import { ListingCard } from '../components/ListingCard';
 import { ListingCoverImage } from '../components/ListingCoverImage';
 import { ListingImageModal } from '../components/ListingImageModal';
@@ -338,7 +339,10 @@ export function ListingDetailScreen({
             ) : null}
           </View>
 
-          <AppText style={[styles.title, contentRtl ? styles.textRtl : styles.textLtr]}>{listing.title}</AppText>
+          <View style={[styles.titleRow, contentRtl ? styles.titleRowRtl : styles.titleRowLtr]}>
+            <AppText style={[styles.title, contentRtl ? styles.textRtl : styles.textLtr, styles.titleFlex]}>{listing.title}</AppText>
+            {listing.trustBadgeApproved ? <VerifiedBadge size="md" /> : null}
+          </View>
           {listing.isActive === false ? (
             <AppText style={styles.inactive}>{text.inactiveNotice}</AppText>
           ) : null}
@@ -393,9 +397,12 @@ export function ListingDetailScreen({
                 badgeLabel={listing.user?.isBlocked ? t.profile.accountBlocked : undefined}
               />
               <View style={styles.sellerBody}>
-                <AppText style={[styles.sellerName, contentRtl ? styles.textRtl : styles.textLtr]}>
-                  {locale === 'en' ? listing.store.nameEn : listing.store.nameAr}
-                </AppText>
+                <View style={[styles.sellerNameRow, contentRtl ? styles.sellerNameRowRtl : styles.sellerNameRowLtr]}>
+                  <AppText style={[styles.sellerName, contentRtl ? styles.textRtl : styles.textLtr, styles.sellerNameFlex]}>
+                    {locale === 'en' ? listing.store.nameEn : listing.store.nameAr}
+                  </AppText>
+                  {listing.trustBadgeApproved ? <VerifiedBadge /> : null}
+                </View>
                 <AppText style={[styles.sellerMeta, styles.sellerStoreMeta, contentRtl ? styles.textRtl : styles.textLtr]}>
                   {text.storeListing}
                 </AppText>
@@ -417,13 +424,16 @@ export function ListingDetailScreen({
                 badgeLabel={listing.user?.isBlocked ? t.profile.accountBlocked : undefined}
               />
               <View style={styles.sellerBody}>
-                <AppText style={[styles.sellerName, contentRtl ? styles.textRtl : styles.textLtr]}>
-                  {listing.store
-                    ? locale === 'en'
-                      ? listing.store.nameEn
-                      : listing.store.nameAr
-                    : listing.user?.fullName ?? '-'}
-                </AppText>
+                <View style={[styles.sellerNameRow, contentRtl ? styles.sellerNameRowRtl : styles.sellerNameRowLtr]}>
+                  <AppText style={[styles.sellerName, contentRtl ? styles.textRtl : styles.textLtr, styles.sellerNameFlex]}>
+                    {listing.store
+                      ? locale === 'en'
+                        ? listing.store.nameEn
+                        : listing.store.nameAr
+                      : listing.user?.fullName ?? '-'}
+                  </AppText>
+                  {listing.trustBadgeApproved ? <VerifiedBadge /> : null}
+                </View>
                 <AppText style={[styles.sellerMeta, contentRtl ? styles.textRtl : styles.textLtr]}>
                   {listing.store ? text.storeListing : `${text.memberSince} ${memberYear}`}
                 </AppText>
@@ -721,6 +731,21 @@ const styles = StyleSheet.create({
     color: colors.ink,
     marginBottom: 6
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6
+  },
+  titleRowRtl: {
+    flexDirection: 'row-reverse'
+  },
+  titleRowLtr: {
+    flexDirection: 'row'
+  },
+  titleFlex: {
+    flex: 1
+  },
   inactive: {
     color: colors.danger,
     fontWeight: '700',
@@ -865,6 +890,20 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '800',
     color: colors.ink
+  },
+  sellerNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6
+  },
+  sellerNameRowRtl: {
+    flexDirection: 'row-reverse'
+  },
+  sellerNameRowLtr: {
+    flexDirection: 'row'
+  },
+  sellerNameFlex: {
+    flex: 1
   },
   sellerMeta: {
     color: colors.muted,

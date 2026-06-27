@@ -6,6 +6,7 @@ import { useState } from 'react';
 
 import { HeaderAuthAction } from '@/components/auth/user-menu';
 import { HeaderCustomNavButtons } from '@/components/navigation/header-custom-nav-buttons';
+import { NotificationBell } from '@/components/notifications/notification-bell';
 import { SiteBrandMark } from '@/components/navigation/site-brand-mark';
 import { useI18n } from '@/lib/i18n';
 
@@ -27,6 +28,7 @@ export function MobileNavMenu({ variant = 'light' }: MobileNavMenuProps) {
 
   return (
     <div className="flex items-center gap-2 md:hidden">
+      <NotificationBell variant={variant === 'hero' ? 'hero' : 'default'} />
       <HeaderAuthAction loginClassName={loginClass} />
       <button aria-label="Open navigation" className={buttonClass} onClick={() => setIsOpen(true)} type="button">
         <Menu size={22} />
@@ -61,6 +63,7 @@ export function MobileNavMenu({ variant = 'light' }: MobileNavMenuProps) {
               <MobileLink href="/pricing" label={m.common.pricing} onClick={() => setIsOpen(false)} />
               <MobileLink href="/all-listings" label={m.common.allListings} onClick={() => setIsOpen(false)} />
               <MobileLink href="/favorites" label={m.common.favorites} onClick={() => setIsOpen(false)} />
+              <MobileLink href="/notifications" label={m.common.notifications} onClick={() => setIsOpen(false)} />
               <MobileLink href="/profile" label={m.common.profile} onClick={() => setIsOpen(false)} />
               <Link
                 href={localizedPath('/add-listing')}

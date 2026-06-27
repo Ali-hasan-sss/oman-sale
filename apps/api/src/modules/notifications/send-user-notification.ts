@@ -1,6 +1,7 @@
 import { NotificationType } from '@prisma/client';
 
 import { notificationQueue } from '../../config/queues';
+import { emitInAppNotification } from './emit-notification';
 import { notificationsRepository } from './notifications.repository';
 
 export type LocalizedNotificationText = {
@@ -12,6 +13,7 @@ export type NotificationDeliveryChannels = {
   inApp?: boolean;
   email?: boolean;
   whatsapp?: boolean;
+  push?: boolean;
 };
 
 export type SendUserNotificationInput = {
@@ -19,13 +21,15 @@ export type SendUserNotificationInput = {
   type: NotificationType;
   title: LocalizedNotificationText;
   body: LocalizedNotificationText;
+  metadata?: Record<string, unknown>;
   channels?: NotificationDeliveryChannels;
 };
 
 const defaultChannels: Required<NotificationDeliveryChannels> = {
   inApp: true,
   email: false,
-  whatsapp: false
+  whatsapp: false,
+  push: true
 };
 
 async function safeQueue(name: string, data: Record<string, unknown>) {
@@ -50,14 +54,35 @@ export async function sendUserNotification(input: SendUserNotificationInput) {
         metadata: {
           titleEn: input.title.en,
           bodyEn: input.body.en,
-          channels
+          channels,
+          ...(input.metadata ?? {})
         }
       });
       notificationId = notification.id;
-      await safeQueue('deliver-in-app-notification', { notificationId: notification.id });
+
+      // Emit in real time directly from the API process. The socket server only
+      // exists in this process, so emitting here (instead of from a separate
+      // worker process where `io` is undefined) guarantees instant delivery.
+      try {
+        await emitInAppNotification(notification.id);
+      } catch (emitError) {
+        console.error('[notifications] failed to emit in-app notification', emitError);
+        // Fallback to the queue so a running worker can retry the emit.
+        await safeQueue('deliver-in-app-notification', { notificationId: notification.id });
+      }
     } catch (error) {
       console.error('[notifications] failed to create in-app notification', error);
     }
+  }
+
+  if (channels.push) {
+    await safeQueue('deliver-push-notification', {
+      userId: input.userId,
+      notificationId,
+      type: input.type,
+      title: input.title,
+      body: input.body
+    });
   }
 
   if (channels.email) {

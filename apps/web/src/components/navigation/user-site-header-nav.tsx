@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { HeaderAuthAction } from '@/components/auth/user-menu';
 import { BrowseStoresNavButton } from '@/components/navigation/browse-stores-nav-button';
 import { HeaderCustomNavButtons } from '@/components/navigation/header-custom-nav-buttons';
+import { NotificationBell } from '@/components/notifications/notification-bell';
 import { useI18n } from '@/lib/i18n';
 
 type UserSiteHeaderNavProps = {
@@ -46,6 +47,7 @@ export function UserSiteHeaderNav({ variant = 'default' }: UserSiteHeaderNavProp
       <Link href={localizedPath('/add-listing')} className={primary}>
         {m.common.addListing}
       </Link>
+      <NotificationBell variant={variant === 'hero' ? 'hero' : 'default'} />
       <HeaderAuthAction loginClassName={outline} />
     </nav>
   );

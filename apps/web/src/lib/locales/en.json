@@ -2,6 +2,10 @@
   "common": {
     "languageSwitch": "AR",
     "chats": "Chats",
+    "notifications": "Notifications",
+    "noNotifications": "No notifications yet",
+    "markAllRead": "Mark all as read",
+    "viewAllNotifications": "View all notifications",
     "myListings": "My Listings",
     "addListing": "Post Ad",
     "createStore": "Create store",

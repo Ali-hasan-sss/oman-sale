@@ -13,6 +13,15 @@ for (const envPath of [
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  /**
+   * Run the BullMQ queue workers inside the API process. Defaults to ON outside
+   * production so a single `npm run dev` delivers emails, push and realtime jobs.
+   * In production keep this OFF and run a dedicated worker (`start:worker`).
+   */
+  WORKERS_INLINE: z.preprocess(
+    (value) => (value === undefined ? undefined : value === 'true'),
+    z.boolean().optional()
+  ),
   PORT: z.coerce.number().default(4000),
   HOST: z.string().default('0.0.0.0'),
   TRUST_PROXY: z
@@ -91,6 +100,7 @@ const envSchema = z.object({
   MEDIA_PUBLIC_BASE_URL: z.string().url().optional(),
   /** private = serve via API proxy (default, works with blocked public S3). public = direct S3 URLs. */
   MEDIA_S3_ACCESS: z.enum(['private', 'public']).default('private'),
+  ADMIN_NOTIFICATION_EMAIL: z.string().email().default('info@omansale.om'),
   FIREBASE_PROJECT_ID: z.string().optional(),
   /** JSON string of Firebase service account (single line). Required for Google sign-in token verification. */
   FIREBASE_SERVICE_ACCOUNT_JSON: z.string().optional()

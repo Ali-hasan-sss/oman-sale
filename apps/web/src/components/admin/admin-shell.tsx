@@ -7,6 +7,7 @@ import { FormEvent, PropsWithChildren, useEffect, useState } from 'react';
 
 import { notifyAuthChanged } from '@/components/auth/user-menu';
 import { AdminContentLoader } from '@/components/admin/admin-page-loader';
+import { NotificationBell } from '@/components/notifications/notification-bell';
 import { adminApi, clearAdminSession, getAdminAccessToken } from '@/lib/admin-auth';
 import { ADMIN_PENDING_COUNTS_EVENT } from '@/lib/admin-pending-counts';
 import { useI18n } from '@/lib/i18n';
@@ -246,6 +247,7 @@ export function AdminShell({ children }: PropsWithChildren) {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <NotificationBell variant="admin" showViewAllLink={false} />
               <button
                 type="button"
                 onClick={() => setPasswordModalOpen(true)}

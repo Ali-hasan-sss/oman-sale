@@ -15,7 +15,7 @@ import { clearUserSession } from '@/lib/user-auth';
 import { useAuthStore } from '@/store/auth-store';
 import { useChatRealtimeStore } from '@/store/chat-realtime-store';
 
-const AUTH_CHANGED_EVENT = 'oman-sale-auth-changed';
+export const AUTH_CHANGED_EVENT = 'oman-sale-auth-changed';
 
 const logoutDialogLabels = {
   ar: {
