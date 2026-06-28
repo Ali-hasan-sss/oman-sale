@@ -103,7 +103,9 @@ const envSchema = z.object({
   ADMIN_NOTIFICATION_EMAIL: z.string().email().default('info@omansale.om'),
   FIREBASE_PROJECT_ID: z.string().optional(),
   /** JSON string of Firebase service account (single line). Required for Google sign-in token verification. */
-  FIREBASE_SERVICE_ACCOUNT_JSON: z.string().optional()
+  FIREBASE_SERVICE_ACCOUNT_JSON: z.string().optional(),
+  /** Google OAuth web client ID. Used to verify the audience of native (mobile) Google ID tokens. */
+  GOOGLE_WEB_CLIENT_ID: z.string().optional()
 });
 
 export const env = envSchema.parse(process.env);
