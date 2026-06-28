@@ -2,12 +2,22 @@
 export const API_ENDPOINTS = {
   auth: {
     register: '/auth/register',
+    registerStart: '/auth/register/start',
+    registerVerifyEmail: '/auth/register/verify-email',
+    registerResendEmail: '/auth/register/resend-email',
+    registerSendPhone: '/auth/register/send-phone-code',
+    registerVerifyPhone: '/auth/register/verify-phone',
+    registerResendPhone: '/auth/register/resend-phone',
     login: '/auth/login',
+    google: '/auth/google',
     refresh: '/auth/refresh',
     verifyEmail: '/auth/verify-email',
     resendVerification: '/auth/resend-verification',
     forgotPassword: '/auth/forgot-password',
-    resetPassword: '/auth/reset-password'
+    resetPassword: '/auth/reset-password',
+    completeProfileSendPhone: '/auth/complete-profile/send-phone',
+    completeProfileVerifyPhone: '/auth/complete-profile/verify-phone',
+    completeProfile: '/auth/complete-profile'
   },
   users: {
     me: '/users/me',
@@ -103,7 +113,14 @@ export const API_ENDPOINTS = {
 /** Routes that must not trigger automatic token refresh on 401. */
 export const AUTH_PUBLIC_PATHS = [
   API_ENDPOINTS.auth.register,
+  API_ENDPOINTS.auth.registerStart,
+  API_ENDPOINTS.auth.registerVerifyEmail,
+  API_ENDPOINTS.auth.registerResendEmail,
+  API_ENDPOINTS.auth.registerSendPhone,
+  API_ENDPOINTS.auth.registerVerifyPhone,
+  API_ENDPOINTS.auth.registerResendPhone,
   API_ENDPOINTS.auth.login,
+  API_ENDPOINTS.auth.google,
   API_ENDPOINTS.auth.refresh,
   API_ENDPOINTS.auth.verifyEmail,
   API_ENDPOINTS.auth.resendVerification,

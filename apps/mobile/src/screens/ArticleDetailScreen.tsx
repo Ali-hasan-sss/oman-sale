@@ -1,10 +1,17 @@
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
-import { ArticleComments } from '../components/articles/ArticleComments';
+import {
+  ArticleCommentComposer,
+  ArticleCommentsDialogs,
+  ArticleCommentsList,
+  useArticleComments
+} from '../components/articles/ArticleComments';
+import { ArticleImageGallery } from '../components/articles/ArticleImageGallery';
 import { ArticleReactions } from '../components/articles/ArticleReactions';
 import { AppText } from '../components/AppText';
 import { EmptyState } from '../components/EmptyState';
+import { KeyboardAwareScrollView } from '../components/KeyboardAwareScrollView';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
 import { fetchArticleBySlug, type ArticleDetails } from '../services/articles.service';
@@ -25,6 +32,15 @@ function stripHtml(value: string) {
     .trim();
 }
 
+function buildArticleImages(article: ArticleDetails) {
+  const images: string[] = [];
+  if (article.coverImageUrl) images.push(article.coverImageUrl);
+  for (const url of article.galleryImages ?? []) {
+    if (url && !images.includes(url)) images.push(url);
+  }
+  return images;
+}
+
 export function ArticleDetailScreen({ slug, onLoginRequired }: ArticleDetailScreenProps) {
   const { locale, t, isRtl } = useI18n();
   const text = t.articles;
@@ -35,6 +51,12 @@ export function ArticleDetailScreen({ slug, onLoginRequired }: ArticleDetailScre
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
   const textAlign = isRtl ? styles.rtl : styles.ltr;
+
+  const commentsState = useArticleComments({
+    articleId: article?.id ?? '',
+    isLoggedIn,
+    onLoginRequired
+  });
 
   useEffect(() => {
     setIsLoading(true);
@@ -47,6 +69,8 @@ export function ArticleDetailScreen({ slug, onLoginRequired }: ArticleDetailScre
       })
       .finally(() => setIsLoading(false));
   }, [slug]);
+
+  const images = useMemo(() => (article ? buildArticleImages(article) : []), [article]);
 
   if (isLoading) {
     return (
@@ -64,56 +88,74 @@ export function ArticleDetailScreen({ slug, onLoginRequired }: ArticleDetailScre
   const body = stripHtml(locale === 'en' ? article.bodyEn : article.bodyAr);
 
   return (
-    <ScrollView contentContainerStyle={[styles.content, { paddingBottom: scrollBottomPadding }]}>
-      {article.coverImageUrl ? (
-        <Image source={{ uri: article.coverImageUrl }} style={styles.cover} resizeMode="cover" />
-      ) : null}
-      {article.category ? (
-        <AppText style={styles.category}>
-          {locale === 'en' ? article.category.nameEn : article.category.nameAr}
-        </AppText>
-      ) : null}
-      <AppText style={[styles.title, textAlign]}>{title}</AppText>
-      <AppText style={styles.meta}>
-        {article.views} {text.views}
-        {article.publishedAt ? ` • ${new Date(article.publishedAt).toLocaleDateString()}` : ''}
-      </AppText>
-      <AppText style={[styles.body, textAlign]}>{body}</AppText>
-      {article.galleryImages?.length ? (
-        <View style={styles.gallery}>
-          {article.galleryImages.map((imageUrl) => (
-            <Image key={imageUrl} source={{ uri: imageUrl }} style={styles.galleryImage} resizeMode="cover" />
-          ))}
+    <View style={styles.root}>
+      <KeyboardAwareScrollView
+        style={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingBottom: scrollBottomPadding
+        }}
+      >
+        <ArticleImageGallery images={images} />
+
+        <View style={styles.body}>
+          {article.category ? (
+            <AppText style={styles.category}>
+              {locale === 'en' ? article.category.nameEn : article.category.nameAr}
+            </AppText>
+          ) : null}
+          <AppText style={[styles.title, textAlign]}>{title}</AppText>
+          <AppText style={styles.meta}>
+            {article.views} {text.views}
+            {article.publishedAt ? ` • ${new Date(article.publishedAt).toLocaleDateString()}` : ''}
+          </AppText>
+          <AppText style={[styles.articleBody, textAlign]}>{body}</AppText>
+
+          <ArticleReactions articleId={article.id} isLoggedIn={isLoggedIn} onLoginRequired={onLoginRequired} />
+
+          <ArticleCommentsList
+            articleId={article.id}
+            currentUserId={user?.id}
+            isLoggedIn={isLoggedIn}
+            onLoginRequired={onLoginRequired}
+            {...commentsState}
+          />
         </View>
-      ) : null}
+      </KeyboardAwareScrollView>
 
-      <ArticleReactions articleId={article.id} isLoggedIn={isLoggedIn} onLoginRequired={onLoginRequired} />
-
-      <ArticleComments
-        articleId={article.id}
-        currentUserId={user?.id}
-        isLoggedIn={isLoggedIn}
-        onLoginRequired={onLoginRequired}
+      <ArticleCommentComposer
+        body={commentsState.body}
+        setBody={commentsState.setBody}
+        submit={commentsState.submit}
+        submitting={commentsState.submitting}
       />
-    </ScrollView>
+
+      <ArticleCommentsDialogs
+        pendingDeleteId={commentsState.pendingDeleteId}
+        setPendingDeleteId={commentsState.setPendingDeleteId}
+        confirmDelete={commentsState.confirmDelete}
+        deleting={commentsState.deleting}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: colors.background
+  },
+  scroll: {
+    flex: 1
+  },
   centered: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center'
   },
-  content: {
+  body: {
     paddingHorizontal: 18,
-    paddingTop: 8
-  },
-  cover: {
-    width: '100%',
-    height: 220,
-    borderRadius: 18,
-    marginBottom: 16
+    paddingTop: 16
   },
   category: {
     color: colors.brand,
@@ -131,19 +173,10 @@ const styles = StyleSheet.create({
     marginBottom: 18,
     color: colors.muted
   },
-  body: {
+  articleBody: {
     color: colors.ink,
     lineHeight: 26,
     fontSize: 16
-  },
-  gallery: {
-    marginTop: 20,
-    gap: 12
-  },
-  galleryImage: {
-    width: '100%',
-    height: 200,
-    borderRadius: 16
   },
   rtl: {
     textAlign: 'right'

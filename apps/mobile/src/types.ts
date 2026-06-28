@@ -10,6 +10,7 @@ export type ScreenName =
   | 'chat'
   | 'login'
   | 'register'
+  | 'completeProfile'
   | 'profile'
   | 'settings'
   | 'favorites'
@@ -31,6 +32,7 @@ export type User = {
   bio?: string | null;
   role?: string;
   avatar?: string | null;
+  profileCompleted?: boolean;
   isBlocked?: boolean;
   isActive?: boolean;
   trustBadgeApproved?: boolean;

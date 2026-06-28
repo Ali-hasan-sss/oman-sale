@@ -42,6 +42,20 @@ export async function sendAdminNotification(input: SendAdminNotificationInput) {
     select: { id: true }
   });
 
+  if (staff.length === 0) {
+    console.warn(
+      '[notifications] no active ADMIN/MODERATOR recipients found for admin notification',
+      { type: input.type }
+    );
+    return;
+  }
+
+  console.log('[notifications] dispatching admin notification', {
+    type: input.type,
+    recipients: staff.length,
+    email: adminEmail
+  });
+
   await Promise.all(
     staff.map((user) =>
       sendUserNotification({

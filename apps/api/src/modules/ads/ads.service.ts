@@ -198,7 +198,9 @@ export class AdsService {
         en: `A new report was submitted for listing "${ad.title}".`
       },
       metadata: { adId: id, reportId: report.id, reason: dto.reason }
-    }).catch(() => undefined);
+    }).catch((error) => {
+      console.error('[notifications] failed to send admin report notification', error);
+    });
 
     return report;
   }

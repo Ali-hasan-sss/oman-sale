@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 import { setupApiInterceptors } from '../lib/api/interceptors';
 import { setupApiLogging } from '../lib/api/logger';
+import { signInWithGoogleNative } from '../lib/google-auth';
 import {
   clearStoredSession,
   loadStoredSession,
@@ -10,20 +11,26 @@ import {
 } from '../lib/session-storage';
 import { getApiErrorCode } from '../lib/api-errors';
 import {
+  completeProfileRequest,
+  completeProfileSendPhoneRequest,
+  completeProfileVerifyPhoneRequest,
   forgotPasswordRequest,
   getApiErrorMessage,
+  googleAuthRequest,
   isEmailVerificationRequiredError,
   loginRequest,
   refreshTokensRequest,
-  registerRequest,
   resendVerificationRequest,
   resetPasswordRequest,
-  verifyEmailRequest
+  verifyEmailRequest,
+  type PhoneVerificationChannel
 } from '../services/auth.service';
 import { fetchCurrentUser } from '../services/user.service';
 import type { AuthSession, Locale, User } from '../types';
 
 type AuthTokens = AuthSession['tokens'];
+
+type AuthSuccess = { ok: true; profileCompleted: boolean };
 
 type AuthState = {
   accessToken?: string;
@@ -34,22 +41,17 @@ type AuthState = {
   authError?: string;
   hydrate: () => Promise<void>;
   setSession: (session: AuthSession) => Promise<void>;
+  setUser: (user: User) => Promise<void>;
   setTokens: (tokens: AuthTokens) => Promise<void>;
   clearSession: () => Promise<void>;
   logout: () => Promise<void>;
   login: (email: string, password: string) => Promise<
-    | { ok: true }
+    | AuthSuccess
     | { ok: false; needsVerification: true; email: string }
     | { ok: false; error: string; errorCode?: string }
   >;
-  register: (payload: {
-    fullName: string;
-    email: string;
-    phone: string;
-    password: string;
-    locale: Locale;
-  }) => Promise<{ ok: true; email: string } | { ok: false; error: string; errorCode?: string }>;
-  verifyEmail: (email: string, code: string) => Promise<{ ok: true } | { ok: false; error: string; errorCode?: string }>;
+  googleSignIn: () => Promise<AuthSuccess | { ok: false; error: string; errorCode?: string; cancelled?: boolean }>;
+  verifyEmail: (email: string, code: string) => Promise<AuthSuccess | { ok: false; error: string; errorCode?: string }>;
   resendVerification: (email: string, locale: Locale) => Promise<{ ok: true } | { ok: false; error: string; errorCode?: string }>;
   forgotPassword: (email: string, locale: Locale) => Promise<{ ok: true } | { ok: false; error: string; errorCode?: string }>;
   resetPassword: (
@@ -57,9 +59,16 @@ type AuthState = {
     code: string,
     password: string
   ) => Promise<{ ok: true } | { ok: false; error: string; errorCode?: string }>;
+  completeProfileSendPhone: (phone: string, locale: Locale, channel?: PhoneVerificationChannel) => Promise<{ ok: true } | { ok: false; error: string; errorCode?: string }>;
+  completeProfileVerifyPhone: (phone: string, code: string) => Promise<{ ok: true } | { ok: false; error: string; errorCode?: string }>;
+  completeProfile: (payload: { fullName: string; phone: string; password: string }) => Promise<AuthSuccess | { ok: false; error: string; errorCode?: string }>;
   refreshAccessToken: () => Promise<AuthTokens>;
   markAccountRestricted: (reason: 'blocked' | 'inactive') => Promise<void>;
 };
+
+function isProfileComplete(user?: User) {
+  return user?.profileCompleted !== false;
+}
 
 async function refreshCurrentUser() {
   const { accessToken, refreshToken } = useAuthStore.getState();
@@ -112,6 +121,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     });
   },
 
+  setUser: async (user) => {
+    const { accessToken, refreshToken } = get();
+    if (!accessToken || !refreshToken) return;
+    await persistSession({ user, tokens: { accessToken, refreshToken } });
+    set({ user });
+  },
+
   setTokens: async (tokens) => {
     await persistTokens(tokens);
     set({ accessToken: tokens.accessToken, refreshToken: tokens.refreshToken });
@@ -132,7 +148,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const session = await loginRequest(email, password);
       await get().setSession(session);
       await refreshCurrentUser();
-      return { ok: true };
+      return { ok: true, profileCompleted: isProfileComplete(get().user) };
     } catch (error) {
       if (isEmailVerificationRequiredError(error)) {
         return { ok: false, needsVerification: true, email };
@@ -146,13 +162,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  register: async (payload) => {
+  googleSignIn: async () => {
     set({ isAuthenticating: true, authError: undefined });
     try {
-      const result = await registerRequest(payload);
-      return { ok: true, email: result.email };
+      const idToken = await signInWithGoogleNative();
+      const session = await googleAuthRequest(idToken);
+      await get().setSession(session);
+      await refreshCurrentUser();
+      return { ok: true, profileCompleted: isProfileComplete(get().user) };
     } catch (error) {
-      const message = getApiErrorMessage(error, 'register');
+      if (error instanceof Error && error.message === 'GOOGLE_SIGN_IN_CANCELLED') {
+        return { ok: false, error: 'cancelled', cancelled: true };
+      }
+      if (
+        error instanceof Error &&
+        (error.message === 'FIREBASE_NOT_CONFIGURED' || error.message === 'GOOGLE_NATIVE_UNAVAILABLE')
+      ) {
+        return { ok: false, error: 'FIREBASE_NOT_CONFIGURED', errorCode: 'FIREBASE_NOT_CONFIGURED' };
+      }
+      const message = getApiErrorMessage(error, 'google');
       set({ authError: message });
       return { ok: false, error: message, errorCode: getApiErrorCode(error) };
     } finally {
@@ -166,7 +194,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const session = await verifyEmailRequest(email, code);
       await get().setSession(session);
       await refreshCurrentUser();
-      return { ok: true };
+      return { ok: true, profileCompleted: isProfileComplete(get().user) };
     } catch (error) {
       const message = getApiErrorMessage(error, 'verify');
       set({ authError: message });
@@ -211,6 +239,49 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return { ok: true };
     } catch (error) {
       const message = getApiErrorMessage(error, 'reset');
+      set({ authError: message });
+      return { ok: false, error: message, errorCode: getApiErrorCode(error) };
+    } finally {
+      set({ isAuthenticating: false });
+    }
+  },
+
+  completeProfileSendPhone: async (phone, locale, channel = 'whatsapp') => {
+    set({ isAuthenticating: true, authError: undefined });
+    try {
+      await completeProfileSendPhoneRequest({ phone, locale, channel });
+      return { ok: true };
+    } catch (error) {
+      const message = getApiErrorMessage(error, 'completeProfile');
+      set({ authError: message });
+      return { ok: false, error: message, errorCode: getApiErrorCode(error) };
+    } finally {
+      set({ isAuthenticating: false });
+    }
+  },
+
+  completeProfileVerifyPhone: async (phone, code) => {
+    set({ isAuthenticating: true, authError: undefined });
+    try {
+      await completeProfileVerifyPhoneRequest(phone, code);
+      return { ok: true };
+    } catch (error) {
+      const message = getApiErrorMessage(error, 'verify');
+      set({ authError: message });
+      return { ok: false, error: message, errorCode: getApiErrorCode(error) };
+    } finally {
+      set({ isAuthenticating: false });
+    }
+  },
+
+  completeProfile: async (payload) => {
+    set({ isAuthenticating: true, authError: undefined });
+    try {
+      const user = await completeProfileRequest(payload);
+      await get().setUser(user);
+      return { ok: true, profileCompleted: true };
+    } catch (error) {
+      const message = getApiErrorMessage(error, 'completeProfile');
       set({ authError: message });
       return { ok: false, error: message, errorCode: getApiErrorCode(error) };
     } finally {

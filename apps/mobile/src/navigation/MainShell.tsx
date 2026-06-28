@@ -30,6 +30,7 @@ import { AddOfferScreen } from '../screens/AddOfferScreen';
 import { AddStoreScreen } from '../screens/AddStoreScreen';
 import { MyStoreScreen } from '../screens/MyStoreScreen';
 import { AuthScreen } from '../screens/AuthScreen';
+import { CompleteProfileScreen } from '../screens/CompleteProfileScreen';
 import { ChatConversationScreen } from '../screens/ChatConversationScreen';
 import { ChatScreen } from '../screens/ChatScreen';
 import { FavoritesScreen } from '../screens/FavoritesScreen';
@@ -63,6 +64,7 @@ export function MainShell() {
   const safeInsets = useSafeAreaInsets();
   const user = useAuthStore((state) => state.user);
   const accessToken = useAuthStore((state) => state.accessToken);
+  const isHydrated = useAuthStore((state) => state.isHydrated);
   const logout = useAuthStore((state) => state.logout);
   const chatUnreadCount = useChatStore((state) => state.unreadCount);
   const notificationUnreadCount = useNotificationsStore((state) => state.unreadCount);
@@ -97,6 +99,12 @@ export function MainShell() {
   };
 
   const navigate = (next: ScreenName) => {
+    if (needsProfileCompletion && next !== 'completeProfile' && next !== 'login' && next !== 'register') {
+      setPendingScreen(next);
+      pushScreen('completeProfile');
+      return;
+    }
+
     if (protectedScreens.includes(next) && !user) {
       setPendingScreen(next);
       setAuthGateOpen(true);
@@ -167,7 +175,12 @@ export function MainShell() {
     return true;
   };
 
-  const handleAuthSuccess = () => {
+  const handleAuthSuccess = (options?: { profileCompleted?: boolean }) => {
+    if (options?.profileCompleted === false) {
+      pushScreen('completeProfile');
+      return;
+    }
+
     const next = pendingScreen ?? 'home';
     if (tabScreens.includes(next)) {
       resetToTab(next as TabKey);
@@ -179,6 +192,15 @@ export function MainShell() {
     setPendingScreen(null);
     setAuthGateOpen(false);
   };
+
+  const needsProfileCompletion = Boolean(user && user.profileCompleted === false);
+
+  useEffect(() => {
+    if (!isHydrated || !accessToken || !user) return;
+    if (user.profileCompleted === false && screen !== 'completeProfile' && screen !== 'login' && screen !== 'register') {
+      pushScreen('completeProfile');
+    }
+  }, [accessToken, isHydrated, screen, user?.profileCompleted]);
 
   useEffect(() => {
     if (accessToken) {
@@ -232,9 +254,10 @@ export function MainShell() {
 
   const tabBarActiveScreen = tabScreens.includes(screen) ? screen : lastTab;
   const isChatConversation = screen === 'chatConversation';
-  const hideTabBar = isChatConversation;
+  const hideTabBar = isChatConversation || screen === 'articleDetail' || screen === 'completeProfile';
   const hideAppHeader = isChatConversation;
-  const hideAssistant = isChatConversation || screen === 'login' || screen === 'register';
+  const hideAssistant =
+    isChatConversation || screen === 'login' || screen === 'register' || screen === 'completeProfile';
   const chatEdgeSwipeTopInset = safeInsets.top + CHAT_THREAD_BAR_BODY_HEIGHT;
   const [tabBarKeyboardOffset, setTabBarKeyboardOffset] = useState(0);
   const isCategoryOffers = screen === 'categoryOffers';
@@ -334,6 +357,13 @@ export function MainShell() {
               setScreen('login');
             }}
             onSuccess={handleAuthSuccess}
+          />
+        );
+      case 'completeProfile':
+        return (
+          <CompleteProfileScreen
+            onSuccess={() => handleAuthSuccess({ profileCompleted: true })}
+            onNeedsLogin={() => pushScreen('login')}
           />
         );
       case 'profile':

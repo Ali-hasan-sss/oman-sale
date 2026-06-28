@@ -29,10 +29,33 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://omansale.om/api/v1",
         "EXPO_PUBLIC_API_DEBUG": "false",
-        "REACT_NATIVE_ARCHITECTURES": "armeabi-v7a,arm64-v8a,x86,x86_64"
+        "REACT_NATIVE_ARCHITECTURES": "armeabi-v7a,arm64-v8a,x86,x86_64",
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyCNfJkLaP2Nb0G7ZNW2yqqKn_8Qto0Ov_E",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "oman-sale-5f29c.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "oman-sale-5f29c",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "oman-sale-5f29c.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "486964938862",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:486964938862:web:a42c158217b3dd9077be7f",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "486964938862-0c3v4s2ec87q6iss0vca3h41pmua435p.apps.googleusercontent.com"
       },
       "android": {
         "buildType": "apk"
+      }
+    },
+    "production-local": {
+      "extends": "production",
+      "credentialsSource": "local",
+      "autoIncrement": false,
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "production-aab-local": {
+      "extends": "production",
+      "credentialsSource": "local",
+      "autoIncrement": false,
+      "android": {
+        "buildType": "app-bundle"
       }
     }
   },

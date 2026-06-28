@@ -1,0 +1,21 @@
+# Expo / native
+.expo
+android
+ios
+web-build
+*.orig.*
+
+# Local build secrets — NEVER commit
+google-services.json
+GoogleService-Info.plist
+credentials.json
+credentials/
+*.keystore
+*.jks
+*.p12
+*.p8
+
+# Local build output
+build-output/
+*.apk
+*.aab

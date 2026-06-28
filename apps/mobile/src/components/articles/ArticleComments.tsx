@@ -1,28 +1,23 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  Platform,
   Pressable,
   StyleSheet,
   View
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '../AppText';
 import { AppTextInput } from '../AppTextInput';
 import { ConfirmDialog } from '../ConfirmDialog';
+import { useComposerKeyboardLift } from '../../hooks/use-composer-keyboard-lift';
 import { useI18n } from '../../i18n';
-import {
-  createArticleComment,
-  deleteArticleComment,
-  fetchArticleComments,
-  updateArticleComment,
-  type ArticleComment
-} from '../../services/articles.service';
+import { type ArticleComment, updateArticleComment } from '../../services/articles.service';
 import { colors, radius } from '../../theme';
-
-const PAGE_SIZE = 10;
-const COMMENT_MAX_LENGTH = 500;
+import { COMMENT_MAX_LENGTH, useArticleComments } from './use-article-comments';
 
 type ArticleCommentsProps = {
   articleId: string;
@@ -31,80 +26,27 @@ type ArticleCommentsProps = {
   onLoginRequired: () => void;
 };
 
-export function ArticleComments({ articleId, currentUserId, isLoggedIn, onLoginRequired }: ArticleCommentsProps) {
+type CommentsState = ReturnType<typeof useArticleComments>;
+
+type ArticleCommentsListProps = ArticleCommentsProps & CommentsState;
+
+export function ArticleCommentsList({
+  currentUserId,
+  isLoggedIn,
+  onLoginRequired,
+  comments,
+  loading,
+  loadingMore,
+  hasMore,
+  page,
+  loadPage,
+  updateComment,
+  requestDelete,
+  articleId
+}: ArticleCommentsListProps) {
   const { locale, t, isRtl } = useI18n();
   const text = t.articles;
   const textAlign = isRtl ? styles.rtl : styles.ltr;
-
-  const [comments, setComments] = useState<ArticleComment[]>([]);
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [body, setBody] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState(false);
-
-  const hasMore = comments.length < total;
-
-  const loadPage = useCallback(
-    async (nextPage: number, append: boolean) => {
-      if (append) setLoadingMore(true);
-      else setLoading(true);
-      try {
-        const result = await fetchArticleComments(articleId, nextPage, PAGE_SIZE);
-        setTotal(result.total);
-        setPage(nextPage);
-        setComments((current) => (append ? [...current, ...result.items] : result.items));
-      } catch {
-        if (!append) {
-          setComments([]);
-          setTotal(0);
-        }
-      } finally {
-        setLoading(false);
-        setLoadingMore(false);
-      }
-    },
-    [articleId]
-  );
-
-  useEffect(() => {
-    void loadPage(1, false);
-  }, [loadPage]);
-
-  const submit = async () => {
-    if (!isLoggedIn) {
-      onLoginRequired();
-      return;
-    }
-    const trimmed = body.trim();
-    if (!trimmed) return;
-
-    setSubmitting(true);
-    try {
-      const created = await createArticleComment(articleId, trimmed);
-      setComments((current) => [created, ...current]);
-      setTotal((current) => current + 1);
-      setBody('');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const confirmDelete = async () => {
-    if (!pendingDeleteId) return;
-    setDeleting(true);
-    try {
-      await deleteArticleComment(articleId, pendingDeleteId);
-      setComments((current) => current.filter((item) => item.id !== pendingDeleteId));
-      setTotal((current) => Math.max(0, current - 1));
-      setPendingDeleteId(null);
-    } finally {
-      setDeleting(false);
-    }
-  };
 
   return (
     <View style={styles.section}>
@@ -127,18 +69,12 @@ export function ArticleComments({ articleId, currentUserId, isLoggedIn, onLoginR
                 edit: text.commentEdit,
                 delete: text.commentDelete,
                 save: text.commentSave,
-                cancel: text.commentCancel
+                cancel: text.commentCancel,
+                readMore: text.commentReadMore,
+                readLess: text.commentReadLess
               }}
-              onUpdated={(updated) => {
-                setComments((current) => current.map((item) => (item.id === updated.id ? updated : item)));
-              }}
-              onDeleteRequest={() => {
-                if (!isLoggedIn) {
-                  onLoginRequired();
-                  return;
-                }
-                setPendingDeleteId(comment.id);
-              }}
+              onUpdated={updateComment}
+              onDeleteRequest={() => requestDelete(comment.id)}
               onLoginRequired={onLoginRequired}
               isLoggedIn={isLoggedIn}
             />
@@ -158,13 +94,37 @@ export function ArticleComments({ articleId, currentUserId, isLoggedIn, onLoginR
           ) : null}
         </>
       )}
+    </View>
+  );
+}
 
-      <View style={styles.composer}>
+type ArticleCommentComposerProps = Pick<CommentsState, 'body' | 'setBody' | 'submit' | 'submitting'>;
+
+export function ArticleCommentComposer({ body, setBody, submit, submitting }: ArticleCommentComposerProps) {
+  const { t, isRtl } = useI18n();
+  const text = t.articles;
+  const textAlign = isRtl ? styles.rtl : styles.ltr;
+  const safeInsets = useSafeAreaInsets();
+  const composerLift = useComposerKeyboardLift();
+  const composerBottomPad = Math.max(safeInsets.bottom, 8);
+
+  return (
+    <View
+      style={[
+        styles.composerDock,
+        Platform.OS === 'ios' && composerLift > 0 ? { marginBottom: composerLift } : null,
+        { paddingBottom: composerBottomPad }
+      ]}
+    >
+      <View style={[styles.composer, isRtl && styles.composerRtl]}>
         <AppTextInput
           value={body}
           onChangeText={(value) => setBody(value.slice(0, COMMENT_MAX_LENGTH))}
           placeholder={text.commentPlaceholder}
-          multiline
+          multiline={false}
+          returnKeyType="send"
+          onSubmitEditing={() => void submit()}
+          blurOnSubmit={false}
           style={[styles.composerInput, textAlign]}
         />
         <Pressable
@@ -179,7 +139,26 @@ export function ArticleComments({ articleId, currentUserId, isLoggedIn, onLoginR
           )}
         </Pressable>
       </View>
+    </View>
+  );
+}
 
+type ArticleCommentsDialogsProps = Pick<
+  CommentsState,
+  'pendingDeleteId' | 'setPendingDeleteId' | 'confirmDelete' | 'deleting'
+>;
+
+export function ArticleCommentsDialogs({
+  pendingDeleteId,
+  setPendingDeleteId,
+  confirmDelete,
+  deleting
+}: ArticleCommentsDialogsProps) {
+  const { t } = useI18n();
+  const text = t.articles;
+
+  return (
+    <>
       <ConfirmDialog
         visible={Boolean(pendingDeleteId)}
         title={text.commentDeleteTitle}
@@ -191,16 +170,25 @@ export function ArticleComments({ articleId, currentUserId, isLoggedIn, onLoginR
         onConfirm={() => void confirmDelete()}
       />
       {deleting ? <ActivityIndicator color={colors.danger} style={styles.loader} /> : null}
-    </View>
+    </>
   );
 }
+
+export { useArticleComments };
 
 type CommentItemProps = {
   comment: ArticleComment;
   articleId: string;
   isOwner: boolean;
   locale: string;
-  labels: { edit: string; delete: string; save: string; cancel: string };
+  labels: {
+    edit: string;
+    delete: string;
+    save: string;
+    cancel: string;
+    readMore: string;
+    readLess: string;
+  };
   onUpdated: (comment: ArticleComment) => void;
   onDeleteRequest: () => void;
   onLoginRequired: () => void;
@@ -221,6 +209,8 @@ function CommentItem({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(comment.body);
   const [saving, setSaving] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [isTruncated, setIsTruncated] = useState(false);
 
   const save = async () => {
     if (!isLoggedIn) {
@@ -234,10 +224,14 @@ function CommentItem({
       const updated = await updateArticleComment(articleId, comment.id, trimmed);
       onUpdated(updated);
       setEditing(false);
+      setExpanded(false);
+      setIsTruncated(false);
     } finally {
       setSaving(false);
     }
   };
+
+  const shouldShowToggle = isTruncated || expanded;
 
   return (
     <View style={styles.commentCard}>
@@ -274,7 +268,24 @@ function CommentItem({
           </View>
         </>
       ) : (
-        <AppText style={styles.commentBody}>{comment.body}</AppText>
+        <>
+          {!expanded ? (
+            <AppText
+              style={styles.measureText}
+              onTextLayout={(event) => setIsTruncated(event.nativeEvent.lines.length > 2)}
+            >
+              {comment.body}
+            </AppText>
+          ) : null}
+          <AppText style={styles.commentBody} numberOfLines={expanded ? undefined : 2}>
+            {comment.body}
+          </AppText>
+          {shouldShowToggle ? (
+            <Pressable onPress={() => setExpanded((current) => !current)} hitSlop={8}>
+              <AppText style={styles.readMore}>{expanded ? labels.readLess : labels.readMore}</AppText>
+            </Pressable>
+          ) : null}
+        </>
       )}
 
       {isOwner && !editing ? (
@@ -355,6 +366,20 @@ const styles = StyleSheet.create({
     color: colors.ink,
     lineHeight: 22
   },
+  measureText: {
+    position: 'absolute',
+    opacity: 0,
+    zIndex: -1,
+    left: 0,
+    right: 0,
+    lineHeight: 22
+  },
+  readMore: {
+    marginTop: 4,
+    color: colors.brandDark,
+    fontWeight: '700',
+    fontSize: 13
+  },
   editInput: {
     marginBottom: 8
   },
@@ -407,21 +432,30 @@ const styles = StyleSheet.create({
     color: colors.brandDark,
     fontWeight: '800'
   },
+  composerDock: {
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+    backgroundColor: colors.surface,
+    zIndex: 30
+  },
   composer: {
-    flexDirection: 'row-reverse',
-    alignItems: 'flex-end',
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radius.md,
-    padding: 8,
-    backgroundColor: colors.surface
+    paddingHorizontal: 12,
+    paddingTop: 10
+  },
+  composerRtl: {
+    flexDirection: 'row-reverse'
   },
   composerInput: {
     flex: 1,
-    minHeight: 44,
-    maxHeight: 120
+    height: 44,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.md,
+    paddingHorizontal: 14,
+    backgroundColor: colors.background
   },
   sendButton: {
     width: 44,

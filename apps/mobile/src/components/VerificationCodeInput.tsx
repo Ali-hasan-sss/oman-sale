@@ -1,13 +1,7 @@
-import { useRef } from 'react';
-import {
-  NativeSyntheticEvent,
-  Pressable,
-  StyleSheet,
-  TextInput,
-  TextInputKeyPressEventData,
-  View
-} from 'react-native';
+import { useRef, useState } from 'react';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
+import { AppText } from './AppText';
 import { colors, radius } from '../theme';
 
 type VerificationCodeInputProps = {
@@ -17,76 +11,65 @@ type VerificationCodeInputProps = {
   value: string;
 };
 
-export function VerificationCodeInput({ disabled, isRtl = true, onChange, value }: VerificationCodeInputProps) {
-  const refs = useRef<Array<TextInput | null>>([]);
-  const digits = Array.from({ length: 6 }, (_, index) => value[index] ?? '');
+const CODE_LENGTH = 6;
 
-  const focusCell = (index: number) => {
-    refs.current[Math.max(0, Math.min(index, 5))]?.focus();
-  };
+export function VerificationCodeInput({ disabled, onChange, value }: VerificationCodeInputProps) {
+  const inputRef = useRef<TextInput | null>(null);
+  const [focused, setFocused] = useState(false);
+  const digits = Array.from({ length: CODE_LENGTH }, (_, index) => value[index] ?? '');
+  const activeIndex = Math.min(value.length, CODE_LENGTH - 1);
 
-  const applyCode = (raw: string, focusIndex?: number) => {
-    const code = raw.replace(/\D/g, '').slice(0, 6);
+  const handleChange = (text: string) => {
+    const code = text.replace(/\D/g, '').slice(0, CODE_LENGTH);
     onChange(code);
-    focusCell(focusIndex ?? Math.min(code.length, 5));
-  };
-
-  const setDigit = (index: number, raw: string) => {
-    const cleaned = raw.replace(/\D/g, '');
-    if (cleaned.length > 1) {
-      applyCode(cleaned);
-      return;
-    }
-
-    const next = digits.slice();
-    next[index] = cleaned.slice(-1);
-    const joined = next.join('').replace(/\s/g, '');
-    onChange(joined);
-    if (cleaned && index < 5) focusCell(index + 1);
-  };
-
-  const handleKeyPress = (event: NativeSyntheticEvent<TextInputKeyPressEventData>, index: number) => {
-    if (event.nativeEvent.key === 'Backspace' && !digits[index] && index > 0) {
-      focusCell(index - 1);
-    }
   };
 
   return (
-    <Pressable style={[styles.row, isRtl ? styles.rowRtl : styles.rowLtr]} onPress={() => focusCell(value.length >= 6 ? 5 : value.length)}>
-      {digits.map((digit, index) => (
-        <TextInput
-          key={index}
-          ref={(node) => {
-            refs.current[index] = node;
-          }}
-          value={digit}
-          editable={!disabled}
-          keyboardType="number-pad"
-          inputMode="numeric"
-          maxLength={6}
-          textContentType={index === 0 ? 'oneTimeCode' : 'none'}
-          autoComplete={index === 0 ? 'one-time-code' : 'off'}
-          selectTextOnFocus
-          onChangeText={(text) => setDigit(index, text)}
-          onKeyPress={(event) => handleKeyPress(event, index)}
-          keyboardAppearance="light"
-          style={[styles.cell, disabled && styles.cellDisabled]}
-        />
-      ))}
+    <Pressable style={styles.row} onPress={() => inputRef.current?.focus()}>
+      {digits.map((digit, index) => {
+        const isActive = focused && index === activeIndex && value.length < CODE_LENGTH;
+        const isFilledActive = focused && value.length === CODE_LENGTH && index === CODE_LENGTH - 1;
+        return (
+          <View
+            key={index}
+            style={[
+              styles.cell,
+              (isActive || isFilledActive) && styles.cellActive,
+              disabled && styles.cellDisabled
+            ]}
+          >
+            <AppText style={styles.cellText}>{digit}</AppText>
+          </View>
+        );
+      })}
+
+      <TextInput
+        ref={inputRef}
+        value={value}
+        editable={!disabled}
+        keyboardType="number-pad"
+        inputMode="numeric"
+        maxLength={CODE_LENGTH}
+        textContentType="oneTimeCode"
+        autoComplete="one-time-code"
+        onChangeText={handleChange}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        keyboardAppearance="light"
+        style={styles.hiddenInput}
+        caretHidden
+      />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   row: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 8
-  },
-  rowRtl: {
-    flexDirection: 'row-reverse'
-  },
-  rowLtr: {
-    flexDirection: 'row'
+    gap: 8,
+    writingDirection: 'ltr',
+    position: 'relative'
   },
   cell: {
     flex: 1,
@@ -96,12 +79,28 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     borderRadius: radius.md,
     backgroundColor: colors.surface,
-    textAlign: 'center',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  cellActive: {
+    borderColor: colors.brand,
+    borderWidth: 2
+  },
+  cellDisabled: {
+    opacity: 0.6
+  },
+  cellText: {
     fontSize: 24,
     fontWeight: '900',
     color: colors.ink
   },
-  cellDisabled: {
-    opacity: 0.6
+  hiddenInput: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    opacity: 0,
+    color: 'transparent'
   }
 });
