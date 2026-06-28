@@ -220,9 +220,8 @@ export class AuthService {
     if (!user) {
       user = await authRepository.findByEmail(googleUser.email);
       if (user && !user.deletedAt) {
-        if (user.googleId && user.googleId !== googleUser.googleId) {
-          throw new ApiError(409, 'Email is already linked to another Google account');
-        }
+        // Same verified Google email — log in and link/update googleId (covers accounts
+        // created via email/password or older web sign-in that stored a Firebase UID).
         user = await authRepository.linkGoogleAccount(user.id, {
           googleId: googleUser.googleId,
           avatar: googleUser.avatar
