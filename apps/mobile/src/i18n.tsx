@@ -51,7 +51,10 @@ const dictionary = {
       loadingMore: 'جاري تحميل المزيد...',
       pullToRefresh: 'اسحب للتحديث',
       retry: 'إعادة المحاولة',
-      browseStores: 'استعرض المتاجر'
+      browseStores: 'استعرض المتاجر',
+      terms: 'شروط الاستخدام',
+      privacy: 'سياسة الخصوصية',
+      appVersion: 'إصدار التطبيق'
     },
     errors: {
       ACCOUNT_BLOCKED: 'تم حظر حسابك. لا يمكنك نشر الإعلانات أو استخدام ميزات المنصة حالياً.',
@@ -446,8 +449,16 @@ const dictionary = {
       title: 'الإعدادات',
       subtitle: 'اللغة والتنبيهات وتفضيلات التطبيق',
       notifications: 'التنبيهات',
-      privacy: 'الخصوصية والأمان',
+      privacy: 'سياسة الخصوصية',
+      terms: 'شروط الاستخدام',
       help: 'المساعدة والدعم'
+    },
+    legal: {
+      termsTitle: 'شروط الاستخدام',
+      privacyTitle: 'سياسة الخصوصية',
+      contactTitle: 'التواصل',
+      contactText: 'لأي استفسار، راسلنا على:',
+      notPublished: 'لم يُنشر هذا المحتوى بعد من لوحة الإدارة.'
     },
     globalSearch: {
       title: 'البحث',
@@ -561,7 +572,10 @@ const dictionary = {
       loadingMore: 'Loading more...',
       pullToRefresh: 'Pull to refresh',
       retry: 'Retry',
-      browseStores: 'Browse stores'
+      browseStores: 'Browse stores',
+      terms: 'Terms of use',
+      privacy: 'Privacy policy',
+      appVersion: 'App version'
     },
     errors: {
       ACCOUNT_BLOCKED: 'Your account has been blocked. You cannot publish listings or use platform features right now.',
@@ -956,8 +970,16 @@ const dictionary = {
       title: 'Settings',
       subtitle: 'Language, notifications, and app preferences',
       notifications: 'Notifications',
-      privacy: 'Privacy and security',
+      privacy: 'Privacy policy',
+      terms: 'Terms of use',
       help: 'Help and support'
+    },
+    legal: {
+      termsTitle: 'Terms of use',
+      privacyTitle: 'Privacy policy',
+      contactTitle: 'Contact',
+      contactText: 'For any questions, email us at:',
+      notPublished: 'This content has not been published by the admin yet.'
     },
     globalSearch: {
       title: 'Search',

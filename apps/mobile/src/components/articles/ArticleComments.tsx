@@ -3,7 +3,6 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   Image,
-  Platform,
   Pressable,
   StyleSheet,
   View
@@ -13,7 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '../AppText';
 import { AppTextInput } from '../AppTextInput';
 import { ConfirmDialog } from '../ConfirmDialog';
-import { useComposerKeyboardLift } from '../../hooks/use-composer-keyboard-lift';
+import { composerBottomPadding, useKeyboardOpen } from '../KeyboardInsets';
 import { useI18n } from '../../i18n';
 import { type ArticleComment, updateArticleComment } from '../../services/articles.service';
 import { colors, radius } from '../../theme';
@@ -105,17 +104,11 @@ export function ArticleCommentComposer({ body, setBody, submit, submitting }: Ar
   const text = t.articles;
   const textAlign = isRtl ? styles.rtl : styles.ltr;
   const safeInsets = useSafeAreaInsets();
-  const composerLift = useComposerKeyboardLift();
-  const composerBottomPad = Math.max(safeInsets.bottom, 8);
+  const keyboardOpen = useKeyboardOpen();
+  const composerBottomPad = composerBottomPadding(keyboardOpen, safeInsets.bottom);
 
   return (
-    <View
-      style={[
-        styles.composerDock,
-        Platform.OS === 'ios' && composerLift > 0 ? { marginBottom: composerLift } : null,
-        { paddingBottom: composerBottomPad }
-      ]}
-    >
+    <View style={[styles.composerDock, { paddingBottom: composerBottomPad }]}>
       <View style={[styles.composer, isRtl && styles.composerRtl]}>
         <AppTextInput
           value={body}

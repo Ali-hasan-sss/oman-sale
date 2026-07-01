@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 import { setupApiInterceptors } from '../lib/api/interceptors';
 import { setupApiLogging } from '../lib/api/logger';
-import { signInWithGoogleNative } from '../lib/google-auth';
+import { signInWithGoogleNative, signOutGoogleNative } from '../lib/google-auth';
 import {
   clearStoredSession,
   loadStoredSession,
@@ -139,6 +139,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
+    await signOutGoogleNative().catch(() => undefined);
     await get().clearSession();
   },
 

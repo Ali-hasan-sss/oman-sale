@@ -56,7 +56,6 @@ module.exports = () => {
         'expo-asset',
         'expo-font',
         'expo-av',
-        'expo-android-keyboard-fix',
         '@react-native-google-signin/google-signin',
         [
           'expo-notifications',

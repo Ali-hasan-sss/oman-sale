@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { PhoneVerificationResend, type PhoneVerificationChannel } from '../components/auth/PhoneVerificationResend';
 import { ResendCodeButton } from '../components/auth/ResendCodeButton';
@@ -7,6 +7,7 @@ import { AppText } from '../components/AppText';
 import { AppTextInput } from '../components/AppTextInput';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { KeyboardAwareScrollView } from '../components/KeyboardAwareScrollView';
+import { ScreenKeyboardAvoiding } from '../components/KeyboardInsets';
 import { PhoneInput } from '../components/PhoneInput';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { VerificationCodeInput } from '../components/VerificationCodeInput';
@@ -347,15 +348,24 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
   if (isRegister) {
     if (!draftLoaded) {
       return (
-        <KeyboardAwareScrollView contentContainerStyle={scrollContentStyle}>
+        <ScreenKeyboardAvoiding>
+        <KeyboardAwareScrollView
+          contentContainerStyle={scrollContentStyle}
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        >
           <AppText style={[styles.subtitle, textAlign]}>{t.common.loading}</AppText>
         </KeyboardAwareScrollView>
+      </ScreenKeyboardAvoiding>
       );
     }
 
     if (registerStep === 'email-code') {
       return (
-        <KeyboardAwareScrollView contentContainerStyle={scrollContentStyle}>
+        <ScreenKeyboardAvoiding>
+        <KeyboardAwareScrollView
+          contentContainerStyle={scrollContentStyle}
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        >
           <AppText style={[styles.title, textAlign]}>{t.auth.verifyTitle}</AppText>
           <AppText style={[styles.subtitle, textAlign]}>
             {resumedRegistration ? `${t.auth.registerResumeHint}\n${t.auth.verifySubtitle}` : t.auth.verifySubtitle}
@@ -381,12 +391,17 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
             <AppText style={[styles.switch, textAlign]}>{t.auth.backToLogin}</AppText>
           </Pressable>
         </KeyboardAwareScrollView>
+      </ScreenKeyboardAvoiding>
       );
     }
 
     if (registerStep === 'phone') {
       return (
-        <KeyboardAwareScrollView contentContainerStyle={scrollContentStyle}>
+        <ScreenKeyboardAvoiding>
+        <KeyboardAwareScrollView
+          contentContainerStyle={scrollContentStyle}
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        >
           <AppText style={[styles.title, textAlign]}>{t.auth.phone}</AppText>
           <AppText style={[styles.subtitle, textAlign]}>{t.auth.registerStepPhone}</AppText>
           <PhoneInput
@@ -402,12 +417,17 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
             <AppText style={[styles.switch, textAlign]}>{t.auth.backToLogin}</AppText>
           </Pressable>
         </KeyboardAwareScrollView>
+      </ScreenKeyboardAvoiding>
       );
     }
 
     if (registerStep === 'phone-code') {
       return (
-        <KeyboardAwareScrollView contentContainerStyle={scrollContentStyle}>
+        <ScreenKeyboardAvoiding>
+        <KeyboardAwareScrollView
+          contentContainerStyle={scrollContentStyle}
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        >
           <AppText style={[styles.title, textAlign]}>{t.auth.phoneVerifyTitle}</AppText>
           <AppText style={[styles.subtitle, textAlign]}>
             {t.auth.phoneCodeSentTo} {submittedPhone}
@@ -446,12 +466,17 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
             }}
           />
         </KeyboardAwareScrollView>
+      </ScreenKeyboardAvoiding>
       );
     }
 
     if (registerStep === 'password') {
       return (
-        <KeyboardAwareScrollView contentContainerStyle={scrollContentStyle}>
+        <ScreenKeyboardAvoiding>
+        <KeyboardAwareScrollView
+          contentContainerStyle={scrollContentStyle}
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        >
           <AppText style={[styles.title, textAlign]}>{t.auth.registerStepPassword}</AppText>
           <AppText style={[styles.subtitle, textAlign]}>{t.auth.password}</AppText>
           <AppTextInput
@@ -477,11 +502,16 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
           {error ? <AppText style={[styles.error, textAlign]}>{error}</AppText> : null}
           <PrimaryButton label={t.auth.submitRegister} onPress={completeRegistration} loading={isSubmitting} style={styles.submitSpacing} />
         </KeyboardAwareScrollView>
+      </ScreenKeyboardAvoiding>
       );
     }
 
     return (
-      <KeyboardAwareScrollView contentContainerStyle={scrollContentStyle}>
+      <ScreenKeyboardAvoiding>
+      <KeyboardAwareScrollView
+        contentContainerStyle={scrollContentStyle}
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+      >
         <AppText style={[styles.title, textAlign]}>{t.auth.registerTitle}</AppText>
         <AppText style={[styles.subtitle, textAlign]}>
           {resumedRegistration ? t.auth.registerResumeSubtitle : t.auth.registerSubtitle}
@@ -514,12 +544,17 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
           <AppText style={[styles.switch, textAlign]}>{t.auth.switchToLogin}</AppText>
         </Pressable>
       </KeyboardAwareScrollView>
+      </ScreenKeyboardAvoiding>
     );
   }
 
   if (loginStep === 'verify') {
     return (
-      <KeyboardAwareScrollView contentContainerStyle={scrollContentStyle}>
+      <ScreenKeyboardAvoiding>
+      <KeyboardAwareScrollView
+        contentContainerStyle={scrollContentStyle}
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+      >
         <AppText style={[styles.title, textAlign]}>{t.auth.verifyTitle}</AppText>
         <AppText style={[styles.subtitle, textAlign]}>{t.auth.verifySubtitle}</AppText>
         <VerificationCodeInput value={verificationCode} onChange={setVerificationCode} disabled={isSubmitting} isRtl={isRtl} />
@@ -544,6 +579,7 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
           <AppText style={[styles.switch, textAlign]}>{t.auth.backToLogin}</AppText>
         </Pressable>
       </KeyboardAwareScrollView>
+      </ScreenKeyboardAvoiding>
     );
   }
 
@@ -551,7 +587,11 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
     const isResetStep = loginStep === 'forgot-reset';
 
     return (
-      <KeyboardAwareScrollView contentContainerStyle={scrollContentStyle}>
+      <ScreenKeyboardAvoiding>
+      <KeyboardAwareScrollView
+        contentContainerStyle={scrollContentStyle}
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+      >
         <AppText style={[styles.title, textAlign]}>
           {isResetStep ? t.auth.resetPasswordTitle : t.auth.forgotPasswordTitle}
         </AppText>
@@ -596,11 +636,16 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
           <AppText style={[styles.switch, textAlign]}>{t.auth.backToLogin}</AppText>
         </Pressable>
       </KeyboardAwareScrollView>
+      </ScreenKeyboardAvoiding>
     );
   }
 
   return (
-    <KeyboardAwareScrollView contentContainerStyle={scrollContentStyle}>
+    <ScreenKeyboardAvoiding>
+    <KeyboardAwareScrollView
+      contentContainerStyle={scrollContentStyle}
+      keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+    >
       <AppText style={[styles.title, textAlign]}>{t.auth.loginTitle}</AppText>
       <AppText style={[styles.subtitle, textAlign]}>{t.auth.loginSubtitle}</AppText>
 
@@ -637,6 +682,7 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
         <AppText style={[styles.switch, textAlign]}>{t.auth.switchToRegister}</AppText>
       </Pressable>
     </KeyboardAwareScrollView>
+    </ScreenKeyboardAvoiding>
   );
 }
 

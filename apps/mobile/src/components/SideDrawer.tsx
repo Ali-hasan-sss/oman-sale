@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Dimensions, Easing, Image, Pressable, StyleSheet, View } from 'react-native';
+import { Animated, Dimensions, Easing, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from './AppText';
@@ -8,8 +8,9 @@ import { AppText } from './AppText';
 import { useAuthStore } from '../stores';
 import { useI18n } from '../i18n';
 import { fetchMyStores } from '../services/stores.service';
+import { getAppName, getAppVersionLabel } from '../lib/app-version';
 import type { ScreenName } from '../types';
-import { colors, radius } from '../theme';
+import { colors } from '../theme';
 
 const drawerWidth = Math.min(Dimensions.get('window').width * 0.82, 320);
 
@@ -36,17 +37,42 @@ export function SideDrawer({ visible, onClose, onNavigate, onLogoutRequest }: Si
   const [hasStore, setHasStore] = useState(false);
 
   const items: DrawerItem[] = useMemo(() => {
-    const base: DrawerItem[] = [
-      { screen: 'storesBrowse', label: t.common.browseStores, icon: 'storefront-outline' },
-      { screen: 'myStore', label: t.common.myStore, icon: 'storefront' },
-      { screen: 'addStore', label: t.common.createStore, icon: 'storefront-outline' },
-      { screen: 'profile', label: t.common.profile, icon: 'person-circle-outline' },
-      { screen: 'favorites', label: t.common.favorites, icon: 'heart-outline' },
-      { screen: 'news', label: t.common.news, icon: 'newspaper-outline' },
-      { screen: 'settings', label: t.common.settings, icon: 'settings-outline' }
+    const list: DrawerItem[] = [
+      { screen: 'storesBrowse', label: t.common.browseStores, icon: 'storefront-outline' }
     ];
-    return hasStore ? base.filter((item) => item.screen !== 'addStore') : base;
-  }, [hasStore, t.common.browseStores, t.common.createStore, t.common.favorites, t.common.myStore, t.common.news, t.common.profile, t.common.settings]);
+
+    if (user) {
+      list.push(
+        hasStore
+          ? { screen: 'myStore', label: t.common.myStore, icon: 'storefront' }
+          : { screen: 'addStore', label: t.common.createStore, icon: 'add-circle-outline' }
+      );
+      list.push({ screen: 'favorites', label: t.common.favorites, icon: 'heart-outline' });
+    }
+
+    list.push({ screen: 'profile', label: t.common.profile, icon: 'person-circle-outline' });
+
+    list.push(
+      { screen: 'news', label: t.common.news, icon: 'newspaper-outline' },
+      { screen: 'settings', label: t.common.settings, icon: 'settings-outline' },
+      { screen: 'terms', label: t.common.terms, icon: 'document-text-outline' },
+      { screen: 'privacy', label: t.common.privacy, icon: 'shield-checkmark-outline' }
+    );
+
+    return list;
+  }, [
+    hasStore,
+    user,
+    t.common.browseStores,
+    t.common.createStore,
+    t.common.favorites,
+    t.common.myStore,
+    t.common.news,
+    t.common.privacy,
+    t.common.profile,
+    t.common.settings,
+    t.common.terms
+  ]);
 
   useEffect(() => {
     if (!visible || !user) {
@@ -99,6 +125,8 @@ export function SideDrawer({ visible, onClose, onNavigate, onLogoutRequest }: Si
 
   if (!shouldRender) return null;
 
+  const chevronIcon = isRtl ? 'chevron-back' : 'chevron-forward';
+
   return (
     <View style={styles.overlay} pointerEvents="box-none">
       <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
@@ -112,89 +140,112 @@ export function SideDrawer({ visible, onClose, onNavigate, onLogoutRequest }: Si
             width: drawerWidth,
             top: insets.top,
             bottom: insets.bottom,
-            paddingTop: 12,
-            paddingBottom: 12,
             transform: [{ translateX }]
           }
         ]}
       >
         <View style={styles.headerCard}>
           <View style={styles.headerText}>
-            <AppText style={[styles.name, isRtl ? styles.textRtl : styles.textLtr]}>{user?.fullName ?? t.common.guest}</AppText>
-            <AppText style={[styles.email, isRtl ? styles.textRtl : styles.textLtr]}>{user?.email ?? t.common.guestHint}</AppText>
+            <AppText style={[styles.name, isRtl ? styles.textRtl : styles.textLtr]} numberOfLines={1}>
+              {user?.fullName ?? t.common.guest}
+            </AppText>
+            <AppText style={[styles.email, isRtl ? styles.textRtl : styles.textLtr]} numberOfLines={2}>
+              {user?.email ?? t.common.guestHint}
+            </AppText>
           </View>
           <UserAvatar avatar={user?.avatar} name={user?.fullName} />
         </View>
 
-        {items.map((item) => (
-          <Pressable
-            key={item.screen}
-            style={styles.item}
-            onPress={() => {
-              onClose();
-              onNavigate(item.screen);
-            }}
-          >
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          bounces={false}
+        >
+          {items.map((item) => (
+            <Pressable
+              key={item.screen}
+              style={styles.item}
+              onPress={() => {
+                onClose();
+                onNavigate(item.screen);
+              }}
+            >
+              <View style={styles.iconBubble}>
+                <Ionicons name={item.icon} size={21} color={colors.brand} />
+              </View>
+              <AppText style={[styles.itemLabel, isRtl ? styles.textRtl : styles.textLtr]} numberOfLines={2}>
+                {item.label}
+              </AppText>
+              <Ionicons name={chevronIcon} size={18} color={colors.muted} />
+            </Pressable>
+          ))}
+
+          <Pressable style={styles.item} onPress={toggleLocale}>
             <View style={styles.iconBubble}>
-              <Ionicons name={item.icon} size={21} color={colors.brand} />
+              <Ionicons name="language-outline" size={21} color={colors.brand} />
             </View>
-            <AppText style={[styles.itemLabel, isRtl ? styles.textRtl : styles.textLtr]}>{item.label}</AppText>
-            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+            <AppText style={[styles.itemLabel, isRtl ? styles.textRtl : styles.textLtr]}>{t.common.language}</AppText>
+            <Ionicons name={chevronIcon} size={18} color={colors.muted} />
           </Pressable>
-        ))}
 
-        <Pressable style={styles.item} onPress={toggleLocale}>
-          <View style={styles.iconBubble}>
-            <Ionicons name="language-outline" size={21} color={colors.brand} />
-          </View>
-          <AppText style={[styles.itemLabel, isRtl ? styles.textRtl : styles.textLtr]}>{t.common.language}</AppText>
-          <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-        </Pressable>
-
-        {user ? (
-          <Pressable
-            style={styles.item}
-            onPress={() => {
-              onClose();
-              onLogoutRequest?.();
-            }}
-          >
-            <View style={[styles.iconBubble, styles.dangerBubble]}>
-              <Ionicons name="log-out-outline" size={21} color={colors.danger} />
-            </View>
-            <AppText style={[styles.itemLabel, { color: colors.danger }, isRtl ? styles.textRtl : styles.textLtr]}>{t.common.logout}</AppText>
-            <Ionicons name="chevron-forward" size={18} color={colors.danger} />
-          </Pressable>
-        ) : (
-          <>
+          {user ? (
             <Pressable
               style={styles.item}
               onPress={() => {
                 onClose();
-                onNavigate('login');
+                onLogoutRequest?.();
               }}
             >
-              <View style={styles.iconBubble}>
-                <Ionicons name="log-in-outline" size={21} color={colors.brand} />
+              <View style={[styles.iconBubble, styles.dangerBubble]}>
+                <Ionicons name="log-out-outline" size={21} color={colors.danger} />
               </View>
-              <AppText style={[styles.itemLabel, isRtl ? styles.textRtl : styles.textLtr]}>{t.common.login}</AppText>
-              <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+              <AppText style={[styles.itemLabel, { color: colors.danger }, isRtl ? styles.textRtl : styles.textLtr]}>
+                {t.common.logout}
+              </AppText>
+              <Ionicons name={chevronIcon} size={18} color={colors.danger} />
             </Pressable>
-            <Pressable
-              style={styles.item}
-              onPress={() => {
-                onClose();
-                onNavigate('register');
-              }}
-            >
-              <View style={styles.iconBubble}>
-                <Ionicons name="person-add-outline" size={21} color={colors.brand} />
-              </View>
-              <AppText style={[styles.itemLabel, isRtl ? styles.textRtl : styles.textLtr]}>{t.common.register}</AppText>
-              <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-            </Pressable>
-          </>
-        )}
+          ) : (
+            <>
+              <Pressable
+                style={styles.item}
+                onPress={() => {
+                  onClose();
+                  onNavigate('login');
+                }}
+              >
+                <View style={styles.iconBubble}>
+                  <Ionicons name="log-in-outline" size={21} color={colors.brand} />
+                </View>
+                <AppText style={[styles.itemLabel, isRtl ? styles.textRtl : styles.textLtr]}>{t.common.login}</AppText>
+                <Ionicons name={chevronIcon} size={18} color={colors.muted} />
+              </Pressable>
+              <Pressable
+                style={styles.item}
+                onPress={() => {
+                  onClose();
+                  onNavigate('register');
+                }}
+              >
+                <View style={styles.iconBubble}>
+                  <Ionicons name="person-add-outline" size={21} color={colors.brand} />
+                </View>
+                <AppText style={[styles.itemLabel, isRtl ? styles.textRtl : styles.textLtr]}>{t.common.register}</AppText>
+                <Ionicons name={chevronIcon} size={18} color={colors.muted} />
+              </Pressable>
+            </>
+          )}
+        </ScrollView>
+
+        <View style={styles.footer}>
+          <AppText style={[styles.footerAppName, isRtl ? styles.textRtl : styles.textLtr]} numberOfLines={1}>
+            {getAppName()}
+          </AppText>
+          <AppText style={[styles.footerVersion, isRtl ? styles.textRtl : styles.textLtr]}>
+            {t.common.appVersion}: {getAppVersionLabel()}
+          </AppText>
+        </View>
       </Animated.View>
     </View>
   );
@@ -228,26 +279,37 @@ const styles = StyleSheet.create({
   drawer: {
     position: 'absolute',
     left: 0,
+    flexDirection: 'column',
     backgroundColor: colors.surface,
     paddingHorizontal: 18,
+    paddingTop: 12,
+    paddingBottom: 12,
     borderTopRightRadius: 28,
     borderBottomRightRadius: 28,
     shadowColor: '#0f172a',
     shadowOffset: { width: 8, height: 0 },
     shadowOpacity: 0.12,
     shadowRadius: 18,
-    elevation: 12
+    elevation: 12,
+    overflow: 'hidden'
   },
   headerCard: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 12,
-    marginBottom: 24,
+    marginBottom: 16,
     padding: 14,
     borderRadius: 22,
     backgroundColor: colors.brandSoft,
     borderWidth: 1,
     borderColor: '#d6f2e5'
+  },
+  scroll: {
+    flex: 1
+  },
+  scrollContent: {
+    paddingBottom: 8,
+    flexGrow: 1
   },
   avatar: {
     width: 58,
@@ -270,7 +332,8 @@ const styles = StyleSheet.create({
     color: colors.brand
   },
   headerText: {
-    flex: 1
+    flex: 1,
+    minWidth: 0
   },
   name: {
     fontSize: 18,
@@ -317,5 +380,21 @@ const styles = StyleSheet.create({
   },
   textRtl: {
     textAlign: 'right'
+  },
+  footer: {
+    marginTop: 8,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#edf2f7'
+  },
+  footerAppName: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: colors.ink
+  },
+  footerVersion: {
+    marginTop: 4,
+    fontSize: 11,
+    color: colors.muted
   }
 });

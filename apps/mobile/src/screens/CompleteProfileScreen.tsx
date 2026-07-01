@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { PhoneVerificationResend, type PhoneVerificationChannel } from '../components/auth/PhoneVerificationResend';
 import { AppText } from '../components/AppText';
 import { AppTextInput } from '../components/AppTextInput';
 import { KeyboardAwareScrollView } from '../components/KeyboardAwareScrollView';
+import { ScreenKeyboardAvoiding } from '../components/KeyboardInsets';
 import { PhoneInput } from '../components/PhoneInput';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { VerificationCodeInput } from '../components/VerificationCodeInput';
@@ -127,7 +128,11 @@ export function CompleteProfileScreen({ onSuccess, onNeedsLogin }: CompleteProfi
 
   if (step === 'phone-code') {
     return (
-      <KeyboardAwareScrollView contentContainerStyle={scrollContentStyle}>
+      <ScreenKeyboardAvoiding>
+      <KeyboardAwareScrollView
+        contentContainerStyle={scrollContentStyle}
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+      >
         <AppText style={[styles.title, textAlign]}>{t.auth.phoneVerifyTitle}</AppText>
         <AppText style={[styles.subtitle, textAlign]}>
           {t.auth.phoneCodeSentTo} {phone.trim()}
@@ -168,12 +173,17 @@ export function CompleteProfileScreen({ onSuccess, onNeedsLogin }: CompleteProfi
           }}
         />
       </KeyboardAwareScrollView>
+      </ScreenKeyboardAvoiding>
     );
   }
 
   if (step === 'password') {
     return (
-      <KeyboardAwareScrollView contentContainerStyle={scrollContentStyle}>
+      <ScreenKeyboardAvoiding>
+      <KeyboardAwareScrollView
+        contentContainerStyle={scrollContentStyle}
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+      >
         <AppText style={[styles.title, textAlign]}>{t.auth.completeProfileTitle}</AppText>
         <AppText style={[styles.subtitle, textAlign]}>{t.auth.completeProfileStepPassword}</AppText>
         <AppTextInput
@@ -204,11 +214,16 @@ export function CompleteProfileScreen({ onSuccess, onNeedsLogin }: CompleteProfi
           style={styles.submitSpacing}
         />
       </KeyboardAwareScrollView>
+      </ScreenKeyboardAvoiding>
     );
   }
 
   return (
-    <KeyboardAwareScrollView contentContainerStyle={scrollContentStyle}>
+    <ScreenKeyboardAvoiding>
+    <KeyboardAwareScrollView
+      contentContainerStyle={scrollContentStyle}
+      keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+    >
       <AppText style={[styles.title, textAlign]}>{t.auth.completeProfileTitle}</AppText>
       <AppText style={[styles.subtitle, textAlign]}>{t.auth.completeProfileSubtitle}</AppText>
 
@@ -240,6 +255,7 @@ export function CompleteProfileScreen({ onSuccess, onNeedsLogin }: CompleteProfi
         style={styles.submitSpacing}
       />
     </KeyboardAwareScrollView>
+    </ScreenKeyboardAvoiding>
   );
 }
 

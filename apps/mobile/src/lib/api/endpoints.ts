@@ -101,6 +101,9 @@ export const API_ENDPOINTS = {
     comment: (articleId: string, commentId: string) => `/articles/${articleId}/comments/${commentId}`,
     reactions: (articleId: string) => `/articles/${articleId}/reactions`
   },
+  legal: {
+    byKind: (kind: 'terms' | 'privacy') => `/legal/${kind}`
+  },
   trustBadge: {
     userMe: '/trust-badge/users/me',
     store: (storeId: string) => `/trust-badge/stores/${storeId}`

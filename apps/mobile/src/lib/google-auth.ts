@@ -14,7 +14,9 @@ type GoogleSigninModule = {
   GoogleSignin: {
     configure: (config: { webClientId: string; offlineAccess: boolean }) => void;
     hasPlayServices: (config: { showPlayServicesUpdateDialog: boolean }) => Promise<boolean>;
-    signIn: () => Promise<GoogleSigninResponse>;
+    signIn: (options?: { prompt?: 'select_account' | 'consent' }) => Promise<GoogleSigninResponse>;
+    signOut: () => Promise<void>;
+    revokeAccess: () => Promise<void>;
   };
   isSuccessResponse: (response: GoogleSigninResponse) => boolean;
 };
@@ -39,6 +41,23 @@ function ensureGoogleSignInConfigured(googleSignin: GoogleSigninModule) {
   configured = true;
 }
 
+export async function signOutGoogleNative() {
+  const googleSignin = loadGoogleSignin();
+  if (!googleSignin) return;
+
+  ensureGoogleSignInConfigured(googleSignin);
+  try {
+    await googleSignin.GoogleSignin.revokeAccess();
+  } catch {
+    // User may not have signed in with Google.
+  }
+  try {
+    await googleSignin.GoogleSignin.signOut();
+  } catch {
+    // Ignore if no cached Google session exists.
+  }
+}
+
 export async function signInWithGoogleNative(): Promise<string> {
   if (!isFirebaseConfigured()) throw new Error('FIREBASE_NOT_CONFIGURED');
   if (!getGoogleWebClientId()) throw new Error('FIREBASE_NOT_CONFIGURED');
@@ -49,10 +68,16 @@ export async function signInWithGoogleNative(): Promise<string> {
   ensureGoogleSignInConfigured(googleSignin);
   await googleSignin.GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
-  const response = await googleSignin.GoogleSignin.signIn();
+  try {
+    await googleSignin.GoogleSignin.signOut();
+  } catch {
+    // Ignore if no cached Google session exists.
+  }
+
+  const response = await googleSignin.GoogleSignin.signIn({ prompt: 'select_account' });
   if (!googleSignin.isSuccessResponse(response)) throw new Error('GOOGLE_SIGN_IN_CANCELLED');
 
-  const idToken = response.data.idToken;
+  const idToken = response.data?.idToken;
   if (!idToken) throw new Error('GOOGLE_SIGN_IN_CANCELLED');
 
   return idToken;

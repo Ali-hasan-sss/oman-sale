@@ -27,7 +27,7 @@ import {
   markConversationReadRequest,
   sendChatMessageRequest
 } from '../services/chat.service';
-import { useComposerKeyboardLift } from '../hooks/use-composer-keyboard-lift';
+import { KeyboardAvoidingView, composerBottomPadding, useKeyboardOpen } from '../components/KeyboardInsets';
 import { useAuthStore, useChatStore } from '../stores';
 import type { ChatConversation, ChatMessage } from '../types';
 import { colors, radius, shadow } from '../theme';
@@ -56,13 +56,11 @@ export function ChatConversationScreen({
   const emitTypingStarted = useChatStore((state) => state.emitTypingStarted);
   const emitTypingStopped = useChatStore((state) => state.emitTypingStopped);
   const setConversationRead = useChatStore((state) => state.setConversationRead);
-  const setConversationKeyboardOpen = useChatStore((state) => state.setConversationKeyboardOpen);
   const setThreadBar = useChatStore((state) => state.setThreadBar);
-  const conversationKeyboardOpen = useChatStore((state) => state.conversationKeyboardOpen);
 
   const [conversation, setConversation] = useState<ChatConversation | null>(null);
   const safeInsets = useSafeAreaInsets();
-  const composerLift = useComposerKeyboardLift();
+  const keyboardOpen = useKeyboardOpen();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -138,10 +136,6 @@ export function ChatConversationScreen({
   }, [conversationId]);
 
   useEffect(() => {
-    setConversationKeyboardOpen(false);
-  }, [conversationId, setConversationKeyboardOpen]);
-
-  useEffect(() => {
     setThreadBar({
       conversationId,
       peerId: otherUser?.id,
@@ -165,14 +159,12 @@ export function ChatConversationScreen({
     return () => {
       emitTypingStopped(conversationId);
       setActiveConversationId(null);
-      setConversationKeyboardOpen(false);
       setThreadBar(null);
     };
   }, [
     conversationId,
     emitTypingStopped,
     setActiveConversationId,
-    setConversationKeyboardOpen,
     setThreadBar
   ]);
 
@@ -233,25 +225,12 @@ export function ChatConversationScreen({
   }, [messages.length, isOtherTyping, isLoading, scrollToBottom]);
 
   useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-    const onShow = () => {
-      setConversationKeyboardOpen(true);
-      scrollToBottomReliable(true);
-    };
-    const onHide = () => {
-      setConversationKeyboardOpen(false);
-    };
-
-    const showSub = Keyboard.addListener(showEvent, onShow);
-    const hideSub = Keyboard.addListener(hideEvent, onHide);
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-      setConversationKeyboardOpen(false);
-    };
-  }, [scrollToBottomReliable, setConversationKeyboardOpen]);
+    const event = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const show = Keyboard.addListener(event, () => {
+      setTimeout(() => scrollToBottomReliable(true), 60);
+    });
+    return () => show.remove();
+  }, [scrollToBottomReliable]);
 
   useEffect(
     () => () => {
@@ -291,10 +270,13 @@ export function ChatConversationScreen({
     }
   };
 
-  const renderShell = (children: ReactNode) => <View style={styles.root}>{children}</View>;
+  const renderShell = (children: ReactNode) => (
+    <KeyboardAvoidingView style={styles.root} behavior="padding">
+      {children}
+    </KeyboardAvoidingView>
+  );
 
-  const keyboardOpen = conversationKeyboardOpen;
-  const composerBottomPad = keyboardOpen ? 8 : Math.max(safeInsets.bottom, 8);
+  const composerBottomPad = composerBottomPadding(keyboardOpen, safeInsets.bottom);
   const showAdCard = adCardVisible && !keyboardOpen;
   const threadTopInset = safeInsets.top + CHAT_THREAD_BAR_BODY_HEIGHT;
 
@@ -361,7 +343,7 @@ export function ChatConversationScreen({
         data={messages}
         keyExtractor={(item) => item.id}
         style={styles.messagesList}
-        keyboardDismissMode="interactive"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={[
           styles.messagesContent,
@@ -428,13 +410,7 @@ export function ChatConversationScreen({
 
       {error ? <AppText style={styles.sendError}>{error}</AppText> : null}
 
-      <View
-        style={[
-          styles.composerDock,
-          Platform.OS === 'ios' && composerLift > 0 ? { marginBottom: composerLift } : null,
-          { paddingBottom: composerBottomPad }
-        ]}
-      >
+      <View style={[styles.composerDock, { paddingBottom: composerBottomPad }]}>
         <View style={[styles.composer, isRtl && styles.composerRtl]}>
           <TextInput
             value={draft}

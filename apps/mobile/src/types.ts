@@ -22,7 +22,9 @@ export type ScreenName =
   | 'search'
   | 'notifications'
   | 'news'
-  | 'articleDetail';
+  | 'articleDetail'
+  | 'terms'
+  | 'privacy';
 
 export type User = {
   id: string;

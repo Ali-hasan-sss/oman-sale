@@ -2,7 +2,6 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Image,
-  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
@@ -14,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '../AppText';
+import { KeyboardAvoidingView, composerBottomPadding, useKeyboardOpen } from '../KeyboardInsets';
 import { AssistantListingCarousel } from './AssistantListingCarousel';
 import { AssistantStoreCarousel } from './AssistantStoreCarousel';
 import { AssistantTypingIndicator } from './AssistantTypingIndicator';
@@ -56,6 +56,8 @@ export function AssistantChatWidget({
   const { locale, isRtl, t } = useI18n();
   const a = t.assistant;
   const insets = useSafeAreaInsets();
+  const keyboardOpen = useKeyboardOpen();
+  const composerBottomPad = composerBottomPadding(keyboardOpen, insets.bottom);
   const user = useAuthStore((state) => state.user);
   const isAuthenticated = Boolean(user);
   const [open, setOpen] = useState(false);
@@ -124,12 +126,9 @@ export function AssistantChatWidget({
       ) : null}
 
       <Modal visible={open} animationType="slide" transparent onRequestClose={close}>
-        <View style={styles.modalRoot}>
+        <KeyboardAvoidingView inModal behavior="padding" style={styles.modalRoot}>
           <Pressable style={styles.backdrop} onPress={close} />
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            style={[styles.panel, { paddingBottom: Math.max(insets.bottom, 8) }]}
-          >
+          <View style={styles.panel}>
             <View style={styles.header}>
               <View style={styles.headerBrand}>
                 <View style={styles.headerBrandIcons}>
@@ -162,6 +161,7 @@ export function AssistantChatWidget({
               style={styles.messages}
               contentContainerStyle={styles.messagesContent}
               keyboardShouldPersistTaps="handled"
+              keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
             >
               {messages.map((message) => {
                 const isUser = message.role === 'user';
@@ -257,7 +257,7 @@ export function AssistantChatWidget({
 
             {error ? <AppText style={styles.error}>{error}</AppText> : null}
 
-            <View style={styles.composer}>
+            <View style={[styles.composer, { paddingBottom: composerBottomPad }]}>
               <TextInput
                 value={draft}
                 onChangeText={setDraft}
@@ -277,8 +277,8 @@ export function AssistantChatWidget({
                 <Ionicons name="arrow-up" size={18} color="#fff" />
               </Pressable>
             </View>
-          </KeyboardAvoidingView>
-        </View>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
     </>
   );

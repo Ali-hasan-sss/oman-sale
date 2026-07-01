@@ -20,7 +20,8 @@
     "version:bump": "node scripts/bump-version.js",
     "build:android:local": "node scripts/bump-version.js && eas build -p android --profile production-local --local --output ./build-output/omansale.apk",
     "build:android:local:aab": "node scripts/bump-version.js && eas build -p android --profile production-aab-local --local --output ./build-output/omansale.aab",
-    "build:android:win": "node scripts/bump-version.js && cross-env EXPO_NO_METRO_WORKSPACE_ROOT=1 EXPO_PUBLIC_API_URL=https://omansale.om/api/v1 EXPO_PUBLIC_API_DEBUG=false NODE_ENV=production expo prebuild -p android --clean && node scripts/setup-android-release.js && cd android && cross-env EXPO_NO_METRO_WORKSPACE_ROOT=1 EXPO_PUBLIC_API_URL=https://omansale.om/api/v1 EXPO_PUBLIC_API_DEBUG=false NODE_ENV=production gradlew.bat assembleRelease && cd .. && node scripts/copy-release-apk.js",
+    "build:android:win": "node scripts/bump-version.js && node scripts/stop-android-gradle.js && cross-env EXPO_NO_METRO_WORKSPACE_ROOT=1 EXPO_PUBLIC_API_URL=https://omansale.om/api/v1 EXPO_PUBLIC_API_DEBUG=false NODE_ENV=production expo prebuild -p android --clean && node scripts/setup-android-release.js && cd android && gradlew.bat --stop && cross-env EXPO_NO_METRO_WORKSPACE_ROOT=1 EXPO_PUBLIC_API_URL=https://omansale.om/api/v1 EXPO_PUBLIC_API_DEBUG=false NODE_ENV=production gradlew.bat assembleRelease --no-daemon && cd .. && node scripts/copy-release-apk.js",
+    "build:android:win:apk": "node scripts/setup-android-release.js && node scripts/stop-android-gradle.js && cd android && cross-env EXPO_NO_METRO_WORKSPACE_ROOT=1 EXPO_PUBLIC_API_URL=https://omansale.om/api/v1 EXPO_PUBLIC_API_DEBUG=false NODE_ENV=production gradlew.bat assembleRelease --no-daemon && cd .. && node scripts/copy-release-apk.js",
     "keystore:generate": "node scripts/generate-keystore.js",
     "keystore:fingerprint": "node scripts/keystore-fingerprint.js",
     "deps:align": "npx expo install --fix"
@@ -36,7 +37,6 @@
     "@react-native-google-signin/google-signin": "^16.1.2",
     "axios": "^1.7.4",
     "expo": "~54.0.35",
-    "expo-android-keyboard-fix": "^2.1.0",
     "expo-asset": "~12.0.13",
     "expo-av": "~16.0.8",
     "expo-build-properties": "~1.0.10",
@@ -56,6 +56,7 @@
     "react-native-safe-area-context": "5.6.2",
     "react-native-screens": "4.16.0",
     "react-native-svg": "^15.12.1",
+    "react-native-webview": "^13.15.0",
     "socket.io-client": "^4.8.3",
     "zustand": "5.0.13"
   },

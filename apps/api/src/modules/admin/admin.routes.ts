@@ -43,6 +43,8 @@ import {
 } from '../articles/articles.validation';
 import { tourismController } from '../tourism/tourism.controller';
 import { tourismDestinationSchema, updateTourismDestinationSchema } from '../tourism/tourism.validation';
+import { legalController } from '../legal/legal.controller';
+import { legalKindParamSchema, upsertLegalDocumentSchema } from '../legal/legal.validation';
 import { storeTypesController } from '../store-types/store-types.controller';
 import {
   createStoreTypeSchema,
@@ -437,4 +439,12 @@ adminRoutes.post(
   authorize(UserRole.ADMIN, UserRole.MODERATOR),
   validateRequest({ params: storeIdParams, body: rejectTrustBadgeSchema }),
   asyncHandler(trustBadgeController.rejectStore)
+);
+
+adminRoutes.get('/legal', asyncHandler(legalController.listForAdmin));
+adminRoutes.put(
+  '/legal/:kind',
+  authorize(UserRole.ADMIN),
+  validateRequest({ params: legalKindParamSchema, body: upsertLegalDocumentSchema }),
+  asyncHandler(legalController.upsertForAdmin)
 );

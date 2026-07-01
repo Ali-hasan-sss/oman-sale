@@ -26,6 +26,7 @@ import { storesRoutes } from './modules/stores/stores.routes';
 import { searchRoutes } from './modules/search/search.routes';
 import { assistantRoutes } from './modules/assistant/assistant.routes';
 import { articlesRoutes } from './modules/articles/articles.routes';
+import { legalRoutes } from './modules/legal/legal.routes';
 import { tourismRoutes } from './modules/tourism/tourism.routes';
 import { trustBadgeRoutes } from './modules/trust-badge/trust-badge.routes';
 import { usersRoutes } from './modules/users/users.routes';
@@ -85,6 +86,7 @@ app.use('/api/v1/search', searchRoutes);
 app.use('/api/v1/assistant', assistantRoutes);
 app.use('/api/v1/tourism', tourismRoutes);
 app.use('/api/v1/articles', articlesRoutes);
+app.use('/api/v1/legal', legalRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

@@ -91,6 +91,17 @@ if (!props.includes('OMANSALE_UPLOAD_STORE_FILE')) {
   console.log('→ Added signing properties to gradle.properties');
 }
 
+const kotlinStabilityBlock = `
+# Avoid intermittent "Could not connect to Kotlin compile daemon" on Windows
+kotlin.compiler.execution.strategy=in-process
+org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8
+`;
+
+if (!props.includes('kotlin.compiler.execution.strategy')) {
+  fs.appendFileSync(gradleProps, kotlinStabilityBlock, 'utf8');
+  console.log('→ Added Kotlin in-process compiler settings to gradle.properties');
+}
+
 if (props.includes('newArchEnabled=true')) {
   props = props.replace('newArchEnabled=true', 'newArchEnabled=false');
   fs.writeFileSync(gradleProps, props, 'utf8');

@@ -7,14 +7,20 @@ import { AppText } from '../components/AppText';
 import { useI18n } from '../i18n';
 import { colors, radius } from '../theme';
 
-export function SettingsScreen() {
+type SettingsScreenProps = {
+  onOpenTerms?: () => void;
+  onOpenPrivacy?: () => void;
+};
+
+export function SettingsScreen({ onOpenTerms, onOpenPrivacy }: SettingsScreenProps) {
   const { t, isRtl, toggleLocale } = useI18n();
   const { scrollBottomPadding } = useScreenInsets();
 
   const items = [
     { label: t.common.language, icon: 'language-outline' as const, onPress: toggleLocale },
     { label: t.settings.notifications, icon: 'notifications-outline' as const },
-    { label: t.settings.privacy, icon: 'shield-checkmark-outline' as const },
+    { label: t.settings.terms, icon: 'document-text-outline' as const, onPress: onOpenTerms },
+    { label: t.settings.privacy, icon: 'shield-checkmark-outline' as const, onPress: onOpenPrivacy },
     { label: t.settings.help, icon: 'help-circle-outline' as const }
   ];
 

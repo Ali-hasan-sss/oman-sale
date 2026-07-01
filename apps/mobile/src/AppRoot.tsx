@@ -2,6 +2,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { PropsWithChildren, useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { KeyboardInsetsProvider } from './components/KeyboardInsets';
 import { useAppFonts } from './fonts';
 import { I18nProvider } from './i18n';
 import { MainShell } from './navigation/MainShell';
@@ -33,11 +34,13 @@ function FontReadyGate({ children }: PropsWithChildren) {
 export function AppRoot() {
   return (
     <SafeAreaProvider>
-      <I18nProvider>
-        <FontReadyGate>
-          <MainShell />
-        </FontReadyGate>
-      </I18nProvider>
+      <KeyboardInsetsProvider>
+        <I18nProvider>
+          <FontReadyGate>
+            <MainShell />
+          </FontReadyGate>
+        </I18nProvider>
+      </KeyboardInsetsProvider>
     </SafeAreaProvider>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { BadgeCheck, BarChart3, Building2, ExternalLink, Flag, FolderTree, Globe, Image, LayoutList, LayoutPanelTop, Lock, LogOut, MapPin, Megaphone, Menu, Newspaper, Store, Users, X } from 'lucide-react';
+import { BadgeCheck, BarChart3, Building2, ExternalLink, FileText, Flag, FolderTree, Globe, Image, LayoutList, LayoutPanelTop, Lock, LogOut, MapPin, Megaphone, Menu, Newspaper, Store, Users, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { FormEvent, PropsWithChildren, useEffect, useState } from 'react';
@@ -26,6 +26,7 @@ const navItems = [
   { key: 'storePlans', href: '/admin/store-plans', icon: Store },
   { key: 'tourism', href: '/admin/tourism', icon: MapPin },
   { key: 'articles', href: '/admin/articles', icon: Newspaper },
+  { key: 'legal', href: '/admin/legal', icon: FileText },
 ] as const;
 
 export function AdminShell({ children }: PropsWithChildren) {

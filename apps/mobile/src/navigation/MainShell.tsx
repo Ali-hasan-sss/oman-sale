@@ -40,6 +40,7 @@ import { MyOffersScreen } from '../screens/MyOffersScreen';
 import { CategoryOffersScreen } from '../screens/CategoryOffersScreen';
 import { OffersScreen } from '../screens/OffersScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
+import { LegalScreen } from '../screens/LegalScreen';
 import { ListingDetailScreen } from '../screens/ListingDetailScreen';
 import { NotificationsScreen } from '../screens/NotificationsScreen';
 import { NewsScreen } from '../screens/NewsScreen';
@@ -271,6 +272,8 @@ export function MainShell() {
     screen === 'notifications' ||
     screen === 'news' ||
     screen === 'articleDetail' ||
+    screen === 'terms' ||
+    screen === 'privacy' ||
     screen === 'favorites' ||
     screen === 'storesBrowse' ||
     screen === 'storeDetail' ||
@@ -375,7 +378,16 @@ export function MainShell() {
           />
         );
       case 'settings':
-        return <SettingsScreen />;
+        return (
+          <SettingsScreen
+            onOpenTerms={() => pushScreen('terms')}
+            onOpenPrivacy={() => pushScreen('privacy')}
+          />
+        );
+      case 'terms':
+        return <LegalScreen kind="terms" />;
+      case 'privacy':
+        return <LegalScreen kind="privacy" />;
       case 'notifications':
         return <NotificationsScreen />;
       case 'news':
@@ -581,7 +593,14 @@ export function MainShell() {
         onClose={() => setDrawerOpen(false)}
         onLogoutRequest={() => setLogoutConfirmOpen(true)}
         onNavigate={(next) => {
-          if (next === 'profile' || next === 'settings' || next === 'favorites' || next === 'storesBrowse') {
+          if (
+            next === 'profile' ||
+            next === 'settings' ||
+            next === 'favorites' ||
+            next === 'storesBrowse' ||
+            next === 'terms' ||
+            next === 'privacy'
+          ) {
             pushScreen(next);
             return;
           }

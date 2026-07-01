@@ -10,7 +10,6 @@ import {
 import {
   Platform,
   ScrollView,
-  StyleSheet,
   type NativeSyntheticEvent,
   type ScrollView as ScrollViewType,
   type ScrollViewProps,
@@ -18,8 +17,6 @@ import {
   type TargetedEvent,
   type ViewStyle
 } from 'react-native';
-
-import { useKeyboardInset } from '../hooks/use-keyboard-inset';
 
 type ScrollIntoViewHandler = (event: NativeSyntheticEvent<TargetedEvent>) => void;
 
@@ -34,18 +31,23 @@ type KeyboardAwareScrollViewProps = ScrollViewProps & {
   children?: ReactNode;
   /** Extra space above the keyboard when scrolling a focused field into view */
   focusScrollPadding?: number;
+  /** Disable scroll keyboard insets when a fixed bottom composer handles lifting */
+  disableKeyboardInset?: boolean;
 };
 
 export const KeyboardAwareScrollView = forwardRef<ScrollViewType, KeyboardAwareScrollViewProps>(
   function KeyboardAwareScrollView(
-    { contentContainerStyle, focusScrollPadding = 96, children, ...scrollProps },
+    {
+      contentContainerStyle,
+      focusScrollPadding = 96,
+      disableKeyboardInset = false,
+      children,
+      ...scrollProps
+    },
     ref
   ) {
-    const keyboardInset = useKeyboardInset();
     const scrollRef = useRef<ScrollViewType>(null);
-    const flatContent = StyleSheet.flatten(contentContainerStyle) as ViewStyle | undefined;
-    const baseBottomPadding =
-      typeof flatContent?.paddingBottom === 'number' ? flatContent.paddingBottom : 0;
+    const adjustKeyboardInsets = Platform.OS === 'ios' && !disableKeyboardInset;
 
     useImperativeHandle(ref, () => scrollRef.current as ScrollViewType);
 
@@ -67,12 +69,10 @@ export const KeyboardAwareScrollView = forwardRef<ScrollViewType, KeyboardAwareS
       <KeyboardAwareScrollContext.Provider value={scrollFocusedIntoView}>
         <ScrollView
           ref={scrollRef}
-          automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+          automaticallyAdjustKeyboardInsets={adjustKeyboardInsets}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={[
-            contentContainerStyle,
-            keyboardInset > 0 ? { paddingBottom: baseBottomPadding + keyboardInset } : null
-          ]}
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          contentContainerStyle={contentContainerStyle}
           {...scrollProps}
         >
           {children}

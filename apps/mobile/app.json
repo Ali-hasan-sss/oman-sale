@@ -23,7 +23,7 @@
         "foregroundImage": "./assets/adaptive-icon-foreground.png",
         "backgroundColor": "#ffffff"
       },
-      "versionCode": 3
+      "versionCode": 5
     },
     "extra": {
       "supportsRTL": false,
