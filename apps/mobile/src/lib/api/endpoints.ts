@@ -44,7 +44,8 @@ export const API_ENDPOINTS = {
     filters: (id: string) => `/categories/${id}/filters`
   },
   search: {
-    ads: '/search/ads'
+    ads: '/search/ads',
+    suggestions: '/search/suggestions'
   },
   chat: {
     conversations: '/chat/conversations',

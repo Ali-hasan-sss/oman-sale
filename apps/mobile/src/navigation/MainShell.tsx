@@ -2,8 +2,6 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   BackHandler,
-  Keyboard,
-  type KeyboardEvent,
   PanResponder,
   Platform,
   StatusBar as RNStatusBar,
@@ -15,6 +13,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ScreenInsetsProvider } from '../context/screen-insets-context';
 
 import { AppHeader } from '../components/AppHeader';
+import { useKeyboardLiftHeight } from '../components/KeyboardInsets';
 import { ChatThreadBar } from '../components/ChatThreadBar';
 import { ScreenTransition, type ScreenTransitionKind } from '../components/ScreenTransition';
 import { AuthGateModal } from '../components/AuthGateModal';
@@ -260,26 +259,8 @@ export function MainShell() {
   const hideAssistant =
     isChatConversation || screen === 'login' || screen === 'register' || screen === 'completeProfile';
   const chatEdgeSwipeTopInset = safeInsets.top + CHAT_THREAD_BAR_BODY_HEIGHT;
-  const [tabBarKeyboardOffset, setTabBarKeyboardOffset] = useState(0);
-  const isCategoryOffers = screen === 'categoryOffers';
-  const showHeaderBack =
-    screen === 'listingDetail' ||
-    isCategoryOffers ||
-    screen === 'myStore' ||
-    screen === 'addStore' ||
-    screen === 'profile' ||
-    screen === 'settings' ||
-    screen === 'notifications' ||
-    screen === 'news' ||
-    screen === 'articleDetail' ||
-    screen === 'terms' ||
-    screen === 'privacy' ||
-    screen === 'favorites' ||
-    screen === 'storesBrowse' ||
-    screen === 'storeDetail' ||
-    screen === 'search';
-
-  const showHeaderSearch = !showHeaderBack;
+  const keyboardLift = useKeyboardLiftHeight();
+  const tabBarKeyboardOffset = hideTabBar ? 0 : keyboardLift;
 
   const homeScreenProps = {
     onBrowseOffers: () => navigate('offers'),
@@ -412,8 +393,10 @@ export function MainShell() {
             onListingPress={openListingDetail}
             onStorePress={openStoreDetail}
             onCategoryPress={openCategoryOffers}
+            onArticlePress={openArticleDetail}
             onBrowseOffers={() => pushScreen('offers')}
             onBrowseStores={() => pushScreen('storesBrowse')}
+            onBrowseNews={() => pushScreen('news')}
           />
         );
       case 'listingDetail':
@@ -444,29 +427,6 @@ export function MainShell() {
   };
 
   useEffect(() => {
-    if (hideTabBar) {
-      setTabBarKeyboardOffset(0);
-      return;
-    }
-
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-    const onShow = (event: KeyboardEvent) => {
-      setTabBarKeyboardOffset(event.endCoordinates.height);
-    };
-    const onHide = () => setTabBarKeyboardOffset(0);
-
-    const showSub = Keyboard.addListener(showEvent, onShow);
-    const hideSub = Keyboard.addListener(hideEvent, onHide);
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-      setTabBarKeyboardOffset(0);
-    };
-  }, [hideTabBar]);
-
-  useEffect(() => {
     if (!isChatConversation) return;
     if (Platform.OS === 'android') {
       RNStatusBar.setBackgroundColor(colors.surface);
@@ -494,10 +454,8 @@ export function MainShell() {
         {!hideAppHeader ? (
           <AppHeader
             onMenuPress={() => setDrawerOpen(true)}
-            showBack={showHeaderBack}
-            onBackPress={goBack}
-            onSearchPress={showHeaderSearch ? () => pushScreen('search') : undefined}
-            onNotificationsPress={user ? () => navigate('notifications') : undefined}
+            onSearchPress={() => pushScreen('search')}
+            onNotificationsPress={() => navigate('notifications')}
             notificationUnreadCount={notificationUnreadCount}
           />
         ) : null}

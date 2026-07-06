@@ -72,8 +72,7 @@ export function HomeCategoriesSection({ onCategoryPress }: HomeCategoriesSection
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={isRtl ? styles.scrollRtl : undefined}
-          contentContainerStyle={[styles.scrollContent, isRtl && styles.scrollContentRtl]}
+          contentContainerStyle={styles.scrollContent}
         >
           {t.home.categoryNames.map((name) => (
             <CategoryChip key={name} label={name} adsCount={0} isRtl={isRtl} adsLabel={adsLabel} />
@@ -83,8 +82,7 @@ export function HomeCategoriesSection({ onCategoryPress }: HomeCategoriesSection
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={isRtl ? styles.scrollRtl : undefined}
-          contentContainerStyle={[styles.scrollContent, isRtl && styles.scrollContentRtl]}
+          contentContainerStyle={styles.scrollContent}
         >
           {rootCategories.map((category) => (
             <Pressable

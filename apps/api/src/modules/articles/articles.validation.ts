@@ -58,6 +58,26 @@ export const reactionSchema = z.object({
   type: z.nativeEnum(ArticleReactionType)
 });
 
+export const checkArticleSlugQuerySchema = z.object({
+  slug: z
+    .string()
+    .trim()
+    .min(2)
+    .max(120)
+    .regex(/^[a-z0-9-]+$/),
+  excludeId: z.string().uuid().optional()
+});
+
+export const checkArticleCategorySlugQuerySchema = z.object({
+  slug: z
+    .string()
+    .trim()
+    .min(2)
+    .max(80)
+    .regex(/^[a-z0-9-]+$/),
+  excludeId: z.string().uuid().optional()
+});
+
 export const idParams = z.object({ id: z.string().uuid() });
 export const idOrSlugParams = z.object({ idOrSlug: z.string().min(1) });
 

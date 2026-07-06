@@ -46,7 +46,7 @@ module.exports = () => {
       },
       android: {
         ...appJson.expo.android,
-        softwareKeyboardLayoutMode: 'resize',
+        softwareKeyboardLayoutMode: 'pan',
         versionCode: Number(process.env.ANDROID_VERSION_CODE) || versionInfo.versionCode || 3,
         usesCleartextTraffic: false,
         permissions: ['INTERNET', 'ACCESS_NETWORK_STATE', 'POST_NOTIFICATIONS'],
@@ -74,7 +74,7 @@ module.exports = () => {
               // 34: broader sideload compatibility; use 35 for Play Store later.
               targetSdkVersion: 34,
               newArchEnabled: false,
-              softwareKeyboardLayoutMode: 'resize',
+              softwareKeyboardLayoutMode: 'pan',
               // Helps native libs install on older devices (arm32/arm64/x86).
               useLegacyPackaging: true
             }

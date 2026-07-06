@@ -55,7 +55,7 @@ export function ListingCard({ listing, locale, featuredLabel, layout = 'vertical
         ) : null}
       </View>
       <View style={[styles.body, isHorizontal && styles.bodyHorizontal]}>
-        <View style={[styles.titleRow, contentRtl ? styles.titleRowRtl : styles.titleRowLtr]}>
+        <View style={styles.titleRow}>
           <AppText style={[styles.title, contentRtl ? styles.textRtl : styles.textLtr, styles.titleFlex]} numberOfLines={1}>
             {listing.title}
           </AppText>

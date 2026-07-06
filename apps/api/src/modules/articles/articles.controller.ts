@@ -22,6 +22,16 @@ export class ArticlesController {
     res.json({ data: await articlesService.deleteCategory(getRequiredParam(req, 'id')) });
   }
 
+  async checkCategorySlugAvailability(req: Request, res: Response) {
+    const query = req.query as { slug: string; excludeId?: string };
+    res.json({ data: await articlesService.checkCategorySlugAvailability(query.slug, query.excludeId) });
+  }
+
+  async checkArticleSlugAvailability(req: Request, res: Response) {
+    const query = req.query as { slug: string; excludeId?: string };
+    res.json({ data: await articlesService.checkArticleSlugAvailability(query.slug, query.excludeId) });
+  }
+
   async list(req: Request, res: Response) {
     res.json({ data: await articlesService.list(req.query as never) });
   }

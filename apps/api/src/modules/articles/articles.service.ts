@@ -53,6 +53,16 @@ export class ArticlesService {
     return articlesRepository.deleteCategory(id);
   }
 
+  async checkCategorySlugAvailability(slug: string, excludeId?: string) {
+    const category = await articlesRepository.findCategoryBySlug(slug);
+    return { available: !category || category.id === excludeId };
+  }
+
+  async checkArticleSlugAvailability(slug: string, excludeId?: string) {
+    const article = await articlesRepository.findBySlug(slug);
+    return { available: !article || article.id === excludeId };
+  }
+
   async list(query: ListArticlesQuery, options?: { admin?: boolean }) {
     const page = await articlesRepository.list(query, options);
     return { ...page, items: resolveArticlesMedia(page.items) };

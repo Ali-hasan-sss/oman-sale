@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, PropsWithChildren, useContext, useEffect, useMemo, useState } from 'react';
-import { I18nManager } from 'react-native';
+import { I18nManager, View, type ViewStyle } from 'react-native';
 
 import type { Locale } from './types';
 
@@ -462,15 +462,22 @@ const dictionary = {
     },
     globalSearch: {
       title: 'البحث',
-      hint: 'ابحث عن عروض أو متاجر أو فئات في Oman Sale.',
-      placeholder: 'ابحث عن عروض، متاجر، أو فئات...',
+      hint: 'ابحث في العروض والمقالات والمتاجر والفئات في Oman Sale.',
+      placeholder: 'ابحث عن عروض، مقالات، متاجر، أو فئات...',
       search: 'بحث',
       queryLabel: 'نتائج البحث عن',
       categories: 'الفئات',
       listings: 'العروض',
+      articles: 'المقالات',
       stores: 'المتاجر',
       empty: 'لا توجد نتائج مطابقة.',
-      viewAll: 'عرض الكل'
+      viewAll: 'عرض الكل',
+      suggestionsLoading: 'جاري تحميل الاقتراحات...',
+      suggestionsEmpty: 'لا توجد اقتراحات مطابقة.',
+      suggestionListing: 'عرض',
+      suggestionCategory: 'فئة',
+      suggestionArticle: 'مقالة',
+      suggestionStore: 'متجر'
     },
     storesBrowse: {
       title: 'استعرض المتاجر',
@@ -983,15 +990,22 @@ const dictionary = {
     },
     globalSearch: {
       title: 'Search',
-      hint: 'Find listings, stores, or categories on Oman Sale.',
-      placeholder: 'Search listings, stores, or categories...',
+      hint: 'Search listings, articles, stores, and categories across Oman Sale.',
+      placeholder: 'Search listings, articles, stores, or categories...',
       search: 'Search',
       queryLabel: 'Results for',
       categories: 'Categories',
       listings: 'Listings',
+      articles: 'Articles',
       stores: 'Stores',
       empty: 'No matching results.',
-      viewAll: 'View all'
+      viewAll: 'View all',
+      suggestionsLoading: 'Loading suggestions...',
+      suggestionsEmpty: 'No matching suggestions.',
+      suggestionListing: 'Listing',
+      suggestionCategory: 'Category',
+      suggestionArticle: 'Article',
+      suggestionStore: 'Store'
     },
     storesBrowse: {
       title: 'Browse stores',
@@ -1053,8 +1067,10 @@ const dictionary = {
 
 type I18nContextValue = {
   locale: Locale;
-  /** للمحتوى والنصوص فقط (عربي = يمين). لا تستخدمها في النافبار/التابات/السايدبار. */
+  /** true when Arabic is active — layout direction is applied at the provider root. */
   isRtl: boolean;
+  /** Root layout direction; use plain `flexDirection: 'row'` in children (no manual row-reverse). */
+  directionStyle: ViewStyle;
   t: (typeof dictionary)[Locale];
   toggleLocale: () => void;
 };
@@ -1078,22 +1094,31 @@ export function I18nProvider({ children }: PropsWithChildren) {
     });
   };
 
+  const isRtl = locale === 'ar';
+
   const value = useMemo(
     () => ({
       locale,
-      isRtl: locale === 'ar',
+      isRtl,
+      directionStyle: { direction: isRtl ? ('rtl' as const) : ('ltr' as const), flex: 1 },
       t: dictionary[locale],
       toggleLocale
     }),
-    [locale]
+    [isRtl, locale]
   );
 
   useEffect(() => {
-    I18nManager.allowRTL(false);
-    I18nManager.forceRTL(false);
-  }, []);
+    I18nManager.allowRTL(true);
+    if (I18nManager.isRTL !== isRtl) {
+      I18nManager.forceRTL(isRtl);
+    }
+  }, [isRtl]);
 
-  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
+  return (
+    <I18nContext.Provider value={value}>
+      <View style={value.directionStyle}>{children}</View>
+    </I18nContext.Provider>
+  );
 }
 
 export function useI18n() {

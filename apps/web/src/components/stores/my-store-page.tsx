@@ -1,6 +1,6 @@
 'use client';
 
-import { Camera, Store, Upload, X } from 'lucide-react';
+import { Camera, Eye, Megaphone, Store, Upload, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChangeEvent, FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
@@ -15,6 +15,7 @@ import { StoreSubscriptionHistory } from '@/components/stores/store-subscription
 import { StoreTrustBadgePanel } from '@/components/trust-badge/store-trust-badge-panel';
 import { SubscriptionRingGauge } from '@/components/stores/subscription-ring-gauge';
 import { api } from '@/lib/api';
+import { buildBannerAdRequestUrl } from '@/lib/banner-ad-prefill';
 import { resolveApiErrorMessage } from '@/lib/api-errors';
 import { registerMediaPreviewUrl, resolveMediaUrl } from '@/lib/media-url';
 import { uploadMediaFile } from '@/lib/media-upload';
@@ -140,6 +141,8 @@ const labels = {
     storeListings: 'عروض المتجر',
     noListings: 'لا توجد عروض منشورة من المتجر بعد.',
     addListing: 'إضافة عرض من المتجر',
+    viewListing: 'عرض',
+    promoteBanner: 'ترويج بالبنر',
     loadError: 'تعذر تحميل بيانات المتجر.',
     checkoutError: 'تعذر إتمام العملية.',
     adminFreeBadge: 'مجانية (شهر واحد)',
@@ -239,6 +242,8 @@ const labels = {
     storeListings: 'Store listings',
     noListings: 'No store listings yet.',
     addListing: 'Add store listing',
+    viewListing: 'View',
+    promoteBanner: 'Promote with banner',
     loadError: 'Could not load store data.',
     checkoutError: 'Could not complete the request.',
     adminFreeBadge: 'Free (1 month)',
@@ -711,27 +716,48 @@ export function MyStorePage() {
                     {listings.map((listing) => {
                       const categoryName =
                         (locale === 'en' ? listing.category?.nameEn : listing.category?.nameAr) ?? listing.category?.name ?? '';
+                      const bannerAdHref = buildBannerAdRequestUrl(localizedPath, {
+                        listingId: listing.id,
+                        title: listing.title,
+                        imageUrl: listing.images?.[0]?.imageUrl
+                      });
+
                       return (
-                        <Link
+                        <div
                           key={listing.id}
-                          href={localizedPath(`/listing/${listing.id}`)}
-                          className="flex gap-4 rounded-2xl border border-gray-100 p-4 transition hover:border-green-200 hover:bg-green-50/40"
+                          className="flex flex-col gap-4 rounded-2xl border border-gray-100 p-4 sm:flex-row"
                         >
                           <ListingMediaCover
                             items={listing.images}
                             alt={listing.title}
                             fallbackSrc={fallbackImage}
-                            className="h-24 w-28 shrink-0 rounded-xl"
-                            imageClassName="h-24 w-28 rounded-xl"
+                            className="h-24 w-full shrink-0 rounded-xl sm:w-28"
+                            imageClassName="h-24 w-full rounded-xl sm:w-28"
                           />
-                          <div>
+                          <div className="min-w-0 flex-1">
                             <h3 className="font-bold">{listing.title}</h3>
                             <p className="text-sm text-gray-500">{categoryName}</p>
                             <p className="mt-1 font-bold text-green-600">
                               {listing.price ? `${listing.price} ${listing.currency}` : '-'}
                             </p>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <Link
+                                href={localizedPath(`/listing/${listing.id}`)}
+                                className="inline-flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-200"
+                              >
+                                <Eye size={16} />
+                                {text.viewListing}
+                              </Link>
+                              <Link
+                                href={bannerAdHref}
+                                className="inline-flex items-center gap-2 rounded-lg bg-brand-50 px-3 py-2 text-sm font-medium text-brand-700 transition hover:bg-brand-100"
+                              >
+                                <Megaphone size={16} />
+                                {text.promoteBanner}
+                              </Link>
+                            </div>
                           </div>
-                        </Link>
+                        </div>
                       );
                     })}
                   </div>

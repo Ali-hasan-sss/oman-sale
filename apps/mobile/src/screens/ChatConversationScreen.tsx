@@ -27,7 +27,7 @@ import {
   markConversationReadRequest,
   sendChatMessageRequest
 } from '../services/chat.service';
-import { KeyboardAvoidingView, composerBottomPadding, useKeyboardOpen } from '../components/KeyboardInsets';
+import { ComposerDock, useKeyboardOpen } from '../components/KeyboardInsets';
 import { useAuthStore, useChatStore } from '../stores';
 import type { ChatConversation, ChatMessage } from '../types';
 import { colors, radius, shadow } from '../theme';
@@ -270,13 +270,7 @@ export function ChatConversationScreen({
     }
   };
 
-  const renderShell = (children: ReactNode) => (
-    <KeyboardAvoidingView style={styles.root} behavior="padding">
-      {children}
-    </KeyboardAvoidingView>
-  );
-
-  const composerBottomPad = composerBottomPadding(keyboardOpen, safeInsets.bottom);
+  const renderShell = (children: ReactNode) => <View style={styles.root}>{children}</View>;
   const showAdCard = adCardVisible && !keyboardOpen;
   const threadTopInset = safeInsets.top + CHAT_THREAD_BAR_BODY_HEIGHT;
 
@@ -410,7 +404,7 @@ export function ChatConversationScreen({
 
       {error ? <AppText style={styles.sendError}>{error}</AppText> : null}
 
-      <View style={[styles.composerDock, { paddingBottom: composerBottomPad }]}>
+      <ComposerDock style={styles.composerDock}>
         <View style={[styles.composer, isRtl && styles.composerRtl]}>
           <TextInput
             value={draft}
@@ -434,7 +428,7 @@ export function ChatConversationScreen({
             )}
           </Pressable>
         </View>
-      </View>
+      </ComposerDock>
     </View>
   );
 }

@@ -7,12 +7,11 @@ import {
   StyleSheet,
   View
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '../AppText';
 import { AppTextInput } from '../AppTextInput';
 import { ConfirmDialog } from '../ConfirmDialog';
-import { composerBottomPadding, useKeyboardOpen } from '../KeyboardInsets';
+import { ComposerDock } from '../KeyboardInsets';
 import { useI18n } from '../../i18n';
 import { type ArticleComment, updateArticleComment } from '../../services/articles.service';
 import { colors, radius } from '../../theme';
@@ -103,12 +102,8 @@ export function ArticleCommentComposer({ body, setBody, submit, submitting }: Ar
   const { t, isRtl } = useI18n();
   const text = t.articles;
   const textAlign = isRtl ? styles.rtl : styles.ltr;
-  const safeInsets = useSafeAreaInsets();
-  const keyboardOpen = useKeyboardOpen();
-  const composerBottomPad = composerBottomPadding(keyboardOpen, safeInsets.bottom);
-
   return (
-    <View style={[styles.composerDock, { paddingBottom: composerBottomPad }]}>
+    <ComposerDock style={styles.composerDock}>
       <View style={[styles.composer, isRtl && styles.composerRtl]}>
         <AppTextInput
           value={body}
@@ -132,7 +127,7 @@ export function ArticleCommentComposer({ body, setBody, submit, submitting }: Ar
           )}
         </Pressable>
       </View>
-    </View>
+    </ComposerDock>
   );
 }
 

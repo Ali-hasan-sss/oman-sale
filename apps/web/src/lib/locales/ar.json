@@ -502,6 +502,8 @@
     "selectCategory": "اختر التصنيف",
     "articleCoverTitle": "الصورة الرئيسية للبطاقة",
     "articleCoverHint": "JPG أو PNG أو WebP — تظهر في بطاقة المقالة",
+    "articleCoverRequired": "الصورة الرئيسية مطلوبة",
+    "articleCategoryRequired": "يرجى اختيار التصنيف",
     "articleGalleryTitle": "صور إضافية",
     "articleGalleryUploadTitle": "اضغط لإضافة صور للمقال",
     "articleGalleryUploadHint": "حتى 12 صورة تظهر في صفحة المقال",

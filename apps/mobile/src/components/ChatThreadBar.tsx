@@ -27,13 +27,13 @@ export function ChatThreadBar({ onBack }: ChatThreadBarProps) {
 
   return (
     <View style={[styles.shell, { paddingTop: safeInsets.top }]} pointerEvents="box-none">
-      <View style={[styles.row, isRtl && styles.rowRtl]} pointerEvents="auto">
+      <View style={styles.row} pointerEvents="auto">
         <Pressable style={styles.iconBtn} onPress={onBack}>
           <Ionicons name={isRtl ? 'arrow-forward' : 'arrow-back'} size={22} color={colors.ink} />
         </Pressable>
 
         {isLoading ? (
-          <View style={[styles.peerRow, isRtl && styles.peerRowRtl]}>
+          <View style={styles.peerRow}>
             <Skeleton width={44} height={44} borderRadius={22} />
             <View style={styles.peerMeta}>
               <Skeleton width={120} height={16} />
@@ -41,7 +41,7 @@ export function ChatThreadBar({ onBack }: ChatThreadBarProps) {
             </View>
           </View>
         ) : (
-          <View style={[styles.peerRow, isRtl && styles.peerRowRtl]}>
+          <View style={styles.peerRow}>
             <View style={styles.avatar}>
               {peerAvatar ? (
                 <Image source={{ uri: peerAvatar }} style={styles.avatarImage} />
@@ -53,7 +53,7 @@ export function ChatThreadBar({ onBack }: ChatThreadBarProps) {
               <AppText style={[styles.peerName, isRtl && styles.textRtl]} numberOfLines={1}>
                 {peerName || '-'}
               </AppText>
-              <View style={[styles.statusRow, isRtl && styles.statusRowRtl]}>
+              <View style={styles.statusRow}>
                 <View style={[styles.statusDot, isOtherOnline ? styles.statusDotOnline : styles.statusDotOffline]} />
                 <AppText style={styles.statusText}>{isOtherOnline ? text.online : text.offline}</AppText>
               </View>

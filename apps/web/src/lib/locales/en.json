@@ -501,6 +501,8 @@
     "selectCategory": "Select category",
     "articleCoverTitle": "Cover image for card",
     "articleCoverHint": "JPG, PNG, or WebP — shown on article cards",
+    "articleCoverRequired": "Cover image is required",
+    "articleCategoryRequired": "Please select a category",
     "articleGalleryTitle": "Additional images",
     "articleGalleryUploadTitle": "Click to add article gallery photos",
     "articleGalleryUploadHint": "Up to 12 images shown on the article page",

@@ -61,6 +61,13 @@ function mapZodIssueToMessageKey(issue: ZodIssue): string {
   if (field === 'city') return 'fieldCityRequired';
   if (field === 'wilayah') return 'fieldWilayahRequired';
   if (field === 'price') return 'fieldPriceInvalid';
+  if (field === 'coverImageUrl') return 'fieldCoverImageRequired';
+  if (field === 'categoryId') return 'fieldCategoryRequired';
+  if (field === 'slug') return 'invalidSlug';
+  if (field === 'titleAr' || field === 'titleEn' || field === 'nameAr' || field === 'nameEn') {
+    return issue.code === 'too_small' ? 'requiredField' : 'requiredField';
+  }
+  if (field === 'bodyAr' || field === 'bodyEn') return 'requiredField';
 
   return 'VALIDATION_FAILED';
 }

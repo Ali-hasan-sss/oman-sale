@@ -37,6 +37,8 @@ import { articlesController } from '../articles/articles.controller';
 import {
   articleCategorySchema,
   articleSchema,
+  checkArticleCategorySlugQuerySchema,
+  checkArticleSlugQuerySchema,
   listArticlesQuerySchema,
   updateArticleCategorySchema,
   updateArticleSchema
@@ -295,6 +297,11 @@ adminRoutes.delete(
   asyncHandler(tourismController.delete)
 );
 adminRoutes.get('/article-categories', asyncHandler(articlesController.listCategories));
+adminRoutes.get(
+  '/article-categories/slug-availability',
+  validateRequest({ query: checkArticleCategorySlugQuerySchema }),
+  asyncHandler(articlesController.checkCategorySlugAvailability)
+);
 adminRoutes.post(
   '/article-categories',
   authorize(UserRole.ADMIN),
@@ -317,6 +324,11 @@ adminRoutes.get(
   '/articles',
   validateRequest({ query: listArticlesQuerySchema }),
   asyncHandler(articlesController.listForAdmin)
+);
+adminRoutes.get(
+  '/articles/slug-availability',
+  validateRequest({ query: checkArticleSlugQuerySchema }),
+  asyncHandler(articlesController.checkArticleSlugAvailability)
 );
 adminRoutes.get('/articles/:idOrSlug', asyncHandler(articlesController.getForAdmin));
 adminRoutes.post(

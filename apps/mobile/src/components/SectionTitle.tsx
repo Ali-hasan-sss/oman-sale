@@ -14,7 +14,7 @@ export function SectionTitle({ title, actionLabel, onAction }: SectionTitleProps
   const { isRtl } = useI18n();
 
   return (
-    <View style={[styles.row, isRtl && styles.rowRtl]}>
+    <View style={styles.row}>
       <AppText style={[styles.title, isRtl ? styles.titleRtl : styles.titleLtr]}>{title}</AppText>
       {actionLabel && onAction ? (
         <Pressable onPress={onAction}>

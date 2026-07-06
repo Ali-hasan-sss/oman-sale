@@ -38,6 +38,10 @@ export class ArticlesRepository {
     return prisma.articleCategory.findUnique({ where: { id } });
   }
 
+  findCategoryBySlug(slug: string) {
+    return prisma.articleCategory.findUnique({ where: { slug } });
+  }
+
   createCategory(data: ArticleCategoryInput) {
     return prisma.articleCategory.create({
       data: {

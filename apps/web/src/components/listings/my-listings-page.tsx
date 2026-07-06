@@ -1,6 +1,6 @@
 'use client';
 
-import { Calendar, CheckCircle2, Clock, Eye, Pen, Trash2, TrendingUp, X } from 'lucide-react';
+import { Calendar, CheckCircle2, Clock, Eye, Megaphone, Pen, Trash2, TrendingUp, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
@@ -13,6 +13,7 @@ import { useI18n } from '@/lib/i18n';
 import { PlanPriceWithVat } from '@/components/pricing/plan-price-with-vat';
 import { getListingLocationLabel, getWilayahsForGovernorate, omanGovernorates } from '@/lib/oman-locations';
 import { getUserAccessToken } from '@/lib/user-auth';
+import { buildBannerAdRequestUrl } from '@/lib/banner-ad-prefill';
 import { useAuthStore } from '@/store/auth-store';
 import { ListingTitleWithVerified } from '@/components/trust-badge/listing-verified-badge';
 import { ListingCardsSkeleton } from './listing-card-skeleton';
@@ -86,6 +87,7 @@ const labels = {
     view: 'عرض',
     edit: 'تعديل',
     promote: 'ترقية',
+    promoteBanner: 'ترويج بالبنر',
     delete: 'حذف',
     loading: 'جاري تحميل إعلاناتك...',
     empty: 'لا توجد إعلانات خاصة بك حاليًا.',
@@ -134,6 +136,7 @@ const labels = {
     view: 'View',
     edit: 'Edit',
     promote: 'Promote',
+    promoteBanner: 'Promote with banner',
     delete: 'Delete',
     loading: 'Loading your listings...',
     empty: 'You do not have listings yet.',
@@ -359,6 +362,11 @@ function ListingCard({
     (locale === 'en' ? listing.promotion?.plan?.nameEn : listing.promotion?.plan?.nameAr) ||
     text.featuredAd;
   const daysLeft = getDaysLeft(listing.expiresAt || listing.promotion?.endsAt);
+  const bannerAdHref = buildBannerAdRequestUrl(localizedPath, {
+    listingId: listing.id,
+    title: listing.title,
+    imageUrl: listing.images[0]?.imageUrl
+  });
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
@@ -414,6 +422,13 @@ function ListingCard({
             </Link>
             <ActionButton className="bg-blue-50 text-blue-600 hover:bg-blue-100" icon={<Pen className="h-4 w-4" />} label={text.edit} onClick={onEdit} />
             <ActionButton className="bg-green-50 text-green-600 hover:bg-green-100" icon={<TrendingUp className="h-4 w-4" />} label={text.promote} onClick={onPromote} />
+            <Link
+              className="flex items-center gap-2 rounded-lg bg-brand-50 px-4 py-2 text-sm font-medium text-brand-700 transition hover:bg-brand-100"
+              href={bannerAdHref}
+            >
+              <Megaphone className="h-4 w-4" />
+              {text.promoteBanner}
+            </Link>
             <ActionButton
               className={listing.isSold ? 'bg-amber-50 text-amber-700 hover:bg-amber-100' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}
               icon={<CheckCircle2 className="h-4 w-4" />}

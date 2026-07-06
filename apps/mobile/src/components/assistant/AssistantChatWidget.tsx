@@ -8,12 +8,13 @@ import {
   ScrollView,
   StyleSheet,
   TextInput,
+  useWindowDimensions,
   View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '../AppText';
-import { KeyboardAvoidingView, composerBottomPadding, useKeyboardOpen } from '../KeyboardInsets';
+import { ComposerDock } from '../KeyboardInsets';
 import { AssistantListingCarousel } from './AssistantListingCarousel';
 import { AssistantStoreCarousel } from './AssistantStoreCarousel';
 import { AssistantTypingIndicator } from './AssistantTypingIndicator';
@@ -45,6 +46,9 @@ function formatMessageTime(value: string, locale: 'ar' | 'en') {
   }).format(new Date(value));
 }
 
+const FAB_SIZE = 56;
+const FAB_MARGIN = 16;
+
 export function AssistantChatWidget({
   hidden,
   onListingPress,
@@ -54,10 +58,9 @@ export function AssistantChatWidget({
   onRegister
 }: AssistantChatWidgetProps) {
   const { locale, isRtl, t } = useI18n();
+  const { width: windowWidth } = useWindowDimensions();
   const a = t.assistant;
   const insets = useSafeAreaInsets();
-  const keyboardOpen = useKeyboardOpen();
-  const composerBottomPad = composerBottomPadding(keyboardOpen, insets.bottom);
   const user = useAuthStore((state) => state.user);
   const isAuthenticated = Boolean(user);
   const [open, setOpen] = useState(false);
@@ -115,18 +118,26 @@ export function AssistantChatWidget({
   return (
     <>
       {!open ? (
-        <Pressable
-          style={[styles.fab, { bottom: insets.bottom + 78, right: 16 }]}
-          onPress={() => setOpen(true)}
-          accessibilityRole="button"
-          accessibilityLabel={a.openAssistant}
-        >
-          <Ionicons name="chatbubble-ellipses" size={26} color="#fff" />
-        </Pressable>
+        <View style={styles.fabLayer} pointerEvents="box-none">
+          <Pressable
+            style={[
+              styles.fab,
+              {
+                bottom: insets.bottom + 78,
+                left: windowWidth - FAB_SIZE - FAB_MARGIN
+              }
+            ]}
+            onPress={() => setOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel={a.openAssistant}
+          >
+            <Ionicons name="chatbubble-ellipses" size={26} color="#fff" />
+          </Pressable>
+        </View>
       ) : null}
 
       <Modal visible={open} animationType="slide" transparent onRequestClose={close}>
-        <KeyboardAvoidingView inModal behavior="padding" style={styles.modalRoot}>
+        <View style={styles.modalRoot}>
           <Pressable style={styles.backdrop} onPress={close} />
           <View style={styles.panel}>
             <View style={styles.header}>
@@ -240,7 +251,7 @@ export function AssistantChatWidget({
               ) : null}
             </ScrollView>
 
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+            <View style={styles.chipsWrap}>
               {a.quickReplies.map((chip) => (
                 <Pressable
                   key={chip.label}
@@ -248,54 +259,62 @@ export function AssistantChatWidget({
                   style={[styles.chip, chip.primary ? styles.chipPrimary : styles.chipDefault, isLoading && styles.chipDisabled]}
                   onPress={() => void sendQuickReply(chip.intent as QuickReplyIntent, chip.message)}
                 >
-                  <AppText style={[styles.chipText, chip.primary ? styles.chipTextPrimary : styles.chipTextDefault]}>
+                  <AppText
+                    style={[styles.chipText, chip.primary ? styles.chipTextPrimary : styles.chipTextDefault]}
+                  >
                     {chip.label}
                   </AppText>
                 </Pressable>
               ))}
-            </ScrollView>
+            </View>
 
             {error ? <AppText style={styles.error}>{error}</AppText> : null}
 
-            <View style={[styles.composer, { paddingBottom: composerBottomPad }]}>
-              <TextInput
-                value={draft}
-                onChangeText={setDraft}
-                placeholder={a.placeholder}
-                placeholderTextColor="#9B9B9B"
-                multiline
-                editable={!isLoading}
-                style={[styles.input, isRtl ? styles.rtl : styles.ltr]}
-                onSubmitEditing={handleSend}
-              />
-              <Pressable
-                style={[styles.sendBtn, (!draft.trim() || isLoading) && styles.sendBtnDisabled]}
-                disabled={!draft.trim() || isLoading}
-                onPress={handleSend}
-                accessibilityLabel={a.send}
-              >
-                <Ionicons name="arrow-up" size={18} color="#fff" />
-              </Pressable>
-            </View>
+            <ComposerDock>
+              <View style={styles.composer}>
+                <TextInput
+                  value={draft}
+                  onChangeText={setDraft}
+                  placeholder={a.placeholder}
+                  placeholderTextColor="#9B9B9B"
+                  multiline
+                  editable={!isLoading}
+                  style={[styles.input, isRtl ? styles.rtl : styles.ltr]}
+                  onSubmitEditing={handleSend}
+                />
+                <Pressable
+                  style={[styles.sendBtn, (!draft.trim() || isLoading) && styles.sendBtnDisabled]}
+                  disabled={!draft.trim() || isLoading}
+                  onPress={handleSend}
+                  accessibilityLabel={a.send}
+                >
+                  <Ionicons name="arrow-up" size={18} color="#fff" />
+                </Pressable>
+              </View>
+            </ComposerDock>
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </Modal>
     </>
   );
 }
 
 const styles = StyleSheet.create({
+  fabLayer: {
+    ...StyleSheet.absoluteFillObject,
+    direction: 'ltr',
+    zIndex: 50,
+    elevation: 50
+  },
   fab: {
     position: 'absolute',
-    zIndex: 50,
-    width: 56,
-    height: 56,
+    width: FAB_SIZE,
+    height: FAB_SIZE,
     borderRadius: 999,
     backgroundColor: colors.brand,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadow,
-    elevation: 50
+    ...shadow
   },
   modalRoot: {
     flex: 1,
@@ -473,16 +492,20 @@ const styles = StyleSheet.create({
   timeBot: {
     alignSelf: 'flex-start'
   },
-  chipsRow: {
+  chipsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 8
+    paddingVertical: 10
   },
   chip: {
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderWidth: 1
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1,
+    maxWidth: '100%',
+    justifyContent: 'center'
   },
   chipPrimary: {
     backgroundColor: colors.brand,
@@ -496,8 +519,9 @@ const styles = StyleSheet.create({
     opacity: 0.5
   },
   chipText: {
-    fontSize: 12,
-    fontWeight: '700'
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 20
   },
   chipTextPrimary: {
     color: '#fff'

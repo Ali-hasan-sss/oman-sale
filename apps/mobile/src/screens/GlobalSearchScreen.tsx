@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Image,
   Pressable,
   RefreshControl,
@@ -15,28 +16,40 @@ import { ListingListSkeleton } from '../components/skeleton';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
 import { getCityLabel } from '../lib/oman-cities';
+import { fetchArticles, type ArticleSummary } from '../services/articles.service';
 import { fetchCategories, fetchFilteredListings, type CategoryOption } from '../services/listings.service';
+import {
+  fetchSearchSuggestions,
+  type SearchSuggestion,
+  type SearchSuggestionType
+} from '../services/search.service';
 import { fetchPublicStores, type PublicStore } from '../services/stores.service';
 import type { Listing } from '../types';
 import { colors, radius, shadow } from '../theme';
 
 const fallbackLogo = require('../../assets/nav-logo.png');
 const RESULT_LIMIT = 8;
+const MIN_SUGGESTIONS_LENGTH = 4;
+const SUGGESTIONS_DEBOUNCE_MS = 300;
 
 type GlobalSearchScreenProps = {
   onListingPress: (listingId: string) => void;
   onStorePress: (slug: string) => void;
   onCategoryPress: (categoryId: string) => void;
+  onArticlePress: (slug: string) => void;
   onBrowseOffers: () => void;
   onBrowseStores: () => void;
+  onBrowseNews: () => void;
 };
 
 export function GlobalSearchScreen({
   onListingPress,
   onStorePress,
   onCategoryPress,
+  onArticlePress,
   onBrowseOffers,
-  onBrowseStores
+  onBrowseStores,
+  onBrowseNews
 }: GlobalSearchScreenProps) {
   const { locale, t, isRtl } = useI18n();
   const text = t.globalSearch;
@@ -48,13 +61,60 @@ export function GlobalSearchScreen({
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [listings, setListings] = useState<Listing[]>([]);
   const [stores, setStores] = useState<PublicStore[]>([]);
+  const [articles, setArticles] = useState<ArticleSummary[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const suggestionsAbortRef = useRef<AbortController | null>(null);
+
+  const trimmedInput = searchInput.trim();
+  const showSuggestions = suggestionsOpen && trimmedInput.length >= MIN_SUGGESTIONS_LENGTH;
+
+  const suggestionTypeLabels: Record<Exclude<SearchSuggestionType, 'tourism'>, string> = {
+    listing: text.suggestionListing,
+    category: text.suggestionCategory,
+    article: text.suggestionArticle,
+    store: text.suggestionStore
+  };
 
   useEffect(() => {
     fetchCategories(locale)
       .then((items) => setCategories(Array.isArray(items) ? items : []))
       .catch(() => setCategories([]));
   }, [locale]);
+
+  useEffect(() => {
+    if (!showSuggestions) {
+      suggestionsAbortRef.current?.abort();
+      suggestionsAbortRef.current = null;
+      setSuggestions([]);
+      setLoadingSuggestions(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    suggestionsAbortRef.current = controller;
+    const timer = setTimeout(() => {
+      setLoadingSuggestions(true);
+      fetchSearchSuggestions({ q: trimmedInput, locale, limit: 5 })
+        .then((items) => {
+          if (controller.signal.aborted) return;
+          setSuggestions(items.filter((item) => item.type !== 'tourism'));
+        })
+        .catch(() => {
+          if (!controller.signal.aborted) setSuggestions([]);
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setLoadingSuggestions(false);
+        });
+    }, SUGGESTIONS_DEBOUNCE_MS);
+
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [locale, showSuggestions, trimmedInput]);
 
   const matchedCategories = useMemo(() => {
     if (!query) return [];
@@ -70,21 +130,25 @@ export function GlobalSearchScreen({
     if (!trimmed) {
       setListings([]);
       setStores([]);
+      setArticles([]);
       setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
     try {
-      const [listingsResult, storesResult] = await Promise.all([
+      const [listingsResult, storesResult, articlesResult] = await Promise.all([
         fetchFilteredListings({ q: trimmed, page: 1, limit: RESULT_LIMIT }),
-        fetchPublicStores({ q: trimmed, page: 1, limit: RESULT_LIMIT })
+        fetchPublicStores({ q: trimmed, page: 1, limit: RESULT_LIMIT }),
+        fetchArticles({ q: trimmed, page: 1, limit: RESULT_LIMIT })
       ]);
       setListings(listingsResult.items);
       setStores(storesResult.items);
+      setArticles(articlesResult.items);
     } catch {
       setListings([]);
       setStores([]);
+      setArticles([]);
     } finally {
       setIsLoading(false);
     }
@@ -95,15 +159,44 @@ export function GlobalSearchScreen({
   }, [loadResults, query]);
 
   const submitSearch = () => {
-    setQuery(searchInput.trim());
+    setSuggestionsOpen(false);
+    setQuery(trimmedInput);
   };
 
-  const hasResults = matchedCategories.length > 0 || listings.length > 0 || stores.length > 0;
+  const handleSuggestionPress = (suggestion: SearchSuggestion) => {
+    setSuggestionsOpen(false);
+    setSearchInput(suggestion.label);
+    setQuery(suggestion.label);
+
+    switch (suggestion.type) {
+      case 'listing':
+        onListingPress(suggestion.id);
+        break;
+      case 'category':
+        onCategoryPress(suggestion.id);
+        break;
+      case 'store':
+        if (suggestion.slug) onStorePress(suggestion.slug);
+        break;
+      case 'article':
+        if (suggestion.slug) onArticlePress(suggestion.slug);
+        break;
+      default:
+        break;
+    }
+  };
+
+  const hasResults =
+    matchedCategories.length > 0 || listings.length > 0 || stores.length > 0 || articles.length > 0;
+
+  const localizedArticleTitle = (article: ArticleSummary) =>
+    locale === 'en' ? article.titleEn : article.titleAr;
 
   return (
     <ScrollView
       contentContainerStyle={[styles.content, { paddingBottom: scrollBottomPadding }]}
       keyboardShouldPersistTaps="handled"
+      onScrollBeginDrag={() => setSuggestionsOpen(false)}
       refreshControl={
         query ? (
           <RefreshControl
@@ -118,18 +211,60 @@ export function GlobalSearchScreen({
       <AppText style={[styles.title, textAlign]}>{text.title}</AppText>
       <AppText style={[styles.hint, textAlign]}>{text.hint}</AppText>
 
-      <AppTextInput
-        value={searchInput}
-        onChangeText={setSearchInput}
-        placeholder={text.placeholder}
-        placeholderTextColor={colors.muted}
-        returnKeyType="search"
-        onSubmitEditing={submitSearch}
-        style={[styles.searchInput, isRtl ? styles.inputRtl : styles.inputLtr]}
-      />
-      <Pressable style={styles.searchButton} onPress={submitSearch}>
-        <AppText style={styles.searchButtonText}>{text.search}</AppText>
-      </Pressable>
+      <View style={styles.searchBox}>
+        <AppTextInput
+          value={searchInput}
+          onChangeText={(value) => {
+            setSearchInput(value);
+            setSuggestionsOpen(true);
+          }}
+          onFocus={() => setSuggestionsOpen(true)}
+          placeholder={text.placeholder}
+          placeholderTextColor={colors.muted}
+          returnKeyType="search"
+          onSubmitEditing={submitSearch}
+          style={[styles.searchInput, isRtl ? styles.inputRtl : styles.inputLtr]}
+        />
+        <Pressable style={styles.searchButton} onPress={submitSearch}>
+          <AppText style={styles.searchButtonText}>{text.search}</AppText>
+        </Pressable>
+
+        {showSuggestions ? (
+          <View style={styles.suggestionsPanel}>
+            {loadingSuggestions ? (
+              <View style={styles.suggestionsLoading}>
+                <ActivityIndicator color={colors.brand} size="small" />
+                <AppText style={[styles.suggestionsLoadingText, textAlign]}>{text.suggestionsLoading}</AppText>
+              </View>
+            ) : suggestions.length === 0 ? (
+              <AppText style={[styles.suggestionsEmpty, textAlign]}>{text.suggestionsEmpty}</AppText>
+            ) : (
+              suggestions.map((suggestion, index) => {
+                if (suggestion.type === 'tourism') return null;
+                const typeLabel = suggestionTypeLabels[suggestion.type];
+                return (
+                  <Pressable
+                    key={`${suggestion.type}-${suggestion.id}`}
+                    style={({ pressed }) => [
+                      styles.suggestionRow,
+                      index > 0 && styles.suggestionRowBorder,
+                      pressed && styles.chipPressed
+                    ]}
+                    onPress={() => handleSuggestionPress(suggestion)}
+                  >
+                    <View style={styles.suggestionBadge}>
+                      <AppText style={styles.suggestionBadgeText}>{typeLabel}</AppText>
+                    </View>
+                    <AppText style={[styles.suggestionLabel, textAlign]} numberOfLines={1}>
+                      {suggestion.label}
+                    </AppText>
+                  </Pressable>
+                );
+              })
+            )}
+          </View>
+        ) : null}
+      </View>
 
       {!query ? null : (
         <AppText style={[styles.queryLabel, textAlign]}>
@@ -146,7 +281,7 @@ export function GlobalSearchScreen({
       {query && !isLoading && matchedCategories.length > 0 ? (
         <View style={styles.section}>
           <AppText style={[styles.sectionTitle, textAlign]}>{text.categories}</AppText>
-          <View style={[styles.chipsWrap, isRtl && styles.chipsWrapRtl]}>
+          <View style={styles.chipsWrap}>
             {matchedCategories.slice(0, 12).map((category) => (
               <Pressable
                 key={category.id}
@@ -164,7 +299,7 @@ export function GlobalSearchScreen({
 
       {query && !isLoading && listings.length > 0 ? (
         <View style={styles.section}>
-          <View style={[styles.sectionHeader, isRtl && styles.sectionHeaderRtl]}>
+          <View style={styles.sectionHeader}>
             <AppText style={[styles.sectionTitle, textAlign]}>{text.listings}</AppText>
             <Pressable onPress={onBrowseOffers}>
               <AppText style={styles.viewAll}>{text.viewAll}</AppText>
@@ -182,9 +317,40 @@ export function GlobalSearchScreen({
         </View>
       ) : null}
 
+      {query && !isLoading && articles.length > 0 ? (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <AppText style={[styles.sectionTitle, textAlign]}>{text.articles}</AppText>
+            <Pressable onPress={onBrowseNews}>
+              <AppText style={styles.viewAll}>{text.viewAll}</AppText>
+            </Pressable>
+          </View>
+          {articles.map((article) => (
+            <Pressable
+              key={article.id}
+              style={({ pressed }) => [styles.articleCard, pressed && styles.chipPressed]}
+              onPress={() => onArticlePress(article.slug)}
+            >
+              {article.coverImageUrl ? (
+                <Image source={{ uri: article.coverImageUrl }} style={styles.articleCover} />
+              ) : (
+                <View style={styles.articleCoverFallback}>
+                  <Image source={fallbackLogo} style={styles.articleCoverLogo} resizeMode="contain" />
+                </View>
+              )}
+              <View style={styles.articleBody}>
+                <AppText style={[styles.articleTitle, textAlign]} numberOfLines={2}>
+                  {localizedArticleTitle(article)}
+                </AppText>
+              </View>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+
       {query && !isLoading && stores.length > 0 ? (
         <View style={styles.section}>
-          <View style={[styles.sectionHeader, isRtl && styles.sectionHeaderRtl]}>
+          <View style={styles.sectionHeader}>
             <AppText style={[styles.sectionTitle, textAlign]}>{text.stores}</AppText>
             <Pressable onPress={onBrowseStores}>
               <AppText style={styles.viewAll}>{text.viewAll}</AppText>
@@ -244,6 +410,10 @@ const styles = StyleSheet.create({
     color: colors.muted,
     lineHeight: 22
   },
+  searchBox: {
+    gap: 10,
+    zIndex: 20
+  },
   searchInput: {
     borderWidth: 1,
     borderColor: colors.line,
@@ -262,6 +432,62 @@ const styles = StyleSheet.create({
   searchButtonText: {
     color: '#fff',
     fontWeight: '800'
+  },
+  suggestionsPanel: {
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
+    overflow: 'hidden',
+    ...shadow
+  },
+  suggestionsLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 18,
+    paddingHorizontal: 14
+  },
+  suggestionsLoadingText: {
+    color: colors.muted,
+    fontSize: 13
+  },
+  suggestionsEmpty: {
+    color: colors.muted,
+    fontSize: 13,
+    textAlign: 'center',
+    paddingVertical: 18,
+    paddingHorizontal: 14
+  },
+  suggestionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12
+  },
+  suggestionRowBorder: {
+    borderTopWidth: 1,
+    borderTopColor: colors.line
+  },
+  suggestionBadge: {
+    borderRadius: radius.pill,
+    backgroundColor: colors.brandSoft,
+    paddingHorizontal: 10,
+    paddingVertical: 4
+  },
+  suggestionBadgeText: {
+    color: colors.brand,
+    fontSize: 11,
+    fontWeight: '800'
+  },
+  suggestionLabel: {
+    flex: 1,
+    minWidth: 0,
+    color: colors.ink,
+    fontSize: 14,
+    fontWeight: '600'
   },
   queryLabel: {
     color: colors.muted,
@@ -285,9 +511,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12
   },
-  sectionHeaderRtl: {
-    flexDirection: 'row-reverse'
-  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '900',
@@ -302,9 +525,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8
-  },
-  chipsWrapRtl: {
-    flexDirection: 'row-reverse'
   },
   categoryChip: {
     borderRadius: radius.pill,
@@ -322,6 +542,38 @@ const styles = StyleSheet.create({
   },
   chipPressed: {
     opacity: 0.9
+  },
+  articleCard: {
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.surface,
+    ...shadow
+  },
+  articleCover: {
+    width: '100%',
+    height: 140
+  },
+  articleCoverFallback: {
+    height: 140,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.brandSoft
+  },
+  articleCoverLogo: {
+    width: 56,
+    height: 56,
+    opacity: 0.5
+  },
+  articleBody: {
+    padding: 12
+  },
+  articleTitle: {
+    fontWeight: '800',
+    color: colors.ink,
+    fontSize: 15,
+    lineHeight: 22
   },
   storeCard: {
     borderRadius: radius.lg,

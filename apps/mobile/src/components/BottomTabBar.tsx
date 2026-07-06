@@ -16,8 +16,9 @@ type BottomTabBarProps = {
   chatUnreadCount?: number;
 };
 
-const leftTabs: TabKey[] = ['chat', 'myOffers'];
-const rightTabs: TabKey[] = ['offers', 'home'];
+/** Logical start→end; parent `direction` mirrors the bar for RTL/LTR. */
+const startTabs: TabKey[] = ['home', 'offers'];
+const endTabs: TabKey[] = ['myOffers', 'chat'];
 
 export function BottomTabBar({ activeScreen, onChange, onAddPress, chatUnreadCount = 0 }: BottomTabBarProps) {
   const { t } = useI18n();
@@ -60,9 +61,9 @@ export function BottomTabBar({ activeScreen, onChange, onAddPress, chatUnreadCou
   return (
     <View style={[styles.wrapper, { paddingBottom: Math.max(insets.bottom, 10) }]}>
       <View style={styles.bar}>
-        <View style={styles.group}>{leftTabs.map(renderTab)}</View>
+        <View style={styles.group}>{startTabs.map(renderTab)}</View>
         <View style={styles.fabSpace} />
-        <View style={styles.group}>{rightTabs.map(renderTab)}</View>
+        <View style={styles.group}>{endTabs.map(renderTab)}</View>
       </View>
       <Pressable style={styles.fab} onPress={onAddPress}>
         <Ionicons name="add" size={34} color="#fff" />
@@ -105,7 +106,7 @@ const styles = StyleSheet.create({
   tabBadge: {
     position: 'absolute',
     top: -6,
-    right: -10,
+    end: -10,
     minWidth: 18,
     height: 18,
     borderRadius: 9,

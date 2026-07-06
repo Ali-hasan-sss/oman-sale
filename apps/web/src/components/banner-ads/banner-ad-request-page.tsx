@@ -2,13 +2,14 @@
 
 import { Megaphone } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import { SiteFooter } from '@/components/home/site-footer';
 import { ImageUploader } from '@/components/media/image-uploader';
 import { UserSiteHeader } from '@/components/navigation/user-site-header';
 import { api } from '@/lib/api';
 import { resolveApiErrorMessage } from '@/lib/api-errors';
+import { hasBannerAdPrefill, readBannerAdPrefill } from '@/lib/banner-ad-prefill';
 import { useI18n } from '@/lib/i18n';
 import { getUserAccessToken } from '@/lib/user-auth';
 
@@ -41,7 +42,8 @@ const labels = {
     loadError: 'تعذر تحميل الأسعار.',
     createError: 'تعذر إرسال الطلب. تحقق من البيانات وحاول مرة أخرى.',
     preview: 'معاينة الصورة',
-    daysHint: 'يوم'
+    daysHint: 'يوم',
+    prefilledHint: 'تم تعبئة النموذج من إعلانك. راجع التفاصيل ثم أرسل الطلب.'
   },
   en: {
     title: 'Homepage banner advertisement',
@@ -65,7 +67,8 @@ const labels = {
     loadError: 'Could not load pricing.',
     createError: 'Could not submit the request. Check your details and try again.',
     preview: 'Image preview',
-    daysHint: 'days'
+    daysHint: 'days',
+    prefilledHint: 'Form pre-filled from your listing. Review the details and submit.'
   }
 } as const;
 
@@ -78,8 +81,10 @@ function formatOmrAmount(value: number) {
 
 export function BannerAdRequestPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { locale, dir, localizedPath, m } = useI18n();
   const text = labels[locale];
+  const isPrefilled = useMemo(() => hasBannerAdPrefill(searchParams), [searchParams]);
   const [pricing, setPricing] = useState<BannerPricing | null>(null);
   const [imageUrl, setImageUrl] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
@@ -110,6 +115,14 @@ export function BannerAdRequestPage() {
       .catch(() => setError(text.loadError))
       .finally(() => setLoading(false));
   }, [localizedPath, router, text.loadError]);
+
+  useEffect(() => {
+    const prefill = readBannerAdPrefill(searchParams);
+    if (prefill.imageUrl) setImageUrl(prefill.imageUrl);
+    if (prefill.linkUrl) setLinkUrl(prefill.linkUrl);
+    if (prefill.textAr) setTextAr(prefill.textAr);
+    if (prefill.textEn) setTextEn(prefill.textEn);
+  }, [searchParams]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -169,6 +182,9 @@ export function BannerAdRequestPage() {
           <div className="rounded-2xl bg-white p-8 text-center font-bold text-slate-500 shadow-sm">{text.submitting}</div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-100 md:p-8">
+            {isPrefilled ? (
+              <p className="rounded-xl bg-brand-50 px-4 py-3 text-sm font-bold text-brand-800">{text.prefilledHint}</p>
+            ) : null}
             <div>
               <ImageUploader
                 folder="banners"

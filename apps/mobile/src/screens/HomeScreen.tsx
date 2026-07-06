@@ -71,8 +71,7 @@ export function HomeScreen({ onBrowseOffers, onListingPress, onCategoryPress, on
             data={listings}
             keyExtractor={(item) => item.id}
             showsHorizontalScrollIndicator={false}
-            style={isRtl ? styles.latestScrollRtl : undefined}
-            contentContainerStyle={[styles.latestScroll, isRtl && styles.latestScrollContentRtl]}
+            contentContainerStyle={styles.latestScroll}
             renderItem={({ item }) => (
               <ListingCard
                 listing={item}

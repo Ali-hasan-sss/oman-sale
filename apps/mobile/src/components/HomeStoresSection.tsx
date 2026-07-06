@@ -64,8 +64,7 @@ export function HomeStoresSection({ onBrowseStores, onStorePress }: HomeStoresSe
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={isRtl ? styles.scrollRtl : undefined}
-          contentContainerStyle={[styles.scrollContent, isRtl && styles.scrollContentRtl]}
+          contentContainerStyle={styles.scrollContent}
         >
           {stores.map((store) => {
             const name = locale === 'en' ? store.nameEn : store.nameAr;

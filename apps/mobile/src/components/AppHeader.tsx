@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { useI18n } from '../i18n';
 import { colors } from '../theme';
 
 /** Matches `assets/nav-logo.png` (92×104 @1x). */
@@ -10,52 +9,34 @@ const NAV_LOGO_HEIGHT = 52;
 
 type AppHeaderProps = {
   onMenuPress: () => void;
-  showBack?: boolean;
-  onBackPress?: () => void;
-  onSearchPress?: () => void;
-  onNotificationsPress?: () => void;
+  onSearchPress: () => void;
+  onNotificationsPress: () => void;
   notificationUnreadCount?: number;
 };
 
 export function AppHeader({
   onMenuPress,
-  showBack,
-  onBackPress,
   onSearchPress,
   onNotificationsPress,
   notificationUnreadCount = 0
 }: AppHeaderProps) {
-  const { isRtl } = useI18n();
-
   return (
     <View style={styles.header}>
       <View style={styles.headerStart}>
-        {showBack ? (
-          <Pressable style={styles.iconButton} onPress={onBackPress}>
-            <Ionicons name={isRtl ? 'arrow-forward' : 'arrow-back'} size={24} color={colors.ink} />
-          </Pressable>
-        ) : (
-          <>
-            <Pressable style={styles.iconButton} onPress={onMenuPress}>
-              <Ionicons name="menu" size={24} color={colors.ink} />
-            </Pressable>
-            {onSearchPress ? (
-              <Pressable style={styles.iconButton} onPress={onSearchPress} accessibilityRole="button">
-                <Ionicons name="search" size={22} color={colors.ink} />
-              </Pressable>
-            ) : null}
-            {onNotificationsPress ? (
-              <Pressable style={styles.iconButton} onPress={onNotificationsPress} accessibilityRole="button">
-                <Ionicons name="notifications-outline" size={22} color={colors.ink} />
-                {notificationUnreadCount > 0 ? (
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{notificationUnreadCount > 9 ? '9+' : notificationUnreadCount}</Text>
-                  </View>
-                ) : null}
-              </Pressable>
-            ) : null}
-          </>
-        )}
+        <Pressable style={styles.iconButton} onPress={onMenuPress}>
+          <Ionicons name="menu" size={24} color={colors.ink} />
+        </Pressable>
+        <Pressable style={styles.iconButton} onPress={onSearchPress} accessibilityRole="button">
+          <Ionicons name="search" size={22} color={colors.ink} />
+        </Pressable>
+        <Pressable style={styles.iconButton} onPress={onNotificationsPress} accessibilityRole="button">
+          <Ionicons name="notifications-outline" size={22} color={colors.ink} />
+          {notificationUnreadCount > 0 ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{notificationUnreadCount > 9 ? '9+' : notificationUnreadCount}</Text>
+            </View>
+          ) : null}
+        </Pressable>
       </View>
       <View style={styles.brand}>
         <Image
@@ -74,6 +55,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    direction: 'ltr',
     paddingHorizontal: 18,
     paddingVertical: 12,
     backgroundColor: colors.surface,
@@ -86,7 +68,7 @@ const styles = StyleSheet.create({
     gap: 8
   },
   brand: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
     width: NAV_LOGO_WIDTH,

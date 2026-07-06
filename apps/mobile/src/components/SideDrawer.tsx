@@ -31,7 +31,8 @@ export function SideDrawer({ visible, onClose, onNavigate, onLogoutRequest }: Si
   const { t, toggleLocale, isRtl } = useI18n();
   const insets = useSafeAreaInsets();
   const user = useAuthStore((state) => state.user);
-  const translateX = useRef(new Animated.Value(-drawerWidth)).current;
+  const hiddenOffset = -drawerWidth;
+  const translateX = useRef(new Animated.Value(hiddenOffset)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const [shouldRender, setShouldRender] = useState(visible);
   const [hasStore, setHasStore] = useState(false);
@@ -87,7 +88,7 @@ export function SideDrawer({ visible, onClose, onNavigate, onLogoutRequest }: Si
   useEffect(() => {
     if (visible) {
       setShouldRender(true);
-      translateX.setValue(-drawerWidth);
+      translateX.setValue(hiddenOffset);
       backdropOpacity.setValue(0);
       Animated.parallel([
         Animated.spring(translateX, {
@@ -108,7 +109,7 @@ export function SideDrawer({ visible, onClose, onNavigate, onLogoutRequest }: Si
 
     Animated.parallel([
       Animated.timing(translateX, {
-        toValue: -drawerWidth,
+        toValue: hiddenOffset,
         duration: 240,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true
@@ -121,7 +122,13 @@ export function SideDrawer({ visible, onClose, onNavigate, onLogoutRequest }: Si
     ]).start(({ finished }) => {
       if (finished) setShouldRender(false);
     });
-  }, [backdropOpacity, translateX, visible]);
+  }, [backdropOpacity, hiddenOffset, translateX, visible]);
+
+  useEffect(() => {
+    if (!visible && !shouldRender) {
+      translateX.setValue(hiddenOffset);
+    }
+  }, [hiddenOffset, shouldRender, translateX, visible]);
 
   if (!shouldRender) return null;
 
@@ -136,6 +143,7 @@ export function SideDrawer({ visible, onClose, onNavigate, onLogoutRequest }: Si
       <Animated.View
         style={[
           styles.drawer,
+          styles.drawerLtr,
           {
             width: drawerWidth,
             top: insets.top,
@@ -270,7 +278,8 @@ function UserAvatar({ avatar, name }: { avatar?: string | null; name?: string })
 const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    zIndex: 40
+    zIndex: 40,
+    direction: 'ltr'
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -278,23 +287,25 @@ const styles = StyleSheet.create({
   },
   drawer: {
     position: 'absolute',
-    left: 0,
     flexDirection: 'column',
     backgroundColor: colors.surface,
     paddingHorizontal: 18,
     paddingTop: 12,
     paddingBottom: 12,
-    borderTopRightRadius: 28,
-    borderBottomRightRadius: 28,
     shadowColor: '#0f172a',
-    shadowOffset: { width: 8, height: 0 },
     shadowOpacity: 0.12,
     shadowRadius: 18,
     elevation: 12,
     overflow: 'hidden'
   },
+  drawerLtr: {
+    left: 0,
+    borderTopRightRadius: 28,
+    borderBottomRightRadius: 28,
+    shadowOffset: { width: 8, height: 0 }
+  },
   headerCard: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     marginBottom: 16,
@@ -346,7 +357,7 @@ const styles = StyleSheet.create({
     fontSize: 12
   },
   item: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     minHeight: 58,

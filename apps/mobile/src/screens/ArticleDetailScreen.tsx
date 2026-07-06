@@ -11,7 +11,6 @@ import { ArticleImageGallery } from '../components/articles/ArticleImageGallery'
 import { ArticleReactions } from '../components/articles/ArticleReactions';
 import { AppText } from '../components/AppText';
 import { EmptyState } from '../components/EmptyState';
-import { KeyboardAvoidingView } from '../components/KeyboardInsets';
 import { KeyboardAwareScrollView } from '../components/KeyboardAwareScrollView';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
@@ -23,6 +22,8 @@ type ArticleDetailScreenProps = {
   slug: string;
   onLoginRequired: () => void;
 };
+
+const COMMENT_COMPOSER_CLEARANCE = 72;
 
 function stripHtml(value: string) {
   return value
@@ -89,13 +90,13 @@ export function ArticleDetailScreen({ slug, onLoginRequired }: ArticleDetailScre
   const body = stripHtml(locale === 'en' ? article.bodyEn : article.bodyAr);
 
   return (
-    <KeyboardAvoidingView style={styles.root} behavior="padding">
+    <View style={styles.root}>
       <KeyboardAwareScrollView
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
         disableKeyboardInset
         contentContainerStyle={{
-          paddingBottom: scrollBottomPadding
+          paddingBottom: scrollBottomPadding + COMMENT_COMPOSER_CLEARANCE
         }}
       >
         <ArticleImageGallery images={images} />
@@ -138,7 +139,7 @@ export function ArticleDetailScreen({ slug, onLoginRequired }: ArticleDetailScre
         confirmDelete={commentsState.confirmDelete}
         deleting={commentsState.deleting}
       />
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
