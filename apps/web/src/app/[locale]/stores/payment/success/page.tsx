@@ -1,3 +1,11 @@
-import StorePaymentSuccessRoutePage from '../../../../stores/payment/success/page';
+import { Suspense } from 'react';
 
-export default StorePaymentSuccessRoutePage;
+import { StorePaymentSuccessPage } from '@/components/stores/store-payment-success-page';
+
+export default function LocaleStorePaymentSuccessRoutePage() {
+  return (
+    <Suspense fallback={null}>
+      <StorePaymentSuccessPage />
+    </Suspense>
+  );
+}

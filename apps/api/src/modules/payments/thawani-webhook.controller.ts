@@ -1,7 +1,6 @@
 import type { Request, Response } from 'express';
 
 import { env } from '../../config/env';
-import { ApiError } from '../../shared/utils/api-error';
 import type { ThawaniWebhookEvent } from '../../shared/payments/thawani.client';
 import { verifyThawaniWebhookSignature } from '../../shared/payments/thawani.client';
 import { handleThawaniWebhookEvent } from '../../shared/payments/thawani-webhook.service';
@@ -16,7 +15,8 @@ export class ThawaniWebhookController {
     const rawBody = typeof req.body === 'string' ? req.body : Buffer.isBuffer(req.body) ? req.body.toString('utf8') : '';
 
     if (!rawBody) {
-      throw new ApiError(400, 'Empty webhook body');
+      res.status(200).json({ received: true, handled: false, reason: 'empty_body' });
+      return;
     }
 
     const timestamp = getHeaderValue(req.headers['thawani-timestamp']);
@@ -24,21 +24,30 @@ export class ThawaniWebhookController {
 
     if (env.THAWANI_WEBHOOK_SECRET) {
       if (!timestamp || !signature) {
-        throw new ApiError(401, 'Missing Thawani webhook signature headers');
+        console.warn('[thawani-webhook] missing signature headers');
+        res.status(200).json({ received: true, handled: false, reason: 'missing_signature_headers' });
+        return;
       }
 
       const valid = verifyThawaniWebhookSignature(rawBody, timestamp, signature);
       if (!valid) {
-        throw new ApiError(401, 'Invalid Thawani webhook signature');
+        console.warn('[thawani-webhook] invalid signature');
+        res.status(200).json({ received: true, handled: false, reason: 'invalid_signature' });
+        return;
       }
-    } else if (env.NODE_ENV === 'production') {
-      throw new ApiError(503, 'Thawani webhook secret is not configured');
     }
 
-    const event = JSON.parse(rawBody) as ThawaniWebhookEvent;
-    const result = await handleThawaniWebhookEvent(event);
+    let event: ThawaniWebhookEvent;
+    try {
+      event = JSON.parse(rawBody) as ThawaniWebhookEvent;
+    } catch (error) {
+      console.error('[thawani-webhook] invalid json body', error);
+      res.status(200).json({ received: true, handled: false, reason: 'invalid_json' });
+      return;
+    }
 
-    res.json({ received: true, ...result });
+    const result = await handleThawaniWebhookEvent(event);
+    res.status(200).json({ received: true, ...result });
   }
 }
 

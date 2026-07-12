@@ -17,19 +17,27 @@ function resolveStorePaymentAction(metadata?: Record<string, string | number>): 
   return 'create';
 }
 
-async function finalizeStoreSubscriptionPayment(
-  paymentId: string,
-  sessionId: string,
+async function activatePaidStoreSubscription(
   subscriptionId: string,
-  action: StorePaymentAction
+  metadata?: Record<string, string | number>
 ) {
-  await storesRepository.markPaymentPaid(paymentId, sessionId);
+  const action = resolveStorePaymentAction(metadata);
 
   if (action === 'renew') {
     return extendStoreSubscription(subscriptionId);
   }
 
   return activateStoreSubscription(subscriptionId);
+}
+
+async function finalizeStoreSubscriptionPayment(
+  paymentId: string,
+  sessionId: string,
+  subscriptionId: string,
+  metadata?: Record<string, string | number>
+) {
+  await storesRepository.markPaymentPaid(paymentId, sessionId);
+  return activatePaidStoreSubscription(subscriptionId, metadata);
 }
 
 async function finalizeBannerPayment(paymentId: string, requestId: string, sessionId: string) {
@@ -51,7 +59,20 @@ export async function completeThawaniPaymentBySession(sessionId: string, options
 
   if (payment.status === PaymentStatus.PAID) {
     if (payment.storeSubscriptionId) {
-      const subscription = await activateStoreSubscription(payment.storeSubscriptionId);
+      let paidMetadata: Record<string, string | number> | undefined;
+      if (!shouldSkipThawaniCheckout()) {
+        try {
+          const session = await retrieveThawaniCheckoutSession(sessionId);
+          paidMetadata = session.data?.metadata;
+        } catch (error) {
+          console.warn('[thawani-payment] could not load session metadata for paid payment', {
+            sessionId,
+            error
+          });
+        }
+      }
+
+      const subscription = await activatePaidStoreSubscription(payment.storeSubscriptionId, paidMetadata);
       return { handled: true as const, kind: 'store' as const, payment, subscription, alreadyPaid: true };
     }
 
@@ -71,12 +92,11 @@ export async function completeThawaniPaymentBySession(sessionId: string, options
   }
 
   if (payment.storeSubscriptionId) {
-    const action = resolveStorePaymentAction(sessionMetadata);
     const subscription = await finalizeStoreSubscriptionPayment(
       payment.id,
       sessionId,
       payment.storeSubscriptionId,
-      action
+      sessionMetadata
     );
     return {
       handled: true as const,
@@ -102,14 +122,23 @@ export async function completeThawaniPaymentBySession(sessionId: string, options
 }
 
 export async function handleThawaniWebhookEvent(event: ThawaniWebhookEvent) {
-  if (event.event_type !== 'checkout.completed') {
-    return { handled: false as const, reason: 'ignored_event' as const };
-  }
+  try {
+    if (event.event_type !== 'checkout.completed') {
+      return { handled: false as const, reason: 'ignored_event' as const };
+    }
 
-  const sessionId = event.data?.session_id;
-  if (!sessionId || event.data?.payment_status !== 'paid') {
-    return { handled: false as const, reason: 'ignored_payload' as const };
-  }
+    const sessionId = event.data?.session_id;
+    if (!sessionId || event.data?.payment_status !== 'paid') {
+      return { handled: false as const, reason: 'ignored_payload' as const };
+    }
 
-  return completeThawaniPaymentBySession(sessionId);
+    return await completeThawaniPaymentBySession(sessionId);
+  } catch (error) {
+    console.error('[thawani-webhook] failed to process event', {
+      eventType: event.event_type,
+      sessionId: event.data?.session_id,
+      error
+    });
+    return { handled: false as const, reason: 'processing_failed' as const };
+  }
 }
