@@ -85,6 +85,7 @@ const envSchema = z.object({
   THAWANI_PUBLISHABLE_KEY: z.string().optional(),
   THAWANI_SANDBOX: z.preprocess((value) => value !== 'false', z.boolean()).default(true),
   THAWANI_SKIP_CHECKOUT: z.preprocess((value) => value === 'true', z.boolean()).default(false),
+  THAWANI_WEBHOOK_SECRET: z.string().optional(),
   /** Max stores a user may own. Increase later to allow multiple stores per account. */
   STORES_MAX_PER_USER: z.coerce.number().int().positive().default(1),
   OPENAI_API_KEY: z.string().optional(),

@@ -3,12 +3,13 @@ import path from 'node:path';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import express from 'express';
+import express, { Router } from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
 
 import { corsOptions } from './config/cors';
 import { env } from './config/env';
+import { thawaniWebhookController } from './modules/payments/thawani-webhook.controller';
 import { adminRoutes } from './modules/admin/admin.routes';
 import { adsRoutes } from './modules/ads/ads.routes';
 import { authRoutes } from './modules/auth/auth.routes';
@@ -33,6 +34,7 @@ import { usersRoutes } from './modules/users/users.routes';
 import { errorHandler } from './shared/middleware/error-handler';
 import { notFoundHandler } from './shared/middleware/not-found';
 import { apiRateLimiter } from './shared/middleware/rate-limit';
+import { asyncHandler } from './shared/utils/async-handler';
 
 export const app = express();
 
@@ -49,6 +51,15 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 app.use(compression());
 app.use(cookieParser());
+
+const thawaniWebhookRouter = Router();
+thawaniWebhookRouter.post(
+  '/thawani/webhook',
+  express.raw({ type: 'application/json' }),
+  asyncHandler(thawaniWebhookController.handle.bind(thawaniWebhookController))
+);
+app.use('/api/v1/payments', thawaniWebhookRouter);
+
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(apiRateLimiter);

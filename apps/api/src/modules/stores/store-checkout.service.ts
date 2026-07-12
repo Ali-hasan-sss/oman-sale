@@ -1,4 +1,4 @@
-import { PaymentProvider, PaymentStatus } from '@prisma/client';
+import { PaymentProvider } from '@prisma/client';
 
 import { env } from '../../config/env';
 import {
@@ -8,11 +8,15 @@ import {
   omrToBaisa,
   shouldSkipThawaniCheckout
 } from '../../shared/payments/thawani.client';
+import { completeThawaniPaymentBySession } from '../../shared/payments/thawani-webhook.service';
 import { ApiError } from '../../shared/utils/api-error';
 import { usersRepository } from '../users/users.repository';
 import { activateStoreSubscription } from './store-subscription.utils';
 import { getPlanChargeAmount } from '../../shared/utils/plan-pricing.utils';
 import { storesRepository } from './stores.repository';
+
+export type StorePaymentAction = 'create' | 'activate' | 'upgrade' | 'renew';
+export type StoreCheckoutFlow = 'create' | 'manage';
 
 type CheckoutInput = {
   userId: string;
@@ -20,6 +24,8 @@ type CheckoutInput = {
   storeName: string;
   finalPrice: number;
   locale?: 'ar' | 'en';
+  paymentAction: StorePaymentAction;
+  flow?: StoreCheckoutFlow;
 };
 
 export type StoreCheckoutResult = {
@@ -29,8 +35,29 @@ export type StoreCheckoutResult = {
   paymentUrl?: string;
 };
 
+function getCheckoutUrls(locale: 'ar' | 'en', flow: StoreCheckoutFlow) {
+  const localePrefix = locale === 'en' ? '/en' : '/ar';
+
+  if (flow === 'create') {
+    return {
+      successUrl: `${env.WEB_URL}${localePrefix}/stores/create/success`,
+      cancelUrl: `${env.WEB_URL}${localePrefix}/stores/create/cancel`
+    };
+  }
+
+  return {
+    successUrl: `${env.WEB_URL}${localePrefix}/stores/payment/success`,
+    cancelUrl: `${env.WEB_URL}${localePrefix}/stores/payment/cancel`
+  };
+}
+
 export async function checkoutStoreSubscription(input: CheckoutInput): Promise<StoreCheckoutResult> {
   if (input.finalPrice <= 0) {
+    await activateStoreSubscription(input.subscriptionId);
+    return { activated: true };
+  }
+
+  if (shouldSkipThawaniCheckout()) {
     await activateStoreSubscription(input.subscriptionId);
     return { activated: true };
   }
@@ -39,10 +66,9 @@ export async function checkoutStoreSubscription(input: CheckoutInput): Promise<S
     throw new ApiError(503, 'Payment gateway is not configured');
   }
 
-  const localePrefix = input.locale === 'en' ? '/en' : '/ar';
-  const successUrl = `${env.WEB_URL}${localePrefix}/stores/create/success`;
-  const cancelUrl = `${env.WEB_URL}${localePrefix}/stores/create/cancel`;
-
+  const locale = input.locale ?? 'ar';
+  const flow = input.flow ?? 'manage';
+  const { successUrl, cancelUrl } = getCheckoutUrls(locale, flow);
   const chargeAmount = getPlanChargeAmount(input.finalPrice);
 
   const user = await usersRepository.findById(input.userId);
@@ -64,7 +90,8 @@ export async function checkoutStoreSubscription(input: CheckoutInput): Promise<S
       orderId: input.subscriptionId,
       extra: {
         'service type': 'store subscription',
-        'store name': input.storeName.slice(0, 80)
+        'store name': input.storeName.slice(0, 80),
+        'payment action': input.paymentAction
       }
     })
   });
@@ -87,32 +114,21 @@ export async function checkoutStoreSubscription(input: CheckoutInput): Promise<S
 }
 
 export async function confirmThawaniStorePayment(userId: string, sessionId: string) {
-  const payment = await storesRepository.findPaymentBySessionId(sessionId);
-  if (!payment || !payment.storeSubscriptionId) {
+  const result = await completeThawaniPaymentBySession(sessionId, { userId });
+
+  if (!result.handled) {
+    if (result.reason === 'forbidden') throw new ApiError(403, 'Forbidden');
+    if (result.reason === 'not_paid') throw new ApiError(400, 'Payment is not completed yet');
     throw new ApiError(404, 'Payment not found');
   }
-  if (payment.userId !== userId) {
-    throw new ApiError(403, 'Forbidden');
-  }
-  if (payment.status === PaymentStatus.PAID) {
-    const subscription = await activateStoreSubscription(payment.storeSubscriptionId);
-    return { payment, subscription, alreadyPaid: true };
+
+  if (result.kind !== 'store' || !result.subscription) {
+    throw new ApiError(404, 'Payment not found');
   }
 
-  if (shouldSkipThawaniCheckout()) {
-    await storesRepository.markPaymentPaid(payment.id, sessionId);
-    const subscription = await activateStoreSubscription(payment.storeSubscriptionId);
-    return { payment: { ...payment, status: PaymentStatus.PAID }, subscription, alreadyPaid: false };
-  }
-
-  const { retrieveThawaniCheckoutSession, isThawaniSessionPaid } = await import('../../shared/payments/thawani.client');
-  const session = await retrieveThawaniCheckoutSession(sessionId);
-
-  if (!isThawaniSessionPaid(session)) {
-    throw new ApiError(400, 'Payment is not completed yet');
-  }
-
-  await storesRepository.markPaymentPaid(payment.id, sessionId);
-  const subscription = await activateStoreSubscription(payment.storeSubscriptionId);
-  return { payment: { ...payment, status: PaymentStatus.PAID }, subscription, alreadyPaid: false };
+  return {
+    payment: result.payment,
+    subscription: result.subscription,
+    alreadyPaid: result.alreadyPaid
+  };
 }

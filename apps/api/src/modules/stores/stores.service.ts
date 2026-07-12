@@ -13,9 +13,9 @@ import {
   assertAdminFreeBillingPeriod,
   assertValidUpgradeTarget,
   canActivateStorePlanWithoutPayment,
-  createPaymentComingSoonError,
   findActiveNonTrialSubscription
 } from './store-plan-activation.utils';
+import { checkoutStoreSubscription } from './store-checkout.service';
 import {
   applyStoreListingPromotion,
   resolveStoreListingLimit
@@ -42,6 +42,21 @@ import { resolveStoreMedia, resolveStoreTrustDocs, resolveUserMedia } from '../.
 import type { ListAdsQuery } from '../ads/ads.validation';
 
 export class StoresService {
+  private buildPaidCheckoutResponse(checkout: Awaited<ReturnType<typeof checkoutStoreSubscription>>) {
+    return {
+      checkout: {
+        activated: checkout.activated,
+        paymentUrl: checkout.paymentUrl,
+        sessionId: checkout.sessionId
+      },
+      requiresPayment: !checkout.activated
+    };
+  }
+
+  private resolveStoreDisplayName(store: { nameAr: string; nameEn: string }, locale: 'ar' | 'en' = 'ar') {
+    return (locale === 'en' ? store.nameEn : store.nameAr) || store.nameEn || store.nameAr;
+  }
+
   private mapPublicStoreCard<
     T extends {
       id: string;
@@ -298,8 +313,23 @@ export class StoresService {
       };
     }
 
-    await storesRepository.rollbackPendingStoreCreation(store.id);
-    throw createPaymentComingSoonError();
+    const checkout = await checkoutStoreSubscription({
+      userId,
+      subscriptionId: subscription.id,
+      storeName: this.resolveStoreDisplayName(store, locale),
+      finalPrice: resolved.finalPrice,
+      locale,
+      paymentAction: 'create',
+      flow: 'create'
+    });
+
+    return {
+      store: await storesRepository.findById(store.id),
+      subscription,
+      ...this.buildPaidCheckoutResponse(checkout),
+      isFreePlan: false,
+      isTrial: false
+    };
   }
 
   async update(id: string, userId: string, dto: UpdateStoreDto) {
@@ -318,7 +348,7 @@ export class StoresService {
     return storesRepository.update(id, dto);
   }
 
-  async renewSubscription(id: string, userId: string) {
+  async renewSubscription(id: string, userId: string, locale: 'ar' | 'en' = 'ar') {
     const store = await this.getByIdForOwner(id, userId);
     const now = new Date();
 
@@ -344,7 +374,21 @@ export class StoresService {
           Number(activePaid.finalPrice)
         )
       ) {
-        throw createPaymentComingSoonError();
+        const checkout = await checkoutStoreSubscription({
+          userId,
+          subscriptionId: activePaid.id,
+          storeName: this.resolveStoreDisplayName(store, locale),
+          finalPrice: Number(activePaid.finalPrice),
+          locale,
+          paymentAction: 'renew',
+          flow: 'manage'
+        });
+
+        return {
+          store: await storesRepository.findById(id).then((row) => (row ? this.mapStoreForOwner(row) : row)),
+          subscription: activePaid,
+          ...this.buildPaidCheckoutResponse(checkout)
+        };
       }
 
       const updated = await extendStoreSubscription(activePaid.id);
@@ -368,7 +412,7 @@ export class StoresService {
     return this.subscribe(id, userId, {
       planId: reference.planId,
       billingPeriod: reference.billingPeriod
-    });
+    }, locale);
   }
 
   private async assertCanCreateStore(userId: string) {
@@ -424,7 +468,21 @@ export class StoresService {
       };
     }
 
-    throw createPaymentComingSoonError();
+    const checkout = await checkoutStoreSubscription({
+      userId,
+      subscriptionId: activeTrial.id,
+      storeName: this.resolveStoreDisplayName(store, locale),
+      finalPrice: Number(activeTrial.finalPrice),
+      locale,
+      paymentAction: 'activate',
+      flow: 'manage'
+    });
+
+    return {
+      store: await storesRepository.findById(id).then((row) => (row ? this.mapStoreForOwner(row) : row)),
+      subscription: activeTrial,
+      ...this.buildPaidCheckoutResponse(checkout)
+    };
   }
 
   async subscribe(id: string, userId: string, dto: SubscribeStoreDto, _locale: 'ar' | 'en' = 'ar') {
@@ -438,10 +496,6 @@ export class StoresService {
 
     assertAdminFreeBillingPeriod(resolved.plan, dto.billingPeriod);
 
-    if (!canActivateStorePlanWithoutPayment(resolved.plan, dto.billingPeriod, resolved.finalPrice)) {
-      throw createPaymentComingSoonError();
-    }
-
     await storesRepository.deactivateActiveSubscriptions(id);
 
     const subscription = await storesRepository.createSubscription(id, {
@@ -453,6 +507,24 @@ export class StoresService {
       finalPrice: resolved.finalPrice,
       maxListings: resolved.pricing.maxListings
     });
+
+    if (!canActivateStorePlanWithoutPayment(resolved.plan, dto.billingPeriod, resolved.finalPrice)) {
+      const checkout = await checkoutStoreSubscription({
+        userId,
+        subscriptionId: subscription.id,
+        storeName: this.resolveStoreDisplayName(store, _locale),
+        finalPrice: resolved.finalPrice,
+        locale: _locale,
+        paymentAction: 'upgrade',
+        flow: 'manage'
+      });
+
+      return {
+        subscription,
+        ...this.buildPaidCheckoutResponse(checkout),
+        isFreePlan: false
+      };
+    }
 
     await activateStoreSubscription(subscription.id);
 

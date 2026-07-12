@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 
 import { env } from '../../config/env';
 
@@ -16,14 +17,25 @@ type CreateCheckoutSessionInput = {
   metadata?: Record<string, string | number>;
 };
 
-type ThawaniSessionResponse = {
+export type ThawaniSessionResponse = {
   success: boolean;
   data?: {
     session_id: string;
     client_reference_id: string;
     payment_status?: string;
+    metadata?: Record<string, string | number>;
   };
   description?: string;
+};
+
+export type ThawaniWebhookEvent = {
+  event_type: string;
+  data?: {
+    session_id?: string;
+    payment_status?: string;
+    client_reference_id?: string;
+    metadata?: Record<string, string | number>;
+  };
 };
 
 const getBaseUrl = () => (env.THAWANI_SANDBOX ? 'https://uatcheckout.thawani.om/api/v1' : 'https://checkout.thawani.om/api/v1');
@@ -53,6 +65,20 @@ export function buildThawaniPaymentMetadata(input: {
     'order id': input.orderId,
     ...(input.extra ?? {})
   };
+}
+
+export function verifyThawaniWebhookSignature(rawBody: string, timestamp: string, signature: string) {
+  if (!env.THAWANI_WEBHOOK_SECRET) return false;
+
+  const expected = createHmac('sha256', env.THAWANI_WEBHOOK_SECRET)
+    .update(`${rawBody}-${timestamp}`)
+    .digest('hex');
+
+  const expectedBuffer = Buffer.from(expected, 'hex');
+  const receivedBuffer = Buffer.from(signature, 'hex');
+
+  if (expectedBuffer.length !== receivedBuffer.length) return false;
+  return timingSafeEqual(expectedBuffer, receivedBuffer);
 }
 
 export async function createThawaniCheckoutSession(input: CreateCheckoutSessionInput) {
@@ -104,4 +130,9 @@ export async function retrieveThawaniCheckoutSession(sessionId: string) {
 
 export function isThawaniSessionPaid(session: ThawaniSessionResponse) {
   return session.success && session.data?.payment_status === 'paid';
+}
+
+export function getThawaniWebhookUrl() {
+  const base = env.API_URL.replace(/\/$/, '');
+  return `${base}/api/v1/payments/thawani/webhook`;
 }

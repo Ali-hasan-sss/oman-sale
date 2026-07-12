@@ -80,7 +80,7 @@ export class StoresController {
 
   renewSubscription(req: Request, res: Response) {
     return storesService
-      .renewSubscription(getRequiredParam(req, 'id'), req.user!.id)
+      .renewSubscription(getRequiredParam(req, 'id'), req.user!.id, resolveLocale(req))
       .then((data) => res.json({ data }));
   }
 
