@@ -36,7 +36,6 @@ type StorePlanPickerModalProps = {
   title: string;
   submitLabel: string;
   freeSubmitLabel: string;
-  paymentComingSoonLabel: string;
   locale: 'ar' | 'en';
   plans: StorePlanPickerPlan[];
   isLoading: boolean;
@@ -67,7 +66,6 @@ export function StorePlanPickerModal({
   title,
   submitLabel,
   freeSubmitLabel,
-  paymentComingSoonLabel,
   locale,
   plans,
   isLoading,
@@ -95,7 +93,6 @@ export function StorePlanPickerModal({
   const canActivateFree = Boolean(
     selectedPlan && billingPeriod && canActivateStorePlanWithoutPayment(selectedPlan, billingPeriod, selectedPrice)
   );
-  const paymentBlocked = Boolean(selectedPlan && billingPeriod && !canActivateFree);
 
   const handleSelectPlan = (id: string) => {
     setPlanId(id);
@@ -103,7 +100,7 @@ export function StorePlanPickerModal({
   };
 
   const handleSubmit = () => {
-    if (!planId || !billingPeriod || paymentBlocked) return;
+    if (!planId || !billingPeriod) return;
     onSubmit(planId, billingPeriod);
   };
 
@@ -176,12 +173,6 @@ export function StorePlanPickerModal({
             </>
           )}
 
-          {paymentBlocked ? (
-            <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-              {paymentComingSoonLabel}
-            </p>
-          ) : null}
-
           <div className="flex flex-col-reverse gap-3 border-t border-gray-100 pt-6 sm:flex-row sm:justify-end">
             <button
               type="button"
@@ -194,16 +185,10 @@ export function StorePlanPickerModal({
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={isSubmitting || !planId || !billingPeriod || paymentBlocked || isLoading}
+              disabled={isSubmitting || !planId || !billingPeriod || isLoading}
               className="rounded-xl bg-green-600 px-5 py-3 font-bold text-white hover:bg-green-700 disabled:opacity-60"
             >
-              {isSubmitting
-                ? labels.submitting
-                : paymentBlocked
-                  ? paymentComingSoonLabel
-                  : canActivateFree
-                    ? freeSubmitLabel
-                    : submitLabel}
+              {isSubmitting ? labels.submitting : canActivateFree ? freeSubmitLabel : submitLabel}
             </button>
           </div>
         </div>

@@ -1,9 +1,12 @@
 import { BannerRequestStatus, PaymentStatus } from '@prisma/client';
 
+import { AppEvents } from '../../shared/constants/events';
 import { notifyAdminBannerRequestPending } from '../../modules/banner-requests/banner-admin-notifications';
 import { bannerRequestsRepository } from '../../modules/banner-requests/banner-requests.repository';
+import { promotionsRepository } from '../../modules/promotions/promotions.repository';
 import { activateStoreSubscription, extendStoreSubscription } from '../../modules/stores/store-subscription.utils';
 import { storesRepository } from '../../modules/stores/stores.repository';
+import { eventBus } from '../../shared/utils/event-bus';
 import type { ThawaniWebhookEvent } from './thawani.client';
 import { isThawaniSessionPaid, retrieveThawaniCheckoutSession, shouldSkipThawaniCheckout } from './thawani.client';
 
@@ -47,6 +50,13 @@ async function finalizeBannerPayment(paymentId: string, requestId: string, sessi
   return bannerRequestsRepository.findById(requestId);
 }
 
+async function finalizePromotionPayment(paymentId: string, sessionId: string, promotionId: string) {
+  await promotionsRepository.markPaymentPaid(paymentId, sessionId);
+  const promotion = await promotionsRepository.activatePromotion(promotionId);
+  eventBus.emit(AppEvents.PROMOTION_ACTIVATED, promotion);
+  return promotion;
+}
+
 export async function completeThawaniPaymentBySession(sessionId: string, options?: { userId?: string }) {
   const payment = await storesRepository.findPaymentBySessionId(sessionId);
   if (!payment) {
@@ -76,6 +86,12 @@ export async function completeThawaniPaymentBySession(sessionId: string, options
       return { handled: true as const, kind: 'store' as const, payment, subscription, alreadyPaid: true };
     }
 
+    if (payment.promotionId) {
+      const promotion = await promotionsRepository.activatePromotion(payment.promotionId);
+      eventBus.emit(AppEvents.PROMOTION_ACTIVATED, promotion);
+      return { handled: true as const, kind: 'promotion' as const, payment, promotion, alreadyPaid: true };
+    }
+
     if (payment.bannerRequestId) {
       const request = await bannerRequestsRepository.findById(payment.bannerRequestId);
       return { handled: true as const, kind: 'banner' as const, payment, request, alreadyPaid: true };
@@ -103,6 +119,17 @@ export async function completeThawaniPaymentBySession(sessionId: string, options
       kind: 'store' as const,
       payment: { ...payment, status: PaymentStatus.PAID },
       subscription,
+      alreadyPaid: false
+    };
+  }
+
+  if (payment.promotionId) {
+    const promotion = await finalizePromotionPayment(payment.id, sessionId, payment.promotionId);
+    return {
+      handled: true as const,
+      kind: 'promotion' as const,
+      payment: { ...payment, status: PaymentStatus.PAID },
+      promotion,
       alreadyPaid: false
     };
   }

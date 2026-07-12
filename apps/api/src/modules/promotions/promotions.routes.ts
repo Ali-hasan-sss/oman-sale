@@ -5,7 +5,12 @@ import { authorize, requireAuth } from '../../shared/middleware/auth';
 import { asyncHandler } from '../../shared/utils/async-handler';
 import { validateRequest } from '../../shared/validators/validate-request';
 import { promotionsController } from './promotions.controller';
-import { createPromotionPlanSchema, promoteAdSchema, updatePromotionPlanSchema } from './promotions.validation';
+import {
+  confirmThawaniPromotionPaymentSchema,
+  createPromotionPlanSchema,
+  promoteAdSchema,
+  updatePromotionPlanSchema
+} from './promotions.validation';
 import { z } from 'zod';
 
 export const promotionsRoutes = Router();
@@ -38,4 +43,10 @@ promotionsRoutes.post(
   requireAuth,
   validateRequest({ body: promoteAdSchema }),
   asyncHandler(promotionsController.promoteAd)
+);
+promotionsRoutes.post(
+  '/payments/thawani/confirm',
+  requireAuth,
+  validateRequest({ body: confirmThawaniPromotionPaymentSchema }),
+  asyncHandler(promotionsController.confirmThawaniPayment)
 );

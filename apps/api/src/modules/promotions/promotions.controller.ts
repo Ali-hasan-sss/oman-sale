@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 
 import { getRequiredParam } from '../../shared/utils/request';
+import { confirmThawaniPromotionPayment } from './promotion-checkout.service';
 import { promotionsService } from './promotions.service';
 
 export class PromotionsController {
@@ -21,7 +22,12 @@ export class PromotionsController {
   }
 
   async promoteAd(req: Request, res: Response) {
-    res.status(201).json({ data: await promotionsService.promoteAd(req.body, req.user!.id) });
+    const locale = req.query.locale === 'en' ? 'en' : 'ar';
+    res.status(201).json({ data: await promotionsService.promoteAd(req.body, req.user!.id, locale) });
+  }
+
+  async confirmThawaniPayment(req: Request, res: Response) {
+    res.json({ data: await confirmThawaniPromotionPayment(req.user!.id, req.body.sessionId) });
   }
 }
 

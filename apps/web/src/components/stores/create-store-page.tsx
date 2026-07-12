@@ -245,7 +245,6 @@ export function CreateStorePage() {
       canActivateStorePlanWithoutPayment(selectedPlan, billingPeriod, finalPrice)
   );
   const isTrialEligible = Boolean(selectedPlan?.trialAvailable && selectedPlan.trialDays && selectedPlan.trialDays > 0);
-  const planActivationBlocked = Boolean(selectedPlan && billingPeriod && !canActivateFree);
   const selectedPlanName = selectedPlan ? (locale === 'en' ? selectedPlan.nameEn : selectedPlan.nameAr) : '';
   const displayPrice = canActivateFree ? 0 : finalPrice;
   const trimmedPhone = phone.trim();
@@ -782,12 +781,6 @@ export function CreateStorePage() {
                 </div>
               ) : null}
 
-              {billingPeriod && planActivationBlocked ? (
-                <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                  {text.paymentComingSoon}
-                </p>
-              ) : null}
-
               <div className="grid gap-3 sm:grid-cols-2">
                 {isTrialEligible ? (
                   <button
@@ -801,7 +794,7 @@ export function CreateStorePage() {
                 ) : null}
                 <button
                   type="button"
-                  disabled={isSubmitting || !isFormComplete || planActivationBlocked}
+                  disabled={isSubmitting || !isFormComplete}
                   onClick={() => submitStore('plan')}
                   className={`w-full rounded-lg bg-green-600 px-6 py-3 font-bold text-white transition hover:bg-green-700 disabled:opacity-60 ${
                     !isTrialEligible ? 'sm:col-span-2' : ''
@@ -809,11 +802,9 @@ export function CreateStorePage() {
                 >
                   {isSubmitting && submittingMode === 'plan'
                     ? text.submitting
-                    : planActivationBlocked
-                      ? text.submitPaymentComingSoon
-                      : canActivateFree
-                        ? text.activatePlan
-                        : text.submit}
+                    : canActivateFree
+                      ? text.activatePlan
+                      : text.submit}
                 </button>
               </div>
             </section>

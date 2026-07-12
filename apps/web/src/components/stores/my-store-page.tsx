@@ -148,6 +148,7 @@ const labels = {
     adminFreeBadge: 'مجانية (شهر واحد)',
     paymentComingSoon: 'سيتم توفر التفعيل المدفوع قريباً.',
     activateFree: 'تفعيل الاشتراك (مجاني)',
+    activatePaid: 'تفعيل الاشتراك المدفوع',
     subscriptionHistory: 'سجل الاشتراكات',
     subscriptionHistoryEmpty: 'لا يوجد سجل اشتراكات بعد.',
     subscriptionHistoryLoading: 'جاري تحميل السجل...',
@@ -250,6 +251,7 @@ const labels = {
     adminFreeBadge: 'Free (1 month)',
     paymentComingSoon: 'Paid activation will be available soon.',
     activateFree: 'Activate subscription (free)',
+    activatePaid: 'Activate paid subscription',
     subscriptionHistory: 'Subscription history',
     subscriptionHistoryEmpty: 'No subscription history yet.',
     subscriptionHistoryLoading: 'Loading history...',
@@ -411,7 +413,7 @@ export function MyStorePage() {
   );
 
   const showActivateFreeButton = isOnActiveTrial && trialCanActivateFree;
-  const showPaymentComingSoonTrial = isOnActiveTrial && !trialCanActivateFree;
+  const showActivatePaidButton = isOnActiveTrial && !trialCanActivateFree;
   const showRenewButton = Boolean(
     renewReference && !isOnActiveTrial && (isExpiredRenewal || canRenewWithinWindow)
   );
@@ -831,10 +833,15 @@ export function MyStorePage() {
                   </div>
                 ) : null}
 
-                {showPaymentComingSoonTrial ? (
-                  <p className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                    {text.paymentComingSoon}
-                  </p>
+                {showActivatePaidButton ? (
+                  <button
+                    type="button"
+                    disabled={isPaying}
+                    onClick={() => handleSubscriptionAction('activate-paid')}
+                    className="w-full rounded-xl bg-green-600 px-4 py-3 font-bold text-white disabled:opacity-70"
+                  >
+                    {text.activatePaid}
+                  </button>
                 ) : null}
 
                 <div className="mt-6 space-y-3">
@@ -850,21 +857,14 @@ export function MyStorePage() {
                   ) : null}
 
                   {showRenewButton ? (
-                    <>
-                      {!canRenewFree ? (
-                        <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                          {text.paymentComingSoon}
-                        </p>
-                      ) : null}
-                      <button
-                        type="button"
-                        disabled={isPaying || !canRenewFree}
-                        onClick={() => handleSubscriptionAction('renew-subscription')}
-                        className="w-full rounded-xl border border-green-600 bg-white px-4 py-3 font-bold text-green-700 disabled:opacity-60"
-                      >
-                        {canRenewFree ? text.renewFree : text.renewPlan}
-                      </button>
-                    </>
+                    <button
+                      type="button"
+                      disabled={isPaying}
+                      onClick={() => handleSubscriptionAction('renew-subscription')}
+                      className="w-full rounded-xl border border-green-600 bg-white px-4 py-3 font-bold text-green-700 disabled:opacity-60"
+                    >
+                      {canRenewFree ? text.renewFree : text.renewPlan}
+                    </button>
                   ) : null}
 
                   {showUpgradeButton ? (
@@ -935,7 +935,6 @@ export function MyStorePage() {
           title={text.upgradeTitle}
           submitLabel={text.upgradeSubmit}
           freeSubmitLabel={text.upgradeFree}
-          paymentComingSoonLabel={text.paymentComingSoon}
           locale={locale}
           plans={upgradePlans}
           isLoading={isLoadingPlans}

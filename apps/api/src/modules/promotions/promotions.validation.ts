@@ -24,6 +24,10 @@ export const promoteAdSchema = z.object({
   days: z.number().int().positive()
 });
 
+export const confirmThawaniPromotionPaymentSchema = z.object({
+  sessionId: z.string().min(1)
+});
+
 export type CreatePromotionPlanDto = z.infer<typeof createPromotionPlanSchema>;
 export type UpdatePromotionPlanDto = z.infer<typeof updatePromotionPlanSchema>;
 export type PromoteAdDto = z.infer<typeof promoteAdSchema>;

@@ -1,7 +1,7 @@
-import { ErrorCodes } from '../../shared/constants/error-codes';
 import { AppEvents } from '../../shared/constants/events';
 import { ApiError } from '../../shared/utils/api-error';
 import { eventBus } from '../../shared/utils/event-bus';
+import { checkoutAdPromotion } from './promotion-checkout.service';
 import { promotionsRepository } from './promotions.repository';
 import type { CreatePromotionPlanDto, PromoteAdDto, UpdatePromotionPlanDto } from './promotions.validation';
 
@@ -26,7 +26,7 @@ export class PromotionsService {
     return promotionsRepository.softDeletePlan(id);
   }
 
-  async promoteAd(dto: PromoteAdDto, userId: string) {
+  async promoteAd(dto: PromoteAdDto, userId: string, locale: 'ar' | 'en' = 'ar') {
     const ad = await promotionsRepository.findAdForPromotion(dto.adId);
     if (!ad) throw new ApiError(404, 'Ad not found');
     if (ad.userId !== userId) throw new ApiError(403, 'Only owner can promote ad');
@@ -35,17 +35,37 @@ export class PromotionsService {
     if (!plan) throw new ApiError(404, 'Promotion plan not found');
 
     const totalPrice = getPromotionPlanPrice(plan, dto.days);
-    if (totalPrice > 0) {
-      throw new ApiError(
-        503,
-        'Ad promotion payment will be available soon',
-        ErrorCodes.PAYMENT_COMING_SOON
-      );
+
+    if (totalPrice <= 0) {
+      const promotion = await promotionsRepository.promoteAd(dto);
+      eventBus.emit(AppEvents.PROMOTION_ACTIVATED, promotion);
+      return { promotion, checkout: { paid: true } };
     }
 
-    const promotion = await promotionsRepository.promoteAd(dto);
-    eventBus.emit(AppEvents.PROMOTION_ACTIVATED, promotion);
-    return promotion;
+    const pendingPromotion = await promotionsRepository.createPendingPromotion(dto, totalPrice);
+    const checkout = await checkoutAdPromotion({
+      userId,
+      promotionId: pendingPromotion.id,
+      adTitle: pendingPromotion.ad.title,
+      planName: plan.nameEn || plan.nameAr,
+      totalPrice,
+      locale
+    });
+
+    if (checkout.paid) {
+      const promotion = await promotionsRepository.activatePromotion(pendingPromotion.id);
+      eventBus.emit(AppEvents.PROMOTION_ACTIVATED, promotion);
+      return { promotion, checkout: { paid: true } };
+    }
+
+    return {
+      promotion: pendingPromotion,
+      checkout: {
+        paid: false,
+        paymentUrl: checkout.paymentUrl,
+        sessionId: checkout.sessionId
+      }
+    };
   }
 }
 

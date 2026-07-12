@@ -96,6 +96,7 @@ const labels = {
     twoWeeks: 'أسبوعين',
     oneMonth: 'شهر واحد',
     publish: 'نشر الإعلان',
+    proceedToPayment: 'متابعة الدفع',
     publishing: 'جاري النشر...',
     cancel: 'إلغاء',
     loadError: 'تعذر تحميل بيانات الصفحة.',
@@ -107,8 +108,6 @@ const labels = {
     publishFromStoreHint: 'يُعرض الإعلان باسم المتجر ويستفيد من مزايا خطة المتجر',
     publishFromPersonal: 'النشر من حسابي الشخصي',
     publishFromPersonalHint: 'يُعرض الإعلان باسمك ويتطلب الدفع للتمييز مثل أي مستخدم',
-    paymentComingSoon: 'سيتم إعداد الدفع قريباً. يمكنك اختيار إعلان مجاني أو النشر من متجرك.',
-    submitPaymentComingSoon: 'الدفع قريباً',
     vatShort: 'ضريبة القيمة المضافة'
   },
   en: {
@@ -158,8 +157,7 @@ const labels = {
     publishFromStoreHint: 'Listing appears under your store name with plan benefits',
     publishFromPersonal: 'Publish from personal account',
     publishFromPersonalHint: 'Listing appears under your name and paid promotion applies',
-    paymentComingSoon: 'Payment will be available soon. Choose a free ad type or publish from your store.',
-    submitPaymentComingSoon: 'Payment coming soon',
+    proceedToPayment: 'Continue to payment',
     vatShort: 'VAT'
   }
 };
@@ -261,7 +259,7 @@ export function AddListingPage() {
   );
   const isStorePublish = canPublishFromStore && publishSource === 'store';
   const selectedPromotionPrice = selectedPlan ? getPlanPrice(selectedPlan, duration) : 0;
-  const paymentBlocked = !isStorePublish && Boolean(selectedPlan) && selectedPromotionPrice > 0;
+  const requiresPaidPromotion = !isStorePublish && Boolean(selectedPlan) && selectedPromotionPrice > 0;
   const authHeaders = useMemo(() => {
     const token = getUserAccessToken();
     return token ? { Authorization: `Bearer ${token}` } : undefined;
@@ -325,12 +323,6 @@ export function AddListingPage() {
 
     if (!selectedCategory) return;
 
-    if (paymentBlocked) {
-      setError(text.paymentComingSoon);
-      setMessage('');
-      return;
-    }
-
     setError('');
     setMessage('');
     setFieldErrors({});
@@ -356,11 +348,19 @@ export function AddListingPage() {
       );
 
       if (selectedPlan && !isStorePublish) {
-        await api.post(
+        const promotionResponse = await api.post<{
+          data: { checkout?: { paymentUrl?: string; paid?: boolean } };
+        }>(
           '/promotions/ad-promotions',
           { adId: adResponse.data.data.id, planId: selectedPlan.id, days: duration },
-          { headers: authHeaders }
+          { headers: authHeaders, params: { locale } }
         );
+
+        const paymentUrl = promotionResponse.data.data.checkout?.paymentUrl;
+        if (paymentUrl) {
+          window.location.href = paymentUrl;
+          return;
+        }
       }
 
       setMessage(text.success);
@@ -605,12 +605,6 @@ export function AddListingPage() {
                 </div>
               </div>
             ) : null}
-
-            {paymentBlocked ? (
-              <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                {text.paymentComingSoon}
-              </p>
-            ) : null}
           </div>
           ) : (
             <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 sm:p-6">
@@ -622,10 +616,10 @@ export function AddListingPage() {
           <div className="flex gap-4">
             <button
               type="submit"
-              disabled={isSubmitting || paymentBlocked}
+              disabled={isSubmitting}
               className="flex-1 rounded-lg bg-green-600 px-6 py-3 font-bold text-white transition hover:bg-green-700 disabled:opacity-70"
             >
-              {isSubmitting ? text.publishing : paymentBlocked ? text.submitPaymentComingSoon : text.publish}
+              {isSubmitting ? text.publishing : requiresPaidPromotion ? text.proceedToPayment : text.publish}
             </button>
             <button type="button" onClick={() => router.push(localizedPath('/my-listings'))} className="rounded-lg border border-gray-300 px-6 py-3 transition hover:bg-gray-50">
               {text.cancel}

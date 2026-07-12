@@ -122,6 +122,85 @@ export class PromotionsRepository {
     });
   }
 
+  createPendingPromotion(dto: PromoteAdDto, totalPrice: number) {
+    const startsAt = new Date();
+    const endsAt = new Date(startsAt.getTime() + dto.days * 24 * 60 * 60 * 1000);
+
+    return prisma.$transaction(async (tx) => {
+      const promotion = await tx.adPromotion.upsert({
+        where: { adId: dto.adId },
+        update: {
+          planId: dto.planId,
+          startsAt,
+          endsAt,
+          totalPrice,
+          isActive: false,
+          deletedAt: null
+        },
+        create: {
+          adId: dto.adId,
+          planId: dto.planId,
+          startsAt,
+          endsAt,
+          totalPrice,
+          isActive: false
+        },
+        include: { plan: true, ad: { select: { id: true, title: true } } }
+      });
+
+      return promotion;
+    });
+  }
+
+  activatePromotion(promotionId: string) {
+    return prisma.$transaction(async (tx) => {
+      const promotion = await tx.adPromotion.update({
+        where: { id: promotionId },
+        data: { isActive: true },
+        include: { plan: true }
+      });
+
+      await tx.ad.update({
+        where: { id: promotion.adId },
+        data: { isActive: true, isSold: false }
+      });
+
+      return promotion;
+    });
+  }
+
+  createPaymentForPromotion(input: {
+    userId: string;
+    promotionId: string;
+    amount: number;
+    provider: import('@prisma/client').PaymentProvider;
+    sessionId: string;
+    paymentUrl: string;
+  }) {
+    return prisma.payment.create({
+      data: {
+        userId: input.userId,
+        amount: input.amount,
+        provider: input.provider,
+        status: 'PENDING',
+        transactionId: input.sessionId,
+        paymentUrl: input.paymentUrl,
+        promotionId: input.promotionId
+      }
+    });
+  }
+
+  markPaymentPaid(paymentId: string, transactionId: string) {
+    return prisma.payment.update({
+      where: { id: paymentId },
+      data: {
+        status: 'PAID',
+        paidAt: new Date(),
+        transactionId
+      }
+    });
+  }
+
   async promoteAd(dto: PromoteAdDto) {
     const plan = await prisma.promotionPlan.findUniqueOrThrow({ where: { id: dto.planId } });
     const startsAt = new Date();
