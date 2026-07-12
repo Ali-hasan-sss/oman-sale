@@ -71,11 +71,13 @@
     "pricing": "Pricing & plans",
     "privacy": "Privacy policy",
     "terms": "Terms of use",
+    "refundPolicy": "Refund policy",
     "newsletterTitle": "Subscribe to the newsletter",
     "newsletterSubtitle": "Get the latest offers and listings",
     "emailPlaceholder": "Your email address",
     "subscribe": "Subscribe",
     "copyright": "© 2023 Oman Sale. All rights reserved.",
+    "license": "License",
     "backToTop": "Back to top",
     "regionsList": ["Muscat", "Salalah", "Nizwa", "Sohar", "Sur", "Duqm"]
   },
@@ -517,6 +519,7 @@
     "legalManagementHint": "Manage bilingual terms of use and privacy policy as shown on web and mobile.",
     "legalTermsTab": "Terms of use",
     "legalPrivacyTab": "Privacy policy",
+    "legalRefundTab": "Refund policy",
     "legalLoadError": "Could not load legal pages.",
     "legalSaveError": "Could not save legal page.",
     "legalSaveSuccess": "Legal page saved.",
@@ -1135,6 +1138,63 @@
           "paragraphs": [
             "These terms are governed by the laws of the Sultanate of Oman. Disputes shall be resolved before the competent courts in Oman unless otherwise agreed.",
             "We may amend these terms at any time. Continued use of the platform after publication constitutes acceptance of the updated terms."
+          ]
+        }
+      ]
+    },
+    "refund": {
+      "title": "Refund policy",
+      "lastUpdated": "Last updated: July 2026",
+      "intro": "This policy explains refund terms for digital services on Oman Sale, including store subscriptions, banner ads and listing promotions.",
+      "contactTitle": "Refund contact",
+      "contactText": "To request a refund or ask about your request status, email us at:",
+      "sections": [
+        {
+          "title": "1. Scope",
+          "paragraphs": [
+            "This policy applies to payments made through Thawani Pay on the Oman Sale website and app.",
+            "It does not cover direct transactions between users (buyer and seller) outside the platform."
+          ]
+        },
+        {
+          "title": "2. Eligible refunds",
+          "paragraphs": ["A refund may be approved in the following cases:"],
+          "bullets": [
+            "Duplicate or erroneous charge due to a proven technical error.",
+            "Paid service not activated (e.g. store subscription or banner ad) within 48 hours of payment for reasons not attributable to the user.",
+            "Banner ad request rejected by admin before publication.",
+            "Store subscription cancelled before activation or within 24 hours of payment if the store was not used."
+          ]
+        },
+        {
+          "title": "3. Non-refundable services",
+          "paragraphs": ["Refunds are not available when:"],
+          "bullets": [
+            "A store subscription has been activated and its features used.",
+            "A banner ad has been published or its display period has started.",
+            "A listing promotion has been activated and is live on the platform.",
+            "Terms of use were violated or the service was misused."
+          ]
+        },
+        {
+          "title": "4. How to request a refund",
+          "paragraphs": [
+            "Email info@omansale.om with your order ID, payment date and reason for the request.",
+            "We will review your request within 3–5 business days and reply by email."
+          ]
+        },
+        {
+          "title": "5. Refund processing time",
+          "paragraphs": [
+            "If approved, the amount is returned to the original payment method within 7–14 business days, subject to Thawani Pay and bank policies.",
+            "In rare cases outside our control, processing may take longer."
+          ]
+        },
+        {
+          "title": "6. Changes",
+          "paragraphs": [
+            "We may update this policy from time to time. The version published on this page is the current one.",
+            "Continued use of paid services after an update constitutes acceptance of the revised policy."
           ]
         }
       ]

@@ -1042,6 +1042,7 @@ model ArticleReaction {
 enum LegalDocumentKind {
   TERMS
   PRIVACY
+  REFUND
 }
 
 model LegalDocument {

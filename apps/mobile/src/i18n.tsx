@@ -54,6 +54,7 @@ const dictionary = {
       browseStores: 'استعرض المتاجر',
       terms: 'شروط الاستخدام',
       privacy: 'سياسة الخصوصية',
+      refund: 'سياسة الاسترداد',
       appVersion: 'إصدار التطبيق'
     },
     errors: {
@@ -451,11 +452,13 @@ const dictionary = {
       notifications: 'التنبيهات',
       privacy: 'سياسة الخصوصية',
       terms: 'شروط الاستخدام',
+      refund: 'سياسة الاسترداد',
       help: 'المساعدة والدعم'
     },
     legal: {
       termsTitle: 'شروط الاستخدام',
       privacyTitle: 'سياسة الخصوصية',
+      refundTitle: 'سياسة الاسترداد',
       contactTitle: 'التواصل',
       contactText: 'لأي استفسار، راسلنا على:',
       notPublished: 'لم يُنشر هذا المحتوى بعد من لوحة الإدارة.'
@@ -582,6 +585,7 @@ const dictionary = {
       browseStores: 'Browse stores',
       terms: 'Terms of use',
       privacy: 'Privacy policy',
+      refund: 'Refund policy',
       appVersion: 'App version'
     },
     errors: {
@@ -979,11 +983,13 @@ const dictionary = {
       notifications: 'Notifications',
       privacy: 'Privacy policy',
       terms: 'Terms of use',
+      refund: 'Refund policy',
       help: 'Help and support'
     },
     legal: {
       termsTitle: 'Terms of use',
       privacyTitle: 'Privacy policy',
+      refundTitle: 'Refund policy',
       contactTitle: 'Contact',
       contactText: 'For any questions, email us at:',
       notPublished: 'This content has not been published by the admin yet.'

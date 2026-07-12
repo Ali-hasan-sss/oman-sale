@@ -103,7 +103,7 @@ export const API_ENDPOINTS = {
     reactions: (articleId: string) => `/articles/${articleId}/reactions`
   },
   legal: {
-    byKind: (kind: 'terms' | 'privacy') => `/legal/${kind}`
+    byKind: (kind: 'terms' | 'privacy' | 'refund') => `/legal/${kind}`
   },
   trustBadge: {
     userMe: '/trust-badge/users/me',

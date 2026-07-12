@@ -2,12 +2,14 @@ import { BannerRequestStatus, PaymentProvider, PaymentStatus } from '@prisma/cli
 
 import { env } from '../../config/env';
 import {
+  buildThawaniPaymentMetadata,
   createThawaniCheckoutSession,
   isThawaniConfigured,
   omrToBaisa,
   shouldSkipThawaniCheckout
 } from '../../shared/payments/thawani.client';
 import { ApiError } from '../../shared/utils/api-error';
+import { usersRepository } from '../users/users.repository';
 import { bannerRequestsRepository } from './banner-requests.repository';
 import { notifyAdminBannerRequestPending } from './banner-admin-notifications';
 
@@ -49,6 +51,9 @@ export async function checkoutBannerRequest(input: CheckoutInput): Promise<Banne
   const successUrl = `${env.WEB_URL}${localePrefix}/banner-ad/success`;
   const cancelUrl = `${env.WEB_URL}${localePrefix}/banner-ad/cancel`;
 
+  const user = await usersRepository.findById(input.userId);
+  const customerName = user?.fullName ?? 'Customer';
+
   const { sessionId, paymentUrl } = await createThawaniCheckoutSession({
     clientReferenceId: input.requestId,
     products: [
@@ -60,10 +65,13 @@ export async function checkoutBannerRequest(input: CheckoutInput): Promise<Banne
     ],
     successUrl,
     cancelUrl,
-    metadata: {
-      bannerRequestId: input.requestId,
-      userId: input.userId
-    }
+    metadata: buildThawaniPaymentMetadata({
+      customerName,
+      orderId: input.requestId,
+      extra: {
+        'service type': 'banner ad'
+      }
+    })
   });
 
   const payment = await bannerRequestsRepository.createPaymentForRequest({

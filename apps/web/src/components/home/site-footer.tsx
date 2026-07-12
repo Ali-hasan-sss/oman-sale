@@ -1,12 +1,14 @@
 'use client';
 
-import { ArrowUp, Facebook, Instagram, Mail, MapPin, Twitter, Youtube } from 'lucide-react';
+import { ArrowUp, Facebook, FileText, Instagram, Mail, MapPin, Twitter, Youtube } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { siteContactEmail } from '@/lib/site-contact';
+import { siteInvoiceConfig } from '@/lib/site-invoice';
+import { SiteBrandMark } from '@/components/navigation/site-brand-mark';
 
 type FooterCategory = {
   id: string;
@@ -54,7 +56,7 @@ export function SiteFooter() {
               <span className="flex h-20 w-20 items-center justify-center overflow-hidden">
                 <img src="/logo.png" alt="Oman Sale" className="h-full w-full object-contain" />
               </span>
-              <span className="text-2xl font-black">Oman Sale</span>
+              <SiteBrandMark variant="hero" className="text-start" />
             </div>
             <p className="mb-6 text-sm leading-relaxed text-slate-400">{m.footer.description}</p>
             <div className="space-y-3 text-sm">
@@ -66,6 +68,12 @@ export function SiteFooter() {
                 <MapPin size={16} className="text-brand-500" />
                 <span className="text-slate-300">{m.footer.location}</span>
               </div>
+              <div className="flex items-center gap-3">
+                <FileText size={16} className="text-brand-500" />
+                <span className="text-slate-300" dir="ltr">
+                  {m.footer.license}: {siteInvoiceConfig.license}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -76,7 +84,8 @@ export function SiteFooter() {
               [m.articles.pageTitle, '/news'],
               [m.footer.pricing, '/pricing'],
               [m.footer.privacy, '/privacy'],
-              [m.footer.terms, '/terms']
+              [m.footer.terms, '/terms'],
+              [m.footer.refundPolicy, '/refund-policy']
             ]}
           />
           <FooterList title={m.footer.regions} items={footerRegions} />
@@ -89,6 +98,7 @@ export function SiteFooter() {
             <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm md:justify-start">
               <FooterLink href="/privacy" label={m.footer.privacy} />
               <FooterLink href="/terms" label={m.footer.terms} />
+              <FooterLink href="/refund-policy" label={m.footer.refundPolicy} />
             </div>
           </div>
           <div className="flex items-center gap-4">

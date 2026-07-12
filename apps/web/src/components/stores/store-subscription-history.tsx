@@ -52,6 +52,7 @@ type StoreSubscriptionHistoryProps = {
       website: string;
       taxNumber: string;
       commercialRegistration: string;
+      license: string;
       downloadPdf: string;
       downloading: string;
       close: string;

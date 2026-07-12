@@ -20,7 +20,12 @@ export function LegalScreen({ kind }: LegalScreenProps) {
   const { scrollBottomPadding } = useScreenInsets();
   const textAlign = isRtl ? styles.rtl : styles.ltr;
   const [loading, setLoading] = useState(true);
-  const [title, setTitle] = useState<string>(kind === 'terms' ? text.termsTitle : text.privacyTitle);
+  const titleByKind = {
+    terms: text.termsTitle,
+    privacy: text.privacyTitle,
+    refund: text.refundTitle
+  } as const;
+  const [title, setTitle] = useState<string>(titleByKind[kind]);
   const [body, setBody] = useState('');
   const [contactTitle, setContactTitle] = useState<string>(text.contactTitle);
   const [contactText, setContactText] = useState<string>(text.contactText);
@@ -49,7 +54,7 @@ export function LegalScreen({ kind }: LegalScreenProps) {
       })
       .catch(() => {
         if (cancelled) return;
-        setTitle(kind === 'terms' ? text.termsTitle : text.privacyTitle);
+        setTitle(titleByKind[kind]);
         setBody('');
         setContactTitle(text.contactTitle);
         setContactText(text.contactText);
@@ -63,7 +68,7 @@ export function LegalScreen({ kind }: LegalScreenProps) {
     return () => {
       cancelled = true;
     };
-  }, [kind, locale, text.contactText, text.contactTitle, text.privacyTitle, text.termsTitle]);
+  }, [kind, locale, text.contactText, text.contactTitle, text.privacyTitle, text.refundTitle, text.termsTitle]);
 
   return (
     <ScrollView

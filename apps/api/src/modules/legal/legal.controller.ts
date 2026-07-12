@@ -11,7 +11,7 @@ function resolveLocale(req: Request): 'ar' | 'en' {
 
 export class LegalController {
   async getPublic(req: Request, res: Response) {
-    const kind = getRequiredParam(req, 'kind') as 'terms' | 'privacy';
+    const kind = getRequiredParam(req, 'kind') as 'terms' | 'privacy' | 'refund';
     res.json({ data: await legalService.getPublic(kind, resolveLocale(req)) });
   }
 
@@ -20,7 +20,7 @@ export class LegalController {
   }
 
   async upsertForAdmin(req: Request, res: Response) {
-    const kind = getRequiredParam(req, 'kind') as 'terms' | 'privacy';
+    const kind = getRequiredParam(req, 'kind') as 'terms' | 'privacy' | 'refund';
     res.json({ data: await legalService.upsertForAdmin(kind, req.body as UpsertLegalDocumentInput) });
   }
 }

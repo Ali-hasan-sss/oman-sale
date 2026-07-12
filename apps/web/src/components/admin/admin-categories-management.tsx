@@ -1,42 +1,15 @@
 'use client';
 
 import {
-  Baby,
-  Bike,
-  BookOpen,
-  Briefcase,
-  Building2,
-  Car,
   Check,
   ChevronDown,
   ChevronLeft,
-  Dumbbell,
   Edit3,
   Filter,
-  Gamepad2,
-  GraduationCap,
-  Hammer,
-  Heart,
-  Home,
-  Laptop,
-  MapPin,
-  Monitor,
-  Palette,
-  PawPrint,
-  Plane,
   Plus,
   Search,
-  Shirt,
-  Smartphone,
-  Sofa,
-  Store,
-  Stethoscope,
   Tag,
   Trash2,
-  Truck,
-  Utensils,
-  Watch,
-  Wrench,
   X
 } from 'lucide-react';
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
@@ -44,13 +17,18 @@ import { createPortal } from 'react-dom';
 
 import { CategoriesSkeleton } from '@/components/admin/admin-categories-skeleton';
 import { adminApi } from '@/lib/admin-auth';
-import { CategoryIcon, isCategoryEmojiIcon, isCategoryIconKey, type CategoryIconKey } from '@/lib/category-icons';
+import {
+  CategoryIcon,
+  categoryIconKeys,
+  categoryIconLabels,
+  categoryIconMap,
+  isCategoryEmojiIcon,
+  isCategoryIconKey
+} from '@/lib/category-icons';
 import { buildCategoryTree, type CategoryTreeNode } from '@/lib/category-tree';
 import { useI18n } from '@/lib/i18n';
 
 type CategoryType = 'PRODUCT' | 'SERVICE' | 'JOB' | 'JOB_REQUEST' | 'LOGISTICS' | 'CONSTRUCTION';
-
-type IconKey = CategoryIconKey;
 
 type ManagedCategory = {
   id: string;
@@ -103,39 +81,13 @@ type CategoryFilter = {
 
 const categoryTypes: CategoryType[] = ['PRODUCT', 'SERVICE', 'JOB', 'JOB_REQUEST', 'LOGISTICS', 'CONSTRUCTION'];
 
-const iconOptions: Array<{ key: IconKey; label: string; icon: typeof Car }> = [
-  { key: 'car', label: 'Cars', icon: Car },
-  { key: 'building', label: 'Real estate', icon: Building2 },
-  { key: 'home', label: 'Home', icon: Home },
-  { key: 'store', label: 'Stores', icon: Store },
-  { key: 'shirt', label: 'Fashion', icon: Shirt },
-  { key: 'smartphone', label: 'Mobile', icon: Smartphone },
-  { key: 'laptop', label: 'Computers', icon: Laptop },
-  { key: 'monitor', label: 'Electronics', icon: Monitor },
-  { key: 'sofa', label: 'Furniture', icon: Sofa },
-  { key: 'wrench', label: 'Services', icon: Wrench },
-  { key: 'briefcase', label: 'Jobs', icon: Briefcase },
-  { key: 'search', label: 'Job seekers', icon: Search },
-  { key: 'truck', label: 'Logistics', icon: Truck },
-  { key: 'book', label: 'Books', icon: BookOpen },
-  { key: 'graduation', label: 'Training', icon: GraduationCap },
-  { key: 'gamepad', label: 'Gaming', icon: Gamepad2 },
-  { key: 'bike', label: 'Bikes', icon: Bike },
-  { key: 'baby', label: 'Kids', icon: Baby },
-  { key: 'heart', label: 'Pets', icon: Heart },
-  { key: 'tag', label: 'Offers', icon: Tag },
-  { key: 'map-pin', label: 'Places', icon: MapPin },
-  { key: 'palette', label: 'Design', icon: Palette },
-  { key: 'utensils', label: 'Food', icon: Utensils },
-  { key: 'stethoscope', label: 'Health', icon: Stethoscope },
-  { key: 'watch', label: 'Accessories', icon: Watch },
-  { key: 'paw', label: 'Pets', icon: PawPrint },
-  { key: 'plane', label: 'Travel', icon: Plane },
-  { key: 'hammer', label: 'Construction', icon: Hammer },
-  { key: 'dumbbell', label: 'Sports', icon: Dumbbell }
-];
+const iconOptions = categoryIconKeys.map((key) => ({
+  key,
+  label: categoryIconLabels[key],
+  icon: categoryIconMap[key]
+}));
 
-const iconMap = Object.fromEntries(iconOptions.map((option) => [option.key, option.icon])) as Record<IconKey, typeof Car>;
+const iconMap = categoryIconMap;
 
 const initialForm: CategoryFormState = {
   nameAr: '',
@@ -1270,7 +1222,7 @@ function IconPicker({
       </button>
 
       {isOpen ? (
-        <div className="absolute z-[120] mt-2 grid max-h-64 w-full grid-cols-5 gap-2 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
+        <div className="absolute z-[120] mt-2 grid max-h-80 w-full grid-cols-6 gap-2 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3 shadow-xl sm:grid-cols-8">
           {iconOptions.map((option) => {
             const Icon = option.icon;
             const isSelected = value === option.key;

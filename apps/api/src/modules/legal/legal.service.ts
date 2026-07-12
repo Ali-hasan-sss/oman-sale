@@ -5,7 +5,7 @@ import { legalRepository } from './legal.repository';
 import { fromLegalDocumentKind, toLegalDocumentKind, type UpsertLegalDocumentInput } from './legal.validation';
 
 type PublicLegalDocument = {
-  kind: 'terms' | 'privacy';
+  kind: 'terms' | 'privacy' | 'refund';
   title: string;
   body: string;
   contactTitle: string;
@@ -43,7 +43,7 @@ function mapAdmin(document: LegalDocument) {
 }
 
 export class LegalService {
-  async getPublic(kind: 'terms' | 'privacy', locale: 'ar' | 'en') {
+  async getPublic(kind: 'terms' | 'privacy' | 'refund', locale: 'ar' | 'en') {
     const document = await legalRepository.findByKind(toLegalDocumentKind(kind));
     if (!document || !document.isPublished) {
       throw new ApiError(404, 'Legal document not found');
@@ -62,7 +62,7 @@ export class LegalService {
     return documents.map(mapAdmin);
   }
 
-  async upsertForAdmin(kind: 'terms' | 'privacy', input: UpsertLegalDocumentInput) {
+  async upsertForAdmin(kind: 'terms' | 'privacy' | 'refund', input: UpsertLegalDocumentInput) {
     const now = new Date();
     const existing = await legalRepository.findByKind(toLegalDocumentKind(kind));
     const publishedAt =

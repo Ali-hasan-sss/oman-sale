@@ -30,7 +30,7 @@ const PLATFORM_COPY = {
       { title: 'دعم وتغطية', detail: 'تغطية محافظات عمان مع فريق دعم عبر البريد والهاتف.' }
     ],
     createStore:
-      'لإنشاء متجر: سجّل الدخول، افتح «إنشاء متجر»، اختر الفئة الرئيسية ونوع المتجر، ثم اختر خطة الاشتراك (شهري/سنوي). يمكنك البدء بفترة تجريبية إن كانت متاحة، أو الدفع عبر ثواني.',
+      'لإنشاء متجر على Oman Sale:\n1) سجّل الدخول\n2) افتح «إنشاء متجر»\n3) اختر الفئة الرئيسية (مثل: سيارات أو عقارات)\n4) اختر نوع المتجر (مثل: معرض سيارات، مكتب عقاري، سوبرماركت، أو إلكترونيات)\n5) اختر خطة الاشتراك (شهري أو سنوي)\n6) ابدأ بالفترة التجريبية إن وُجدت، أو أكمل الدفع عبر ثواني.\n\n📌 أمثلة: معرض سيارات في فئة السيارات، أو مكتب عقاري في فئة العقارات.',
     promoteListing:
       'لتمييز إعلان: افتح «إعلاناتي»، اختر الإعلان، اضغط «ترقية»، ثم اختر خطة التمييز والمدة (أسبوع، أسبوعين، شهر). الإعلانات المميزة تظهر أولاً في البحث.',
     postAd:
@@ -43,7 +43,7 @@ const PLATFORM_COPY = {
     payments: 'المدفوعات على Oman Sale تتم عبر بوابة ثواني (Thawani) — اشتراكات المتاجر، تمييز الإعلانات، والبنرات.',
     contact: 'تواصل معنا: info@omansale.om | هاتف: +968 2456 7890 | مسقط، سلطنة عمان.',
     storePlansNote:
-      '📌 ملاحظة: أسعار خطط المتاجر تختلف حسب نوع المتجر والفئة — مثل معارض السيارات، السوبرماركت، المكاتب العقارية، الإلكترونيات، الملابس، وغيرها. الأسعار أدناه لكل فئة على حدة (شهري/سنوي) وقد تشمل خصومات أو فترة تجريبية.',
+      '📌 ملاحظة: خطط المتاجر متاحة باشتراك شهري أو سنوي. الأسعار تختلف حسب نوع المتجر والفئة — مثل معارض السيارات، المكاتب العقارية، السوبرماركت، الإلكترونيات، والملابس. الأسعار أدناه لكل فئة على حدة وقد تشمل خصومات أو فترة تجريبية.',
     promotionNote: 'أسعار التمييز بالريال العماني (OMR). الإعلان العادي مجاني بدون تكلفة تمييز.'
   },
   en: {
@@ -59,7 +59,7 @@ const PLATFORM_COPY = {
       { title: 'Support & coverage', detail: 'Coverage across Oman with email and phone support.' }
     ],
     createStore:
-      'To create a store: sign in, open Create Store, pick your root category and store type, then choose a subscription plan (monthly/yearly). Start with a trial if available, or pay via Thawani.',
+      'To create a store on Oman Sale:\n1) Sign in\n2) Open Create Store\n3) Pick a root category (e.g. Cars or Real Estate)\n4) Choose a store type (e.g. car showroom, real estate office, supermarket, or electronics shop)\n5) Select a subscription plan (monthly or yearly)\n6) Start with a free trial if available, or complete payment via Thawani.\n\n📌 Examples: a car showroom under Cars, or a real estate office under Real Estate.',
     promoteListing:
       'To promote a listing: open My Listings, pick an ad, tap Promote, choose a plan and duration (1 week, 2 weeks, 1 month). Promoted listings rank higher in search.',
     postAd:
@@ -70,7 +70,7 @@ const PLATFORM_COPY = {
     payments: 'Payments on Oman Sale use Thawani — store subscriptions, listing promotions, and banner ads.',
     contact: 'Contact us: info@omansale.om | Phone: +968 2456 7890 | Muscat, Sultanate of Oman.',
     storePlansNote:
-      '📌 Note: Store plan prices vary by store type and category — e.g. car showrooms, supermarkets, real estate offices, electronics, clothing, and more. Prices below are per category (monthly/yearly) and may include discounts or a free trial.',
+      '📌 Note: Store plans are available on monthly or yearly billing. Prices vary by store type and category — e.g. car showrooms, real estate offices, supermarkets, electronics, and clothing. Prices below are per category and may include discounts or a free trial.',
     promotionNote: 'Promotion prices are in OMR. The normal (free) tier has no promotion fee.'
   }
 } as const;
@@ -81,9 +81,9 @@ function formatPrice(value: unknown) {
 }
 
 function billingLabel(period: string, locale: 'ar' | 'en') {
-  if (period === 'THREE_MONTHS') return locale === 'ar' ? '3 أشهر' : '3 months';
+  if (period === 'THREE_MONTHS') return locale === 'ar' ? 'سنوي' : 'Yearly';
   if (period === 'TWO_MONTHS') return locale === 'ar' ? 'شهرين' : '2 months';
-  return locale === 'ar' ? 'شهر واحد' : '1 month';
+  return locale === 'ar' ? 'شهري' : 'Monthly';
 }
 
 async function fetchPromotionPlans(locale: 'ar' | 'en', planFilter?: string) {

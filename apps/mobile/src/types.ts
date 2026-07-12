@@ -24,7 +24,8 @@ export type ScreenName =
   | 'news'
   | 'articleDetail'
   | 'terms'
-  | 'privacy';
+  | 'privacy'
+  | 'refund';
 
 export type User = {
   id: string;

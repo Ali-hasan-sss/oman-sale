@@ -57,7 +57,8 @@ export function SideDrawer({ visible, onClose, onNavigate, onLogoutRequest }: Si
       { screen: 'news', label: t.common.news, icon: 'newspaper-outline' },
       { screen: 'settings', label: t.common.settings, icon: 'settings-outline' },
       { screen: 'terms', label: t.common.terms, icon: 'document-text-outline' },
-      { screen: 'privacy', label: t.common.privacy, icon: 'shield-checkmark-outline' }
+      { screen: 'privacy', label: t.common.privacy, icon: 'shield-checkmark-outline' },
+      { screen: 'refund', label: t.common.refund, icon: 'cash-outline' }
     );
 
     return list;
@@ -70,6 +71,7 @@ export function SideDrawer({ visible, onClose, onNavigate, onLogoutRequest }: Si
     t.common.myStore,
     t.common.news,
     t.common.privacy,
+    t.common.refund,
     t.common.profile,
     t.common.settings,
     t.common.terms

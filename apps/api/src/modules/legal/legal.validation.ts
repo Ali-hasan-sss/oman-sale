@@ -2,7 +2,7 @@ import { LegalDocumentKind } from '@prisma/client';
 import { z } from 'zod';
 
 export const legalKindParamSchema = z.object({
-  kind: z.enum(['terms', 'privacy'])
+  kind: z.enum(['terms', 'privacy', 'refund'])
 });
 
 export const upsertLegalDocumentSchema = z.object({
@@ -19,10 +19,14 @@ export const upsertLegalDocumentSchema = z.object({
 
 export type UpsertLegalDocumentInput = z.infer<typeof upsertLegalDocumentSchema>;
 
-export function toLegalDocumentKind(kind: 'terms' | 'privacy'): LegalDocumentKind {
-  return kind === 'terms' ? LegalDocumentKind.TERMS : LegalDocumentKind.PRIVACY;
+export function toLegalDocumentKind(kind: 'terms' | 'privacy' | 'refund'): LegalDocumentKind {
+  if (kind === 'terms') return LegalDocumentKind.TERMS;
+  if (kind === 'privacy') return LegalDocumentKind.PRIVACY;
+  return LegalDocumentKind.REFUND;
 }
 
-export function fromLegalDocumentKind(kind: LegalDocumentKind): 'terms' | 'privacy' {
-  return kind === LegalDocumentKind.TERMS ? 'terms' : 'privacy';
+export function fromLegalDocumentKind(kind: LegalDocumentKind): 'terms' | 'privacy' | 'refund' {
+  if (kind === LegalDocumentKind.TERMS) return 'terms';
+  if (kind === LegalDocumentKind.PRIVACY) return 'privacy';
+  return 'refund';
 }

@@ -66,6 +66,7 @@ export function MobileNavMenu({ variant = 'light' }: MobileNavMenuProps) {
               <MobileLink href="/notifications" label={m.common.notifications} onClick={() => setIsOpen(false)} />
               <MobileLink href="/terms" label={m.footer.terms} onClick={() => setIsOpen(false)} />
               <MobileLink href="/privacy" label={m.footer.privacy} onClick={() => setIsOpen(false)} />
+              <MobileLink href="/refund-policy" label={m.footer.refundPolicy} onClick={() => setIsOpen(false)} />
               <MobileLink href="/profile" label={m.common.profile} onClick={() => setIsOpen(false)} />
               <Link
                 href={localizedPath('/add-listing')}

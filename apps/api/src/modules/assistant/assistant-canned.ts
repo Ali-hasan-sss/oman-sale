@@ -57,7 +57,7 @@ function buildPricingOverviewReply(
 ) {
   const lines: string[] = [disclaimer, ''];
 
-  lines.push(locale === 'ar' ? '🏪 خطط المتاجر:' : '🏪 Store plans:');
+  lines.push(locale === 'ar' ? '🏪 خطط المتاجر (شهري / سنوي):' : '🏪 Store plans (monthly / yearly):');
   if (storePlans.length === 0) {
     lines.push(locale === 'ar' ? '🔹 لا توجد خطط متاحة حالياً.' : '🔹 No store plans available right now.');
   } else {

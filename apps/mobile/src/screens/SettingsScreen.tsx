@@ -10,9 +10,10 @@ import { colors, radius } from '../theme';
 type SettingsScreenProps = {
   onOpenTerms?: () => void;
   onOpenPrivacy?: () => void;
+  onOpenRefund?: () => void;
 };
 
-export function SettingsScreen({ onOpenTerms, onOpenPrivacy }: SettingsScreenProps) {
+export function SettingsScreen({ onOpenTerms, onOpenPrivacy, onOpenRefund }: SettingsScreenProps) {
   const { t, isRtl, toggleLocale } = useI18n();
   const { scrollBottomPadding } = useScreenInsets();
 
@@ -21,6 +22,7 @@ export function SettingsScreen({ onOpenTerms, onOpenPrivacy }: SettingsScreenPro
     { label: t.settings.notifications, icon: 'notifications-outline' as const },
     { label: t.settings.terms, icon: 'document-text-outline' as const, onPress: onOpenTerms },
     { label: t.settings.privacy, icon: 'shield-checkmark-outline' as const, onPress: onOpenPrivacy },
+    { label: t.settings.refund, icon: 'cash-outline' as const, onPress: onOpenRefund },
     { label: t.settings.help, icon: 'help-circle-outline' as const }
   ];
 

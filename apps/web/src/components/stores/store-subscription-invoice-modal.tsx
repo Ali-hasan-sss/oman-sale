@@ -49,6 +49,7 @@ type StoreSubscriptionInvoiceModalProps = {
     website: string;
     taxNumber: string;
     commercialRegistration: string;
+    license: string;
     downloadPdf: string;
     downloading: string;
     close: string;
@@ -214,6 +215,9 @@ export function StoreSubscriptionInvoiceModal({
               </p>
               <p>
                 {labels.commercialRegistration}: {siteInvoiceConfig.commercialRegistration}
+              </p>
+              <p>
+                {labels.license}: {siteInvoiceConfig.license}
               </p>
             </div>
           </div>

@@ -1,6 +1,6 @@
 import { api } from '@/lib/api';
 
-export type LegalKind = 'terms' | 'privacy';
+export type LegalKind = 'terms' | 'privacy' | 'refund';
 
 export type LegalDocumentContent = {
   kind: LegalKind;

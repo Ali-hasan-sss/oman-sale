@@ -167,8 +167,8 @@ PLATFORM INFO (plans, pricing, features, contact, how-to):
 - If user asks about BOTH store plans AND promotion prices → topic pricing_overview.
 - If user asks about a specific plan by name → pass planName.
 - Explain plan features and prices from tool data only — never invent prices.
-- For plan/pricing answers: summarize clearly with names, prices (OMR), durations, and key benefits (max listings, trial, impressions, badge, priority).
-- When explaining STORE plan prices, ALWAYS include the storePricingDisclaimer note: prices vary by store type/category (car showroom, grocery, real estate, etc.).
+- For plan/pricing answers: summarize clearly with names, prices (OMR), billing period (monthly or yearly for store plans), and key benefits (max listings, trial, impressions, badge, priority).
+- When explaining STORE plan prices, ALWAYS include the storePricingDisclaimer note: prices vary by store type/category (car showroom, real estate office, grocery, etc.) and billing is monthly or yearly.
 - Action buttons are added automatically — do not tell the user links are missing.
 
 OTHER:

@@ -6,7 +6,7 @@ import { RichTextEditor } from '@/components/admin/rich-text-editor';
 import { adminApi } from '@/lib/admin-auth';
 import { useI18n } from '@/lib/i18n';
 
-type LegalKind = 'terms' | 'privacy';
+type LegalKind = 'terms' | 'privacy' | 'refund';
 
 type LegalDocument = {
   kind: LegalKind;
@@ -44,7 +44,8 @@ export function AdminLegalManagement() {
   const [activeKind, setActiveKind] = useState<LegalKind>('terms');
   const [forms, setForms] = useState<Record<LegalKind, LegalForm>>({
     terms: emptyForm,
-    privacy: emptyForm
+    privacy: emptyForm,
+    refund: emptyForm
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -56,7 +57,7 @@ export function AdminLegalManagement() {
     setError('');
     try {
       const response = await adminApi().get<{ data: LegalDocument[] }>('/admin/legal');
-      const next: Record<LegalKind, LegalForm> = { terms: { ...emptyForm }, privacy: { ...emptyForm } };
+      const next: Record<LegalKind, LegalForm> = { terms: { ...emptyForm }, privacy: { ...emptyForm }, refund: { ...emptyForm } };
       for (const item of response.data.data) {
         next[item.kind] = {
           titleAr: item.titleAr,
@@ -106,7 +107,8 @@ export function AdminLegalManagement() {
 
   const tabs: Array<{ kind: LegalKind; label: string }> = [
     { kind: 'terms', label: m.admin.legalTermsTab },
-    { kind: 'privacy', label: m.admin.legalPrivacyTab }
+    { kind: 'privacy', label: m.admin.legalPrivacyTab },
+    { kind: 'refund', label: m.admin.legalRefundTab }
   ];
 
   return (

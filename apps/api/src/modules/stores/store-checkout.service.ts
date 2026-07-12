@@ -2,12 +2,14 @@ import { PaymentProvider, PaymentStatus } from '@prisma/client';
 
 import { env } from '../../config/env';
 import {
+  buildThawaniPaymentMetadata,
   createThawaniCheckoutSession,
   isThawaniConfigured,
   omrToBaisa,
   shouldSkipThawaniCheckout
 } from '../../shared/payments/thawani.client';
 import { ApiError } from '../../shared/utils/api-error';
+import { usersRepository } from '../users/users.repository';
 import { activateStoreSubscription } from './store-subscription.utils';
 import { getPlanChargeAmount } from '../../shared/utils/plan-pricing.utils';
 import { storesRepository } from './stores.repository';
@@ -43,6 +45,9 @@ export async function checkoutStoreSubscription(input: CheckoutInput): Promise<S
 
   const chargeAmount = getPlanChargeAmount(input.finalPrice);
 
+  const user = await usersRepository.findById(input.userId);
+  const customerName = user?.fullName ?? 'Customer';
+
   const { sessionId, paymentUrl } = await createThawaniCheckoutSession({
     clientReferenceId: input.subscriptionId,
     products: [
@@ -54,10 +59,14 @@ export async function checkoutStoreSubscription(input: CheckoutInput): Promise<S
     ],
     successUrl,
     cancelUrl,
-    metadata: {
-      subscriptionId: input.subscriptionId,
-      userId: input.userId
-    }
+    metadata: buildThawaniPaymentMetadata({
+      customerName,
+      orderId: input.subscriptionId,
+      extra: {
+        'service type': 'store subscription',
+        'store name': input.storeName.slice(0, 80)
+      }
+    })
   });
 
   const payment = await storesRepository.createPaymentForSubscription({

@@ -172,6 +172,7 @@ const labels = {
     platformWebsite: 'الموقع الإلكتروني',
     platformTaxNumber: 'الرقم الضريبي',
     platformCommercialRegistration: 'السجل التجاري',
+    platformLicense: 'License',
     downloadInvoicePdf: 'تحميل PDF',
     downloadingInvoice: 'جاري التحميل...',
     startsAt: 'يبدأ في',
@@ -273,6 +274,7 @@ const labels = {
     platformWebsite: 'Website',
     platformTaxNumber: 'Tax number',
     platformCommercialRegistration: 'Commercial registration',
+    platformLicense: 'License',
     downloadInvoicePdf: 'Download PDF',
     downloadingInvoice: 'Downloading...',
     startsAt: 'Starts on',
@@ -916,6 +918,7 @@ export function MyStorePage() {
                     website: text.platformWebsite,
                     taxNumber: text.platformTaxNumber,
                     commercialRegistration: text.platformCommercialRegistration,
+                    license: text.platformLicense,
                     downloadPdf: text.downloadInvoicePdf,
                     downloading: text.downloadingInvoice,
                     close: text.cancel

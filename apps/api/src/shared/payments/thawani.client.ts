@@ -43,6 +43,18 @@ export function omrToBaisa(amount: number) {
   return Math.round(amount * 1000);
 }
 
+export function buildThawaniPaymentMetadata(input: {
+  customerName: string;
+  orderId: string;
+  extra?: Record<string, string | number>;
+}) {
+  return {
+    'Customer name': input.customerName.trim() || 'Customer',
+    'order id': input.orderId,
+    ...(input.extra ?? {})
+  };
+}
+
 export async function createThawaniCheckoutSession(input: CreateCheckoutSessionInput) {
   if (!env.THAWANI_SECRET_KEY || !env.THAWANI_PUBLISHABLE_KEY) {
     throw new Error('Thawani is not configured');

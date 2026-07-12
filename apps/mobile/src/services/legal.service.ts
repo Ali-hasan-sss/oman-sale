@@ -1,7 +1,7 @@
 import { API_ENDPOINTS, http, type ApiEnvelope } from '../lib/api';
 import type { Locale } from '../types';
 
-export type LegalKind = 'terms' | 'privacy';
+export type LegalKind = 'terms' | 'privacy' | 'refund';
 
 export type LegalDocumentContent = {
   kind: LegalKind;

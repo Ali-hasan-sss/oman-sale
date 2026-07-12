@@ -363,12 +363,15 @@ export function MainShell() {
           <SettingsScreen
             onOpenTerms={() => pushScreen('terms')}
             onOpenPrivacy={() => pushScreen('privacy')}
+            onOpenRefund={() => pushScreen('refund')}
           />
         );
       case 'terms':
         return <LegalScreen kind="terms" />;
       case 'privacy':
         return <LegalScreen kind="privacy" />;
+      case 'refund':
+        return <LegalScreen kind="refund" />;
       case 'notifications':
         return <NotificationsScreen />;
       case 'news':
@@ -557,7 +560,8 @@ export function MainShell() {
             next === 'favorites' ||
             next === 'storesBrowse' ||
             next === 'terms' ||
-            next === 'privacy'
+            next === 'privacy' ||
+            next === 'refund'
           ) {
             pushScreen(next);
             return;
