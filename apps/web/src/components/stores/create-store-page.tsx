@@ -16,6 +16,7 @@ import { PlanPriceWithVat } from '@/components/pricing/plan-price-with-vat';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { api } from '@/lib/api';
 import { resolveApiErrorMessage } from '@/lib/api-errors';
+import { storePendingThawaniSession } from '@/lib/thawani-session';
 import { buildCategoryTree } from '@/lib/category-tree';
 import { useI18n, getAuthMessages } from '@/lib/i18n';
 import { isValidPhoneE164 } from '@/lib/phone/phone-utils';
@@ -389,7 +390,7 @@ export function CreateStorePage() {
     setSubmittingMode(activationMode);
 
     try {
-      const response = await api.post<{ data: { checkout?: { paymentUrl?: string }; requiresPayment: boolean; isTrial?: boolean } }>(
+      const response = await api.post<{ data: { checkout?: { paymentUrl?: string; sessionId?: string }; requiresPayment: boolean; isTrial?: boolean } }>(
         '/stores',
         {
           nameAr: nameAr.trim(),
@@ -414,7 +415,9 @@ export function CreateStorePage() {
       );
 
       const paymentUrl = response.data.data.checkout?.paymentUrl;
+      const sessionId = response.data.data.checkout?.sessionId;
       if (response.data.data.requiresPayment && paymentUrl) {
+        if (sessionId) storePendingThawaniSession(sessionId);
         window.location.href = paymentUrl;
         return;
       }

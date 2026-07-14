@@ -36,6 +36,13 @@ storesRoutes.post(
   validateRequest({ body: confirmThawaniPaymentSchema }),
   asyncHandler(storesController.confirmThawaniPayment)
 );
+storesRoutes.post(
+  '/payments/thawani/cancel',
+  requireAuth,
+  ensureActiveUser,
+  validateRequest({ body: confirmThawaniPaymentSchema }),
+  asyncHandler(storesController.cancelThawaniPayment)
+);
 storesRoutes.get('/me', requireAuth, ensureActiveUser, asyncHandler(storesController.getMine));
 storesRoutes.get('/slug/:slug', validateRequest({ params: slugParams }), asyncHandler(storesController.getBySlug));
 storesRoutes.get(

@@ -8,7 +8,7 @@ import {
   omrToBaisa,
   shouldSkipThawaniCheckout
 } from '../../shared/payments/thawani.client';
-import { completeThawaniPaymentBySession } from '../../shared/payments/thawani-webhook.service';
+import { completeThawaniPaymentBySession, cancelThawaniPaymentBySession } from '../../shared/payments/thawani-webhook.service';
 import { ApiError } from '../../shared/utils/api-error';
 import { getPlanChargeAmount } from '../../shared/utils/plan-pricing.utils';
 import { usersRepository } from '../users/users.repository';
@@ -21,6 +21,7 @@ type CheckoutInput = {
   planName: string;
   totalPrice: number;
   locale?: 'ar' | 'en';
+  rollbackAdOnCancel?: boolean;
 };
 
 export type PromotionCheckoutResult = {
@@ -76,7 +77,8 @@ export async function checkoutAdPromotion(input: CheckoutInput): Promise<Promoti
       orderId: input.promotionId,
       extra: {
         'service type': 'listing promotion',
-        'listing title': input.adTitle.slice(0, 80)
+        'listing title': input.adTitle.slice(0, 80),
+        ...(input.rollbackAdOnCancel ? { 'rollback ad on cancel': 'yes' } : {})
       }
     })
   });
@@ -116,4 +118,16 @@ export async function confirmThawaniPromotionPayment(userId: string, sessionId: 
     promotion: result.promotion,
     alreadyPaid: result.alreadyPaid
   };
+}
+
+export async function cancelThawaniPromotionPayment(userId: string, sessionId: string) {
+  const result = await cancelThawaniPaymentBySession(sessionId, { userId });
+
+  if (!result.handled) {
+    if (result.reason === 'forbidden') throw new ApiError(403, 'Forbidden');
+    if (result.reason === 'already_paid') throw new ApiError(400, 'Payment is already completed');
+    throw new ApiError(404, 'Payment not found');
+  }
+
+  return result;
 }

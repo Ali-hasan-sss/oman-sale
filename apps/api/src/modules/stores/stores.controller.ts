@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 
 import { getRequiredParam } from '../../shared/utils/request';
-import { confirmThawaniStorePayment } from './store-checkout.service';
+import { confirmThawaniStorePayment, cancelThawaniStorePayment } from './store-checkout.service';
 import { storesService } from './stores.service';
 import type { ListStorePlansForCategoryQuery, ListStoresQuery } from './stores.validation';
 import type { ListAdsQuery } from '../ads/ads.validation';
@@ -86,6 +86,10 @@ export class StoresController {
 
   confirmThawaniPayment(req: Request, res: Response) {
     return confirmThawaniStorePayment(req.user!.id, req.body.sessionId).then((data) => res.json({ data }));
+  }
+
+  cancelThawaniPayment(req: Request, res: Response) {
+    return cancelThawaniStorePayment(req.user!.id, req.body.sessionId).then((data) => res.json({ data }));
   }
 
   listForAdmin(req: Request, res: Response) {

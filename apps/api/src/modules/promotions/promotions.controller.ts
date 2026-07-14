@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 
 import { getRequiredParam } from '../../shared/utils/request';
-import { confirmThawaniPromotionPayment } from './promotion-checkout.service';
+import { confirmThawaniPromotionPayment, cancelThawaniPromotionPayment } from './promotion-checkout.service';
 import { promotionsService } from './promotions.service';
 
 export class PromotionsController {
@@ -28,6 +28,10 @@ export class PromotionsController {
 
   async confirmThawaniPayment(req: Request, res: Response) {
     res.json({ data: await confirmThawaniPromotionPayment(req.user!.id, req.body.sessionId) });
+  }
+
+  async cancelThawaniPayment(req: Request, res: Response) {
+    res.json({ data: await cancelThawaniPromotionPayment(req.user!.id, req.body.sessionId) });
   }
 }
 

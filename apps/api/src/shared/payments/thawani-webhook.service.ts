@@ -1,4 +1,4 @@
-import { BannerRequestStatus, PaymentStatus } from '@prisma/client';
+import { BannerRequestStatus, PaymentStatus, StoreSubscriptionStatus } from '@prisma/client';
 
 import { AppEvents } from '../../shared/constants/events';
 import { notifyAdminBannerRequestPending } from '../../modules/banner-requests/banner-admin-notifications';
@@ -143,6 +143,82 @@ export async function completeThawaniPaymentBySession(sessionId: string, options
       request,
       alreadyPaid: false
     };
+  }
+
+  return { handled: false as const, reason: 'unsupported_payment' as const };
+}
+
+function shouldRollbackAdOnCancel(metadata?: Record<string, string | number>) {
+  return metadata?.['rollback ad on cancel'] === 'yes';
+}
+
+export async function cancelThawaniPaymentBySession(sessionId: string, options?: { userId?: string }) {
+  const payment = await storesRepository.findPaymentBySessionId(sessionId);
+  if (!payment) {
+    return { handled: false as const, reason: 'payment_not_found' as const };
+  }
+
+  if (options?.userId && payment.userId !== options.userId) {
+    return { handled: false as const, reason: 'forbidden' as const };
+  }
+
+  if (payment.status === PaymentStatus.PAID) {
+    return { handled: false as const, reason: 'already_paid' as const };
+  }
+
+  if (payment.status === PaymentStatus.FAILED) {
+    return { handled: true as const, kind: 'already_cancelled' as const };
+  }
+
+  let sessionMetadata: Record<string, string | number> | undefined;
+  if (!shouldSkipThawaniCheckout()) {
+    try {
+      const session = await retrieveThawaniCheckoutSession(sessionId);
+      if (isThawaniSessionPaid(session)) {
+        return { handled: false as const, reason: 'already_paid' as const };
+      }
+      sessionMetadata = session.data?.metadata;
+    } catch (error) {
+      console.warn('[thawani-payment] could not verify session before cancel', { sessionId, error });
+    }
+  }
+
+  await storesRepository.markPaymentFailed(payment.id);
+
+  if (payment.storeSubscriptionId) {
+    const subscription = await storesRepository.findSubscriptionForPaymentCancel(payment.storeSubscriptionId);
+    const paymentAction = resolveStorePaymentAction(sessionMetadata);
+
+    if (
+      subscription &&
+      paymentAction === 'create' &&
+      subscription.status === StoreSubscriptionStatus.PENDING &&
+      !subscription.store.isActive &&
+      !subscription.store.deletedAt
+    ) {
+      await storesRepository.rollbackPendingStoreCreation(subscription.storeId);
+      return { handled: true as const, kind: 'store' as const, rolledBack: true };
+    }
+
+    return { handled: true as const, kind: 'store' as const, rolledBack: false };
+  }
+
+  if (payment.promotionId) {
+    const promotion = await promotionsRepository.findPromotionForPaymentCancel(payment.promotionId);
+    if (promotion && !promotion.isActive) {
+      await promotionsRepository.rollbackPendingPromotion(payment.promotionId, {
+        deleteAd: shouldRollbackAdOnCancel(sessionMetadata)
+      });
+    }
+
+    return { handled: true as const, kind: 'promotion' as const, rolledBack: true };
+  }
+
+  if (payment.bannerRequestId) {
+    await bannerRequestsRepository.updateStatus(payment.bannerRequestId, {
+      status: BannerRequestStatus.CANCELLED
+    });
+    return { handled: true as const, kind: 'banner' as const, rolledBack: true };
   }
 
   return { handled: false as const, reason: 'unsupported_payment' as const };

@@ -9,6 +9,7 @@ import { SiteFooter } from '@/components/home/site-footer';
 import { SiteHeaderSearch, UserSiteHeader } from '@/components/navigation/user-site-header';
 import { api } from '@/lib/api';
 import { getValidationFieldErrors, resolveApiErrorMessage } from '@/lib/api-errors';
+import { storePendingThawaniSession } from '@/lib/thawani-session';
 import { buildCategoryTree, flattenCategoryTreeWithPath } from '@/lib/category-tree';
 import {
   parseListingPrice,
@@ -349,15 +350,17 @@ export function AddListingPage() {
 
       if (selectedPlan && !isStorePublish) {
         const promotionResponse = await api.post<{
-          data: { checkout?: { paymentUrl?: string; paid?: boolean } };
+          data: { checkout?: { paymentUrl?: string; sessionId?: string; paid?: boolean } };
         }>(
           '/promotions/ad-promotions',
-          { adId: adResponse.data.data.id, planId: selectedPlan.id, days: duration },
+          { adId: adResponse.data.data.id, planId: selectedPlan.id, days: duration, rollbackAdOnCancel: true },
           { headers: authHeaders, params: { locale } }
         );
 
         const paymentUrl = promotionResponse.data.data.checkout?.paymentUrl;
+        const sessionId = promotionResponse.data.data.checkout?.sessionId;
         if (paymentUrl) {
+          if (sessionId) storePendingThawaniSession(sessionId);
           window.location.href = paymentUrl;
           return;
         }

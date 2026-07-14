@@ -308,6 +308,25 @@ export class StoresRepository {
     });
   }
 
+  markPaymentFailed(paymentId: string) {
+    return prisma.payment.update({
+      where: { id: paymentId },
+      data: { status: 'FAILED' }
+    });
+  }
+
+  findSubscriptionForPaymentCancel(subscriptionId: string) {
+    return prisma.storeSubscription.findFirst({
+      where: { id: subscriptionId, deletedAt: null },
+      select: {
+        id: true,
+        status: true,
+        storeId: true,
+        store: { select: { id: true, isActive: true, deletedAt: true } }
+      }
+    });
+  }
+
   hasUserUsedPlanTrial(userId: string, planId: string) {
     return prisma.storeSubscription
       .count({

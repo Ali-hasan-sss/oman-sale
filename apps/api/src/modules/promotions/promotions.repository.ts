@@ -201,6 +201,38 @@ export class PromotionsRepository {
     });
   }
 
+  findPromotionForPaymentCancel(promotionId: string) {
+    return prisma.adPromotion.findFirst({
+      where: { id: promotionId, deletedAt: null },
+      select: { id: true, adId: true, isActive: true, totalPrice: true }
+    });
+  }
+
+  rollbackPendingPromotion(promotionId: string, options?: { deleteAd?: boolean }) {
+    return prisma.$transaction(async (tx) => {
+      const promotion = await tx.adPromotion.findFirst({
+        where: { id: promotionId, deletedAt: null, isActive: false },
+        select: { id: true, adId: true }
+      });
+
+      if (!promotion) return null;
+
+      await tx.adPromotion.update({
+        where: { id: promotionId },
+        data: { deletedAt: new Date(), isActive: false }
+      });
+
+      if (options?.deleteAd) {
+        await tx.ad.update({
+          where: { id: promotion.adId, deletedAt: null },
+          data: { deletedAt: new Date(), status: 'ARCHIVED' }
+        });
+      }
+
+      return promotion;
+    });
+  }
+
   async promoteAd(dto: PromoteAdDto) {
     const plan = await prisma.promotionPlan.findUniqueOrThrow({ where: { id: dto.planId } });
     const startsAt = new Date();

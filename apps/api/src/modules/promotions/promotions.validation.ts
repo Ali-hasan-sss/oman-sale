@@ -21,7 +21,8 @@ export const updatePromotionPlanSchema = createPromotionPlanSchema.partial();
 export const promoteAdSchema = z.object({
   adId: z.string().uuid(),
   planId: z.string().uuid(),
-  days: z.number().int().positive()
+  days: z.number().int().positive(),
+  rollbackAdOnCancel: z.boolean().optional()
 });
 
 export const confirmThawaniPromotionPaymentSchema = z.object({

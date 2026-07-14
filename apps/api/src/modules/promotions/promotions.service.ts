@@ -49,7 +49,8 @@ export class PromotionsService {
       adTitle: pendingPromotion.ad.title,
       planName: plan.nameEn || plan.nameAr,
       totalPrice,
-      locale
+      locale,
+      rollbackAdOnCancel: dto.rollbackAdOnCancel
     });
 
     if (checkout.paid) {

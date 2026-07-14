@@ -8,7 +8,7 @@ import {
   omrToBaisa,
   shouldSkipThawaniCheckout
 } from '../../shared/payments/thawani.client';
-import { completeThawaniPaymentBySession } from '../../shared/payments/thawani-webhook.service';
+import { completeThawaniPaymentBySession, cancelThawaniPaymentBySession } from '../../shared/payments/thawani-webhook.service';
 import { ApiError } from '../../shared/utils/api-error';
 import { usersRepository } from '../users/users.repository';
 import { activateStoreSubscription } from './store-subscription.utils';
@@ -131,4 +131,16 @@ export async function confirmThawaniStorePayment(userId: string, sessionId: stri
     subscription: result.subscription,
     alreadyPaid: result.alreadyPaid
   };
+}
+
+export async function cancelThawaniStorePayment(userId: string, sessionId: string) {
+  const result = await cancelThawaniPaymentBySession(sessionId, { userId });
+
+  if (!result.handled) {
+    if (result.reason === 'forbidden') throw new ApiError(403, 'Forbidden');
+    if (result.reason === 'already_paid') throw new ApiError(400, 'Payment is already completed');
+    throw new ApiError(404, 'Payment not found');
+  }
+
+  return result;
 }

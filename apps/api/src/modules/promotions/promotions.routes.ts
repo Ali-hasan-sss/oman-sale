@@ -50,3 +50,9 @@ promotionsRoutes.post(
   validateRequest({ body: confirmThawaniPromotionPaymentSchema }),
   asyncHandler(promotionsController.confirmThawaniPayment)
 );
+promotionsRoutes.post(
+  '/payments/thawani/cancel',
+  requireAuth,
+  validateRequest({ body: confirmThawaniPromotionPaymentSchema }),
+  asyncHandler(promotionsController.cancelThawaniPayment)
+);
