@@ -1,8 +1,11 @@
-import { BannerRequestStatus, PaymentStatus, StoreSubscriptionStatus } from '@prisma/client';
+import { BannerRequestStatus, CheckoutIntentKind, CheckoutIntentStatus, PaymentStatus, StoreSubscriptionStatus } from '@prisma/client';
 
 import { AppEvents } from '../../shared/constants/events';
 import { notifyAdminBannerRequestPending } from '../../modules/banner-requests/banner-admin-notifications';
 import { bannerRequestsRepository } from '../../modules/banner-requests/banner-requests.repository';
+import { loadCheckoutIntentResult } from '../../modules/checkout/checkout.service';
+import { materializeCheckoutIntent } from '../../modules/checkout/checkout-intent-materialization.service';
+import { checkoutIntentsRepository } from '../../modules/checkout/checkout-intents.repository';
 import { promotionsRepository } from '../../modules/promotions/promotions.repository';
 import { activateStoreSubscription, extendStoreSubscription } from '../../modules/stores/store-subscription.utils';
 import { storesRepository } from '../../modules/stores/stores.repository';
@@ -57,6 +60,59 @@ async function finalizePromotionPayment(paymentId: string, sessionId: string, pr
   return promotion;
 }
 
+async function finalizeCheckoutIntentPayment(paymentId: string, sessionId: string, intentId: string) {
+  const intent = await checkoutIntentsRepository.findById(intentId);
+  if (!intent) {
+    throw new Error(`Checkout intent not found: ${intentId}`);
+  }
+
+  if (intent.status === CheckoutIntentStatus.COMPLETED && intent.result) {
+    await storesRepository.markPaymentPaid(paymentId, sessionId);
+    return { intent, result: intent.result, alreadyMaterialized: true };
+  }
+
+  const result = await materializeCheckoutIntent({
+    userId: intent.userId,
+    kind: intent.kind,
+    payload: intent.payload
+  });
+
+  await checkoutIntentsRepository.markCompleted(intentId, result);
+  await storesRepository.markPaymentPaid(paymentId, sessionId);
+
+  if ('subscriptionId' in result && typeof result.subscriptionId === 'string') {
+    await checkoutIntentsRepository.linkPaymentToStoreSubscription(paymentId, result.subscriptionId);
+  }
+
+  if ('promotionId' in result && typeof result.promotionId === 'string') {
+    await checkoutIntentsRepository.linkPaymentToPromotion(paymentId, result.promotionId);
+  }
+
+  if ('bannerRequestId' in result && typeof result.bannerRequestId === 'string') {
+    await checkoutIntentsRepository.linkPaymentToBannerRequest(paymentId, result.bannerRequestId);
+  }
+
+  return { intent, result, alreadyMaterialized: false };
+}
+
+function mapCheckoutIntentCompletion(intent: Awaited<ReturnType<typeof checkoutIntentsRepository.findById>>, result: unknown) {
+  if (!intent) return null;
+
+  if (intent.kind === CheckoutIntentKind.STORE_CREATE) {
+    return { handled: true as const, kind: 'store' as const, checkoutIntent: intent, result };
+  }
+
+  if (intent.kind === CheckoutIntentKind.LISTING_PROMOTION) {
+    return { handled: true as const, kind: 'promotion' as const, checkoutIntent: intent, result };
+  }
+
+  if (intent.kind === CheckoutIntentKind.BANNER_REQUEST) {
+    return { handled: true as const, kind: 'banner' as const, checkoutIntent: intent, result };
+  }
+
+  return null;
+}
+
 export async function completeThawaniPaymentBySession(sessionId: string, options?: { userId?: string }) {
   const payment = await storesRepository.findPaymentBySessionId(sessionId);
   if (!payment) {
@@ -65,6 +121,40 @@ export async function completeThawaniPaymentBySession(sessionId: string, options
 
   if (options?.userId && payment.userId !== options.userId) {
     return { handled: false as const, reason: 'forbidden' as const };
+  }
+
+  if (payment.checkoutIntentId) {
+    const intent = await checkoutIntentsRepository.findById(payment.checkoutIntentId);
+
+    if (!intent) {
+      return { handled: false as const, reason: 'payment_not_found' as const };
+    }
+
+    if (payment.status === PaymentStatus.PAID || intent.status === CheckoutIntentStatus.COMPLETED) {
+      const loaded = await loadCheckoutIntentResult(intent.kind, intent.result ?? {});
+      return {
+        ...mapCheckoutIntentCompletion(intent, intent.result)!,
+        payment,
+        alreadyPaid: true,
+        ...loaded
+      };
+    }
+
+    if (!shouldSkipThawaniCheckout()) {
+      const session = await retrieveThawaniCheckoutSession(sessionId);
+      if (!isThawaniSessionPaid(session)) {
+        return { handled: false as const, reason: 'not_paid' as const };
+      }
+    }
+
+    const finalized = await finalizeCheckoutIntentPayment(payment.id, sessionId, payment.checkoutIntentId);
+    const loaded = await loadCheckoutIntentResult(finalized.intent.kind, finalized.result);
+    return {
+      ...mapCheckoutIntentCompletion(finalized.intent, finalized.result)!,
+      payment: { ...payment, status: PaymentStatus.PAID },
+      alreadyPaid: false,
+      ...loaded
+    };
   }
 
   if (payment.status === PaymentStatus.PAID) {
@@ -184,6 +274,11 @@ export async function cancelThawaniPaymentBySession(sessionId: string, options?:
   }
 
   await storesRepository.markPaymentFailed(payment.id);
+
+  if (payment.checkoutIntentId) {
+    await checkoutIntentsRepository.markCancelled(payment.checkoutIntentId);
+    return { handled: true as const, kind: 'checkout_intent' as const, rolledBack: true };
+  }
 
   if (payment.storeSubscriptionId) {
     const subscription = await storesRepository.findSubscriptionForPaymentCancel(payment.storeSubscriptionId);

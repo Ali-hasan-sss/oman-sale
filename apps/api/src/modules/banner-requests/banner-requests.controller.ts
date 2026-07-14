@@ -28,6 +28,10 @@ export class BannerRequestsController {
     res.json({ data: await bannerRequestsService.confirmPayment(req.user!.id, req.body.sessionId) });
   }
 
+  async cancelPayment(req: Request, res: Response) {
+    res.json({ data: await bannerRequestsService.cancelPayment(req.user!.id, req.body.sessionId) });
+  }
+
   async listForAdmin(req: Request, res: Response) {
     res.json({ data: await bannerRequestsService.listForAdmin(req.query as unknown as ListBannerRequestsQuery) });
   }

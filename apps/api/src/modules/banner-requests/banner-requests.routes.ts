@@ -40,3 +40,10 @@ bannerRequestsRoutes.post(
   validateRequest({ body: confirmThawaniBannerPaymentSchema }),
   asyncHandler(bannerRequestsController.confirmPayment)
 );
+bannerRequestsRoutes.post(
+  '/payments/thawani/cancel',
+  requireAuth,
+  ensureActiveUser,
+  validateRequest({ body: confirmThawaniBannerPaymentSchema }),
+  asyncHandler(bannerRequestsController.cancelPayment)
+);

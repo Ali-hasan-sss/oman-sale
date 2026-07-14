@@ -10,6 +10,7 @@ import { UserSiteHeader } from '@/components/navigation/user-site-header';
 import { api } from '@/lib/api';
 import { resolveApiErrorMessage } from '@/lib/api-errors';
 import { hasBannerAdPrefill, readBannerAdPrefill } from '@/lib/banner-ad-prefill';
+import { storePendingThawaniSession } from '@/lib/thawani-session';
 import { useI18n } from '@/lib/i18n';
 import { getUserAccessToken } from '@/lib/user-auth';
 
@@ -137,8 +138,8 @@ export function BannerAdRequestPage() {
     try {
       const response = await api.post<{
         data: {
-          request: { id: string };
-          checkout: { paid?: boolean; paymentUrl?: string };
+          request?: { id: string };
+          checkout: { paid?: boolean; paymentUrl?: string; sessionId?: string };
         };
       }>('/banner-requests', {
         imageUrl,
@@ -149,7 +150,9 @@ export function BannerAdRequestPage() {
       });
 
       const paymentUrl = response.data.data.checkout.paymentUrl;
+      const sessionId = response.data.data.checkout.sessionId;
       if (paymentUrl) {
+        if (sessionId) storePendingThawaniSession(sessionId);
         window.location.href = paymentUrl;
         return;
       }

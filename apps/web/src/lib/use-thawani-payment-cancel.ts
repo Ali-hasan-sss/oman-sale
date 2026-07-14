@@ -7,7 +7,10 @@ import { api } from '@/lib/api';
 import { resolvePendingThawaniSession } from '@/lib/thawani-session';
 import { getUserAccessToken } from '@/lib/user-auth';
 
-type CancelEndpoint = '/stores/payments/thawani/cancel' | '/promotions/payments/thawani/cancel';
+type CancelEndpoint =
+  | '/stores/payments/thawani/cancel'
+  | '/promotions/payments/thawani/cancel'
+  | '/banner-requests/payments/thawani/cancel';
 
 type UseThawaniPaymentCancelOptions = {
   cancelEndpoint: CancelEndpoint;

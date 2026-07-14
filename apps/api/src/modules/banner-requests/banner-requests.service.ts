@@ -2,7 +2,9 @@ import { BannerRequestStatus } from '@prisma/client';
 
 import { ApiError } from '../../shared/utils/api-error';
 import { resolveMediaUrl } from '../../shared/utils/media-reference';
-import { checkoutBannerRequest, confirmThawaniBannerPayment } from './banner-checkout.service';
+import type { BannerRequestIntentPayload } from '../checkout/checkout-intent-materialization.service';
+import { startBannerRequestCheckout } from '../checkout/paid-checkout.service';
+import { cancelThawaniBannerPayment, confirmThawaniBannerPayment } from './banner-checkout.service';
 import { bannerRequestsRepository } from './banner-requests.repository';
 import type {
   CreateBannerRequestInput,
@@ -99,30 +101,32 @@ export class BannerRequestsService {
   async createRequest(userId: string, input: CreateBannerRequestInput, locale?: 'ar' | 'en') {
     const quote = await this.quotePrice(input.durationDays);
 
-    const request = await bannerRequestsRepository.createRequest({
-      userId,
+    const payload: BannerRequestIntentPayload = {
       imageUrl: input.imageUrl.trim(),
       linkUrl: input.linkUrl.trim(),
       textAr: input.textAr?.trim() || null,
       textEn: input.textEn?.trim() || null,
       durationDays: input.durationDays,
-      totalPrice: quote.totalPrice,
-      status: BannerRequestStatus.PENDING_PAYMENT
-    });
+      totalPrice: quote.totalPrice
+    };
 
-    const checkout = await checkoutBannerRequest({
-      userId,
-      requestId: request.id,
-      totalPrice: quote.totalPrice,
-      locale
-    });
+    const checkout = await startBannerRequestCheckout({ userId, payload, locale });
 
-    const fullRequest = await bannerRequestsRepository.findById(request.id);
-    if (!fullRequest) throw new ApiError(500, 'Failed to create banner request');
+    if (checkout.paid && checkout.result?.bannerRequestId) {
+      const fullRequest = await bannerRequestsRepository.findById(checkout.result.bannerRequestId);
+      if (!fullRequest) throw new ApiError(500, 'Failed to create banner request');
+      return {
+        request: mapRequest(fullRequest),
+        checkout: { paid: true }
+      };
+    }
 
     return {
-      request: mapRequest(fullRequest),
-      checkout
+      checkout: {
+        paid: false,
+        paymentUrl: checkout.paymentUrl,
+        sessionId: checkout.sessionId
+      }
     };
   }
 
@@ -186,6 +190,10 @@ export class BannerRequestsService {
       request: result.request ? mapRequest(result.request) : null,
       alreadyPaid: result.alreadyPaid
     };
+  }
+
+  async cancelPayment(userId: string, sessionId: string) {
+    return cancelThawaniBannerPayment(userId, sessionId);
   }
 }
 

@@ -109,13 +109,14 @@ export async function confirmThawaniPromotionPayment(userId: string, sessionId: 
     throw new ApiError(404, 'Payment not found');
   }
 
-  if (result.kind !== 'promotion' || !result.promotion) {
+  if (result.kind !== 'promotion') {
     throw new ApiError(404, 'Payment not found');
   }
 
   return {
     payment: result.payment,
-    promotion: result.promotion,
+    promotion: 'promotion' in result ? result.promotion : undefined,
+    adId: 'adId' in result ? result.adId : undefined,
     alreadyPaid: result.alreadyPaid
   };
 }

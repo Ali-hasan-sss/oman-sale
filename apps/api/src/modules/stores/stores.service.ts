@@ -16,6 +16,8 @@ import {
   findActiveNonTrialSubscription
 } from './store-plan-activation.utils';
 import { checkoutStoreSubscription } from './store-checkout.service';
+import { startStoreCreateCheckout } from '../checkout/paid-checkout.service';
+import type { StoreCreateIntentPayload } from '../checkout/checkout-intent-materialization.service';
 import {
   applyStoreListingPromotion,
   resolveStoreListingLimit
@@ -268,7 +270,11 @@ export class StoresService {
     await this.assertStoreType(dto.storeTypeId);
     const resolved = await this.resolvePricing(dto.planId, dto.rootCategoryId, dto.billingPeriod);
 
-    const { store, subscription } = await storesRepository.create(userId, dto, {
+    const trialEligible =
+      resolved.plan.trialDays > 0 && !(await storesRepository.hasUserUsedPlanTrial(userId, dto.planId));
+    const activationMode = dto.activationMode ?? (trialEligible ? 'trial' : 'plan');
+
+    const subscriptionData = {
       planId: dto.planId,
       pricingId: resolved.pricing.id,
       billingPeriod: dto.billingPeriod,
@@ -276,18 +282,14 @@ export class StoresService {
       discountAmount: resolved.discountAmount,
       finalPrice: resolved.finalPrice,
       maxListings: resolved.pricing.maxListings
-    });
-
-    const trialEligible =
-      resolved.plan.trialDays > 0 && !(await storesRepository.hasUserUsedPlanTrial(userId, dto.planId));
-    const activationMode = dto.activationMode ?? (trialEligible ? 'trial' : 'plan');
+    };
 
     if (activationMode === 'trial') {
       if (!trialEligible) {
-        await storesRepository.rollbackPendingStoreCreation(store.id);
         throw new ApiError(400, 'Trial is not available for this plan', ErrorCodes.VALIDATION_FAILED);
       }
 
+      const { store, subscription } = await storesRepository.create(userId, dto, subscriptionData);
       await activateStoreTrialSubscription(subscription.id, resolved.plan.trialDays);
       return {
         store: await storesRepository.findById(store.id),
@@ -302,6 +304,7 @@ export class StoresService {
     assertAdminFreeBillingPeriod(resolved.plan, dto.billingPeriod);
 
     if (canActivateStorePlanWithoutPayment(resolved.plan, dto.billingPeriod, resolved.finalPrice)) {
+      const { store, subscription } = await storesRepository.create(userId, dto, subscriptionData);
       await activateStoreSubscription(subscription.id);
       return {
         store: await storesRepository.findById(store.id),
@@ -313,20 +316,28 @@ export class StoresService {
       };
     }
 
-    const checkout = await checkoutStoreSubscription({
+    const payload: StoreCreateIntentPayload = {
+      dto,
+      subscription: subscriptionData
+    };
+
+    const checkout = await startStoreCreateCheckout({
       userId,
-      subscriptionId: subscription.id,
-      storeName: this.resolveStoreDisplayName(store, locale),
-      finalPrice: resolved.finalPrice,
-      locale,
-      paymentAction: 'create',
-      flow: 'create'
+      payload,
+      storeName: this.resolveStoreDisplayName(
+        { nameAr: dto.nameAr, nameEn: dto.nameEn },
+        locale
+      ),
+      locale
     });
 
     return {
-      store: await storesRepository.findById(store.id),
-      subscription,
-      ...this.buildPaidCheckoutResponse(checkout),
+      checkout: {
+        activated: checkout.paid,
+        paymentUrl: checkout.paymentUrl,
+        sessionId: checkout.sessionId
+      },
+      requiresPayment: !checkout.paid,
       isFreePlan: false,
       isTrial: false
     };

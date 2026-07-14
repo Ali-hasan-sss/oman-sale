@@ -330,30 +330,30 @@ export function AddListingPage() {
     setIsSubmitting(true);
 
     try {
-      const adResponse = await api.post<{ data: CreatedAd }>(
-        '/ads',
-        {
-          title: title.trim(),
-          description: description.trim(),
-          type: selectedCategory.type,
-          price: parseListingPrice(price),
-          currency: 'OMR',
-          city,
-          wilayah,
-          categoryId,
-          imageUrls,
-          videoUrl: videoUrl ?? undefined,
-          ...(isStorePublish && ownerStore ? { storeId: ownerStore.id } : {})
-        },
-        { headers: authHeaders }
-      );
+      const adPayload = {
+        title: title.trim(),
+        description: description.trim(),
+        type: selectedCategory.type,
+        price: parseListingPrice(price),
+        currency: 'OMR',
+        city,
+        wilayah,
+        categoryId,
+        imageUrls,
+        videoUrl: videoUrl ?? undefined,
+        ...(isStorePublish && ownerStore ? { storeId: ownerStore.id } : {})
+      };
 
       if (selectedPlan && !isStorePublish) {
         const promotionResponse = await api.post<{
           data: { checkout?: { paymentUrl?: string; sessionId?: string; paid?: boolean } };
         }>(
-          '/promotions/ad-promotions',
-          { adId: adResponse.data.data.id, planId: selectedPlan.id, days: duration, rollbackAdOnCancel: true },
+          '/checkout/paid-listings',
+          {
+            ad: adPayload,
+            planId: selectedPlan.id,
+            days: duration
+          },
           { headers: authHeaders, params: { locale } }
         );
 
@@ -364,7 +364,13 @@ export function AddListingPage() {
           window.location.href = paymentUrl;
           return;
         }
+
+        setMessage(text.success);
+        router.push(localizedPath('/my-listings'));
+        return;
       }
+
+      await api.post<{ data: CreatedAd }>('/ads', adPayload, { headers: authHeaders });
 
       setMessage(text.success);
       router.push(localizedPath('/my-listings'));

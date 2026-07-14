@@ -122,13 +122,14 @@ export async function confirmThawaniStorePayment(userId: string, sessionId: stri
     throw new ApiError(404, 'Payment not found');
   }
 
-  if (result.kind !== 'store' || !result.subscription) {
+  if (result.kind !== 'store') {
     throw new ApiError(404, 'Payment not found');
   }
 
   return {
     payment: result.payment,
-    subscription: result.subscription,
+    subscription: 'subscription' in result ? result.subscription : undefined,
+    store: 'store' in result ? result.store : undefined,
     alreadyPaid: result.alreadyPaid
   };
 }

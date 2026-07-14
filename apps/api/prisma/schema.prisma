@@ -69,6 +69,18 @@ enum PaymentProvider {
   PAYPAL
 }
 
+enum CheckoutIntentKind {
+  LISTING_PROMOTION
+  STORE_CREATE
+  BANNER_REQUEST
+}
+
+enum CheckoutIntentStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
 enum MessageType {
   TEXT
   IMAGE
@@ -204,6 +216,7 @@ model User {
   authCodes        AuthVerificationCode[]
   stores           Store[]
   bannerRequests   BannerRequest[]
+  checkoutIntents  CheckoutIntent[]
   articleComments  ArticleComment[]
   articleReactions ArticleReaction[]
   articleSaves     ArticleSave[]
@@ -435,6 +448,24 @@ model AdImage {
   @@index([deletedAt])
 }
 
+model CheckoutIntent {
+  id        String               @id @default(uuid())
+  userId    String
+  user      User                 @relation(fields: [userId], references: [id])
+  kind      CheckoutIntentKind
+  payload   Json
+  amount    Decimal              @db.Decimal(12, 3)
+  status    CheckoutIntentStatus @default(PENDING)
+  result    Json?
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  payment   Payment?
+
+  @@index([userId, status])
+  @@index([status, createdAt])
+}
+
 model Payment {
   id            String          @id @default(uuid())
   amount        Decimal         @db.Decimal(12, 3)
@@ -458,11 +489,14 @@ model Payment {
   storeSubscription   StoreSubscription? @relation(fields: [storeSubscriptionId], references: [id])
   bannerRequestId     String?   @unique
   bannerRequest       BannerRequest? @relation(fields: [bannerRequestId], references: [id])
+  checkoutIntentId    String?   @unique
+  checkoutIntent      CheckoutIntent? @relation(fields: [checkoutIntentId], references: [id])
 
   @@index([status])
   @@index([provider])
   @@index([userId])
   @@index([promotionId])
+  @@index([checkoutIntentId])
   @@index([createdAt])
   @@index([deletedAt])
 }
