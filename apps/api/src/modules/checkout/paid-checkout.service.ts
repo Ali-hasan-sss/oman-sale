@@ -16,7 +16,8 @@ import {
   materializeCheckoutIntent,
   type BannerRequestIntentPayload,
   type ListingPromotionIntentPayload,
-  type StoreCreateIntentPayload
+  type StoreCreateIntentPayload,
+  type StoreUpgradeIntentPayload
 } from './checkout-intent-materialization.service';
 
 export type PaidCheckoutResult = {
@@ -31,7 +32,11 @@ export type PaidCheckoutResult = {
 type StartCheckoutInput = {
   userId: string;
   kind: CheckoutIntentKind;
-  payload: StoreCreateIntentPayload | ListingPromotionIntentPayload | BannerRequestIntentPayload;
+  payload:
+    | StoreCreateIntentPayload
+    | StoreUpgradeIntentPayload
+    | ListingPromotionIntentPayload
+    | BannerRequestIntentPayload;
   amount: number;
   productName: string;
   successUrl: string;
@@ -153,6 +158,27 @@ export async function startStoreCreateCheckout(input: {
     cancelUrl: `${env.WEB_URL}${localePrefix}/stores/create/cancel`,
     locale: input.locale,
     metadataExtra: { 'payment action': 'create' }
+  });
+}
+
+export async function startStoreUpgradeCheckout(input: {
+  userId: string;
+  payload: StoreUpgradeIntentPayload;
+  storeName: string;
+  locale?: 'ar' | 'en';
+}) {
+  const localePrefix = getLocalePrefix(input.locale);
+
+  return startPaidCheckout({
+    userId: input.userId,
+    kind: CheckoutIntentKind.STORE_UPGRADE,
+    payload: input.payload,
+    amount: input.payload.subscription.finalPrice,
+    productName: input.storeName,
+    successUrl: `${env.WEB_URL}${localePrefix}/stores/payment/success`,
+    cancelUrl: `${env.WEB_URL}${localePrefix}/stores/payment/cancel`,
+    locale: input.locale,
+    metadataExtra: { 'payment action': 'upgrade' }
   });
 }
 

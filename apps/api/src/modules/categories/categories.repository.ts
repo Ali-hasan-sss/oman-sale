@@ -83,8 +83,82 @@ export class CategoriesRepository {
 
   hasChildren(id: string) {
     return prisma.category
-      .count({ where: { parentId: id, deletedAt: null } })
+      .count({ where: { parentId: id, deletedAt: null, isActive: true } })
       .then((count) => count > 0);
+  }
+
+  async collectCategoryPathIds(categoryId: string) {
+    const pathIds: string[] = [];
+    let currentId: string | null = categoryId;
+
+    while (currentId) {
+      pathIds.unshift(currentId);
+
+      const category: { parentId: string | null } | null = await prisma.category.findFirst({
+        where: { id: currentId, deletedAt: null },
+        select: { parentId: true }
+      });
+
+      if (!category) break;
+      currentId = category.parentId;
+    }
+
+    return pathIds;
+  }
+
+  listFiltersForPathIds(pathIds: string[], locale: 'ar' | 'en', includeInactive = false) {
+    if (pathIds.length === 0) return Promise.resolve([]);
+
+    return prisma.categoryFilter
+      .findMany({
+        where: {
+          categoryId: { in: pathIds },
+          deletedAt: null,
+          ...(!includeInactive && { isActive: true })
+        },
+        include: {
+          options: {
+            where: {
+              deletedAt: null,
+              ...(!includeInactive && { isActive: true })
+            },
+            orderBy: [{ sortOrder: 'asc' }, { labelAr: 'asc' }]
+          }
+        },
+        orderBy: [{ sortOrder: 'asc' }, { titleAr: 'asc' }]
+      })
+      .then((filters) => {
+        const categoryOrder = new Map(pathIds.map((id, index) => [id, index]));
+
+        return filters
+          .sort((a, b) => {
+            const categoryDiff = (categoryOrder.get(a.categoryId) ?? 0) - (categoryOrder.get(b.categoryId) ?? 0);
+            if (categoryDiff !== 0) return categoryDiff;
+            return a.sortOrder - b.sortOrder;
+          })
+          .map((filter) => ({
+            ...filter,
+            title: locale === 'en' ? filter.titleEn : filter.titleAr,
+            options: filter.options.map((option) => ({
+              ...option,
+              label: locale === 'en' ? option.labelEn : option.labelAr
+            }))
+          }));
+      });
+  }
+
+  findActiveFilterOptions(optionIds: string[]) {
+    if (optionIds.length === 0) return Promise.resolve([]);
+
+    return prisma.categoryFilterOption.findMany({
+      where: {
+        id: { in: optionIds },
+        deletedAt: null,
+        isActive: true,
+        filter: { deletedAt: null, isActive: true }
+      },
+      select: { id: true, filterId: true }
+    });
   }
 
   async isUnderAncestor(ancestorId: string, nodeId: string) {

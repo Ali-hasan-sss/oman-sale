@@ -16,8 +16,8 @@ import {
   findActiveNonTrialSubscription
 } from './store-plan-activation.utils';
 import { checkoutStoreSubscription } from './store-checkout.service';
-import { startStoreCreateCheckout } from '../checkout/paid-checkout.service';
-import type { StoreCreateIntentPayload } from '../checkout/checkout-intent-materialization.service';
+import { startStoreCreateCheckout, startStoreUpgradeCheckout } from '../checkout/paid-checkout.service';
+import type { StoreCreateIntentPayload, StoreUpgradeIntentPayload } from '../checkout/checkout-intent-materialization.service';
 import {
   applyStoreListingPromotion,
   resolveStoreListingLimit
@@ -507,6 +507,39 @@ export class StoresService {
 
     assertAdminFreeBillingPeriod(resolved.plan, dto.billingPeriod);
 
+    assertAdminFreeBillingPeriod(resolved.plan, dto.billingPeriod);
+
+    if (!canActivateStorePlanWithoutPayment(resolved.plan, dto.billingPeriod, resolved.finalPrice)) {
+      const payload: StoreUpgradeIntentPayload = {
+        storeId: id,
+        subscription: {
+          planId: dto.planId,
+          pricingId: resolved.pricing.id,
+          billingPeriod: dto.billingPeriod,
+          basePrice: resolved.basePrice,
+          discountAmount: resolved.discountAmount,
+          finalPrice: resolved.finalPrice,
+          maxListings: resolved.pricing.maxListings
+        }
+      };
+
+      const checkout = await startStoreUpgradeCheckout({
+        userId,
+        payload,
+        storeName: this.resolveStoreDisplayName(store, _locale),
+        locale: _locale
+      });
+
+      return {
+        ...this.buildPaidCheckoutResponse({
+          activated: checkout.paid,
+          paymentUrl: checkout.paymentUrl,
+          sessionId: checkout.sessionId
+        }),
+        isFreePlan: false
+      };
+    }
+
     await storesRepository.deactivateActiveSubscriptions(id);
 
     const subscription = await storesRepository.createSubscription(id, {
@@ -518,24 +551,6 @@ export class StoresService {
       finalPrice: resolved.finalPrice,
       maxListings: resolved.pricing.maxListings
     });
-
-    if (!canActivateStorePlanWithoutPayment(resolved.plan, dto.billingPeriod, resolved.finalPrice)) {
-      const checkout = await checkoutStoreSubscription({
-        userId,
-        subscriptionId: subscription.id,
-        storeName: this.resolveStoreDisplayName(store, _locale),
-        finalPrice: resolved.finalPrice,
-        locale: _locale,
-        paymentAction: 'upgrade',
-        flow: 'manage'
-      });
-
-      return {
-        subscription,
-        ...this.buildPaidCheckoutResponse(checkout),
-        isFreePlan: false
-      };
-    }
 
     await activateStoreSubscription(subscription.id);
 

@@ -4,6 +4,7 @@ import { AppEvents } from '../../shared/constants/events';
 import { createSlug } from '../../shared/utils/slug';
 import { eventBus } from '../../shared/utils/event-bus';
 import type { CreateAdDto } from '../ads/ads.validation';
+import { assertValidAdCategorySelection } from '../ads/ads-category-validation';
 import { adsRepository } from '../ads/ads.repository';
 import { notifyAdminBannerRequestPending } from '../banner-requests/banner-admin-notifications';
 import { bannerRequestsRepository } from '../banner-requests/banner-requests.repository';
@@ -11,7 +12,7 @@ import { promotionsRepository } from '../promotions/promotions.repository';
 import { activateStoreSubscription } from '../stores/store-subscription.utils';
 import { storesRepository } from '../stores/stores.repository';
 import { storesService } from '../stores/stores.service';
-import type { CreateStoreDto } from '../stores/stores.validation';
+import type { CreateStoreDto, SubscribeStoreDto } from '../stores/stores.validation';
 
 export type StoreCreateIntentPayload = {
   dto: CreateStoreDto;
@@ -26,10 +27,24 @@ export type StoreCreateIntentPayload = {
   };
 };
 
+export type StoreUpgradeIntentPayload = {
+  storeId: string;
+  subscription: {
+    planId: string;
+    pricingId: string;
+    billingPeriod: SubscribeStoreDto['billingPeriod'];
+    basePrice: number;
+    discountAmount: number;
+    finalPrice: number;
+    maxListings: number;
+  };
+};
+
 export type ListingPromotionIntentPayload = {
-  ad: CreateAdDto;
   planId: string;
   days: number;
+  ad?: CreateAdDto;
+  adId?: string;
 };
 
 export type BannerRequestIntentPayload = {
@@ -51,6 +66,8 @@ export async function materializeCheckoutIntent(input: MaterializeInput) {
   switch (input.kind) {
     case CheckoutIntentKind.STORE_CREATE:
       return materializeStoreCreate(input.userId, input.payload as StoreCreateIntentPayload);
+    case CheckoutIntentKind.STORE_UPGRADE:
+      return materializeStoreUpgrade(input.userId, input.payload as StoreUpgradeIntentPayload);
     case CheckoutIntentKind.LISTING_PROMOTION:
       return materializeListingPromotion(input.userId, input.payload as ListingPromotionIntentPayload);
     case CheckoutIntentKind.BANNER_REQUEST:
@@ -70,10 +87,52 @@ async function materializeStoreCreate(userId: string, payload: StoreCreateIntent
   };
 }
 
+async function materializeStoreUpgrade(userId: string, payload: StoreUpgradeIntentPayload) {
+  const store = await storesRepository.findById(payload.storeId);
+  if (!store || store.userId !== userId) {
+    throw new Error('Store not found');
+  }
+
+  await storesRepository.deactivateActiveSubscriptions(payload.storeId);
+  const subscription = await storesRepository.createSubscription(payload.storeId, payload.subscription);
+  await activateStoreSubscription(subscription.id);
+
+  return {
+    storeId: payload.storeId,
+    subscriptionId: subscription.id
+  };
+}
+
 async function materializeListingPromotion(userId: string, payload: ListingPromotionIntentPayload) {
+  if (payload.adId) {
+    const ad = await promotionsRepository.findAdForPromotion(payload.adId);
+    if (!ad || ad.userId !== userId) {
+      throw new Error('Ad not found');
+    }
+
+    const promotion = await promotionsRepository.promoteAd({
+      adId: payload.adId,
+      planId: payload.planId,
+      days: payload.days
+    });
+
+    eventBus.emit(AppEvents.PROMOTION_ACTIVATED, promotion);
+
+    return {
+      adId: payload.adId,
+      promotionId: promotion.id
+    };
+  }
+
+  if (!payload.ad) {
+    throw new Error('Listing promotion payload is missing ad data');
+  }
+
   if (payload.ad.storeId) {
     await storesService.assertCanPublishAsStore(userId, payload.ad.storeId);
   }
+
+  await assertValidAdCategorySelection(payload.ad.categoryId, payload.ad.filterOptionIds ?? []);
 
   const slug = `${createSlug(payload.ad.title)}-${Date.now()}`;
   const ad = await adsRepository.create(userId, slug, payload.ad);

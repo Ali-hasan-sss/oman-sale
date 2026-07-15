@@ -10,7 +10,14 @@ import { SiteHeaderSearch, UserSiteHeader } from '@/components/navigation/user-s
 import { api } from '@/lib/api';
 import { getValidationFieldErrors, resolveApiErrorMessage } from '@/lib/api-errors';
 import { storePendingThawaniSession } from '@/lib/thawani-session';
-import { buildCategoryTree, flattenCategoryTreeWithPath } from '@/lib/category-tree';
+import { buildCategoryTree } from '@/lib/category-tree';
+import {
+  buildSubcategoryFilterLevels,
+  getEffectiveCategoryId,
+  isSubcategoryPathComplete,
+  selectFilterOption,
+  updateSubcategoryPath
+} from '@/lib/category-subcategory-filters';
 import {
   parseListingPrice,
   sanitizePriceInput,
@@ -28,7 +35,15 @@ type Category = {
   nameAr?: string;
   nameEn?: string;
   parentId?: string | null;
+  sortOrder?: number;
+  icon?: string | null;
   type: 'PRODUCT' | 'SERVICE' | 'JOB' | 'JOB_REQUEST' | 'LOGISTICS' | 'CONSTRUCTION';
+};
+
+type CategoryFilter = {
+  id: string;
+  title: string;
+  options: Array<{ id: string; label: string }>;
 };
 
 type PromotionPlan = {
@@ -67,7 +82,12 @@ const labels = {
     adTitle: 'عنوان الإعلان *',
     titlePlaceholder: 'مثال: تويوتا كامري 2023 للبيع',
     category: 'الفئة *',
-    selectCategory: 'اختر الفئة',
+    selectCategory: 'اختر الفئة الرئيسية',
+    subcategories: 'الفئة الفرعية',
+    selectSubcategory: 'اختر',
+    categoryFilters: 'خصائص الفئة',
+    selectFilter: 'اختر',
+    loadingFilters: 'جاري تحميل الفلاتر...',
     city: 'المحافظة *',
     selectCity: 'اختر المحافظة',
     wilayah: 'الولاية / المنطقة *',
@@ -117,7 +137,12 @@ const labels = {
     adTitle: 'Listing title *',
     titlePlaceholder: 'Example: Toyota Camry 2023 for sale',
     category: 'Category *',
-    selectCategory: 'Select category',
+    selectCategory: 'Select main category',
+    subcategories: 'Subcategory',
+    selectSubcategory: 'Select',
+    categoryFilters: 'Category attributes',
+    selectFilter: 'Select',
+    loadingFilters: 'Loading filters...',
     city: 'Governorate *',
     selectCity: 'Select governorate',
     wilayah: 'Wilayah *',
@@ -180,7 +205,11 @@ export function AddListingPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [plans, setPlans] = useState<PromotionPlan[]>([]);
   const [title, setTitle] = useState('');
-  const [categoryId, setCategoryId] = useState('');
+  const [rootCategoryId, setRootCategoryId] = useState('');
+  const [subcategoryPath, setSubcategoryPath] = useState<string[]>([]);
+  const [selectedFilterOptionIds, setSelectedFilterOptionIds] = useState<string[]>([]);
+  const [categoryFilters, setCategoryFilters] = useState<CategoryFilter[]>([]);
+  const [isCategoryFiltersLoading, setIsCategoryFiltersLoading] = useState(false);
   const [city, setCity] = useState('');
   const [wilayah, setWilayah] = useState('');
   const [price, setPrice] = useState('');
@@ -205,6 +234,8 @@ export function AddListingPage() {
       descriptionRequired: m.errors.fieldDescriptionRequired,
       descriptionMin: m.errors.fieldDescriptionMin,
       categoryRequired: m.errors.fieldCategoryRequired,
+      subcategoryRequired: m.errors.fieldSubcategoryRequired,
+      filterRequired: m.errors.fieldCategoryFilterRequired,
       cityRequired: m.errors.fieldCityRequired,
       wilayahRequired: m.errors.fieldWilayahRequired,
       priceRequired: m.errors.fieldPriceRequired,
@@ -251,6 +282,33 @@ export function AddListingPage() {
   };
 
   const categoryTree = useMemo(() => buildCategoryTree(categories), [categories]);
+  const categoryId = useMemo(
+    () => (rootCategoryId ? getEffectiveCategoryId(rootCategoryId, subcategoryPath) : ''),
+    [rootCategoryId, subcategoryPath]
+  );
+  const subcategoryLevels = useMemo(
+    () =>
+      rootCategoryId
+        ? buildSubcategoryFilterLevels(
+            categories,
+            rootCategoryId,
+            subcategoryPath,
+            (category) => category.name,
+            text.subcategories
+          )
+        : [],
+    [categories, rootCategoryId, subcategoryPath, text.subcategories]
+  );
+  const subcategoryComplete = useMemo(
+    () => (rootCategoryId ? isSubcategoryPathComplete(categories, rootCategoryId, subcategoryPath) : false),
+    [categories, rootCategoryId, subcategoryPath]
+  );
+  const filtersComplete = useMemo(() => {
+    if (!subcategoryComplete || categoryFilters.length === 0) return true;
+    return categoryFilters.every((filter) =>
+      filter.options.some((option) => selectedFilterOptionIds.includes(option.id))
+    );
+  }, [categoryFilters, selectedFilterOptionIds, subcategoryComplete]);
   const selectedCategory = categories.find((category) => category.id === categoryId);
   const selectedPlan = plans.find((plan) => plan.id === selectedPlanId);
   const canPublishFromStore = Boolean(
@@ -273,6 +331,26 @@ export function AddListingPage() {
       ? `${inputClass} border-red-400 focus:ring-red-400`
       : inputClass;
   }
+
+  useEffect(() => {
+    if (!categoryId || !subcategoryComplete) {
+      setCategoryFilters([]);
+      setSelectedFilterOptionIds([]);
+      return;
+    }
+
+    setIsCategoryFiltersLoading(true);
+    api
+      .get<{ data: CategoryFilter[] }>(`/categories/${categoryId}/filters`, {
+        params: { locale, includeAncestors: true }
+      })
+      .then((response) => {
+        setCategoryFilters(response.data.data);
+        setSelectedFilterOptionIds([]);
+      })
+      .catch(() => setCategoryFilters([]))
+      .finally(() => setIsCategoryFiltersLoading(false));
+  }, [categoryId, locale, subcategoryComplete]);
 
   useEffect(() => {
     hydrateFromStorage();
@@ -312,7 +390,12 @@ export function AddListingPage() {
 
     const nextFieldErrors = validateListingForm(
       { title, description, categoryId, city, wilayah, price },
-      validationMessages
+      validationMessages,
+      {
+        rootCategoryId,
+        subcategoryComplete,
+        filtersComplete
+      }
     );
 
     if (Object.keys(nextFieldErrors).length > 0) {
@@ -322,7 +405,7 @@ export function AddListingPage() {
       return;
     }
 
-    if (!selectedCategory) return;
+    if (!selectedCategory || !subcategoryComplete || !filtersComplete) return;
 
     setError('');
     setMessage('');
@@ -339,6 +422,7 @@ export function AddListingPage() {
         city,
         wilayah,
         categoryId,
+        filterOptionIds: selectedFilterOptionIds,
         imageUrls,
         videoUrl: videoUrl ?? undefined,
         ...(isStorePublish && ownerStore ? { storeId: ownerStore.id } : {})
@@ -420,26 +504,118 @@ export function AddListingPage() {
             />
           </Field>
 
-          <Field error={fieldErrors.categoryId} label={text.category}>
+          <Field error={fieldErrors.categoryId || fieldErrors.subcategoryPath} label={text.category}>
             <select
-              value={categoryId}
+              value={rootCategoryId}
               onChange={(event) => {
-                setCategoryId(event.target.value);
+                setRootCategoryId(event.target.value);
+                setSubcategoryPath([]);
+                setSelectedFilterOptionIds([]);
+                setCategoryFilters([]);
                 clearFieldError('categoryId');
+                clearFieldError('subcategoryPath');
+                clearFieldError('filters');
               }}
-              className={fieldInputClass(fieldErrors.categoryId)}
+              className={fieldInputClass(fieldErrors.categoryId || fieldErrors.subcategoryPath)}
             >
               <option value="">{text.selectCategory}</option>
               {categoryTree.map((root) => (
-                <optgroup key={root.id} label={root.name}>
-                  {flattenCategoryTreeWithPath([root], (category) => category.name).map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.label}
-                    </option>
-                  ))}
-                </optgroup>
+                <option key={root.id} value={root.id}>
+                  {root.name}
+                </option>
               ))}
             </select>
+
+            {rootCategoryId
+              ? subcategoryLevels.map((level) => (
+                  <div key={`${level.parentId}-${level.levelIndex}`} className="mt-4">
+                    <p className="mb-2 text-sm font-bold text-gray-700">
+                      {level.title} *
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {level.options.map((category) => {
+                        const active = level.selectedId === category.id;
+
+                        return (
+                          <button
+                            key={category.id}
+                            type="button"
+                            onClick={() => {
+                              setSubcategoryPath((current) =>
+                                updateSubcategoryPath(current, level.levelIndex, category.id)
+                              );
+                              clearFieldError('subcategoryPath');
+                              clearFieldError('categoryId');
+                              clearFieldError('filters');
+                            }}
+                            className={`rounded-full px-4 py-2 text-sm transition ${
+                              active
+                                ? 'bg-green-600 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                          >
+                            {category.icon ? `${category.icon} ` : ''}
+                            {category.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {!level.selectedId ? (
+                      <p className="mt-2 text-sm text-gray-500">
+                        {text.selectSubcategory} {level.title}
+                      </p>
+                    ) : null}
+                  </div>
+                ))
+              : null}
+
+            {subcategoryComplete && (categoryFilters.length > 0 || isCategoryFiltersLoading) ? (
+              <div className="mt-4 space-y-4">
+                <p className="text-sm font-bold text-gray-700">{text.categoryFilters} *</p>
+                {isCategoryFiltersLoading ? (
+                  <p className="text-sm text-gray-500">{text.loadingFilters}</p>
+                ) : (
+                  categoryFilters.map((filter) => (
+                    <div key={filter.id}>
+                      <p className="mb-2 text-sm font-bold text-gray-600">{filter.title} *</p>
+                      <div className="flex flex-wrap gap-2">
+                        {filter.options.map((option) => {
+                          const active = selectedFilterOptionIds.includes(option.id);
+
+                          return (
+                            <button
+                              key={option.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedFilterOptionIds((current) =>
+                                  selectFilterOption(
+                                    current,
+                                    filter.options.map((item) => item.id),
+                                    option.id
+                                  )
+                                );
+                                clearFieldError('filters');
+                              }}
+                              className={`rounded-full px-4 py-2 text-sm transition ${
+                                active
+                                  ? 'bg-green-600 text-white'
+                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                              }`}
+                            >
+                              {option.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            ) : null}
+
+            {fieldErrors.filters ? (
+              <p className="mt-2 text-sm font-medium text-red-600">{fieldErrors.filters}</p>
+            ) : null}
           </Field>
 
           <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">

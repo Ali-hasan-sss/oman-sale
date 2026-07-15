@@ -6,6 +6,11 @@ const { DEMO_LISTING_CONTENT } = require('./seed-listings-data.cjs');
 const OMAN_CITIES = ['مسقط', 'صلالة', 'صحار', 'نزوى', 'صور', 'البريمي', 'الرستاق', 'السيب', 'الخوير', 'القرم'];
 const AREAS = ['السيب', 'الخوير', 'القرم', 'الغبرة', 'المعبيلة', 'العذيبة', 'مدينة قابوس', 'الموالح'];
 
+/** @param {string} slug */
+function isVehicleTaxonomyCategory(slug) {
+  return /^(car|moto)-(brand|model)-/.test(slug);
+}
+
 /**
  * @param {import('@prisma/client').PrismaClient} prisma
  */
@@ -48,7 +53,7 @@ async function seedListings(prisma) {
 
   const missingContent = categoryDefs
     .map((def) => def.slug)
-    .filter((slug) => !DEMO_LISTING_CONTENT[slug]);
+    .filter((slug) => !DEMO_LISTING_CONTENT[slug] && !isVehicleTaxonomyCategory(slug));
 
   if (missingContent.length) {
     throw new Error(`Missing demo listing content for categories: ${missingContent.join(', ')}`);
@@ -69,6 +74,7 @@ async function seedListings(prisma) {
     }
 
     const content = DEMO_LISTING_CONTENT[def.slug];
+    if (!content) continue;
     const city = OMAN_CITIES[index % OMAN_CITIES.length];
     const area = AREAS[index % AREAS.length];
     const views = 50 + (index * 17) % 450;

@@ -1,12 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
 
-import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
-import { getUserAccessToken } from '@/lib/user-auth';
+import { useThawaniPaymentConfirm } from '@/lib/use-thawani-payment-confirm';
 
 const labels = {
   ar: {
@@ -26,34 +23,13 @@ const labels = {
 } as const;
 
 export function BannerAdSuccessPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const { locale, localizedPath } = useI18n();
   const text = labels[locale];
-  const [message, setMessage] = useState<string>(text.confirming);
-  const [failed, setFailed] = useState(false);
 
-  useEffect(() => {
-    const token = getUserAccessToken();
-    if (!token) {
-      router.replace(localizedPath('/login'));
-      return;
-    }
-
-    const sessionId = searchParams.get('session_id');
-    if (!sessionId) {
-      setMessage(text.subtitle);
-      return;
-    }
-
-    api
-      .post('/banner-requests/payments/thawani/confirm', { sessionId })
-      .then(() => setMessage(text.subtitle))
-      .catch(() => {
-        setFailed(true);
-        setMessage(text.confirmError);
-      });
-  }, [localizedPath, router, searchParams, text.confirmError, text.subtitle]);
+  const { isConfirming, failed } = useThawaniPaymentConfirm({
+    confirmEndpoint: '/banner-requests/payments/thawani/confirm',
+    loginPath: localizedPath('/login')
+  });
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
@@ -61,7 +37,9 @@ export function BannerAdSuccessPage() {
         <h1 className="mb-3 text-3xl font-black text-green-700">
           {failed ? '!' : '✓'} {text.title}
         </h1>
-        <p className="mb-6 text-gray-600">{message}</p>
+        <p className="mb-6 text-gray-600">
+          {failed ? text.confirmError : isConfirming ? text.confirming : text.subtitle}
+        </p>
         <Link href={localizedPath('/')} className="rounded-lg bg-brand-600 px-5 py-3 font-bold text-white">
           {text.home}
         </Link>

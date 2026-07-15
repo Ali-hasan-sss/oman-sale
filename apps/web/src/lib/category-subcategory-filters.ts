@@ -70,3 +70,22 @@ export const buildSubcategoryFilterLevels = <T extends CategoryRef>(
 
   return levels;
 };
+
+export const isSubcategoryPathComplete = <T extends CategoryRef>(
+  categories: T[],
+  rootId: string,
+  selectedPath: string[]
+) => {
+  if (!rootId) return false;
+
+  const levels = buildSubcategoryFilterLevels(categories, rootId, selectedPath, () => '', '');
+  if (levels.some((level) => level.options.length > 0 && !level.selectedId)) return false;
+
+  const effectiveId = getEffectiveCategoryId(rootId, selectedPath);
+  return getDirectChildCategories(categories, effectiveId).length === 0;
+};
+
+export const selectFilterOption = (currentOptionIds: string[], filterOptionIds: string[], optionId: string) => {
+  const withoutSameFilter = currentOptionIds.filter((id) => !filterOptionIds.includes(id));
+  return [...withoutSameFilter, optionId];
+};

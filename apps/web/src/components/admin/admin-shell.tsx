@@ -1,6 +1,6 @@
 'use client';
 
-import { BadgeCheck, BarChart3, Building2, ExternalLink, FileText, Flag, FolderTree, Globe, Image, LayoutList, LayoutPanelTop, Lock, LogOut, MapPin, Megaphone, Menu, Newspaper, Store, Users, X } from 'lucide-react';
+import { BadgeCheck, BarChart3, Building2, ExternalLink, FileText, Flag, FolderTree, Gift, Globe, Image, LayoutList, LayoutPanelTop, Lock, LogOut, MapPin, Megaphone, Menu, Newspaper, Store, Users, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { FormEvent, PropsWithChildren, useEffect, useState } from 'react';
@@ -23,6 +23,7 @@ const navItems = [
   { key: 'bannerRequests', href: '/admin/banner-requests', icon: LayoutPanelTop },
   { key: 'trustBadges', href: '/admin/trust-badges', icon: BadgeCheck },
   { key: 'promotions', href: '/admin/promotions', icon: Megaphone },
+  { key: 'raffles', href: '/admin/raffles', icon: Gift },
   { key: 'storePlans', href: '/admin/store-plans', icon: Store },
   { key: 'tourism', href: '/admin/tourism', icon: MapPin },
   { key: 'articles', href: '/admin/articles', icon: Newspaper },
@@ -33,10 +34,7 @@ export function AdminShell({ children }: PropsWithChildren) {
   const { dir, locale, localizedPath, m, toggleLocale } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
-  const [isReady, setIsReady] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return Boolean(getAdminAccessToken());
-  });
+  const [isReady, setIsReady] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');

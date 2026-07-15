@@ -19,6 +19,12 @@ enum TrustBadgeStatus {
   REJECTED
 }
 
+enum RaffleStatus {
+  DRAFT
+  ACTIVE
+  ENDED
+}
+
 enum TrustIdentityDocumentType {
   NATIONAL_ID
   PASSPORT
@@ -72,6 +78,7 @@ enum PaymentProvider {
 enum CheckoutIntentKind {
   LISTING_PROMOTION
   STORE_CREATE
+  STORE_UPGRADE
   BANNER_REQUEST
 }
 
@@ -220,6 +227,8 @@ model User {
   articleComments  ArticleComment[]
   articleReactions ArticleReaction[]
   articleSaves     ArticleSave[]
+  raffleEntries    RaffleEntry[]
+  rafflePointTransactions RafflePointTransaction[]
 
   @@index([role])
   @@index([isActive, isBlocked])
@@ -525,6 +534,8 @@ model PromotionPlan {
 
   promotions       AdPromotion[]
   storePlans         StoreSubscriptionPlan[]
+  rafflePlanPoints   RafflePlanPoints[]
+  rafflePointTransactions RafflePointTransaction[]
 
   @@index([isActive])
   @@index([priorityScore])
@@ -549,6 +560,7 @@ model AdPromotion {
   plan            PromotionPlan @relation(fields: [planId], references: [id])
   payments        Payment[]
   dailyStats      AdPromotionDailyImpression[]
+  rafflePointTransaction RafflePointTransaction?
 
   @@index([planId])
   @@index([isActive])
@@ -568,6 +580,78 @@ model AdPromotionDailyImpression {
 
   @@unique([promotionId, date])
   @@index([date])
+}
+
+model Raffle {
+  id            String       @id @default(uuid())
+  titleAr       String
+  titleEn       String
+  descriptionAr String       @default("")
+  descriptionEn String       @default("")
+  startsAt      DateTime
+  endsAt        DateTime
+  status        RaffleStatus @default(DRAFT)
+  heroImageUrl  String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  deletedAt     DateTime?
+
+  planPoints   RafflePlanPoints[]
+  entries      RaffleEntry[]
+  transactions RafflePointTransaction[]
+  heroSlide    HeroSlide?
+
+  @@index([status])
+  @@index([startsAt, endsAt])
+  @@index([deletedAt])
+}
+
+model RafflePlanPoints {
+  id        String   @id @default(uuid())
+  points    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  raffleId String
+  raffle   Raffle        @relation(fields: [raffleId], references: [id], onDelete: Cascade)
+  planId   String
+  plan     PromotionPlan @relation(fields: [planId], references: [id])
+
+  @@unique([raffleId, planId])
+  @@index([raffleId])
+}
+
+model RaffleEntry {
+  id          String   @id @default(uuid())
+  totalPoints Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  raffleId String
+  raffle   Raffle @relation(fields: [raffleId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User   @relation(fields: [userId], references: [id])
+
+  @@unique([raffleId, userId])
+  @@index([raffleId, totalPoints(sort: Desc)])
+}
+
+model RafflePointTransaction {
+  id          String   @id @default(uuid())
+  points      Int
+  createdAt   DateTime @default(now())
+
+  raffleId    String
+  raffle      Raffle        @relation(fields: [raffleId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User          @relation(fields: [userId], references: [id])
+  promotionId String        @unique
+  promotion   AdPromotion   @relation(fields: [promotionId], references: [id])
+  planId      String
+  plan        PromotionPlan @relation(fields: [planId], references: [id])
+
+  @@index([raffleId])
+  @@index([userId])
 }
 
 model Favorite {
@@ -723,6 +807,8 @@ model HeroSlide {
   buttonLabelEn String
   buttonLink    String
   isActive      Boolean           @default(true)
+  raffleId      String?           @unique
+  raffle        Raffle?           @relation(fields: [raffleId], references: [id])
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 

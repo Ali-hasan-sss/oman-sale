@@ -165,9 +165,10 @@ async function main() {
   ];
 
   for (const plan of promotionPlans) {
+    // Keep admin-edited prices: only insert plans that do not exist yet.
     await prisma.promotionPlan.upsert({
       where: { name: plan.name },
-      update: plan,
+      update: {},
       create: plan
     });
   }

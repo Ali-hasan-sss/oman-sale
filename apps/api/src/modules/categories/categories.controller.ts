@@ -33,7 +33,15 @@ export class CategoriesController {
   async listFilters(req: Request, res: Response) {
     const locale = req.query.locale === 'en' ? 'en' : 'ar';
     const includeInactive = req.query.includeInactive === 'true';
-    res.json({ data: await categoriesService.listFilters(getRequiredParam(req, 'id'), locale, includeInactive) });
+    const includeAncestors = req.query.includeAncestors === 'true';
+    res.json({
+      data: await categoriesService.listFilters(
+        getRequiredParam(req, 'id'),
+        locale,
+        includeInactive,
+        includeAncestors
+      )
+    });
   }
 
   async createFilter(req: Request, res: Response) {

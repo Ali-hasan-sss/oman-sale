@@ -1,6 +1,8 @@
 import { AppEvents } from '../../shared/constants/events';
 import { ApiError } from '../../shared/utils/api-error';
 import { eventBus } from '../../shared/utils/event-bus';
+import { startListingPromotionCheckout } from '../checkout/paid-checkout.service';
+import type { ListingPromotionIntentPayload } from '../checkout/checkout-intent-materialization.service';
 import { checkoutAdPromotion } from './promotion-checkout.service';
 import { promotionsRepository } from './promotions.repository';
 import type { CreatePromotionPlanDto, PromoteAdDto, UpdatePromotionPlanDto } from './promotions.validation';
@@ -42,25 +44,26 @@ export class PromotionsService {
       return { promotion, checkout: { paid: true } };
     }
 
-    const pendingPromotion = await promotionsRepository.createPendingPromotion(dto, totalPrice);
-    const checkout = await checkoutAdPromotion({
+    const payload: ListingPromotionIntentPayload = {
+      adId: dto.adId,
+      planId: dto.planId,
+      days: dto.days
+    };
+
+    const checkout = await startListingPromotionCheckout({
       userId,
-      promotionId: pendingPromotion.id,
-      adTitle: pendingPromotion.ad.title,
+      payload,
+      adTitle: ad.title,
       planName: plan.nameEn || plan.nameAr,
       totalPrice,
-      locale,
-      rollbackAdOnCancel: dto.rollbackAdOnCancel
+      locale
     });
 
     if (checkout.paid) {
-      const promotion = await promotionsRepository.activatePromotion(pendingPromotion.id);
-      eventBus.emit(AppEvents.PROMOTION_ACTIVATED, promotion);
-      return { promotion, checkout: { paid: true } };
+      return { checkout: { paid: true } };
     }
 
     return {
-      promotion: pendingPromotion,
       checkout: {
         paid: false,
         paymentUrl: checkout.paymentUrl,

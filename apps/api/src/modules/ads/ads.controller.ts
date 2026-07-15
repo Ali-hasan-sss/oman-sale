@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 
+import { setPrivateNoStore } from '../../shared/utils/no-cache';
 import { getRequiredParam } from '../../shared/utils/request';
 import { getViewerContext } from '../../shared/utils/viewer-context';
 import { adsService } from './ads.service';
@@ -23,6 +24,7 @@ export class AdsController {
   }
 
   async listForUser(req: Request, res: Response) {
+    setPrivateNoStore(res);
     res.json({ data: await adsService.listForUser(req.user!.id, req.query as unknown as ListAdsQuery) });
   }
 

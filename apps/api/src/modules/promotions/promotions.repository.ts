@@ -50,7 +50,10 @@ export class PromotionsRepository {
   }
 
   findAdForPromotion(id: string) {
-    return prisma.ad.findFirst({ where: { id, deletedAt: null }, select: { id: true, userId: true } });
+    return prisma.ad.findFirst({
+      where: { id, deletedAt: null },
+      select: { id: true, userId: true, title: true }
+    });
   }
 
   async updatePlan(id: string, dto: UpdatePromotionPlanDto) {

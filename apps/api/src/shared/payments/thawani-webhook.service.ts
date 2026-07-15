@@ -98,7 +98,7 @@ async function finalizeCheckoutIntentPayment(paymentId: string, sessionId: strin
 function mapCheckoutIntentCompletion(intent: Awaited<ReturnType<typeof checkoutIntentsRepository.findById>>, result: unknown) {
   if (!intent) return null;
 
-  if (intent.kind === CheckoutIntentKind.STORE_CREATE) {
+  if (intent.kind === CheckoutIntentKind.STORE_CREATE || intent.kind === CheckoutIntentKind.STORE_UPGRADE) {
     return { handled: true as const, kind: 'store' as const, checkoutIntent: intent, result };
   }
 

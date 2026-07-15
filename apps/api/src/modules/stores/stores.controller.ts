@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 
+import { setPrivateNoStore } from '../../shared/utils/no-cache';
 import { getRequiredParam } from '../../shared/utils/request';
 import { confirmThawaniStorePayment, cancelThawaniStorePayment } from './store-checkout.service';
 import { storesService } from './stores.service';
@@ -33,6 +34,7 @@ export class StoresController {
   }
 
   getMine(req: Request, res: Response) {
+    setPrivateNoStore(res);
     return storesService.getMine(req.user!.id).then((data) => res.json({ data }));
   }
 

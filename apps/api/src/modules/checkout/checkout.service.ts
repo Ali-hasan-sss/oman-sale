@@ -4,6 +4,7 @@ import { AppEvents } from '../../shared/constants/events';
 import { ApiError } from '../../shared/utils/api-error';
 import { eventBus } from '../../shared/utils/event-bus';
 import type { CreateAdDto } from '../ads/ads.validation';
+import { assertValidAdCategorySelection } from '../ads/ads-category-validation';
 import { adsService } from '../ads/ads.service';
 import { promotionsRepository } from '../promotions/promotions.repository';
 import { storesService } from '../stores/stores.service';
@@ -34,6 +35,8 @@ export class CheckoutService {
 
     const plan = await promotionsRepository.findPlanById(dto.planId);
     if (!plan) throw new ApiError(404, 'Promotion plan not found');
+
+    await assertValidAdCategorySelection(dto.ad.categoryId, dto.ad.filterOptionIds ?? []);
 
     const totalPrice = getPromotionPlanPrice(plan, dto.days);
     const payload: ListingPromotionIntentPayload = {
@@ -81,6 +84,11 @@ export async function loadCheckoutIntentResult(kind: CheckoutIntentKind, result:
   if (kind === CheckoutIntentKind.STORE_CREATE && data.storeId) {
     const { storesRepository } = await import('../stores/stores.repository');
     return { store: await storesRepository.findById(data.storeId) };
+  }
+
+  if (kind === CheckoutIntentKind.STORE_UPGRADE && data.storeId) {
+    const { storesRepository } = await import('../stores/stores.repository');
+    return { store: await storesRepository.findById(data.storeId), subscriptionId: data.subscriptionId };
   }
 
   if (kind === CheckoutIntentKind.LISTING_PROMOTION && data.adId) {

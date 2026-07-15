@@ -21,6 +21,7 @@ import { chatRoutes } from './modules/chat/chat.routes';
 import { notificationsRoutes } from './modules/notifications/notifications.routes';
 import { paymentsRoutes } from './modules/payments/payments.routes';
 import { promotionsRoutes } from './modules/promotions/promotions.routes';
+import { rafflesRoutes } from './modules/raffles/raffles.routes';
 import { storeTypesRoutes } from './modules/store-types/store-types.routes';
 import { storePlansRoutes } from './modules/store-plans/store-plans.routes';
 import { storesRoutes } from './modules/stores/stores.routes';
@@ -36,6 +37,7 @@ import { errorHandler } from './shared/middleware/error-handler';
 import { notFoundHandler } from './shared/middleware/not-found';
 import { apiRateLimiter } from './shared/middleware/rate-limit';
 import { asyncHandler } from './shared/utils/async-handler';
+import './modules/raffles/raffles.listeners';
 
 export const app = express();
 
@@ -88,6 +90,7 @@ app.use('/api/v1/hero', heroRoutes);
 app.use('/api/v1/media', mediaRoutes);
 app.use('/api/v1/payments', paymentsRoutes);
 app.use('/api/v1/promotions', promotionsRoutes);
+app.use('/api/v1/raffles', rafflesRoutes);
 app.use('/api/v1/checkout', checkoutRoutes);
 app.use('/api/v1/chat', chatRoutes);
 app.use('/api/v1/notifications', notificationsRoutes);

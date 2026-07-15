@@ -77,9 +77,15 @@ export class CategoriesService {
     return categoriesRepository.softDelete(id);
   }
 
-  async listFilters(categoryId: string, locale: 'ar' | 'en', includeInactive = false) {
+  async listFilters(categoryId: string, locale: 'ar' | 'en', includeInactive = false, includeAncestors = false) {
     const category = await categoriesRepository.findById(categoryId);
     if (!category) throw new ApiError(404, 'Category not found');
+
+    if (includeAncestors) {
+      const pathIds = await categoriesRepository.collectCategoryPathIds(categoryId);
+      return categoriesRepository.listFiltersForPathIds(pathIds, locale, includeInactive);
+    }
+
     return categoriesRepository.listFilters(categoryId, locale, includeInactive);
   }
 

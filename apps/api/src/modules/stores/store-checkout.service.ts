@@ -6,6 +6,7 @@ import {
   createThawaniCheckoutSession,
   isThawaniConfigured,
   omrToBaisa,
+  retrieveThawaniCheckoutSession,
   shouldSkipThawaniCheckout
 } from '../../shared/payments/thawani.client';
 import { completeThawaniPaymentBySession, cancelThawaniPaymentBySession } from '../../shared/payments/thawani-webhook.service';
@@ -113,6 +114,16 @@ export async function checkoutStoreSubscription(input: CheckoutInput): Promise<S
   };
 }
 
+function resolveStoreActionFromMetadata(
+  metadata?: Record<string, string | number>
+): 'create' | 'upgrade' | 'renew' | undefined {
+  const raw = metadata?.['payment action'];
+  if (raw === 'renew') return 'renew';
+  if (raw === 'upgrade' || raw === 'activate') return 'upgrade';
+  if (raw === 'create') return 'create';
+  return undefined;
+}
+
 export async function confirmThawaniStorePayment(userId: string, sessionId: string) {
   const result = await completeThawaniPaymentBySession(sessionId, { userId });
 
@@ -126,10 +137,43 @@ export async function confirmThawaniStorePayment(userId: string, sessionId: stri
     throw new ApiError(404, 'Payment not found');
   }
 
+  let storeAction: 'create' | 'upgrade' | 'renew' | undefined;
+  if ('checkoutIntent' in result && result.checkoutIntent) {
+    if (result.checkoutIntent.kind === 'STORE_CREATE') storeAction = 'create';
+    else if (result.checkoutIntent.kind === 'STORE_UPGRADE') storeAction = 'upgrade';
+  }
+
+  if (!storeAction && !shouldSkipThawaniCheckout()) {
+    try {
+      const session = await retrieveThawaniCheckoutSession(sessionId);
+      storeAction = resolveStoreActionFromMetadata(session.data?.metadata);
+    } catch {
+      // Metadata is optional for confirm response shaping.
+    }
+  }
+
+  let storeId =
+    ('store' in result && result.store && typeof result.store === 'object' && 'id' in result.store
+      ? String(result.store.id)
+      : undefined) ??
+    ('result' in result &&
+    result.result &&
+    typeof result.result === 'object' &&
+    'storeId' in (result.result as Record<string, unknown>)
+      ? String((result.result as Record<string, unknown>).storeId)
+      : undefined);
+
+  if (!storeId && result.payment.storeSubscriptionId) {
+    const subscription = await storesRepository.findSubscriptionForPaymentCancel(result.payment.storeSubscriptionId);
+    storeId = subscription?.storeId;
+  }
+
   return {
     payment: result.payment,
     subscription: 'subscription' in result ? result.subscription : undefined,
     store: 'store' in result ? result.store : undefined,
+    storeId,
+    storeAction,
     alreadyPaid: result.alreadyPaid
   };
 }

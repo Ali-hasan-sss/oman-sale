@@ -117,6 +117,15 @@ export async function confirmThawaniPromotionPayment(userId: string, sessionId: 
     payment: result.payment,
     promotion: 'promotion' in result ? result.promotion : undefined,
     adId: 'adId' in result ? result.adId : undefined,
+    promotionId: 'promotionId' in result ? result.promotionId : undefined,
+    action:
+      'checkoutIntent' in result &&
+      result.checkoutIntent &&
+      typeof result.checkoutIntent.payload === 'object' &&
+      result.checkoutIntent.payload !== null &&
+      'ad' in (result.checkoutIntent.payload as Record<string, unknown>)
+        ? ('create' as const)
+        : ('promote' as const),
     alreadyPaid: result.alreadyPaid
   };
 }

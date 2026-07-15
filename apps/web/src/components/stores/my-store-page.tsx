@@ -3,7 +3,7 @@
 import { Camera, Eye, Megaphone, Store, Upload, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChangeEvent, FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { ConfirmationDialog } from '@/components/confirmation-dialog';
 import { SiteFooter } from '@/components/home/site-footer';
@@ -17,6 +17,8 @@ import { SubscriptionRingGauge } from '@/components/stores/subscription-ring-gau
 import { api } from '@/lib/api';
 import { buildBannerAdRequestUrl } from '@/lib/banner-ad-prefill';
 import { resolveApiErrorMessage } from '@/lib/api-errors';
+import { consumeStorePaymentReturn, freshFetchHeaders, freshFetchParams } from '@/lib/payment-return';
+import { storePendingThawaniSession } from '@/lib/thawani-session';
 import { registerMediaPreviewUrl, resolveMediaUrl } from '@/lib/media-url';
 import { uploadMediaFile } from '@/lib/media-upload';
 import { useI18n } from '@/lib/i18n';
@@ -187,7 +189,10 @@ const labels = {
     listingLimitReached: 'وصلت إلى حد العروض في خطتك الحالية. العروض المنشورة ستبقى ظاهرة، لكن لا يمكن إضافة عروض جديدة إلا بعد حذف بعضها أو ترقية الخطة.',
     listingsBaselineHint: 'عروض سابقة',
     listingsPlanAllowanceHint: 'عروض جديدة في الخطة',
-    listingsTotalHint: 'الإجمالي المسموح'
+    listingsTotalHint: 'الإجمالي المسموح',
+    storeCreateSuccess: 'تم إنشاء المتجر وتفعيل الاشتراك بنجاح.',
+    storeUpgradeSuccess: 'تم ترقية خطة المتجر بنجاح.',
+    storeRenewSuccess: 'تم تجديد اشتراك المتجر بنجاح.'
   },
   en: {
     title: 'My Store',
@@ -291,7 +296,10 @@ const labels = {
       'You have reached your plan listing limit. Published listings stay visible, but you cannot add new ones until you remove some or upgrade your plan.',
     listingsBaselineHint: 'Previous listings',
     listingsPlanAllowanceHint: 'New listings in plan',
-    listingsTotalHint: 'Total allowed'
+    listingsTotalHint: 'Total allowed',
+    storeCreateSuccess: 'Your store was created and the subscription is active.',
+    storeUpgradeSuccess: 'Your store plan was upgraded successfully.',
+    storeRenewSuccess: 'Your store subscription was renewed successfully.'
   }
 } as const;
 
@@ -460,30 +468,39 @@ export function MyStorePage() {
     }
   };
 
-  const loadStore = async () => {
-    setError('');
-    setIsLoading(true);
-    try {
-      const response = await api.get<{ data: OwnerStore[] }>('/stores/me', { headers: authHeaders });
-      const nextStore = response.data.data.find((item) => item.isActive) ?? response.data.data[0] ?? null;
-      setStore(nextStore);
-      if (nextStore) {
-        setLogoUrl(nextStore.logoUrl ?? null);
-        setCoverUrl(nextStore.coverUrl ?? null);
-        setBioAr(nextStore.bioAr ?? '');
-        setBioEn(nextStore.bioEn ?? '');
-        const adsResponse = await api.get<{ data: { items: StoreListing[] } }>(`/stores/${nextStore.id}/ads`, {
-          headers: authHeaders,
-          params: { page: 1, limit: 20 }
+  const loadStore = useCallback(
+    async (options?: { refresh?: boolean; successMessage?: string }) => {
+      setError('');
+      setIsLoading(true);
+      try {
+        const response = await api.get<{ data: OwnerStore[] }>('/stores/me', {
+          headers: { ...authHeaders, ...freshFetchHeaders },
+          params: freshFetchParams(Boolean(options?.refresh))
         });
-        setListings(adsResponse.data.data.items);
+        const nextStore = response.data.data.find((item) => item.isActive) ?? response.data.data[0] ?? null;
+        setStore(nextStore);
+        if (nextStore) {
+          setLogoUrl(nextStore.logoUrl ?? null);
+          setCoverUrl(nextStore.coverUrl ?? null);
+          setBioAr(nextStore.bioAr ?? '');
+          setBioEn(nextStore.bioEn ?? '');
+          const adsResponse = await api.get<{ data: { items: StoreListing[] } }>(`/stores/${nextStore.id}/ads`, {
+            headers: { ...authHeaders, ...freshFetchHeaders },
+            params: { page: 1, limit: 20, ...freshFetchParams(Boolean(options?.refresh)) }
+          });
+          setListings(adsResponse.data.data.items);
+        }
+        if (options?.successMessage) {
+          setMessage(options.successMessage);
+        }
+      } catch {
+        setError(text.loadError);
+      } finally {
+        setIsLoading(false);
       }
-    } catch {
-      setError(text.loadError);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+    [authHeaders, text.loadError]
+  );
 
   useEffect(() => {
     const token = getUserAccessToken();
@@ -491,11 +508,29 @@ export function MyStorePage() {
       router.replace(localizedPath('/login'));
       return;
     }
-    loadStore();
+
+    const paymentReturn = consumeStorePaymentReturn();
+    const successMessage =
+      paymentReturn?.action === 'create'
+        ? text.storeCreateSuccess
+        : paymentReturn?.action === 'renew'
+          ? text.storeRenewSuccess
+          : paymentReturn
+            ? text.storeUpgradeSuccess
+            : undefined;
+
+    void loadStore({ refresh: Boolean(paymentReturn), successMessage });
     void syncCurrentUser(token).then((user) => {
       if (user?.fullName) setOwnerName(user.fullName);
     });
-  }, []);
+  }, [
+    loadStore,
+    localizedPath,
+    router,
+    text.storeCreateSuccess,
+    text.storeRenewSuccess,
+    text.storeUpgradeSuccess
+  ]);
 
   useEffect(() => {
     if (!upgradeModalOpen || !store?.rootCategory?.id) return;
@@ -559,7 +594,9 @@ export function MyStorePage() {
           ? { planId: options.planId, billingPeriod: options.billingPeriod }
           : undefined;
 
-      const response = await api.post<{ data: { checkout?: { paymentUrl?: string; activated?: boolean } } }>(
+      const response = await api.post<{
+        data: { checkout?: { paymentUrl?: string; sessionId?: string; activated?: boolean } };
+      }>(
         path,
         body,
         { headers: authHeaders, params: { locale } }
@@ -567,6 +604,7 @@ export function MyStorePage() {
 
       const checkout = response.data.data.checkout;
       if (checkout?.paymentUrl) {
+        if (checkout.sessionId) storePendingThawaniSession(checkout.sessionId);
         window.location.href = checkout.paymentUrl;
         return;
       }

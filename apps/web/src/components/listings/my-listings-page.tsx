@@ -3,7 +3,7 @@
 import { Calendar, CheckCircle2, Clock, Eye, Megaphone, Pen, Trash2, TrendingUp, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
+import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { ConfirmationDialog } from '@/components/confirmation-dialog';
 import { SiteFooter } from '@/components/home/site-footer';
@@ -14,6 +14,8 @@ import { PlanPriceWithVat } from '@/components/pricing/plan-price-with-vat';
 import { getListingLocationLabel, getWilayahsForGovernorate, omanGovernorates } from '@/lib/oman-locations';
 import { getUserAccessToken } from '@/lib/user-auth';
 import { buildBannerAdRequestUrl } from '@/lib/banner-ad-prefill';
+import { consumeListingPaymentReturn, freshFetchHeaders, freshFetchParams } from '@/lib/payment-return';
+import { storePendingThawaniSession } from '@/lib/thawani-session';
 import { useAuthStore } from '@/store/auth-store';
 import { ListingTitleWithVerified } from '@/components/trust-badge/listing-verified-badge';
 import { ListingCardsSkeleton } from './listing-card-skeleton';
@@ -117,6 +119,7 @@ const labels = {
     confirmDeleteAction: 'حذف الإعلان',
     updateSuccess: 'تم تحديث الإعلان بنجاح.',
     promoteSuccess: 'تم ترويج الإعلان بنجاح.',
+    createSuccess: 'تم نشر الإعلان بنجاح.',
     actionError: 'تعذر تنفيذ العملية. حاول مرة أخرى.',
     markSold: 'تعيين كمباع',
     unmarkSold: 'إلغاء حالة مباع',
@@ -166,6 +169,7 @@ const labels = {
     confirmDeleteAction: 'Delete listing',
     updateSuccess: 'Listing updated successfully.',
     promoteSuccess: 'Listing promoted successfully.',
+    createSuccess: 'Listing published successfully.',
     actionError: 'Could not complete the action. Try again.',
     markSold: 'Mark as sold',
     unmarkSold: 'Remove sold status',
@@ -188,33 +192,82 @@ export function MyListingsPage() {
   const [promotingListing, setPromotingListing] = useState<MyListing | null>(null);
   const [pendingDeleteListing, setPendingDeleteListing] = useState<MyListing | null>(null);
   const [isDeletingListing, setIsDeletingListing] = useState(false);
+  const [highlightListingId, setHighlightListingId] = useState<string | null>(null);
+  const highlightRef = useRef<HTMLDivElement | null>(null);
 
   const authHeaders = useMemo(() => {
     const token = getUserAccessToken();
     return token ? { Authorization: `Bearer ${token}` } : undefined;
   }, []);
 
+  const loadListings = useCallback(
+    async (options?: { refresh?: boolean; highlightAdId?: string; successMessage?: string }) => {
+      const token = getUserAccessToken();
+      if (!token) {
+        router.replace(localizedPath('/login'));
+        return;
+      }
+
+      setIsLoading(true);
+      setActionError('');
+
+      try {
+        const fetchMyAds = () =>
+          api.get<{ data: { items: MyListing[] } }>('/ads/my', {
+            headers: { ...authHeaders, ...freshFetchHeaders },
+            params: { limit: 50, ...freshFetchParams(Boolean(options?.refresh)) }
+          });
+
+        const [adsResponse, plansResponse] = await Promise.all([
+          fetchMyAds(),
+          api.get<{ data: PromotionPlan[] }>('/promotions/plans')
+        ]);
+
+        let items = adsResponse.data.data.items;
+        const highlightId = options?.highlightAdId;
+        if (highlightId && options?.refresh && !items.some((item) => item.id === highlightId)) {
+          await new Promise((resolve) => setTimeout(resolve, 400));
+          items = (await fetchMyAds()).data.data.items;
+        }
+        if (highlightId) {
+          items = [...items].sort((a, b) => {
+            if (a.id === highlightId) return -1;
+            if (b.id === highlightId) return 1;
+            return 0;
+          });
+          setHighlightListingId(highlightId);
+        }
+
+        setListings(items);
+        setPlans(plansResponse.data.data);
+        if (options?.successMessage) {
+          setActionMessage(options.successMessage);
+        }
+      } catch {
+        setActionError(text.actionError);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [authHeaders, localizedPath, router, text.actionError]
+  );
+
   useEffect(() => {
     hydrateFromStorage();
-    const token = getUserAccessToken();
-    if (!token) {
-      router.replace(localizedPath('/login'));
-      return;
-    }
 
-    Promise.all([
-      api.get<{ data: { items: MyListing[] } }>('/ads/my?limit=50', { headers: { Authorization: `Bearer ${token}` } }),
-      api.get<{ data: PromotionPlan[] }>('/promotions/plans')
-    ])
-      .then(([adsResponse, plansResponse]) => {
-        setListings(adsResponse.data.data.items);
-        setPlans(plansResponse.data.data);
-      })
-      .catch(() => {
-        setActionError(text.actionError);
-      })
-      .finally(() => setIsLoading(false));
-  }, []);
+    const paymentReturn = consumeListingPaymentReturn();
+    void loadListings({
+      refresh: true,
+      highlightAdId: paymentReturn?.adId,
+      successMessage:
+        paymentReturn?.action === 'create' ? text.createSuccess : paymentReturn ? text.promoteSuccess : undefined
+    });
+  }, [hydrateFromStorage, loadListings, text.createSuccess, text.promoteSuccess]);
+
+  useEffect(() => {
+    if (!highlightListingId || !highlightRef.current) return;
+    highlightRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [highlightListingId, listings]);
 
   const toggleSold = async (listing: MyListing) => {
     setActionError('');
@@ -284,15 +337,20 @@ export function MyListingsPage() {
         ) : (
           <div className="space-y-6">
             {listings.map((listing) => (
-              <ListingCard
+              <div
                 key={listing.id}
-                listing={listing}
-                onDelete={() => setPendingDeleteListing(listing)}
-                onEdit={() => setEditingListing(listing)}
-                onPromote={() => setPromotingListing(listing)}
-                onToggleSold={() => toggleSold(listing)}
-                text={text}
-              />
+                ref={listing.id === highlightListingId ? highlightRef : undefined}
+                className={listing.id === highlightListingId ? 'rounded-2xl ring-2 ring-green-500 ring-offset-2' : undefined}
+              >
+                <ListingCard
+                  listing={listing}
+                  onDelete={() => setPendingDeleteListing(listing)}
+                  onEdit={() => setEditingListing(listing)}
+                  onPromote={() => setPromotingListing(listing)}
+                  onToggleSold={() => toggleSold(listing)}
+                  text={text}
+                />
+              </div>
             ))}
           </div>
         )}
@@ -567,12 +625,29 @@ function PromoteListingModal({
     if (!planId) return;
     setIsSaving(true);
     try {
-      const response = await api.post<{ data: NonNullable<MyListing['promotion']> }>(
+      const response = await api.post<{
+        data: {
+          promotion?: NonNullable<MyListing['promotion']>;
+          checkout?: { paymentUrl?: string; sessionId?: string; paid?: boolean };
+        };
+      }>(
         '/promotions/ad-promotions',
         { adId: listing.id, planId, days },
-        { headers: authHeaders }
+        { headers: authHeaders, params: { locale } }
       );
-      onSaved(listing.id, response.data.data);
+
+      const paymentUrl = response.data.data.checkout?.paymentUrl;
+      const sessionId = response.data.data.checkout?.sessionId;
+      if (paymentUrl) {
+        if (sessionId) storePendingThawaniSession(sessionId);
+        window.location.href = paymentUrl;
+        return;
+      }
+
+      if (response.data.data.promotion) {
+        onSaved(listing.id, response.data.data.promotion);
+      }
+      onClose();
     } finally {
       setIsSaving(false);
     }

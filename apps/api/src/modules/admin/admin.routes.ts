@@ -47,6 +47,8 @@ import { tourismController } from '../tourism/tourism.controller';
 import { tourismDestinationSchema, updateTourismDestinationSchema } from '../tourism/tourism.validation';
 import { legalController } from '../legal/legal.controller';
 import { legalKindParamSchema, upsertLegalDocumentSchema } from '../legal/legal.validation';
+import { rafflesController } from '../raffles/raffles.controller';
+import { createRaffleSchema, publishRaffleToHeroSchema, updateRaffleSchema } from '../raffles/raffles.validation';
 import { storeTypesController } from '../store-types/store-types.controller';
 import {
   createStoreTypeSchema,
@@ -459,4 +461,58 @@ adminRoutes.put(
   authorize(UserRole.ADMIN),
   validateRequest({ params: legalKindParamSchema, body: upsertLegalDocumentSchema }),
   asyncHandler(legalController.upsertForAdmin)
+);
+
+adminRoutes.get('/raffles', asyncHandler(rafflesController.list));
+adminRoutes.get(
+  '/raffles/:id',
+  validateRequest({ params: idParams }),
+  asyncHandler(rafflesController.getById)
+);
+adminRoutes.post(
+  '/raffles',
+  authorize(UserRole.ADMIN),
+  validateRequest({ body: createRaffleSchema }),
+  asyncHandler(rafflesController.create)
+);
+adminRoutes.patch(
+  '/raffles/:id',
+  authorize(UserRole.ADMIN),
+  validateRequest({ params: idParams, body: updateRaffleSchema }),
+  asyncHandler(rafflesController.update)
+);
+adminRoutes.delete(
+  '/raffles/:id',
+  authorize(UserRole.ADMIN),
+  validateRequest({ params: idParams }),
+  asyncHandler(rafflesController.delete)
+);
+adminRoutes.post(
+  '/raffles/:id/activate',
+  authorize(UserRole.ADMIN),
+  validateRequest({ params: idParams }),
+  asyncHandler(rafflesController.activate)
+);
+adminRoutes.post(
+  '/raffles/:id/end',
+  authorize(UserRole.ADMIN),
+  validateRequest({ params: idParams }),
+  asyncHandler(rafflesController.end)
+);
+adminRoutes.get(
+  '/raffles/:id/hero-preview',
+  validateRequest({ params: idParams }),
+  asyncHandler(rafflesController.getHeroPreview)
+);
+adminRoutes.post(
+  '/raffles/:id/publish-to-hero',
+  authorize(UserRole.ADMIN),
+  validateRequest({ params: idParams, body: publishRaffleToHeroSchema }),
+  asyncHandler(rafflesController.publishToHero)
+);
+adminRoutes.post(
+  '/raffles/:id/unpublish-from-hero',
+  authorize(UserRole.ADMIN),
+  validateRequest({ params: idParams }),
+  asyncHandler(rafflesController.unpublishFromHero)
 );

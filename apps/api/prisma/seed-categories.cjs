@@ -2,6 +2,8 @@
 /** @typedef {{ slug: string; titleAr: string; titleEn: string; sortOrder?: number; options: FilterOptionDef[] }} FilterDef */
 /** @typedef {{ slug: string; parentSlug?: string | null; nameAr: string; nameEn: string; icon: string; type: string; sortOrder: number; filters?: FilterDef[] }} CategoryDef */
 
+const { getVehicleBrandCategories } = require('./seed-vehicle-brands.cjs');
+
 /**
  * @param {import('@prisma/client').PrismaClient} prisma
  */
@@ -228,7 +230,7 @@ function getCategoryDefinitions() {
       nameEn: 'Motorcycle Parts',
       icon: 'wrench',
       type: 'PRODUCT',
-      sortOrder: 10
+      sortOrder: 5000
     },
     {
       slug: 'motorcycle-accessories',
@@ -237,7 +239,7 @@ function getCategoryDefinitions() {
       nameEn: 'Motorcycle Accessories',
       icon: 'tag',
       type: 'PRODUCT',
-      sortOrder: 20
+      sortOrder: 5010
     },
     {
       slug: 'trucks-buses',
@@ -1303,7 +1305,8 @@ function getCategoryDefinitions() {
       icon: 'hammer',
       type: 'CONSTRUCTION',
       sortOrder: 30
-    }
+    },
+    ...getVehicleBrandCategories()
   ];
 }
 

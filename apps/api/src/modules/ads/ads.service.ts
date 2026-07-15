@@ -8,6 +8,7 @@ import { createSlug } from '../../shared/utils/slug';
 import type { ViewerContext } from '../../shared/utils/viewer-context';
 import { sendAdminNotification } from '../notifications/send-admin-notification';
 import { storesService } from '../stores/stores.service';
+import { assertValidAdCategorySelection } from './ads-category-validation';
 import { adsRepository } from './ads.repository';
 import type { AdminListAdsQuery, CreateAdDto, ListAdsQuery, ReportAdDto, UpdateAdDto } from './ads.validation';
 
@@ -77,6 +78,9 @@ export class AdsService {
     if (dto.storeId) {
       await storesService.assertCanPublishAsStore(userId, dto.storeId);
     }
+
+    await assertValidAdCategorySelection(dto.categoryId, dto.filterOptionIds ?? []);
+
     const slug = `${createSlug(dto.title)}-${Date.now()}`;
     const ad = await adsRepository.create(userId, slug, { ...dto, status: 'ACTIVE' });
 
@@ -97,6 +101,14 @@ export class AdsService {
     const ad = await adsRepository.findById(id);
     if (!ad) throw new ApiError(404, 'Ad not found');
     if (ad.userId !== userId) throw new ApiError(403, 'Only owner can update ad');
+
+    const nextCategoryId = dto.categoryId ?? ad.categoryId;
+    const nextFilterOptionIds = dto.filterOptionIds ?? [];
+
+    if (dto.categoryId !== undefined || dto.filterOptionIds !== undefined) {
+      await assertValidAdCategorySelection(nextCategoryId, nextFilterOptionIds);
+    }
+
     const updated = await adsRepository.update(id, this.stripProtectedAdFields(dto));
     return resolveAdMedia(updated);
   }
@@ -104,6 +116,14 @@ export class AdsService {
   async updateForAdmin(id: string, dto: UpdateAdDto) {
     const ad = await adsRepository.findById(id);
     if (!ad) throw new ApiError(404, 'Ad not found');
+
+    const nextCategoryId = dto.categoryId ?? ad.categoryId;
+    const nextFilterOptionIds = dto.filterOptionIds ?? [];
+
+    if (dto.categoryId !== undefined || dto.filterOptionIds !== undefined) {
+      await assertValidAdCategorySelection(nextCategoryId, nextFilterOptionIds);
+    }
+
     const updated = await adsRepository.update(id, dto);
     return resolveAdMedia(updated);
   }

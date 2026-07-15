@@ -1,4 +1,7 @@
 /**
+ * Seeds store subscription plans without overwriting admin-edited prices.
+ * Existing plans/pricing rows are left intact; only missing records are created.
+ *
  * @param {import('@prisma/client').PrismaClient} prisma
  */
 async function seedStorePlans(prisma) {
@@ -130,36 +133,41 @@ async function seedStorePlans(prisma) {
       deletedAt: null
     };
 
-    const plan = existing
-      ? await prisma.storeSubscriptionPlan.update({
-          where: { id: existing.id },
-          data: planData
-        })
-      : await prisma.storeSubscriptionPlan.create({ data: planData });
+    const plan = existing ?? (await prisma.storeSubscriptionPlan.create({ data: planData }));
 
     for (const category of rootCategories) {
       for (const row of planDef.pricing) {
-        await prisma.storePlanPricing.upsert({
-          where: {
-            planId_categoryId_billingPeriod: {
-              planId: plan.id,
-              categoryId: category.id,
-              billingPeriod: row.billingPeriod
-            }
-          },
-          update: {
-            price: row.price,
-            maxListings: row.maxListings,
-            deletedAt: null
-          },
-          create: {
+        const pricingWhere = {
+          planId_categoryId_billingPeriod: {
             planId: plan.id,
             categoryId: category.id,
-            billingPeriod: row.billingPeriod,
-            price: row.price,
-            maxListings: row.maxListings
+            billingPeriod: row.billingPeriod
           }
+        };
+
+        const pricingExisting = await prisma.storePlanPricing.findUnique({
+          where: pricingWhere
         });
+
+        if (!pricingExisting) {
+          await prisma.storePlanPricing.create({
+            data: {
+              planId: plan.id,
+              categoryId: category.id,
+              billingPeriod: row.billingPeriod,
+              price: row.price,
+              maxListings: row.maxListings
+            }
+          });
+          continue;
+        }
+
+        if (pricingExisting.deletedAt) {
+          await prisma.storePlanPricing.update({
+            where: { id: pricingExisting.id },
+            data: { deletedAt: null }
+          });
+        }
       }
     }
   }
