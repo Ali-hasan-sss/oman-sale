@@ -14,7 +14,11 @@ import { buildCategoryTree } from '@/lib/category-tree';
 import {
   buildSubcategoryFilterLevels,
   getEffectiveCategoryId,
+  isCategoryUnderSlug,
   isSubcategoryPathComplete,
+  MODEL_YEAR_MAX,
+  MODEL_YEAR_MIN,
+  PASSENGER_CARS_SLUG,
   selectFilterOption,
   updateSubcategoryPath
 } from '@/lib/category-subcategory-filters';
@@ -32,6 +36,7 @@ import { useAuthStore } from '@/store/auth-store';
 type Category = {
   id: string;
   name: string;
+  slug: string;
   nameAr?: string;
   nameEn?: string;
   parentId?: string | null;
@@ -86,6 +91,8 @@ const labels = {
     subcategories: 'الفئة الفرعية',
     selectSubcategory: 'اختر',
     categoryFilters: 'خصائص الفئة',
+    modelYear: 'سنة الصنع *',
+    selectModelYear: 'اختر سنة الصنع',
     selectFilter: 'اختر',
     loadingFilters: 'جاري تحميل الفلاتر...',
     city: 'المحافظة *',
@@ -141,6 +148,8 @@ const labels = {
     subcategories: 'Subcategory',
     selectSubcategory: 'Select',
     categoryFilters: 'Category attributes',
+    modelYear: 'Model year *',
+    selectModelYear: 'Select model year',
     selectFilter: 'Select',
     loadingFilters: 'Loading filters...',
     city: 'Governorate *',
@@ -213,6 +222,7 @@ export function AddListingPage() {
   const [city, setCity] = useState('');
   const [wilayah, setWilayah] = useState('');
   const [price, setPrice] = useState('');
+  const [modelYear, setModelYear] = useState('');
   const [description, setDescription] = useState('');
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
@@ -236,6 +246,7 @@ export function AddListingPage() {
       categoryRequired: m.errors.fieldCategoryRequired,
       subcategoryRequired: m.errors.fieldSubcategoryRequired,
       filterRequired: m.errors.fieldCategoryFilterRequired,
+      modelYearRequired: m.errors.fieldModelYearRequired,
       cityRequired: m.errors.fieldCityRequired,
       wilayahRequired: m.errors.fieldWilayahRequired,
       priceRequired: m.errors.fieldPriceRequired,
@@ -303,6 +314,14 @@ export function AddListingPage() {
     () => (rootCategoryId ? isSubcategoryPathComplete(categories, rootCategoryId, subcategoryPath) : false),
     [categories, rootCategoryId, subcategoryPath]
   );
+  const isPassengerCarsCategory = useMemo(
+    () => (categoryId ? isCategoryUnderSlug(categories, categoryId, PASSENGER_CARS_SLUG) : false),
+    [categories, categoryId]
+  );
+  const modelYearOptions = useMemo(
+    () => Array.from({ length: MODEL_YEAR_MAX - MODEL_YEAR_MIN + 1 }, (_, index) => MODEL_YEAR_MAX - index),
+    []
+  );
   const filtersComplete = useMemo(() => {
     if (!subcategoryComplete || categoryFilters.length === 0) return true;
     return categoryFilters.every((filter) =>
@@ -347,6 +366,7 @@ export function AddListingPage() {
       .then((response) => {
         setCategoryFilters(response.data.data);
         setSelectedFilterOptionIds([]);
+        setModelYear('');
       })
       .catch(() => setCategoryFilters([]))
       .finally(() => setIsCategoryFiltersLoading(false));
@@ -389,12 +409,13 @@ export function AddListingPage() {
     event.preventDefault();
 
     const nextFieldErrors = validateListingForm(
-      { title, description, categoryId, city, wilayah, price },
+      { title, description, categoryId, city, wilayah, price, modelYear },
       validationMessages,
       {
         rootCategoryId,
         subcategoryComplete,
-        filtersComplete
+        filtersComplete,
+        requiresModelYear: isPassengerCarsCategory
       }
     );
 
@@ -423,6 +444,7 @@ export function AddListingPage() {
         wilayah,
         categoryId,
         filterOptionIds: selectedFilterOptionIds,
+        ...(isPassengerCarsCategory ? { modelYear: Number(modelYear) } : {}),
         imageUrls,
         videoUrl: videoUrl ?? undefined,
         ...(isStorePublish && ownerStore ? { storeId: ownerStore.id } : {})
@@ -615,6 +637,30 @@ export function AddListingPage() {
 
             {fieldErrors.filters ? (
               <p className="mt-2 text-sm font-medium text-red-600">{fieldErrors.filters}</p>
+            ) : null}
+
+            {subcategoryComplete && isPassengerCarsCategory ? (
+              <div className="mt-4">
+                <p className="mb-2 text-sm font-bold text-gray-600">{text.modelYear}</p>
+                <select
+                  value={modelYear}
+                  onChange={(event) => {
+                    setModelYear(event.target.value);
+                    clearFieldError('modelYear');
+                  }}
+                  className={fieldInputClass(fieldErrors.modelYear)}
+                >
+                  <option value="">{text.selectModelYear}</option>
+                  {modelYearOptions.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+                {fieldErrors.modelYear ? (
+                  <p className="mt-2 text-sm font-medium text-red-600">{fieldErrors.modelYear}</p>
+                ) : null}
+              </div>
             ) : null}
           </Field>
 

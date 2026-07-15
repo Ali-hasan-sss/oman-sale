@@ -752,6 +752,7 @@
     "fieldCategoryRequired": "يرجى اختيار الفئة.",
     "fieldSubcategoryRequired": "يرجى اختيار جميع الفئات الفرعية حتى الموديل أو آخر مستوى.",
     "fieldCategoryFilterRequired": "يرجى اختيار خيار لكل فلتر مطلوب.",
+    "fieldModelYearRequired": "يرجى اختيار سنة الصنع.",
     "CATEGORY_SUBCATEGORY_REQUIRED": "يرجى اختيار جميع الفئات الفرعية حتى آخر مستوى.",
     "CATEGORY_FILTER_REQUIRED": "يرجى اختيار خيار لكل فلتر مطلوب.",
     "fieldCityRequired": "يرجى اختيار المحافظة.",

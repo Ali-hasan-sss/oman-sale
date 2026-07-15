@@ -749,6 +749,7 @@
     "fieldCategoryRequired": "Please select a category.",
     "fieldSubcategoryRequired": "Please select all subcategories down to the final level.",
     "fieldCategoryFilterRequired": "Please select an option for each required filter.",
+    "fieldModelYearRequired": "Please select the model year.",
     "CATEGORY_SUBCATEGORY_REQUIRED": "Please select all subcategories down to the final level.",
     "CATEGORY_FILTER_REQUIRED": "Please select an option for each required filter.",
     "fieldCityRequired": "Please select a governorate.",

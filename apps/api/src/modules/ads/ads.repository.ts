@@ -86,6 +86,13 @@ export class AdsRepository {
           ...(query.maxPrice !== undefined && { lte: query.maxPrice })
         }
       }),
+      ...((query.minModelYear !== undefined || query.maxModelYear !== undefined) && {
+        modelYear: {
+          not: null,
+          ...(query.minModelYear !== undefined && { gte: query.minModelYear }),
+          ...(query.maxModelYear !== undefined && { lte: query.maxModelYear })
+        }
+      }),
       ...(query.filterOptionIds.length > 0 && {
         AND: query.filterOptionIds.map((optionId) => ({
           filterValues: { some: { optionId, deletedAt: null } }
@@ -319,6 +326,7 @@ export class AdsRepository {
         type: data.type,
         condition: data.condition,
         price: data.price,
+        modelYear: data.modelYear ?? null,
         currency: data.currency,
         city: data.city,
         wilayah: data.wilayah,

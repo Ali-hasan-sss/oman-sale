@@ -36,7 +36,7 @@ export class CheckoutService {
     const plan = await promotionsRepository.findPlanById(dto.planId);
     if (!plan) throw new ApiError(404, 'Promotion plan not found');
 
-    await assertValidAdCategorySelection(dto.ad.categoryId, dto.ad.filterOptionIds ?? []);
+    await assertValidAdCategorySelection(dto.ad.categoryId, dto.ad.filterOptionIds ?? [], dto.ad.modelYear);
 
     const totalPrice = getPromotionPlanPrice(plan, dto.days);
     const payload: ListingPromotionIntentPayload = {

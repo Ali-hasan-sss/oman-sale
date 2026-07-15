@@ -132,7 +132,7 @@ async function materializeListingPromotion(userId: string, payload: ListingPromo
     await storesService.assertCanPublishAsStore(userId, payload.ad.storeId);
   }
 
-  await assertValidAdCategorySelection(payload.ad.categoryId, payload.ad.filterOptionIds ?? []);
+  await assertValidAdCategorySelection(payload.ad.categoryId, payload.ad.filterOptionIds ?? [], payload.ad.modelYear);
 
   const slug = `${createSlug(payload.ad.title)}-${Date.now()}`;
   const ad = await adsRepository.create(userId, slug, payload.ad);

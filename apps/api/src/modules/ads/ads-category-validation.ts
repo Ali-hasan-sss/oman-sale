@@ -1,7 +1,15 @@
 import { ApiError } from '../../shared/utils/api-error';
 import { categoriesRepository } from '../categories/categories.repository';
 
-export async function assertValidAdCategorySelection(categoryId: string, filterOptionIds: string[]) {
+export const PASSENGER_CARS_SLUG = 'passenger-cars';
+export const MODEL_YEAR_MIN = 1998;
+export const MODEL_YEAR_MAX = 2026;
+
+export async function assertValidAdCategorySelection(
+  categoryId: string,
+  filterOptionIds: string[],
+  modelYear?: number | null
+) {
   const category = await categoriesRepository.findById(categoryId);
   if (!category || !category.isActive) {
     throw new ApiError(400, 'Category not found', 'CATEGORY_NOT_FOUND');
@@ -38,5 +46,22 @@ export async function assertValidAdCategorySelection(categoryId: string, filterO
         filterId: filter.id
       });
     }
+  }
+
+  const passengerCars = await categoriesRepository.findBySlug(PASSENGER_CARS_SLUG);
+  const isPassengerCar =
+    passengerCars !== null && (await categoriesRepository.isUnderAncestor(passengerCars.id, categoryId));
+
+  if (isPassengerCar) {
+    if (
+      modelYear === undefined ||
+      modelYear === null ||
+      modelYear < MODEL_YEAR_MIN ||
+      modelYear > MODEL_YEAR_MAX
+    ) {
+      throw new ApiError(400, 'Model year is required for passenger cars', 'MODEL_YEAR_REQUIRED');
+    }
+  } else if (modelYear !== undefined && modelYear !== null) {
+    throw new ApiError(400, 'Model year is only allowed for passenger cars', 'MODEL_YEAR_INVALID');
   }
 }

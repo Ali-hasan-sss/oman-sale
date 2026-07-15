@@ -79,7 +79,7 @@ export class AdsService {
       await storesService.assertCanPublishAsStore(userId, dto.storeId);
     }
 
-    await assertValidAdCategorySelection(dto.categoryId, dto.filterOptionIds ?? []);
+    await assertValidAdCategorySelection(dto.categoryId, dto.filterOptionIds ?? [], dto.modelYear);
 
     const slug = `${createSlug(dto.title)}-${Date.now()}`;
     const ad = await adsRepository.create(userId, slug, { ...dto, status: 'ACTIVE' });
@@ -104,9 +104,10 @@ export class AdsService {
 
     const nextCategoryId = dto.categoryId ?? ad.categoryId;
     const nextFilterOptionIds = dto.filterOptionIds ?? [];
+    const nextModelYear = dto.modelYear !== undefined ? dto.modelYear : ad.modelYear;
 
-    if (dto.categoryId !== undefined || dto.filterOptionIds !== undefined) {
-      await assertValidAdCategorySelection(nextCategoryId, nextFilterOptionIds);
+    if (dto.categoryId !== undefined || dto.filterOptionIds !== undefined || dto.modelYear !== undefined) {
+      await assertValidAdCategorySelection(nextCategoryId, nextFilterOptionIds, nextModelYear);
     }
 
     const updated = await adsRepository.update(id, this.stripProtectedAdFields(dto));
@@ -119,9 +120,10 @@ export class AdsService {
 
     const nextCategoryId = dto.categoryId ?? ad.categoryId;
     const nextFilterOptionIds = dto.filterOptionIds ?? [];
+    const nextModelYear = dto.modelYear !== undefined ? dto.modelYear : ad.modelYear;
 
-    if (dto.categoryId !== undefined || dto.filterOptionIds !== undefined) {
-      await assertValidAdCategorySelection(nextCategoryId, nextFilterOptionIds);
+    if (dto.categoryId !== undefined || dto.filterOptionIds !== undefined || dto.modelYear !== undefined) {
+      await assertValidAdCategorySelection(nextCategoryId, nextFilterOptionIds, nextModelYear);
     }
 
     const updated = await adsRepository.update(id, dto);

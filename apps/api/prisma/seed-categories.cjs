@@ -76,6 +76,38 @@ async function seedCategories(prisma) {
           deletedAt: null
         }
       });
+
+      const existingOptions = await prisma.categoryFilterOption.findMany({
+        where: { filterId: existing.id, deletedAt: null }
+      });
+
+      for (const [index, option] of filter.options.entries()) {
+        const matched = existingOptions.find((item) => item.slug === option.slug);
+        if (matched) {
+          await prisma.categoryFilterOption.update({
+            where: { id: matched.id },
+            data: {
+              labelAr: option.labelAr,
+              labelEn: option.labelEn,
+              sortOrder: (index + 1) * 10,
+              isActive: true,
+              deletedAt: null
+            }
+          });
+        } else {
+          await prisma.categoryFilterOption.create({
+            data: {
+              filterId: existing.id,
+              labelAr: option.labelAr,
+              labelEn: option.labelEn,
+              slug: option.slug,
+              sortOrder: (index + 1) * 10,
+              isActive: true
+            }
+          });
+        }
+      }
+
       return existing;
     }
 
@@ -192,6 +224,18 @@ function getCategoryDefinitions() {
           titleEn: 'Transmission',
           sortOrder: 40,
           options: [cond('automatic', 'أوتوماتيك', 'Automatic'), cond('manual', 'يدوي', 'Manual')]
+        },
+        {
+          slug: 'mileage',
+          titleAr: 'المسافة المقطوعة',
+          titleEn: 'Mileage',
+          sortOrder: 50,
+          options: [
+            cond('0-50000', '0 - 50,000 كم', '0 - 50,000 km'),
+            cond('50000-100000', '50,000 - 100,000 كم', '50,000 - 100,000 km'),
+            cond('100000-150000', '100,000 - 150,000 كم', '100,000 - 150,000 km'),
+            cond('150000-plus', '150,000+ كم', '150,000+ km')
+          ]
         }
       ]
     },

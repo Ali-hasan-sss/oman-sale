@@ -7,6 +7,7 @@ export type ListingFormValues = {
   city: string;
   wilayah: string;
   price: string;
+  modelYear?: string;
 };
 
 export type ListingValidationMessages = {
@@ -21,12 +22,14 @@ export type ListingValidationMessages = {
   wilayahRequired: string;
   priceRequired: string;
   priceInvalid: string;
+  modelYearRequired: string;
 };
 
 export type ListingFormValidationContext = {
   rootCategoryId?: string;
   subcategoryComplete?: boolean;
   filtersComplete?: boolean;
+  requiresModelYear?: boolean;
 };
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -77,6 +80,13 @@ export function validateListingForm(
 
   if (context.filtersComplete === false) {
     errors.filters = messages.filterRequired;
+  }
+
+  if (context.requiresModelYear) {
+    const year = Number(values.modelYear);
+    if (!values.modelYear || Number.isNaN(year) || year < 1998 || year > 2026) {
+      errors.modelYear = messages.modelYearRequired;
+    }
   }
 
   if (!values.city || !omanGovernorateValues.includes(values.city)) {

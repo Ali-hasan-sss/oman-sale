@@ -11,6 +11,11 @@ import { api } from '@/lib/api';
 import {
   buildSubcategoryFilterLevels,
   getEffectiveCategoryId,
+  isCategoryUnderSlug,
+  MODEL_YEAR_MAX,
+  MODEL_YEAR_MIN,
+  PASSENGER_CARS_SLUG,
+  selectFilterOption,
   updateSubcategoryPath
 } from '@/lib/category-subcategory-filters';
 import { buildCategoryTree } from '@/lib/category-tree';
@@ -73,12 +78,16 @@ type ListingsResponse = {
 
 type CategoryFilter = {
   id: string;
+  slug: string;
   title: string;
   options: Array<{
     id: string;
     label: string;
   }>;
 };
+
+const modelYearFloor = MODEL_YEAR_MIN;
+const modelYearCeiling = MODEL_YEAR_MAX;
 
 const priceFloor = 0;
 const priceCeiling = 100000;
@@ -106,6 +115,7 @@ const listingsPageMessages = {
     allWilayahsInGovernorate: 'كل ولايات المحافظة',
     priceRange: 'نطاق السعر',
     priceScale: 'مقياس السعر',
+    modelYearRange: 'سنة الصنع',
     applyFilters: 'تطبيق الفلاتر',
     resetFilters: 'إعادة تعيين',
     loadMore: 'تحميل المزيد',
@@ -131,6 +141,7 @@ const listingsPageMessages = {
     allWilayahsInGovernorate: 'All wilayahs in governorate',
     priceRange: 'Price range',
     priceScale: 'Price scale',
+    modelYearRange: 'Model year',
     applyFilters: 'Apply filters',
     resetFilters: 'Reset',
     loadMore: 'Load more',
@@ -159,10 +170,14 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
   const [appliedWilayah, setAppliedWilayah] = useState('');
   const [appliedMinPrice, setAppliedMinPrice] = useState('');
   const [appliedMaxPrice, setAppliedMaxPrice] = useState('');
+  const [appliedMinModelYear, setAppliedMinModelYear] = useState('');
+  const [appliedMaxModelYear, setAppliedMaxModelYear] = useState('');
   const [city, setCity] = useState('');
   const [wilayah, setWilayah] = useState('');
   const [minPrice, setMinPrice] = useState(priceFloor);
   const [maxPrice, setMaxPrice] = useState(defaultPriceScale);
+  const [minModelYear, setMinModelYear] = useState(modelYearFloor);
+  const [maxModelYear, setMaxModelYear] = useState(modelYearCeiling);
   const [sort, setSort] = useState('recent');
   const [priceScale, setPriceScale] = useState(defaultPriceScale);
   const [page, setPage] = useState(1);
@@ -199,6 +214,13 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
           listingsPageMessages[locale].subcategories
         )
       : [];
+  const isPassengerCarsCategory = useMemo(
+    () =>
+      effectiveCategoryId
+        ? isCategoryUnderSlug(categories, effectiveCategoryId, PASSENGER_CARS_SLUG)
+        : false,
+    [categories, effectiveCategoryId]
+  );
 
   useEffect(() => {
     setIsLoadingCategories(true);
@@ -216,7 +238,9 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
     }
 
     api
-      .get<{ data: CategoryFilter[] }>(`/categories/${effectiveCategoryId}/filters`, { params: { locale } })
+      .get<{ data: CategoryFilter[] }>(`/categories/${effectiveCategoryId}/filters`, {
+        params: { locale, includeAncestors: true }
+      })
       .then((response) => setCategoryFilters(response.data.data))
       .catch(() => setCategoryFilters([]));
   }, [effectiveCategoryId, locale]);
@@ -238,6 +262,8 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
 
     const urlMin = searchParams.get('minPrice');
     const urlMax = searchParams.get('maxPrice');
+    const urlMinYear = searchParams.get('minModelYear');
+    const urlMaxYear = searchParams.get('maxModelYear');
     const urlCity = (searchParams.get('city') ?? '').trim();
     const urlWilayah = (searchParams.get('wilayah') ?? '').trim();
 
@@ -251,6 +277,18 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
       const max = Number(urlMax);
       setMaxPrice(max);
       setAppliedMaxPrice(String(max));
+    }
+
+    if (urlMinYear && !Number.isNaN(Number(urlMinYear))) {
+      const minYear = Number(urlMinYear);
+      setMinModelYear(minYear);
+      setAppliedMinModelYear(String(minYear));
+    }
+
+    if (urlMaxYear && !Number.isNaN(Number(urlMaxYear))) {
+      const maxYear = Number(urlMaxYear);
+      setMaxModelYear(maxYear);
+      setAppliedMaxModelYear(String(maxYear));
     }
 
     setCity(urlCity);
@@ -288,6 +326,8 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
           wilayah: appliedCity && appliedWilayah ? appliedWilayah : undefined,
           minPrice: appliedMinPrice || undefined,
           maxPrice: appliedMaxPrice || undefined,
+          minModelYear: appliedMinModelYear || undefined,
+          maxModelYear: appliedMaxModelYear || undefined,
           filterOptionIds: selectedFilterOptionIds.length > 0 ? selectedFilterOptionIds.join(',') : undefined
         }
       })
@@ -300,7 +340,7 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
         setTotal(0);
       })
       .finally(() => setIsLoading(false));
-  }, [appliedCity, appliedWilayah, appliedMaxPrice, appliedMinPrice, appliedSearch, decodedCategorySlug, effectiveCategoryId, page, categories.length, selectedFilterOptionIds]);
+  }, [appliedCity, appliedWilayah, appliedMaxModelYear, appliedMaxPrice, appliedMinModelYear, appliedMinPrice, appliedSearch, decodedCategorySlug, effectiveCategoryId, page, categories.length, selectedFilterOptionIds]);
 
   useEffect(() => {
     const token = getUserAccessToken();
@@ -326,6 +366,8 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
   const activePriceCeiling = priceScale;
   const minPercent = (minPrice / activePriceCeiling) * 100;
   const maxPercent = (maxPrice / activePriceCeiling) * 100;
+  const minYearPercent = ((minModelYear - modelYearFloor) / (modelYearCeiling - modelYearFloor)) * 100;
+  const maxYearPercent = ((maxModelYear - modelYearFloor) / (modelYearCeiling - modelYearFloor)) * 100;
   const pageMessages = listingsPageMessages[locale];
   const sortOptions = [
     { value: 'recent', label: pageMessages.recent },
@@ -348,6 +390,10 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
     setPriceScale(defaultPriceScale);
     setAppliedMinPrice('');
     setAppliedMaxPrice('');
+    setMinModelYear(modelYearFloor);
+    setMaxModelYear(modelYearCeiling);
+    setAppliedMinModelYear('');
+    setAppliedMaxModelYear('');
     setSelectedFilterOptionIds([]);
     setPage(1);
 
@@ -382,6 +428,8 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
     setAppliedWilayah(city && wilayah ? wilayah : '');
     setAppliedMinPrice(minPrice > priceFloor ? String(minPrice) : '');
     setAppliedMaxPrice(maxPrice < activePriceCeiling ? String(maxPrice) : '');
+    setAppliedMinModelYear(minModelYear > modelYearFloor ? String(minModelYear) : '');
+    setAppliedMaxModelYear(maxModelYear < modelYearCeiling ? String(maxModelYear) : '');
     setPage(1);
   };
 
@@ -401,11 +449,23 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
     setPage(1);
   };
 
-  const toggleFilterOption = (optionId: string) => {
+  const toggleFilterOption = (filter: CategoryFilter, optionId: string) => {
     setSelectedFilterOptionIds((current) =>
-      current.includes(optionId) ? current.filter((id) => id !== optionId) : [...current, optionId]
+      selectFilterOption(
+        current,
+        filter.options.map((option) => option.id),
+        optionId
+      )
     );
     setPage(1);
+  };
+
+  const updateMinModelYear = (value: number) => {
+    setMinModelYear(Math.min(value, maxModelYear - 1));
+  };
+
+  const updateMaxModelYear = (value: number) => {
+    setMaxModelYear(Math.max(value, minModelYear + 1));
   };
 
   const updateMinPrice = (value: number) => {
@@ -445,6 +505,46 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
       <div className="flex items-center gap-2">
         <span className="text-sm text-gray-600">{pageMessages.sortBy}</span>
         <Dropdown value={sort} options={sortOptions} onChange={setSort} />
+      </div>
+    </div>
+  );
+
+  const modelYearSlider = (
+    <div>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-sm font-bold text-gray-700">
+        <span>{pageMessages.modelYearRange}</span>
+        <span dir="ltr">
+          {minModelYear} - {maxModelYear}
+        </span>
+      </div>
+      <div className="relative h-10">
+        <div className="absolute left-0 right-0 top-1/2 h-2 -translate-y-1/2 rounded-full bg-gray-200" />
+        <div
+          className="absolute top-1/2 h-2 -translate-y-1/2 rounded-full bg-green-500"
+          style={
+            dir === 'rtl'
+              ? { right: `${minYearPercent}%`, left: `${100 - maxYearPercent}%` }
+              : { left: `${minYearPercent}%`, right: `${100 - maxYearPercent}%` }
+          }
+        />
+        <input
+          type="range"
+          min={modelYearFloor}
+          max={modelYearCeiling}
+          step={1}
+          value={minModelYear}
+          onChange={(event) => updateMinModelYear(Number(event.target.value))}
+          className="pointer-events-none absolute inset-x-0 top-1/2 w-full -translate-y-1/2 appearance-none bg-transparent [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-green-600 [&::-webkit-slider-thumb]:shadow"
+        />
+        <input
+          type="range"
+          min={modelYearFloor}
+          max={modelYearCeiling}
+          step={1}
+          value={maxModelYear}
+          onChange={(event) => updateMaxModelYear(Number(event.target.value))}
+          className="pointer-events-none absolute inset-x-0 top-1/2 w-full -translate-y-1/2 appearance-none bg-transparent [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-green-700 [&::-webkit-slider-thumb]:shadow"
+        />
       </div>
     </div>
   );
@@ -545,13 +645,17 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
             <FilterChip
               key={option.id}
               active={selectedFilterOptionIds.includes(option.id)}
-              onClick={() => toggleFilterOption(option.id)}
+              onClick={() => toggleFilterOption(filter, option.id)}
             >
               {option.label}
             </FilterChip>
           ))}
         </FilterSection>
       ))}
+
+      {isPassengerCarsCategory ? (
+        <FilterSection title={pageMessages.modelYearRange}>{modelYearSlider}</FilterSection>
+      ) : null}
 
       <FilterSection title={pageMessages.selectCity}>
         <FilterChip
