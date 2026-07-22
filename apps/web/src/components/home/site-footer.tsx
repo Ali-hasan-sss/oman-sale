@@ -14,6 +14,8 @@ type FooterCategory = {
   id: string;
   name: string;
   slug: string;
+  parentId?: string | null;
+  sortOrder?: number;
 };
 
 type FooterTourismDestination = {
@@ -36,7 +38,13 @@ export function SiteFooter() {
   useEffect(() => {
     api
       .get<{ data: FooterCategory[] }>('/categories', { params: { locale } })
-      .then((response) => setCategories(response.data.data.slice(0, 6)))
+      .then((response) => {
+        const rootCategories = response.data.data
+          .filter((category) => !category.parentId)
+          .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+          .slice(0, 5);
+        setCategories(rootCategories);
+      })
       .catch(() => setCategories([]));
   }, [locale]);
 
