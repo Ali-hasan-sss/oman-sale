@@ -12,6 +12,7 @@ import { PhoneVerificationSentNotice } from '@/components/auth/phone-verificatio
 import { RegisterStepper } from '@/components/auth/register-stepper';
 import { VerificationCodeInput } from '@/components/auth/verification-code-input';
 import { PhoneInput } from '@/components/ui/phone-input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { SiteFooter } from '@/components/home/site-footer';
 import { UserSiteHeader } from '@/components/navigation/user-site-header';
 import { api } from '@/lib/api';
@@ -434,10 +435,9 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
       <form onSubmit={completeRegistration}>
         <div className="mb-4">
           <label className="mb-2 block">{authMessages.password}</label>
-          <input
+          <PasswordInput
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            type="password"
             name="new-password"
             autoComplete="new-password"
             required
@@ -448,10 +448,9 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
         </div>
         <div className="mb-6">
           <label className="mb-2 block">{authMessages.confirmPassword}</label>
-          <input
+          <PasswordInput
             value={confirmPassword}
             onChange={(event) => setConfirmPassword(event.target.value)}
-            type="password"
             name="confirm-password"
             autoComplete="new-password"
             required
@@ -542,10 +541,9 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
 
                 <div className="mb-6">
                   <label className="mb-2 block">{authMessages.password}</label>
-                  <input
+                  <PasswordInput
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    type="password"
                     name="current-password"
                     autoComplete="current-password"
                     required

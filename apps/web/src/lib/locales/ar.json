@@ -23,6 +23,8 @@
     "news": "الأخبار",
     "pricing": "الأسعار والخطط",
     "logout": "تسجيل الخروج",
+    "showPassword": "إظهار كلمة المرور",
+    "hidePassword": "إخفاء كلمة المرور",
     "adminDashboard": "لوحة التحكم",
     "adminRole": "إدارة",
     "online": "متصل",

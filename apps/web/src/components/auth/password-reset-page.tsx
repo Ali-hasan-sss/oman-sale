@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
 
 import { VerificationCodeInput } from '@/components/auth/verification-code-input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { api } from '@/lib/api';
 import { getAuthMessages, useI18n } from '@/lib/i18n';
 
@@ -59,7 +60,7 @@ export function PasswordResetPage() {
           {sent ? (
             <>
               <VerificationCodeInput value={code} onChange={setCode} disabled={submitting} />
-              <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required minLength={8} placeholder={messages.newPassword} className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:ring-2 focus:ring-green-500" />
+              <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} placeholder={messages.newPassword} className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:ring-2 focus:ring-green-500" />
             </>
           ) : null}
           {error ? <p className="rounded-lg bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{error}</p> : null}

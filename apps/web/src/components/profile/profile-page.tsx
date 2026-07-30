@@ -10,6 +10,7 @@ import { SiteFooter } from '@/components/home/site-footer';
 import { SiteHeaderSearch, UserSiteHeader } from '@/components/navigation/user-site-header';
 import { AvatarWithBanBadge } from '@/components/ui/avatar-with-ban-badge';
 import { PhoneInput } from '@/components/ui/phone-input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { UserTrustBadgePanel } from '@/components/trust-badge/user-trust-badge-panel';
 import { VerifiedBadge } from '@/components/trust-badge/verified-badge';
 import { api } from '@/lib/api';
@@ -494,8 +495,7 @@ export function ProfilePage() {
               <h2 className="mb-6 text-2xl font-black">{profileMessages.passwordTitle}</h2>
               <div className="space-y-5">
                 <Field label={profileMessages.currentPassword}>
-                  <input
-                    type="password"
+                  <PasswordInput
                     value={currentPassword}
                     onChange={(event) => setCurrentPassword(event.target.value)}
                     required
@@ -503,8 +503,7 @@ export function ProfilePage() {
                   />
                 </Field>
                 <Field label={profileMessages.newPassword}>
-                  <input
-                    type="password"
+                  <PasswordInput
                     value={newPassword}
                     onChange={(event) => setNewPassword(event.target.value)}
                     required

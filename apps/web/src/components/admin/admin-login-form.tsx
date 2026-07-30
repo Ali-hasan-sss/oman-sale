@@ -6,6 +6,7 @@ import { FormEvent, useState } from 'react';
 
 import { api } from '@/lib/api';
 import { notifyAuthChanged } from '@/components/auth/user-menu';
+import { PasswordInput } from '@/components/ui/password-input';
 import { saveAdminSession, type AdminLoginResponse } from '@/lib/admin-auth';
 import { useI18n } from '@/lib/i18n';
 
@@ -57,12 +58,11 @@ export function AdminLoginForm() {
       <div>
         <label className="mb-2 block text-sm font-bold text-slate-700">{m.admin.password}</label>
         <div className="relative">
-          <Lock className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-          <input
-            type="password"
+          <Lock className="pointer-events-none absolute start-4 top-1/2 z-10 -translate-y-1/2 text-slate-400" size={18} />
+          <PasswordInput
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-4 pr-11 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+            className="w-full rounded-xl border border-slate-200 bg-white py-3 ps-11 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
             placeholder="••••••••"
             required
           />

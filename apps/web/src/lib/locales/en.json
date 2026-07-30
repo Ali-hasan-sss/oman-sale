@@ -23,6 +23,8 @@
     "news": "News",
     "pricing": "Pricing & plans",
     "logout": "Log out",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
     "adminDashboard": "Admin dashboard",
     "adminRole": "Admin",
     "online": "Online",

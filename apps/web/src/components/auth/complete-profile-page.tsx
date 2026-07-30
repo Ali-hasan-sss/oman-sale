@@ -8,6 +8,7 @@ import { PhoneVerificationResend, type PhoneVerificationChannel } from '@/compon
 import { PhoneVerificationSentNotice } from '@/components/auth/phone-verification-sent-notice';
 import { VerificationCodeInput } from '@/components/auth/verification-code-input';
 import { PhoneInput } from '@/components/ui/phone-input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { SiteFooter } from '@/components/home/site-footer';
 import { UserSiteHeader } from '@/components/navigation/user-site-header';
 import { api } from '@/lib/api';
@@ -257,10 +258,9 @@ export function CompleteProfilePage() {
               <form onSubmit={completeProfile}>
                 <div className="mb-4">
                   <label className="mb-2 block">{authMessages.password}</label>
-                  <input
+                  <PasswordInput
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    type="password"
                     name="new-password"
                     autoComplete="new-password"
                     required
@@ -271,10 +271,9 @@ export function CompleteProfilePage() {
                 </div>
                 <div className="mb-6">
                   <label className="mb-2 block">{authMessages.confirmPassword}</label>
-                  <input
+                  <PasswordInput
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}
-                    type="password"
                     name="confirm-password"
                     autoComplete="new-password"
                     required

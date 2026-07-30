@@ -8,6 +8,7 @@ import { FormEvent, PropsWithChildren, useEffect, useState } from 'react';
 import { notifyAuthChanged } from '@/components/auth/user-menu';
 import { AdminContentLoader } from '@/components/admin/admin-page-loader';
 import { NotificationBell } from '@/components/notifications/notification-bell';
+import { PasswordInput } from '@/components/ui/password-input';
 import { adminApi, clearAdminSession, getAdminAccessToken, saveAdminTokens, type AdminLoginResponse } from '@/lib/admin-auth';
 import { ADMIN_PENDING_COUNTS_EVENT } from '@/lib/admin-pending-counts';
 import { useI18n } from '@/lib/i18n';
@@ -334,8 +335,7 @@ function PasswordField({ label, minLength = 1, onChange, value }: { label: strin
   return (
     <label className="block">
       <span className="mb-1 block text-sm font-bold text-slate-700">{label}</span>
-      <input
-        type="password"
+      <PasswordInput
         value={value}
         onChange={(event) => onChange(event.target.value)}
         className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
