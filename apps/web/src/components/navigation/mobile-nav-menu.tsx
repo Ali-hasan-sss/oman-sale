@@ -38,11 +38,11 @@ export function MobileNavMenu({ variant = 'light' }: MobileNavMenuProps) {
         <div className="fixed inset-0 z-[90] md:hidden">
           <button className="absolute inset-0 bg-black/40" onClick={() => setIsOpen(false)} type="button" aria-label="Close navigation" />
           <aside
-            className={`absolute top-0 h-full w-80 max-w-[85vw] bg-white p-5 shadow-2xl ${
+            className={`absolute top-0 flex h-full w-80 max-w-[85vw] flex-col overflow-hidden bg-white p-5 shadow-2xl ${
               dir === 'rtl' ? 'right-0' : 'left-0'
             }`}
           >
-            <div className="mb-6 flex items-center justify-between">
+            <div className="mb-6 flex shrink-0 items-center justify-between">
               <Link href={localizedPath('/')} onClick={() => setIsOpen(false)} className="flex items-center gap-3">
                 <img src="/logo.png" alt="Oman Sale" className="h-12 w-auto" />
                 <SiteBrandMark variant="light" />
@@ -52,7 +52,7 @@ export function MobileNavMenu({ variant = 'light' }: MobileNavMenuProps) {
               </button>
             </div>
 
-            <nav className="space-y-2">
+            <nav className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain pb-4">
               <MobileLink href="/stores" label={m.common.browseStores} onClick={() => setIsOpen(false)} />
               <HeaderCustomNavButtons
                 onNavigate={() => setIsOpen(false)}

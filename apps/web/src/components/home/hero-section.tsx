@@ -101,7 +101,7 @@ export function HeroSection() {
   };
 
   return (
-    <section className="group relative flex h-[100dvh] max-h-[100dvh] min-h-0 flex-col overflow-hidden">
+    <section className="group relative flex min-h-0 flex-col overflow-hidden h-auto max-h-none [@media(min-height:500px)]:h-[100dvh] [@media(min-height:500px)]:max-h-[100dvh]">
       {displaySlides.map((slide, index) => (
         <div
           key={slide.id}
@@ -120,7 +120,7 @@ export function HeroSection() {
         </div>
       </UserSiteHeader>
 
-      <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center px-4 pb-16 text-center">
+      <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center px-4 py-8 text-center [@media(min-height:500px)]:pb-16 [@media(min-height:500px)]:pt-0">
         <div className="max-w-3xl">
           <h1 className="mb-3 text-3xl font-black text-white drop-shadow-lg sm:mb-4 sm:text-4xl md:text-5xl lg:text-6xl">
             {currentSlide.title}

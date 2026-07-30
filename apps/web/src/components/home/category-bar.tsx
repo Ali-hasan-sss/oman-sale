@@ -15,6 +15,7 @@ type ApiCategory = {
   parentId?: string | null;
   sortOrder?: number;
   icon?: string | null;
+  iconImageUrl?: string | null;
   _count?: {
     ads: number;
     children?: number;
@@ -65,7 +66,7 @@ export function CategoryBar() {
             }`;
             const inner = (
               <>
-                <CategoryIcon icon={category.icon} size={20} />
+                <CategoryIcon icon={category.icon} iconImageUrl={category.iconImageUrl} size={20} />
                 <span className="whitespace-nowrap">{category.name}</span>
               </>
             );
@@ -105,7 +106,7 @@ export function CategoryBar() {
                   className="group flex flex-col items-center gap-2 text-center"
                 >
                   <span className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-brand-600 transition group-hover:bg-brand-50">
-                    <CategoryIcon icon={child.icon} size={24} />
+                    <CategoryIcon icon={child.icon} iconImageUrl={child.iconImageUrl} size={24} />
                   </span>
                   <span className="text-xs font-bold text-ink-900">{child.name}</span>
                 </Link>

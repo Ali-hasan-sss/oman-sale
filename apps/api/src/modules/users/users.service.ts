@@ -10,6 +10,7 @@ import { normalizePhone, setUserVerifiedPhone, getUserVerifiedPhone } from '../.
 import { ApiError } from '../../shared/utils/api-error';
 import { hashPassword, verifyPassword } from '../../shared/utils/password';
 import { signAccessToken, signRefreshToken } from '../../shared/utils/tokens';
+import { forceDisconnectUserSockets } from '../../config/socket';
 import { authRepository } from '../auth/auth.repository';
 import type { AuthTokens } from '../auth/auth.types';
 import { resolveUserMedia } from '../../shared/utils/resolve-entity-media';
@@ -59,7 +60,8 @@ export class UsersService {
 
     const password = await hashPassword(dto.newPassword);
     await usersRepository.updatePassword(userId, password);
-    return { changed: true };
+    const tokens = await this.createTokens(user.id, user.email, user.role);
+    return { changed: true, tokens };
   }
 
   async requestEmailChange(userId: string, dto: RequestEmailChangeDto) {
@@ -188,11 +190,17 @@ export class UsersService {
   }
 
   private async createTokens(userId: string, email: string, role: string): Promise<AuthTokens> {
+    const { tokenVersion } = await authRepository.replaceUserSession(userId);
+    forceDisconnectUserSockets(userId);
     const tokens = {
-      accessToken: signAccessToken({ userId, email, role }),
-      refreshToken: signRefreshToken({ userId, email, role })
+      accessToken: signAccessToken({ userId, email, role, tokenVersion }),
+      refreshToken: signRefreshToken({ userId, email, role, tokenVersion })
     };
-    await authRepository.createRefreshToken(userId, await hashPassword(tokens.refreshToken), new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
+    await authRepository.createRefreshToken(
+      userId,
+      await hashPassword(tokens.refreshToken),
+      new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+    );
     return tokens;
   }
 }

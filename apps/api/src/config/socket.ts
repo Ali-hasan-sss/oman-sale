@@ -6,14 +6,10 @@ import { Server } from 'socket.io';
 import { resolveCorsOrigin } from './cors';
 import { env } from './env';
 import { redis, socketPubClient, socketSubClient } from './redis';
+import { prisma } from '../shared/prisma/client';
+import type { AccessTokenPayload } from '../shared/utils/tokens';
 
 let io: Server | undefined;
-
-type SocketUserPayload = {
-  sub: string;
-  email: string;
-  role: string;
-};
 
 const userSocketsKey = (userId: string) => `online:user:${userId}:sockets`;
 const socketPresenceKey = (userId: string, socketId: string) => `online:user:${userId}:socket:${socketId}`;
@@ -51,12 +47,20 @@ export const createSocketServer = (httpServer: HttpServer) => {
 
   io.adapter(createAdapter(socketPubClient, socketSubClient));
 
-  io.use((socket, next) => {
+  io.use(async (socket, next) => {
     const token = socket.handshake.auth.token;
     if (typeof token !== 'string') return next(new Error('Authentication required'));
 
     try {
-      const payload = jwt.verify(token, env.JWT_ACCESS_SECRET) as SocketUserPayload;
+      const payload = jwt.verify(token, env.JWT_ACCESS_SECRET) as AccessTokenPayload;
+      const user = await prisma.user.findFirst({
+        where: { id: payload.sub, deletedAt: null },
+        select: { tokenVersion: true }
+      });
+      if (!user || user.tokenVersion !== (payload.tokenVersion ?? -1)) {
+        return next(new Error('Session expired'));
+      }
+
       socket.data.userId = payload.sub;
       socket.data.email = payload.email;
       socket.data.role = payload.role;
@@ -117,3 +121,20 @@ export const createSocketServer = (httpServer: HttpServer) => {
 };
 
 export const getSocketServer = () => io;
+
+/** Kick every live socket for a user after their session is replaced (new login / password change). */
+export const forceDisconnectUserSockets = (userId: string) => {
+  if (!io) return;
+
+  void io
+    .in(`user:${userId}`)
+    .fetchSockets()
+    .then((sockets) => {
+      for (const socket of sockets) {
+        socket.emit('session:revoked');
+        socket.disconnect(true);
+      }
+    })
+    .catch(() => undefined);
+};
+

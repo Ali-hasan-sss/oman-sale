@@ -16,6 +16,7 @@ import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { CategoriesSkeleton } from '@/components/admin/admin-categories-skeleton';
+import { ImageUploader } from '@/components/media/image-uploader';
 import { adminApi } from '@/lib/admin-auth';
 import {
   CategoryIcon,
@@ -27,6 +28,7 @@ import {
 } from '@/lib/category-icons';
 import { buildCategoryTree, type CategoryTreeNode } from '@/lib/category-tree';
 import { useI18n } from '@/lib/i18n';
+import { resolveMediaUrl } from '@/lib/media-url';
 
 type CategoryType = 'PRODUCT' | 'SERVICE' | 'JOB' | 'JOB_REQUEST' | 'LOGISTICS' | 'CONSTRUCTION';
 
@@ -37,6 +39,7 @@ type ManagedCategory = {
   nameEn: string;
   slug: string;
   icon?: string | null;
+  iconImageUrl?: string | null;
   type: CategoryType;
   parentId?: string | null;
   isActive: boolean;
@@ -64,6 +67,7 @@ type CategoryFormState = {
   nameEn: string;
   slug: string;
   icon: string;
+  iconImageUrl: string;
   type: CategoryType;
   parentId: string;
   isActive: boolean;
@@ -94,6 +98,7 @@ const initialForm: CategoryFormState = {
   nameEn: '',
   slug: '',
   icon: '',
+  iconImageUrl: '',
   type: 'PRODUCT',
   parentId: '',
   isActive: true
@@ -311,6 +316,7 @@ export function AdminCategoriesManagement() {
       nameEn: category.nameEn,
       slug: category.slug,
       icon: category.icon ?? '',
+      iconImageUrl: category.iconImageUrl ?? '',
       type: category.type,
       parentId: category.parentId ?? '',
       isActive: category.isActive
@@ -462,9 +468,10 @@ export function AdminCategoriesManagement() {
 
   const validateForm = () => {
     const nextErrors: CategoryFormErrors = {};
+
     if (form.nameAr.trim().length < 2) nextErrors.nameAr = m.admin.requiredField;
     if (form.nameEn.trim().length < 2) nextErrors.nameEn = m.admin.requiredField;
-    if (!form.icon) nextErrors.icon = m.admin.requiredField;
+    if (!form.icon && !form.iconImageUrl) nextErrors.icon = m.admin.requiredField;
     if (!resolvedSlug || !slugPattern.test(resolvedSlug)) nextErrors.slug = m.admin.invalidSlug;
     if (slugStatus === 'checking') nextErrors.slug = m.admin.slugChecking;
     if (slugStatus === 'unavailable') nextErrors.slug = m.admin.slugUnavailable;
@@ -483,7 +490,8 @@ export function AdminCategoriesManagement() {
       nameAr: form.nameAr.trim(),
       nameEn: form.nameEn.trim(),
       slug: form.slug || createSlug(form.nameEn || form.nameAr),
-      icon: form.icon,
+      icon: form.icon || undefined,
+      iconImageUrl: form.iconImageUrl || null,
       type: form.type,
       parentId: form.parentId || null,
       isActive: form.isActive
@@ -691,6 +699,37 @@ export function AdminCategoriesManagement() {
               />
               <p className="mt-1 text-xs text-slate-500">{m.admin.emojiIconHint}</p>
             </Field>
+
+            <div className="lg:col-span-2">
+              <Field label={m.admin.categoryIconImage}>
+                <ImageUploader
+                  folder="categories"
+                  useAdminAuth
+                  value={form.iconImageUrl}
+                  onChange={(value) => setForm((current) => ({ ...current, iconImageUrl: value }))}
+                  labels={{
+                    title: m.admin.categoryIconImageUploadTitle,
+                    hint: m.admin.categoryIconImageUploadHint,
+                    remove: m.admin.removeImage,
+                    uploading: m.admin.categoryIconImageUploading,
+                    compressing: m.admin.categoryIconImageCompressing,
+                    uploadError: m.admin.categoryIconImageUploadError
+                  }}
+                />
+                <p className="mt-1 text-xs text-slate-500">{m.admin.categoryIconImageHint}</p>
+                {form.iconImageUrl ? (
+                  <div className="mt-3 flex items-center gap-3 rounded-xl border border-slate-200 p-3">
+                    <img
+                      src={resolveMediaUrl(form.iconImageUrl)}
+                      alt=""
+                      className="h-14 w-14 rounded-xl object-cover"
+                    />
+                    <CategoryIcon icon={form.icon} size={40} />
+                    <span className="text-xs text-slate-500">{m.admin.categoryIconImagePreviewHint}</span>
+                  </div>
+                ) : null}
+              </Field>
+            </div>
 
             <Field label={m.admin.adType}>
               <select
@@ -1103,7 +1142,13 @@ function CategoryTreeRow({
         )}
 
         <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
-          {IconPreview ? <IconPreview size={20} /> : <CategoryIcon icon={category.icon} size={20} />}
+          {category.iconImageUrl ? (
+            <CategoryIcon icon={category.icon} iconImageUrl={category.iconImageUrl} size={20} />
+          ) : IconPreview ? (
+            <IconPreview size={20} />
+          ) : (
+            <CategoryIcon icon={category.icon} size={20} />
+          )}
         </span>
 
         <div className="min-w-0">

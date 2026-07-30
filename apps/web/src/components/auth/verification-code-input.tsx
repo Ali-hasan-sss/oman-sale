@@ -27,7 +27,7 @@ export function VerificationCodeInput({ disabled, onChange, value }: { disabled?
   };
 
   return (
-    <div dir="rtl" className="grid grid-cols-6 gap-2">
+    <div dir="ltr" className="grid grid-cols-6 gap-2">
       {digits.map((digit, index) => (
         <input
           key={index}
@@ -38,6 +38,7 @@ export function VerificationCodeInput({ disabled, onChange, value }: { disabled?
           disabled={disabled}
           inputMode="numeric"
           maxLength={1}
+          autoComplete={index === 0 ? 'one-time-code' : 'off'}
           onPaste={paste}
           onKeyDown={(event) => keyDown(event, index)}
           onChange={(event) => setDigit(index, event.target.value.replace(/\D/g, '').slice(-1))}

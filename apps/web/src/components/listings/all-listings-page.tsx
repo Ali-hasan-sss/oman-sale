@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDown, MapPin } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
 import Link from 'next/link';
 import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -9,15 +9,15 @@ import { SiteFooter } from '@/components/home/site-footer';
 import { SiteHeaderSearch, UserSiteHeader } from '@/components/navigation/user-site-header';
 import { api } from '@/lib/api';
 import {
-  buildSubcategoryFilterLevels,
   getEffectiveCategoryId,
+  getSubcategoryViewState,
   isCategoryUnderSlug,
   MODEL_YEAR_MAX,
   MODEL_YEAR_MIN,
   PASSENGER_CARS_SLUG,
-  selectFilterOption,
-  updateSubcategoryPath
+  selectFilterOption
 } from '@/lib/category-subcategory-filters';
+import { CategoryIcon } from '@/lib/category-icons';
 import { buildCategoryTree } from '@/lib/category-tree';
 import { useI18n } from '@/lib/i18n';
 import { getListingLocationLabel, getWilayahsForGovernorate, omanGovernorates } from '@/lib/oman-locations';
@@ -34,6 +34,8 @@ type Category = {
   slug: string;
   parentId?: string | null;
   sortOrder?: number;
+  icon?: string | null;
+  iconImageUrl?: string | null;
 };
 
 type Listing = {
@@ -104,6 +106,7 @@ const listingsPageMessages = {
     filters: 'الفلاتر',
     clearAll: 'عرض الكل',
     subcategories: 'الفئة الفرعية',
+    backTo: 'رجوع إلى',
     moreFilters: 'المزيد من الخيارات',
     sortBy: 'الترتيب حسب:',
     recent: 'الأحدث',
@@ -130,6 +133,7 @@ const listingsPageMessages = {
     filters: 'Filters',
     clearAll: 'Clear all',
     subcategories: 'Subcategory',
+    backTo: 'Back to',
     moreFilters: 'More options',
     sortBy: 'Sort by:',
     recent: 'Newest',
@@ -195,25 +199,15 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
   const effectiveCategoryId = rootCategoryId
     ? getEffectiveCategoryId(rootCategoryId, selectedSubcategoryPath)
     : '';
-  const subcategoryLevels = isCategoryPage
-    ? buildSubcategoryFilterLevels(
+  const subcategoryView = rootCategoryId
+    ? getSubcategoryViewState(
         categories,
         rootCategoryId,
         selectedSubcategoryPath,
-        (category) => category.name,
-        listingsPageMessages[locale].subcategories
+        (category) => category.name
       )
-    : [];
-  const allListingsSubcategoryLevels =
-    !isCategoryPage && rootCategoryId
-      ? buildSubcategoryFilterLevels(
-          categories,
-          rootCategoryId,
-          selectedSubcategoryPath,
-          (category) => category.name,
-          listingsPageMessages[locale].subcategories
-        )
-      : [];
+    : null;
+  const activeRootCategory = rootCategoryId ? categories.find((category) => category.id === rootCategoryId) : undefined;
   const isPassengerCarsCategory = useMemo(
     () =>
       effectiveCategoryId
@@ -444,10 +438,37 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
     return locale === 'ar' ? `${value.toLocaleString('en-US')}+ ر.ع` : `${value.toLocaleString('en-US')}+ OMR`;
   };
 
-  const handleSubcategorySelect = (levelIndex: number, categoryId: string) => {
-    setSelectedSubcategoryPath((current) => updateSubcategoryPath(current, levelIndex, categoryId));
+  const drillIntoSubcategory = (categoryId: string) => {
+    setSelectedSubcategoryPath((current) => [...current, categoryId]);
     setPage(1);
   };
+
+  const goBackSubcategory = () => {
+    if (selectedSubcategoryPath.length > 0) {
+      setSelectedSubcategoryPath((current) => current.slice(0, -1));
+      setPage(1);
+      return;
+    }
+
+    if (!isCategoryPage) {
+      clearRootCategory();
+    }
+  };
+
+  const getSubcategoryBackLabel = () => {
+    if (selectedSubcategoryPath.length > 0) {
+      return subcategoryView?.backTarget?.name ?? pageMessages.all;
+    }
+
+    if (!isCategoryPage && activeRootCategory) {
+      return pageMessages.all;
+    }
+
+    return pageMessages.all;
+  };
+
+  const showSubcategoryBack =
+    selectedSubcategoryPath.length > 0 || (!isCategoryPage && Boolean(appliedCategoryId));
 
   const toggleFilterOption = (filter: CategoryFilter, optionId: string) => {
     setSelectedFilterOptionIds((current) =>
@@ -608,34 +629,33 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
     </div>
   );
 
-  const subcategoryChipRows = (levels: typeof subcategoryLevels) =>
-    levels.map((level) => (
-      <div
-        key={`${level.parentId}-${level.levelIndex}`}
-        className="filter-chips-shell -mx-4 mb-4 px-4 sm:mx-0 sm:px-0"
-      >
+  const subcategoryDrillDownRow =
+    subcategoryView && (subcategoryView.options.length > 0 || showSubcategoryBack) ? (
+      <div className="filter-chips-shell -mx-4 mb-4 px-4 sm:mx-0 sm:px-0">
         <div className="filter-chips-scroll flex gap-2 overflow-x-auto pb-2">
-          <span className="shrink-0 self-center text-sm font-bold text-gray-500">{level.title}:</span>
-          <button
-            onClick={() => handleSubcategorySelect(level.levelIndex, '')}
-            className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 transition ${!level.selectedId ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-          >
-            {pageMessages.all}
-          </button>
-          {level.options.map((category) => (
+          {showSubcategoryBack ? (
             <button
-              key={category.id}
-              onClick={() =>
-                handleSubcategorySelect(level.levelIndex, level.selectedId === category.id ? '' : category.id)
-              }
-              className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 transition ${level.selectedId === category.id ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              type="button"
+              onClick={goBackSubcategory}
+              className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-green-200 bg-green-50 px-4 py-2 text-sm font-bold text-green-700 transition hover:bg-green-100"
             >
-              {category.name}
+              {dir === 'rtl' ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+              <span>
+                {pageMessages.backTo} {getSubcategoryBackLabel()}
+              </span>
             </button>
+          ) : null}
+          {subcategoryView.options.map((category) => (
+            <CategoryFilterChip
+              key={category.id}
+              category={category}
+              active={false}
+              onClick={() => drillIntoSubcategory(category.id)}
+            />
           ))}
         </div>
       </div>
-    ));
+    ) : null;
 
   const secondaryFilterContent = (
     <>
@@ -722,24 +742,36 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
     </>
   );
 
-  const desktopSubcategoryFilters = subcategoryLevels.map((level) => (
-    <FilterSection key={`${level.parentId}-${level.levelIndex}`} title={level.title}>
-      <FilterChip active={!level.selectedId} onClick={() => handleSubcategorySelect(level.levelIndex, '')}>
-        {pageMessages.all}
-      </FilterChip>
-      {level.options.map((category) => (
-        <FilterChip
-          key={category.id}
-          active={level.selectedId === category.id}
-          onClick={() =>
-            handleSubcategorySelect(level.levelIndex, level.selectedId === category.id ? '' : category.id)
-          }
-        >
-          {category.name}
-        </FilterChip>
-      ))}
-    </FilterSection>
-  ));
+  const desktopSubcategoryFilters =
+    (isCategoryPage || appliedCategoryId) &&
+    subcategoryView &&
+    (subcategoryView.options.length > 0 || showSubcategoryBack) ? (
+      <FilterSection title={pageMessages.subcategories}>
+        {showSubcategoryBack ? (
+          <button
+            type="button"
+            onClick={goBackSubcategory}
+            className="mb-2 inline-flex w-full items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-3 py-2 text-sm font-bold text-green-700 transition hover:bg-green-100"
+          >
+            {dir === 'rtl' ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+            <span>
+              {pageMessages.backTo} {getSubcategoryBackLabel()}
+            </span>
+          </button>
+        ) : null}
+        <div className="flex flex-wrap gap-2">
+          {subcategoryView.options.map((category) => (
+            <CategoryFilterChip
+              key={category.id}
+              category={category}
+              active={false}
+              variant="sidebar"
+              onClick={() => drillIntoSubcategory(category.id)}
+            />
+          ))}
+        </div>
+      </FilterSection>
+    ) : null;
 
   const filterSidebar = (
     <aside className="hidden min-w-0 lg:col-span-1 lg:block">
@@ -803,23 +835,22 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
                       />
                     ))
                   : rootCategories.map((category) => (
-                      <button
+                      <CategoryFilterChip
                         key={category.id}
+                        category={category}
+                        active={appliedCategoryId === category.id}
                         onClick={() =>
                           appliedCategoryId === category.id ? clearRootCategory() : selectRootCategory(category.id)
                         }
-                        className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 transition ${appliedCategoryId === category.id ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                      >
-                        {category.name}
-                      </button>
+                      />
                     ))}
               </div>
             </div>
 
-            {subcategoryChipRows(allListingsSubcategoryLevels)}
+            {subcategoryDrillDownRow}
           </>
         ) : (
-          subcategoryChipRows(subcategoryLevels)
+          subcategoryDrillDownRow
         )}
 
         {mobileFiltersPanel}
@@ -908,6 +939,42 @@ function ListingCard({
         </div>
       </div>
     </Link>
+  );
+}
+
+function CategoryFilterChip({
+  active,
+  category,
+  onClick,
+  variant = 'top'
+}: {
+  active: boolean;
+  category: Category;
+  onClick: () => void;
+  variant?: 'top' | 'sidebar';
+}) {
+  const activeTopClass = active ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200';
+  const activeSidebarClass = active
+    ? 'border-blue-600 bg-blue-50 text-blue-700'
+    : 'border-gray-300 bg-white text-gray-700 hover:border-blue-500';
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-3 py-2 transition ${
+        variant === 'sidebar' ? `border ${activeSidebarClass}` : activeTopClass
+      }`}
+    >
+      <span
+        className={`flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full ${
+          active && variant === 'top' ? 'bg-white/20' : 'bg-white'
+        }`}
+      >
+        <CategoryIcon icon={category.icon} iconImageUrl={category.iconImageUrl} size={18} />
+      </span>
+      <span>{category.name}</span>
+    </button>
   );
 }
 

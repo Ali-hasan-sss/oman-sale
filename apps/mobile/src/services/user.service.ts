@@ -19,7 +19,11 @@ export async function updateProfileRequest(payload: UpdateProfilePayload) {
 }
 
 export async function changePasswordRequest(currentPassword: string, newPassword: string) {
-  await http.patch(API_ENDPOINTS.users.changePassword, { currentPassword, newPassword });
+  const response = await http.patch<ApiEnvelope<{ changed: boolean; tokens: AuthSession['tokens'] }>>(
+    API_ENDPOINTS.users.changePassword,
+    { currentPassword, newPassword }
+  );
+  return response.data.data;
 }
 
 export async function requestEmailChangeRequest(email: string, locale: Locale) {

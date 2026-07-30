@@ -87,6 +87,7 @@ export function ProfileScreen({ onLogin, onManageStore, onCreateStore }: Profile
   const user = useAuthStore((state) => state.user);
   const accessToken = useAuthStore((state) => state.accessToken);
   const setSession = useAuthStore((state) => state.setSession);
+  const setTokens = useAuthStore((state) => state.setTokens);
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -242,7 +243,10 @@ export function ProfileScreen({ onLogin, onManageStore, onCreateStore }: Profile
     setIsSavingPassword(true);
 
     try {
-      await changePasswordRequest(currentPassword, newPassword);
+      const result = await changePasswordRequest(currentPassword, newPassword);
+      if (result.tokens) {
+        await setTokens(result.tokens);
+      }
       setCurrentPassword('');
       setNewPassword('');
       setPasswordMessage(t.profile.passwordSaved);

@@ -1,4 +1,5 @@
 import { ApiError } from '../../shared/utils/api-error';
+import { resolveMediaUrl } from '../../shared/utils/media-reference';
 import { categoriesRepository } from './categories.repository';
 import type {
   CreateCategoryDto,
@@ -11,7 +12,7 @@ import type {
 
 export class CategoriesService {
   list(query: ListCategoriesQuery) {
-    return categoriesRepository.findAll(query);
+    return categoriesRepository.findAll(query).then((categories) => categories.map(mapCategoryForPublic));
   }
 
   listForAdmin(query: ListAdminCategoriesQuery) {
@@ -40,6 +41,12 @@ export class CategoriesService {
 
     if (nextParentId && dto.storeBaseMonthlyPrice !== undefined) {
       dto = { ...dto, storeBaseMonthlyPrice: null };
+    }
+
+    const nextIcon = dto.icon !== undefined ? dto.icon : category.icon;
+    const nextIconImageUrl = dto.iconImageUrl !== undefined ? dto.iconImageUrl : category.iconImageUrl;
+    if (!nextIcon && !nextIconImageUrl) {
+      throw new ApiError(400, 'Category must have an icon or icon image');
     }
 
     return categoriesRepository.update(id, dto);
@@ -107,5 +114,10 @@ export class CategoriesService {
     return categoriesRepository.softDeleteFilter(id);
   }
 }
+
+const mapCategoryForPublic = <T extends { iconImageUrl?: string | null }>(category: T) => ({
+  ...category,
+  iconImageUrl: category.iconImageUrl ? resolveMediaUrl(category.iconImageUrl) : category.iconImageUrl
+});
 
 export const categoriesService = new CategoriesService();

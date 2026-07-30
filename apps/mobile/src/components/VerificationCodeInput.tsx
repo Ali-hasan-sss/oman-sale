@@ -68,6 +68,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 8,
+    direction: 'ltr',
     writingDirection: 'ltr',
     position: 'relative'
   },

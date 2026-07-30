@@ -309,6 +309,8 @@ export const categoryIconLabels: Record<CategoryIconKey, string> = {
   zap: 'Energy'
 };
 
+import { resolveMediaUrl } from '@/lib/media-url';
+
 export const isCategoryIconKey = (value?: string | null): value is CategoryIconKey =>
   Boolean(value && categoryIconKeys.includes(value as CategoryIconKey));
 
@@ -317,12 +319,24 @@ export const isCategoryEmojiIcon = (value?: string | null) =>
 
 type CategoryIconProps = {
   icon?: string | null;
+  iconImageUrl?: string | null;
   size?: number;
   className?: string;
   strokeWidth?: number;
 };
 
-export function CategoryIcon({ icon, size = 40, className, strokeWidth = 1.5 }: CategoryIconProps) {
+export function CategoryIcon({ icon, iconImageUrl, size = 40, className, strokeWidth = 1.5 }: CategoryIconProps) {
+  if (iconImageUrl) {
+    return (
+      <img
+        src={resolveMediaUrl(iconImageUrl)}
+        alt=""
+        className={className}
+        style={{ width: size, height: size, objectFit: 'cover', borderRadius: size * 0.15 }}
+      />
+    );
+  }
+
   if (isCategoryEmojiIcon(icon)) {
     return (
       <span className={className} style={{ fontSize: size * 0.85, lineHeight: 1 }}>

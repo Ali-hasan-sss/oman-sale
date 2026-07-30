@@ -13,6 +13,7 @@ import { ApiError } from '../../shared/utils/api-error';
 import { hashPassword, verifyPassword } from '../../shared/utils/password';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../../shared/utils/tokens';
 import { resolveUserMedia } from '../../shared/utils/resolve-entity-media';
+import { forceDisconnectUserSockets } from '../../config/socket';
 import { authRepository } from './auth.repository';
 import type { AuthTokens, AuthUserResponse } from './auth.types';
 import {
@@ -191,7 +192,7 @@ export class AuthService {
 
     return {
       user: sanitizeUser(verifiedUser),
-      tokens: await this.createTokens(verifiedUser.id, verifiedUser.email, verifiedUser.role)
+      tokens: await this.issueNewSessionTokens(verifiedUser.id, verifiedUser.email, verifiedUser.role)
     };
   }
 
@@ -321,13 +322,26 @@ export class AuthService {
 
   async refresh(dto: RefreshTokenDto): Promise<AuthTokens> {
     const payload = verifyRefreshToken(dto.refreshToken);
+    const user = await authRepository.findById(payload.sub);
+    if (!user || user.deletedAt) throw new ApiError(401, 'Invalid refresh token');
+    if (user.tokenVersion !== (payload.tokenVersion ?? -1)) {
+      throw new ApiError(401, 'Session expired', ErrorCodes.SESSION_EXPIRED);
+    }
+    if (!user.isActive || user.isBlocked) {
+      throw new ApiError(
+        403,
+        'Account is not allowed',
+        user.isBlocked ? ErrorCodes.ACCOUNT_BLOCKED : ErrorCodes.ACCOUNT_INACTIVE
+      );
+    }
+
     const activeTokens = await authRepository.findActiveRefreshTokens(payload.sub);
 
     for (const token of activeTokens) {
       const matches = await verifyPassword(dto.refreshToken, token.tokenHash);
       if (matches) {
         await authRepository.revokeRefreshToken(token.id);
-        return this.createTokens(payload.sub, payload.email, payload.role);
+        return this.createTokens(payload.sub, payload.email, payload.role, user.tokenVersion);
       }
     }
 
@@ -341,7 +355,7 @@ export class AuthService {
     const verifiedUser = await authRepository.verifyUserEmail(user.id);
     return {
       user: sanitizeUser(verifiedUser),
-      tokens: await this.createTokens(verifiedUser.id, verifiedUser.email, verifiedUser.role)
+      tokens: await this.issueNewSessionTokens(verifiedUser.id, verifiedUser.email, verifiedUser.role)
     };
   }
 
@@ -366,6 +380,8 @@ export class AuthService {
     if (!user || user.deletedAt) throw new ApiError(404, 'User not found');
     await this.consumeEmailCode(dto.email, dto.code, AuthCodePurpose.PASSWORD_RESET);
     await authRepository.updatePassword(user.id, await hashPassword(dto.password));
+    await authRepository.replaceUserSession(user.id);
+    forceDisconnectUserSockets(user.id);
     return { reset: true };
   }
 
@@ -377,7 +393,8 @@ export class AuthService {
     if (!validPassword) throw new ApiError(400, 'Current password is incorrect');
 
     await authRepository.updatePassword(user.id, await hashPassword(dto.newPassword));
-    return { changed: true };
+    const tokens = await this.issueNewSessionTokens(user.id, user.email, user.role);
+    return { changed: true, tokens };
   }
 
   private async buildAuthResponse(user: {
@@ -391,7 +408,7 @@ export class AuthService {
   }): Promise<{ user: AuthUserResponse; tokens: AuthTokens }> {
     return {
       user: sanitizeUser(user),
-      tokens: await this.createTokens(user.id, user.email, user.role)
+      tokens: await this.issueNewSessionTokens(user.id, user.email, user.role)
     };
   }
 
@@ -442,10 +459,17 @@ export class AuthService {
     await checkPhoneVerification(phone, code);
   }
 
-  private async createTokens(userId: string, email: string, role: string): Promise<AuthTokens> {
+  /** New login / registration: revoke other devices and bump tokenVersion. */
+  private async issueNewSessionTokens(userId: string, email: string, role: string): Promise<AuthTokens> {
+    const { tokenVersion } = await authRepository.replaceUserSession(userId);
+    forceDisconnectUserSockets(userId);
+    return this.createTokens(userId, email, role, tokenVersion);
+  }
+
+  private async createTokens(userId: string, email: string, role: string, tokenVersion: number): Promise<AuthTokens> {
     const tokens = {
-      accessToken: signAccessToken({ userId, email, role }),
-      refreshToken: signRefreshToken({ userId, email, role })
+      accessToken: signAccessToken({ userId, email, role, tokenVersion }),
+      refreshToken: signRefreshToken({ userId, email, role, tokenVersion })
     };
     const tokenHash = await hashPassword(tokens.refreshToken);
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);

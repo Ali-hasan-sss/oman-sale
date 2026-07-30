@@ -10,6 +10,7 @@ export type CategoryOption = {
   nameEn?: string;
   slug?: string;
   icon?: string | null;
+  iconImageUrl?: string | null;
   parentId?: string | null;
   type: string;
   sortOrder?: number;

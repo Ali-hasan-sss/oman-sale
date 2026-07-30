@@ -116,6 +116,7 @@ type ApiCategory = {
   slug: string;
   parentId?: string | null;
   icon?: keyof typeof iconMap | string | null;
+  iconImageUrl?: string | null;
   _count?: {
     ads: number;
     children?: number;
@@ -128,6 +129,7 @@ type DisplayCategory = {
   count: string;
   href: string;
   iconKey: string | null;
+  iconImageUrl?: string | null;
   color: string;
 };
 
@@ -145,6 +147,7 @@ const mapCategoryToDisplay = (category: ApiCategory, index: number): DisplayCate
     count: String(category._count?.ads ?? 0),
     href: `/category/${category.slug}`,
     iconKey,
+    iconImageUrl: category.iconImageUrl ?? null,
     color: fallback.color
   };
 };
@@ -229,7 +232,7 @@ function CategorySubmenuColumn({
               className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-2 text-sm font-bold text-ink-900 transition hover:bg-slate-50"
             >
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-brand-600">
-                <CategoryIcon icon={display.iconKey} size={18} />
+                <CategoryIcon icon={display.iconKey} iconImageUrl={display.iconImageUrl} size={18} />
               </span>
               <span className="min-w-0 flex-1 text-start">
                 <span>{display.name}</span>
@@ -455,7 +458,7 @@ function CategoryGridCard({
           href={localizedPath(category.href)}
           className="group flex flex-1 flex-col items-center p-6 text-center transition-transform hover:-translate-y-0.5"
         >
-          <CategoryIcon icon={category.iconKey} size={40} />
+          <CategoryIcon icon={category.iconKey} iconImageUrl={category.iconImageUrl} size={40} />
           <h3 className="mt-4 font-bold text-ink-900">{category.name}</h3>
           <p className="mt-1 text-sm text-slate-500">
             {category.count} {adCountLabel}

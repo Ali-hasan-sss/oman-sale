@@ -34,6 +34,50 @@ export const updateSubcategoryPath = (currentPath: string[], levelIndex: number,
   return nextPath;
 };
 
+export type SubcategoryViewState<T extends CategoryRef & { name: string }> = {
+  options: T[];
+  currentParentId: string;
+  currentParent: T;
+  backTarget: { id: string; name: string } | null;
+};
+
+export const getSubcategoryViewState = <T extends CategoryRef & { name: string }>(
+  categories: T[],
+  rootId: string,
+  selectedPath: string[],
+  getLabel: (category: T) => string
+): SubcategoryViewState<T> | null => {
+  if (!rootId) return null;
+
+  const rootCategory = categories.find((category) => category.id === rootId);
+  if (!rootCategory) return null;
+
+  const currentParentId = selectedPath.length > 0 ? selectedPath[selectedPath.length - 1]! : rootId;
+  const currentParent = categories.find((category) => category.id === currentParentId) ?? rootCategory;
+  const options = getDirectChildCategories(categories, currentParentId);
+
+  if (options.length === 0 && selectedPath.length === 0) return null;
+
+  let backTarget: { id: string; name: string } | null = null;
+
+  if (selectedPath.length > 1) {
+    const backId = selectedPath[selectedPath.length - 2]!;
+    const backCategory = categories.find((category) => category.id === backId);
+    if (backCategory) {
+      backTarget = { id: backId, name: getLabel(backCategory) };
+    }
+  } else if (selectedPath.length === 1) {
+    backTarget = { id: rootId, name: getLabel(rootCategory) };
+  }
+
+  return {
+    options,
+    currentParentId,
+    currentParent,
+    backTarget
+  };
+};
+
 export const buildSubcategoryFilterLevels = <T extends CategoryRef>(
   categories: T[],
   rootId: string,

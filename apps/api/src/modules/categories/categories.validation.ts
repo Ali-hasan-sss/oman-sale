@@ -1,6 +1,8 @@
 import { CategoryType } from '@prisma/client';
 import { z } from 'zod';
 
+import { imageReferenceSchema } from '../../shared/utils/media-reference';
+
 export const categoryIconKeys = [
   'anchor',
   'baby',
@@ -95,7 +97,7 @@ export const categoryIconSchema = z
     message: 'Icon must be a supported icon key or emoji'
   });
 
-export const createCategorySchema = z.object({
+const categoryFieldsSchema = z.object({
   nameAr: z.string().trim().min(2).max(80),
   nameEn: z.string().trim().min(2).max(80),
   slug: z
@@ -105,14 +107,35 @@ export const createCategorySchema = z.object({
     .max(100)
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
     .optional(),
-  icon: categoryIconSchema,
+  icon: categoryIconSchema.optional(),
+  iconImageUrl: imageReferenceSchema.nullable().optional(),
   type: z.nativeEnum(CategoryType),
   parentId: z.string().uuid().nullable().optional(),
   storeBaseMonthlyPrice: z.coerce.number().min(0).nullable().optional(),
   isActive: z.boolean().optional()
 });
 
-export const updateCategorySchema = createCategorySchema.partial();
+const refineCategoryIcon = (
+  data: { icon?: string; iconImageUrl?: string | null },
+  ctx: z.RefinementCtx,
+  options?: { requireIcon?: boolean }
+) => {
+  if (options?.requireIcon && !data.icon && !data.iconImageUrl) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Category must have an icon or icon image',
+      path: ['icon']
+    });
+  }
+};
+
+export const createCategorySchema = categoryFieldsSchema.superRefine((data, ctx) =>
+  refineCategoryIcon(data, ctx, { requireIcon: true })
+);
+
+export const updateCategorySchema = categoryFieldsSchema.partial().superRefine((data, ctx) =>
+  refineCategoryIcon(data, ctx)
+);
 
 export const listCategoriesQuerySchema = z.object({
   locale: z.enum(['ar', 'en']).default('ar'),

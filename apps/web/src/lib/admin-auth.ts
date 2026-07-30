@@ -61,7 +61,7 @@ export const saveAdminSession = (session: AdminLoginResponse) => {
   window.localStorage.setItem(ADMIN_USER_KEY, JSON.stringify(session.user));
 };
 
-const saveAdminTokens = (tokens: AdminLoginResponse['tokens']) => {
+export const saveAdminTokens = (tokens: AdminLoginResponse['tokens']) => {
   window.localStorage.setItem(ADMIN_ACCESS_TOKEN_KEY, tokens.accessToken);
   window.localStorage.setItem(ADMIN_REFRESH_TOKEN_KEY, tokens.refreshToken);
 };

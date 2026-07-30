@@ -16,16 +16,17 @@ const getCategoryLabel = (category: CategoryOption, locale: 'ar' | 'en') =>
 type CategoryChipProps = {
   label: string;
   icon?: string | null;
+  iconImageUrl?: string | null;
   adsCount: number;
   adsLabel: string;
   isRtl: boolean;
 };
 
-function CategoryChip({ label, icon, adsCount, adsLabel, isRtl }: CategoryChipProps) {
+function CategoryChip({ label, icon, iconImageUrl, adsCount, adsLabel, isRtl }: CategoryChipProps) {
   return (
     <View style={styles.chip}>
       <View style={styles.iconWrap}>
-        <CategoryIcon icon={icon} size={30} color={colors.brandDark} />
+        <CategoryIcon icon={icon} iconImageUrl={iconImageUrl} size={30} color={colors.brandDark} />
       </View>
       <AppText style={[styles.chipText, isRtl && styles.chipTextRtl]} numberOfLines={1}>
         {label}
@@ -94,6 +95,7 @@ export function HomeCategoriesSection({ onCategoryPress }: HomeCategoriesSection
               <CategoryChip
                 label={getCategoryLabel(category, locale)}
                 icon={category.icon}
+                iconImageUrl={category.iconImageUrl}
                 adsCount={category._count?.ads ?? 0}
                 adsLabel={adsLabel}
                 isRtl={isRtl}

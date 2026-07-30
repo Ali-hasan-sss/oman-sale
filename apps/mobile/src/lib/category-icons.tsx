@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet } from 'react-native';
+import { Image, StyleSheet } from 'react-native';
 
 import { AppText } from '../components/AppText';
 
@@ -168,11 +168,22 @@ export const isCategoryEmojiIcon = (value?: string | null) =>
 
 type CategoryIconProps = {
   icon?: string | null;
+  iconImageUrl?: string | null;
   size?: number;
   color?: string;
 };
 
-export function CategoryIcon({ icon, size = 28, color = '#087a50' }: CategoryIconProps) {
+export function CategoryIcon({ icon, iconImageUrl, size = 28, color = '#087a50' }: CategoryIconProps) {
+  if (iconImageUrl) {
+    return (
+      <Image
+        source={{ uri: iconImageUrl }}
+        style={{ width: size, height: size, borderRadius: size * 0.15 }}
+        resizeMode="cover"
+      />
+    );
+  }
+
   if (isCategoryEmojiIcon(icon)) {
     return <AppText style={[styles.emoji, { fontSize: size * 0.92, lineHeight: size * 1.05 }]}>{icon}</AppText>;
   }

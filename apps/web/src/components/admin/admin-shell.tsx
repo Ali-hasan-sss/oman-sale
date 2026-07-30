@@ -8,7 +8,7 @@ import { FormEvent, PropsWithChildren, useEffect, useState } from 'react';
 import { notifyAuthChanged } from '@/components/auth/user-menu';
 import { AdminContentLoader } from '@/components/admin/admin-page-loader';
 import { NotificationBell } from '@/components/notifications/notification-bell';
-import { adminApi, clearAdminSession, getAdminAccessToken } from '@/lib/admin-auth';
+import { adminApi, clearAdminSession, getAdminAccessToken, saveAdminTokens, type AdminLoginResponse } from '@/lib/admin-auth';
 import { ADMIN_PENDING_COUNTS_EVENT } from '@/lib/admin-pending-counts';
 import { useI18n } from '@/lib/i18n';
 
@@ -117,7 +117,13 @@ export function AdminShell({ children }: PropsWithChildren) {
 
     setPasswordSaving(true);
     try {
-      await adminApi().post('/auth/admin/change-password', { currentPassword, newPassword });
+      const response = await adminApi().post<{ data: { changed: boolean; tokens: AdminLoginResponse['tokens'] } }>(
+        '/auth/admin/change-password',
+        { currentPassword, newPassword }
+      );
+      if (response.data.data.tokens) {
+        saveAdminTokens(response.data.data.tokens);
+      }
       setPasswordMessage(locale === 'en' ? 'Password updated successfully.' : 'تم تحديث كلمة المرور بنجاح.');
       setCurrentPassword('');
       setNewPassword('');

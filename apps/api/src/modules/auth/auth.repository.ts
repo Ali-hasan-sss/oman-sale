@@ -102,6 +102,20 @@ export class AuthRepository {
     });
   }
 
+  incrementTokenVersion(userId: string) {
+    return prisma.user.update({
+      where: { id: userId },
+      data: { tokenVersion: { increment: 1 } },
+      select: { tokenVersion: true }
+    });
+  }
+
+  /** Revoke every refresh token and bump tokenVersion so old access tokens fail immediately. */
+  async replaceUserSession(userId: string) {
+    await this.revokeAllRefreshTokens(userId);
+    return this.incrementTokenVersion(userId);
+  }
+
   createAuthCode(data: {
     email: string;
     phone?: string;

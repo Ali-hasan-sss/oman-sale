@@ -18,7 +18,7 @@ import { registerMediaPreviewUrl, resolveMediaUrl } from '@/lib/media-url';
 import { uploadMediaFile } from '@/lib/media-upload';
 import { useI18n, getAuthMessages } from '@/lib/i18n';
 import { isValidPhoneE164 } from '@/lib/phone/phone-utils';
-import { getStoredUser, getUserAccessToken, saveUser, saveUserSession, type UserAuthSession, type UserAuthUser } from '@/lib/user-auth';
+import { getStoredUser, getUserAccessToken, saveUser, saveUserSession, saveUserTokens, type UserAuthSession, type UserAuthUser } from '@/lib/user-auth';
 import { useAuthStore } from '@/store/auth-store';
 
 type ProfileMessages = {
@@ -152,6 +152,7 @@ export function ProfilePage() {
   const authMessages = getAuthMessages(locale);
   const user = useAuthStore((state) => state.user);
   const setSession = useAuthStore((state) => state.setSession);
+  const setAccessToken = useAuthStore((state) => state.setAccessToken);
   const hydrateFromStorage = useAuthStore((state) => state.hydrateFromStorage);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -283,11 +284,15 @@ export function ProfilePage() {
     setIsSavingPassword(true);
 
     try {
-      await api.patch(
+      const response = await api.patch<{ data: { changed: boolean; tokens: UserAuthSession['tokens'] } }>(
         '/users/me/password',
         { currentPassword, newPassword },
         { headers: getAuthHeaders() }
       );
+      if (response.data.data.tokens) {
+        saveUserTokens(response.data.data.tokens);
+        setAccessToken(response.data.data.tokens.accessToken);
+      }
       setCurrentPassword('');
       setNewPassword('');
       setPasswordMessage(profileMessages.passwordSaved);
