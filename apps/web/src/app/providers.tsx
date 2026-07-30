@@ -5,6 +5,7 @@ import { useState, type PropsWithChildren } from 'react';
 
 import { UserSessionBootstrap } from '@/components/auth/user-session-bootstrap';
 import { ProfileCompletionGuard } from '@/components/auth/profile-completion-guard';
+import { DeploymentRecovery } from '@/components/navigation/deployment-recovery';
 import { RouteProgressBar } from '@/components/navigation/route-progress-bar';
 import { AssistantChatWidget } from '@/components/assistant/assistant-chat-widget';
 import { MediaConfigBootstrap } from '@/components/media/media-config-bootstrap';
@@ -15,6 +16,7 @@ export function Providers({ children }: PropsWithChildren) {
 
   return (
     <I18nProvider>
+      <DeploymentRecovery />
       <QueryClientProvider client={queryClient}>
         <MediaConfigBootstrap />
         <UserSessionBootstrap />
