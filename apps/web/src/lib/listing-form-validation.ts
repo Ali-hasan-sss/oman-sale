@@ -1,4 +1,5 @@
 import { omanGovernorateValues, omanWilayahValues } from '@/lib/oman-locations';
+import { MODEL_YEAR_MAX, MODEL_YEAR_MIN } from '@/lib/category-subcategory-filters';
 
 export type ListingFormValues = {
   title: string;
@@ -84,7 +85,7 @@ export function validateListingForm(
 
   if (context.requiresModelYear) {
     const year = Number(values.modelYear);
-    if (!values.modelYear || Number.isNaN(year) || year < 1998 || year > 2026) {
+    if (!values.modelYear || Number.isNaN(year) || year < MODEL_YEAR_MIN || year > MODEL_YEAR_MAX) {
       errors.modelYear = messages.modelYearRequired;
     }
   }

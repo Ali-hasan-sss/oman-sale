@@ -130,8 +130,8 @@ export const isSubcategoryPathComplete = <T extends CategoryRef>(
 };
 
 export const PASSENGER_CARS_SLUG = 'passenger-cars';
-export const MODEL_YEAR_MIN = 1998;
-export const MODEL_YEAR_MAX = 2026;
+export const MODEL_YEAR_MIN = 1900;
+export const MODEL_YEAR_MAX = 2028;
 
 export const isCategoryUnderSlug = <T extends { id: string; parentId?: string | null; slug: string }>(
   categories: T[],

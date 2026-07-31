@@ -2,8 +2,8 @@ import { ApiError } from '../../shared/utils/api-error';
 import { categoriesRepository } from '../categories/categories.repository';
 
 export const PASSENGER_CARS_SLUG = 'passenger-cars';
-export const MODEL_YEAR_MIN = 1998;
-export const MODEL_YEAR_MAX = 2026;
+export const MODEL_YEAR_MIN = 1900;
+export const MODEL_YEAR_MAX = 2028;
 
 export async function assertValidAdCategorySelection(
   categoryId: string,

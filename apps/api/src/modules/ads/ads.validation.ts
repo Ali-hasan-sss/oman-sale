@@ -7,6 +7,7 @@ import {
   omanWilayahValues
 } from '../../shared/constants/oman-locations';
 import { imageReferenceSchema, videoReferenceSchema } from '../../shared/utils/media-reference';
+import { MODEL_YEAR_MAX, MODEL_YEAR_MIN } from './ads-category-validation';
 
 const governorateSchema = z.enum(omanGovernorateValues as [string, ...string[]]);
 const wilayahSchema = z.enum(omanWilayahValues as [string, ...string[]]);
@@ -47,7 +48,7 @@ export const createAdSchema = z
     type: z.nativeEnum(AdType),
     condition: z.nativeEnum(AdCondition).optional(),
     price: z.number().nonnegative().optional(),
-    modelYear: z.number().int().min(1998).max(2026).optional().nullable(),
+    modelYear: z.number().int().min(MODEL_YEAR_MIN).max(MODEL_YEAR_MAX).optional().nullable(),
     currency: z.string().default('OMR'),
     city: governorateSchema,
     wilayah: wilayahSchema,
@@ -71,7 +72,7 @@ export const updateAdSchema = z
     type: z.nativeEnum(AdType).optional(),
     condition: z.nativeEnum(AdCondition).optional(),
     price: z.number().nonnegative().optional(),
-    modelYear: z.number().int().min(1998).max(2026).optional().nullable(),
+    modelYear: z.number().int().min(MODEL_YEAR_MIN).max(MODEL_YEAR_MAX).optional().nullable(),
     currency: z.string().optional(),
     city: governorateSchema.optional(),
     wilayah: wilayahSchema.optional(),
@@ -97,8 +98,8 @@ const listAdsQueryBaseSchema = z.object({
   wilayah: wilayahSchema.optional(),
   minPrice: z.coerce.number().nonnegative().optional(),
   maxPrice: z.coerce.number().nonnegative().optional(),
-  minModelYear: z.coerce.number().int().min(1998).max(2026).optional(),
-  maxModelYear: z.coerce.number().int().min(1998).max(2026).optional(),
+  minModelYear: z.coerce.number().int().min(MODEL_YEAR_MIN).max(MODEL_YEAR_MAX).optional(),
+  maxModelYear: z.coerce.number().int().min(MODEL_YEAR_MIN).max(MODEL_YEAR_MAX).optional(),
   filterOptionIds: z
     .preprocess((value) => {
       if (Array.isArray(value)) return value;
