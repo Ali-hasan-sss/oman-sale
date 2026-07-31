@@ -299,6 +299,64 @@ export class AdminRepository {
     return { items, total, page: query.page, limit: query.limit };
   }
 
+  findUserByEmail(email: string) {
+    return prisma.user.findUnique({
+      where: { email },
+      select: { id: true, deletedAt: true }
+    });
+  }
+
+  findUserByPhone(phone: string) {
+    return prisma.user.findFirst({
+      where: { phone, deletedAt: null },
+      select: { id: true }
+    });
+  }
+
+  createUser(data: {
+    fullName: string;
+    email: string;
+    phone: string | null;
+    password: string;
+    role: 'USER' | 'ADMIN' | 'MODERATOR';
+    isVerified: boolean;
+    isActive: boolean;
+  }) {
+    return prisma.user.create({
+      data: {
+        fullName: data.fullName,
+        email: data.email,
+        phone: data.phone,
+        password: data.password,
+        role: data.role,
+        isVerified: data.isVerified,
+        isActive: data.isActive,
+        profileCompleted: true
+      },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        phone: true,
+        avatar: true,
+        role: true,
+        isVerified: true,
+        isActive: true,
+        isBlocked: true,
+        trustBadgeStatus: true,
+        lastSeenAt: true,
+        createdAt: true,
+        _count: {
+          select: {
+            ads: true,
+            payments: true,
+            reports: true
+          }
+        }
+      }
+    });
+  }
+
   findUserById(id: string) {
     return prisma.user.findFirst({
       where: { id, deletedAt: null },

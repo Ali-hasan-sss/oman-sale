@@ -336,6 +336,10 @@
     "usersManagement": "Users management",
     "totalResults": "Total results",
     "usersLoadError": "Could not load users.",
+    "createUser": "Add user",
+    "userCreatedSuccess": "User created successfully.",
+    "userCreateError": "Could not create user.",
+    "phoneOptional": "Phone (optional)",
     "searchUsers": "Search by name, email or phone",
     "allRoles": "All roles",
     "search": "Search",
@@ -359,6 +363,7 @@
     "personalInfo": "Personal information",
     "accountInfo": "Account information",
     "fullName": "Full name",
+    "email": "Email",
     "phone": "Phone",
     "bio": "Bio",
     "lastSeen": "Last seen",
@@ -852,7 +857,8 @@
     "pricingPageSubtitle": "View and edit main category prices and discounts for this plan.",
     "backToPlans": "Back to store plans",
     "defaultPricingTitle": "Default plan pricing",
-    "defaultPricingHint": "Applied automatically to all main categories on create or update. You can customize each category later on the plan pricing page.",
+    "defaultPricingHint": "Applied automatically to all main categories when creating a plan only. To edit category prices, use the plan pricing page.",
+    "editPricingHint": "Editing a plan does not change category prices. Open the plan pricing page to manage prices per category.",
     "editCategoryPricing": "Edit category pricing"
   },
   "adminStores": {

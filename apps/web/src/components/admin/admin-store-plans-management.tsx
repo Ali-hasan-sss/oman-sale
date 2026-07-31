@@ -172,6 +172,10 @@ export function AdminStorePlansManagement() {
       const response = await adminApi().get<{ data: StorePlanDetail }>(`/store-plans/${plan.id}`);
       const detail = response.data.data;
       const pricingDefaults = pricingDefaultsFromPlan(detail);
+      const linkedPromotionId = detail.promotionPlanId ?? '';
+      const promotionStillAvailable = linkedPromotionId
+        ? promotionPlans.some((item) => item.id === linkedPromotionId)
+        : false;
 
       setEditingId(plan.id);
       setForm({
@@ -182,7 +186,8 @@ export function AdminStorePlansManagement() {
         sortOrder: String(detail.sortOrder),
         trialDays: String(detail.trialDays ?? 0),
         trialMaxListings: String(detail.trialMaxListings ?? 0),
-        promotionPlanId: detail.promotionPlanId ?? '',
+        // Drop stale promotion links (soft-deleted / missing) so PATCH does not send a dead UUID.
+        promotionPlanId: promotionStillAvailable ? linkedPromotionId : '',
         isActive: detail.isActive,
         isAdminFree: detail.isAdminFree ?? false,
         ...pricingDefaults
@@ -197,7 +202,7 @@ export function AdminStorePlansManagement() {
     event.preventDefault();
     setIsSaving(true);
     try {
-      const payload = {
+      const basePayload = {
         nameAr: form.nameAr.trim(),
         nameEn: form.nameEn.trim(),
         descriptionAr: form.descriptionAr.trim(),
@@ -207,19 +212,22 @@ export function AdminStorePlansManagement() {
         trialMaxListings: Number(form.trialMaxListings),
         promotionPlanId: form.promotionPlanId || null,
         isActive: form.isActive,
-        isAdminFree: form.isAdminFree,
-        oneMonthPrice: Number(form.oneMonthPrice),
-        oneMonthMaxListings: Number(form.oneMonthMaxListings),
-        twoMonthsPrice: Number(form.twoMonthsPrice),
-        twoMonthsMaxListings: Number(form.twoMonthsMaxListings),
-        threeMonthsPrice: Number(form.threeMonthsPrice),
-        threeMonthsMaxListings: Number(form.threeMonthsMaxListings)
+        isAdminFree: form.isAdminFree
       };
 
       if (editingId) {
-        await adminApi().patch(`/store-plans/${editingId}`, payload);
+        // Do not send default pricing on update — that overwrote every category's prices.
+        await adminApi().patch(`/store-plans/${editingId}`, basePayload);
       } else {
-        await adminApi().post('/store-plans', payload);
+        await adminApi().post('/store-plans', {
+          ...basePayload,
+          oneMonthPrice: Number(form.oneMonthPrice),
+          oneMonthMaxListings: Number(form.oneMonthMaxListings),
+          twoMonthsPrice: Number(form.twoMonthsPrice),
+          twoMonthsMaxListings: Number(form.twoMonthsMaxListings),
+          threeMonthsPrice: Number(form.threeMonthsPrice),
+          threeMonthsMaxListings: Number(form.threeMonthsMaxListings)
+        });
       }
 
       closeFormModal();
@@ -469,30 +477,44 @@ export function AdminStorePlansManagement() {
                 <span className="text-xs font-normal text-slate-500">{labels.isAdminFreeHint}</span>
               </label>
 
-              <div className="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="mb-1 text-sm font-black text-slate-800">{labels.defaultPricingTitle}</p>
-                <p className="mb-4 text-xs text-slate-500">{labels.defaultPricingHint}</p>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <Field label={labels.oneMonthPrice}>
-                    <input className={inputClass} type="number" min={0} step="0.001" value={form.oneMonthPrice} onChange={(e) => setForm({ ...form, oneMonthPrice: e.target.value })} required />
-                  </Field>
-                  <Field label={labels.oneMonthMaxListings}>
-                    <input className={inputClass} type="number" min={1} value={form.oneMonthMaxListings} onChange={(e) => setForm({ ...form, oneMonthMaxListings: e.target.value })} required />
-                  </Field>
-                  <Field label={labels.twoMonthsPrice}>
-                    <input className={inputClass} type="number" min={0} step="0.001" value={form.twoMonthsPrice} onChange={(e) => setForm({ ...form, twoMonthsPrice: e.target.value })} required />
-                  </Field>
-                  <Field label={labels.twoMonthsMaxListings}>
-                    <input className={inputClass} type="number" min={1} value={form.twoMonthsMaxListings} onChange={(e) => setForm({ ...form, twoMonthsMaxListings: e.target.value })} required />
-                  </Field>
-                  <Field label={labels.threeMonthsPrice}>
-                    <input className={inputClass} type="number" min={0} step="0.001" value={form.threeMonthsPrice} onChange={(e) => setForm({ ...form, threeMonthsPrice: e.target.value })} required />
-                  </Field>
-                  <Field label={labels.threeMonthsMaxListings}>
-                    <input className={inputClass} type="number" min={1} value={form.threeMonthsMaxListings} onChange={(e) => setForm({ ...form, threeMonthsMaxListings: e.target.value })} required />
-                  </Field>
+              {!editingId ? (
+                <div className="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="mb-1 text-sm font-black text-slate-800">{labels.defaultPricingTitle}</p>
+                  <p className="mb-4 text-xs text-slate-500">{labels.defaultPricingHint}</p>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Field label={labels.oneMonthPrice}>
+                      <input className={inputClass} type="number" min={0} step="0.001" value={form.oneMonthPrice} onChange={(e) => setForm({ ...form, oneMonthPrice: e.target.value })} required />
+                    </Field>
+                    <Field label={labels.oneMonthMaxListings}>
+                      <input className={inputClass} type="number" min={1} value={form.oneMonthMaxListings} onChange={(e) => setForm({ ...form, oneMonthMaxListings: e.target.value })} required />
+                    </Field>
+                    <Field label={labels.twoMonthsPrice}>
+                      <input className={inputClass} type="number" min={0} step="0.001" value={form.twoMonthsPrice} onChange={(e) => setForm({ ...form, twoMonthsPrice: e.target.value })} required />
+                    </Field>
+                    <Field label={labels.twoMonthsMaxListings}>
+                      <input className={inputClass} type="number" min={1} value={form.twoMonthsMaxListings} onChange={(e) => setForm({ ...form, twoMonthsMaxListings: e.target.value })} required />
+                    </Field>
+                    <Field label={labels.threeMonthsPrice}>
+                      <input className={inputClass} type="number" min={0} step="0.001" value={form.threeMonthsPrice} onChange={(e) => setForm({ ...form, threeMonthsPrice: e.target.value })} required />
+                    </Field>
+                    <Field label={labels.threeMonthsMaxListings}>
+                      <input className={inputClass} type="number" min={1} value={form.threeMonthsMaxListings} onChange={(e) => setForm({ ...form, threeMonthsMaxListings: e.target.value })} required />
+                    </Field>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm font-bold text-slate-700">{labels.editPricingHint}</p>
+                  <Link
+                    href={localizedPath(`/admin/store-plans/${editingId}/pricing`)}
+                    className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-brand-700 hover:underline"
+                    onClick={closeFormModal}
+                  >
+                    <Coins size={16} />
+                    {labels.managePricing}
+                  </Link>
+                </div>
+              )}
 
               <div className="flex gap-3 lg:col-span-2">
                 <button type="submit" disabled={isSaving} className="rounded-xl bg-brand-600 px-5 py-3 font-bold text-white hover:bg-brand-700 disabled:opacity-60">

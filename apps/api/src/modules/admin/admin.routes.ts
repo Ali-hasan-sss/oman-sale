@@ -60,7 +60,7 @@ import {
   listAdminStoresQuerySchema
 } from '../stores/stores.validation';
 import { adminController } from './admin.controller';
-import { listAdminReportsQuerySchema, listAdminUsersQuerySchema, updateAdminUserSchema } from './admin.validation';
+import { listAdminReportsQuerySchema, listAdminUsersQuerySchema, createAdminUserSchema, updateAdminUserSchema } from './admin.validation';
 import { z } from 'zod';
 
 export const adminRoutes = Router();
@@ -118,6 +118,12 @@ adminRoutes.get(
   '/users',
   validateRequest({ query: listAdminUsersQuerySchema }),
   asyncHandler(adminController.listUsers)
+);
+adminRoutes.post(
+  '/users',
+  authorize(UserRole.ADMIN),
+  validateRequest({ body: createAdminUserSchema }),
+  asyncHandler(adminController.createUser)
 );
 adminRoutes.get(
   '/users/:id',

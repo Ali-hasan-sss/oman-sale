@@ -45,7 +45,8 @@ export class StorePlansRepository {
             nameEn: true,
             badgeLabel: true,
             color: true,
-            isActive: true
+            isActive: true,
+            deletedAt: true
           }
         },
         pricing: {
@@ -113,7 +114,8 @@ export class StorePlansRepository {
             nameEn: true,
             badgeLabel: true,
             color: true,
-            isActive: true
+            isActive: true,
+            deletedAt: true
           }
         },
         pricing: {

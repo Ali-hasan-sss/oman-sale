@@ -29,7 +29,7 @@ import { colors, radius, shadow } from '../theme';
 
 const fallbackLogo = require('../../assets/nav-logo.png');
 const RESULT_LIMIT = 8;
-const MIN_SUGGESTIONS_LENGTH = 4;
+const MIN_SUGGESTIONS_LENGTH = 1;
 const SUGGESTIONS_DEBOUNCE_MS = 300;
 
 type GlobalSearchScreenProps = {

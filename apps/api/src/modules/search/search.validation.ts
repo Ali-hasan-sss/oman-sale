@@ -7,7 +7,7 @@ export const searchQuerySchema = z.object({
 });
 
 export const searchSuggestionsQuerySchema = z.object({
-  q: z.string().trim().min(4).max(80),
+  q: z.string().trim().min(1).max(80),
   locale: z.enum(['ar', 'en']).default('ar'),
   limit: z.coerce.number().int().min(1).max(8).default(4)
 });

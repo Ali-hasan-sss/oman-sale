@@ -14,7 +14,7 @@ import {
 } from '@/lib/header-search';
 import { useI18n } from '@/lib/i18n';
 
-const MIN_SUGGESTIONS_LENGTH = 4;
+const MIN_SUGGESTIONS_LENGTH = 1;
 const SUGGESTIONS_DEBOUNCE_MS = 300;
 
 type GlobalHeaderSearchProps = {

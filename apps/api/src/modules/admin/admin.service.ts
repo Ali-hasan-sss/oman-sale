@@ -1,10 +1,16 @@
 import { UserRole } from '@prisma/client';
 
 import { ApiError } from '../../shared/utils/api-error';
+import { hashPassword } from '../../shared/utils/password';
 import { resolveAdMedia, resolveUserMedia, resolveUserTrustDocs } from '../../shared/utils/resolve-entity-media';
 import { notificationsService } from '../notifications/notifications.service';
 import { adminRepository } from './admin.repository';
-import type { ListAdminReportsQuery, ListAdminUsersQuery, UpdateAdminUserDto } from './admin.validation';
+import type {
+  CreateAdminUserDto,
+  ListAdminReportsQuery,
+  ListAdminUsersQuery,
+  UpdateAdminUserDto
+} from './admin.validation';
 
 export class AdminService {
   statistics() {
@@ -17,6 +23,36 @@ export class AdminService {
       ...result,
       items: result.items.map(resolveUserMedia)
     };
+  }
+
+  async createUser(dto: CreateAdminUserDto) {
+    const email = dto.email.trim().toLowerCase();
+    const phone = dto.phone?.trim() || null;
+
+    const existingEmail = await adminRepository.findUserByEmail(email);
+    if (existingEmail && !existingEmail.deletedAt) {
+      throw new ApiError(409, 'Email is already registered');
+    }
+
+    if (phone) {
+      const existingPhone = await adminRepository.findUserByPhone(phone);
+      if (existingPhone) {
+        throw new ApiError(409, 'Phone number is already used');
+      }
+    }
+
+    const password = await hashPassword(dto.password);
+    const user = await adminRepository.createUser({
+      fullName: dto.fullName.trim(),
+      email,
+      phone,
+      password,
+      role: dto.role,
+      isVerified: dto.isVerified ?? true,
+      isActive: dto.isActive ?? true
+    });
+
+    return resolveUserMedia(user);
   }
 
   async listReports(query: ListAdminReportsQuery) {

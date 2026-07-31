@@ -41,28 +41,26 @@ export class StorePlansService {
       discountType: StoreDiscountType;
       discountValue: number | string | { toString(): string };
       isDiscountActive: boolean;
+      promotionPlanId?: string | null;
+      promotionPlan?: ({ deletedAt?: Date | null } & Record<string, unknown>) | null;
       pricing?: PricingRow[] | null;
     }
   >(plan: T) {
     const planDiscount = this.getPlanDiscount(plan);
+    const rawPromotion = plan.promotionPlan;
+    const promotionAlive = rawPromotion && !rawPromotion.deletedAt ? rawPromotion : null;
+    const promotionPlan = promotionAlive
+      ? (() => {
+          const { deletedAt: _deletedAt, ...rest } = promotionAlive;
+          return rest;
+        })()
+      : null;
+
     return {
       ...plan,
+      promotionPlanId: promotionPlan ? plan.promotionPlanId : null,
+      promotionPlan,
       pricing: (plan.pricing ?? []).map((row) => withComputedPricing(row, planDiscount))
-    };
-  }
-
-  private extractDefaultPricing(plan: Awaited<ReturnType<typeof this.getById>>) {
-    const oneMonth = plan.pricing.find((row) => row.billingPeriod === 'ONE_MONTH');
-    const twoMonths = plan.pricing.find((row) => row.billingPeriod === 'TWO_MONTHS');
-    const threeMonths = plan.pricing.find((row) => row.billingPeriod === 'THREE_MONTHS');
-
-    return {
-      oneMonthPrice: oneMonth ? Number(oneMonth.price) : 0,
-      oneMonthMaxListings: oneMonth?.maxListings ?? 10,
-      twoMonthsPrice: twoMonths ? Number(twoMonths.price) : 0,
-      twoMonthsMaxListings: twoMonths?.maxListings ?? 20,
-      threeMonthsPrice: threeMonths ? Number(threeMonths.price) : 0,
-      threeMonthsMaxListings: threeMonths?.maxListings ?? 30
     };
   }
 
@@ -81,7 +79,7 @@ export class StorePlansService {
   private async validatePlanFields(
     dto: CreateStorePlanDto | UpdateStorePlanDto,
     existing?: { trialDays: number; trialMaxListings: number }
-  ) {
+  ): Promise<{ promotionPlanId?: string | null }> {
     const trialDays = dto.trialDays ?? existing?.trialDays ?? 0;
     const trialMaxListings = dto.trialMaxListings ?? existing?.trialMaxListings ?? 0;
 
@@ -89,16 +87,25 @@ export class StorePlansService {
       throw new ApiError(400, 'Trial max listings is required when trial days is greater than zero');
     }
 
-    if (dto.promotionPlanId) {
-      const promotionPlan = await promotionsRepository.findPlanById(dto.promotionPlanId);
-      if (!promotionPlan) {
-        throw new ApiError(404, 'Promotion plan not found');
-      }
+    if (dto.promotionPlanId === undefined) {
+      return {};
     }
+
+    if (dto.promotionPlanId === null) {
+      return { promotionPlanId: null };
+    }
+
+    const promotionPlan = await promotionsRepository.findPlanById(dto.promotionPlanId);
+    if (!promotionPlan) {
+      // Stale FK (e.g. soft-deleted promotion) must not block store plan updates.
+      return { promotionPlanId: null };
+    }
+
+    return { promotionPlanId: dto.promotionPlanId };
   }
 
   async create(dto: CreateStorePlanDto) {
-    await this.validatePlanFields(dto);
+    const promotionFix = await this.validatePlanFields(dto);
     const {
       oneMonthPrice,
       oneMonthMaxListings,
@@ -108,7 +115,7 @@ export class StorePlansService {
       threeMonthsMaxListings,
       ...planData
     } = dto;
-    const plan = await storePlansRepository.createPlan(planData);
+    const plan = await storePlansRepository.createPlan({ ...planData, ...promotionFix });
     await storePlansRepository.syncPricingForAllRootCategories(plan.id, {
       oneMonthPrice,
       oneMonthMaxListings,
@@ -122,41 +129,24 @@ export class StorePlansService {
 
   async update(id: string, dto: UpdateStorePlanDto) {
     const existing = await this.getById(id);
-    await this.validatePlanFields(dto, {
+    const promotionFix = await this.validatePlanFields(dto, {
       trialDays: existing.trialDays,
       trialMaxListings: existing.trialMaxListings
     });
 
     const {
-      oneMonthPrice,
-      oneMonthMaxListings,
-      twoMonthsPrice,
-      twoMonthsMaxListings,
-      threeMonthsPrice,
-      threeMonthsMaxListings,
+      oneMonthPrice: _oneMonthPrice,
+      oneMonthMaxListings: _oneMonthMaxListings,
+      twoMonthsPrice: _twoMonthsPrice,
+      twoMonthsMaxListings: _twoMonthsMaxListings,
+      threeMonthsPrice: _threeMonthsPrice,
+      threeMonthsMaxListings: _threeMonthsMaxListings,
       ...planData
     } = dto;
-    await storePlansRepository.updatePlan(id, planData);
 
-    const shouldSyncPricing =
-      oneMonthPrice !== undefined ||
-      oneMonthMaxListings !== undefined ||
-      twoMonthsPrice !== undefined ||
-      twoMonthsMaxListings !== undefined ||
-      threeMonthsPrice !== undefined ||
-      threeMonthsMaxListings !== undefined;
-
-    if (shouldSyncPricing) {
-      const currentDefaults = this.extractDefaultPricing(existing);
-      await storePlansRepository.syncPricingForAllRootCategories(id, {
-        oneMonthPrice: oneMonthPrice ?? currentDefaults.oneMonthPrice,
-        oneMonthMaxListings: oneMonthMaxListings ?? currentDefaults.oneMonthMaxListings,
-        twoMonthsPrice: twoMonthsPrice ?? currentDefaults.twoMonthsPrice,
-        twoMonthsMaxListings: twoMonthsMaxListings ?? currentDefaults.twoMonthsMaxListings,
-        threeMonthsPrice: threeMonthsPrice ?? currentDefaults.threeMonthsPrice,
-        threeMonthsMaxListings: threeMonthsMaxListings ?? currentDefaults.threeMonthsMaxListings
-      });
-    }
+    // Plan metadata only — never overwrite per-category pricing on update.
+    // Category prices are managed via /store-plans/:id/pricing endpoints.
+    await storePlansRepository.updatePlan(id, { ...planData, ...promotionFix });
 
     return this.getById(id);
   }
