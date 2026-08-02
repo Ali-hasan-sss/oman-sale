@@ -30,13 +30,13 @@
         "EXPO_PUBLIC_API_URL": "https://omansale.om/api/v1",
         "EXPO_PUBLIC_API_DEBUG": "false",
         "REACT_NATIVE_ARCHITECTURES": "armeabi-v7a,arm64-v8a,x86,x86_64",
-        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyCNfJkLaP2Nb0G7ZNW2yqqKn_8Qto0Ov_E",
-        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "oman-sale-5f29c.firebaseapp.com",
-        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "oman-sale-5f29c",
-        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "oman-sale-5f29c.firebasestorage.app",
-        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "486964938862",
-        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:486964938862:web:a42c158217b3dd9077be7f",
-        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "486964938862-0c3v4s2ec87q6iss0vca3h41pmua435p.apps.googleusercontent.com"
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyCnk69JP-FmR3y3ecgU8eyOjDpfZteUqFs",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "omansale-65556.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "omansale-65556",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "omansale-65556.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "633909517513",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:633909517513:web:83b68af3438f8588580118",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "633909517513-9lpjppblds63j6n76b1kao8e682p986b.apps.googleusercontent.com"
       },
       "android": {
         "buildType": "apk"
