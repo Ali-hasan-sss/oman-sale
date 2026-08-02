@@ -18,6 +18,7 @@ const userSummarySelect = {
   id: true,
   fullName: true,
   phone: true,
+  avatar: true,
   trustBadgeStatus: true
 } satisfies Prisma.UserSelect;
 
@@ -283,7 +284,9 @@ export class AdsRepository {
       include: {
         images: { where: { deletedAt: null }, orderBy: { sortOrder: 'asc' } },
         category: true,
-        promotion: { include: { plan: true } }
+        promotion: { include: { plan: true } },
+        store: { select: storeSummarySelect },
+        user: { select: userSummarySelect }
       },
       orderBy: [{ createdAt: 'desc' }],
       take: limit

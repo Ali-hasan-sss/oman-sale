@@ -6,8 +6,14 @@ type ImageRecord = { imageUrl: string };
 export function resolveAdMedia<T>(ad: T): T {
   const record = ad as T & {
     images?: ImageRecord[];
-    store?: { trustBadgeStatus?: string | null } | null;
-    user?: { trustBadgeStatus?: string | null } | null;
+    store?: {
+      logoUrl?: string | null;
+      trustBadgeStatus?: string | null;
+    } | null;
+    user?: {
+      avatar?: string | null;
+      trustBadgeStatus?: string | null;
+    } | null;
   };
 
   const withMedia = !record.images?.length
@@ -24,15 +30,28 @@ export function resolveAdMedia<T>(ad: T): T {
     ? isTrustBadgeApproved(record.store.trustBadgeStatus as never)
     : isTrustBadgeApproved(record.user?.trustBadgeStatus as never);
 
-  const store =
-    record.store && 'trustBadgeStatus' in record.store
-      ? { ...record.store, ...mapTrustBadgePublic(record.store.trustBadgeStatus as never) }
-      : record.store;
+  const store = record.store
+    ? {
+        ...record.store,
+        logoUrl: record.store.logoUrl ? resolveMediaUrl(record.store.logoUrl) : record.store.logoUrl,
+        ...('trustBadgeStatus' in record.store
+          ? mapTrustBadgePublic(record.store.trustBadgeStatus as never)
+          : {})
+      }
+    : record.store;
+
+  const user = record.user
+    ? {
+        ...record.user,
+        avatar: record.user.avatar ? resolveMediaUrl(record.user.avatar) : record.user.avatar
+      }
+    : record.user;
 
   return {
     ...withMedia,
     trustBadgeApproved,
-    ...(store ? { store } : {})
+    ...(store ? { store } : {}),
+    ...(user ? { user } : {})
   } as T;
 }
 

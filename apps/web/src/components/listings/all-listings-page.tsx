@@ -26,6 +26,7 @@ import { getUserAccessToken } from '@/lib/user-auth';
 import { FavoriteButton } from './favorite-button';
 import { ListingCardsSkeleton } from './listing-card-skeleton';
 import { ListingMediaCover } from './listing-media-cover';
+import { ListingStoreChip } from './listing-store-chip';
 import { ListingTitleWithVerified } from '@/components/trust-badge/listing-verified-badge';
 
 type Category = {
@@ -884,7 +885,6 @@ function ListingCard({
   onFavoriteChange: (favorited: boolean) => void;
 }) {
   const { locale, localizedPath, m } = useI18n();
-  const router = useRouter();
   const categoryName =
     (locale === 'en' ? listing.category?.nameEn : listing.category?.nameAr) ?? listing.category?.name ?? '';
   const isFeatured = Boolean(listing.promotion);
@@ -912,19 +912,6 @@ function ListingCard({
             {badgeLabel}
           </span>
         ) : null}
-        {storeName && listing.store ? (
-          <button
-            type="button"
-            className="absolute left-3 top-12 z-10 max-w-[70%] truncate rounded-md bg-slate-900/80 px-3 py-1 text-xs font-bold text-white backdrop-blur-sm transition hover:bg-slate-900"
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              router.push(localizedPath(`/stores/${listing.store!.slug}`));
-            }}
-          >
-            {storeName}
-          </button>
-        ) : null}
         {categoryName ? (
           <span className="absolute bottom-3 right-3 rounded-md bg-black/60 px-3 py-1 text-xs text-white backdrop-blur-sm">
             {categoryName}
@@ -939,6 +926,16 @@ function ListingCard({
           titleClassName="line-clamp-1 text-base"
           className="mb-2"
         />
+        {storeName && listing.store ? (
+          <div className="mb-3">
+            <ListingStoreChip
+              name={storeName}
+              slug={listing.store.slug}
+              logoUrl={listing.store.logoUrl}
+              storeHref={localizedPath(`/stores/${listing.store.slug}`)}
+            />
+          </div>
+        ) : null}
         <div className="mb-3 flex items-center justify-between">
           <p className="text-xl font-bold text-green-600">{formatPrice(listing.price, listing.currency)}</p>
         </div>

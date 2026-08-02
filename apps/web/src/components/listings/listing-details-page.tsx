@@ -18,6 +18,7 @@ import { FavoriteButton } from './favorite-button';
 import { ListingDetailSkeleton } from './listing-detail-skeleton';
 import { ListingMediaCover } from './listing-media-cover';
 import { ListingMediaGalleryModal } from './listing-media-gallery-modal';
+import { ListingStoreChip } from './listing-store-chip';
 import { ListingTitleWithVerified, SellerVerifiedBanner } from '@/components/trust-badge/listing-verified-badge';
 
 type ListingImage = {
@@ -565,7 +566,7 @@ export function ListingDetailsPage({ id }: { id: string }) {
                       className="mb-4 flex items-center gap-3 rounded-xl p-2 transition hover:bg-gray-50"
                     >
                       <AvatarWithBanBadge
-                        src={listing.store.logoUrl ?? listing.user?.avatar}
+                        src={resolveMediaUrl(listing.store.logoUrl) || resolveMediaUrl(listing.user?.avatar) || null}
                         alt={locale === 'en' ? listing.store.nameEn : listing.store.nameAr}
                         size={56}
                         isBlocked={listing.user?.isBlocked}
@@ -573,7 +574,7 @@ export function ListingDetailsPage({ id }: { id: string }) {
                         fallback={<User size={26} />}
                       />
                       <div>
-                        <h4 className="font-bold">
+                        <h4 className="font-bold text-green-700 underline-offset-2 hover:underline">
                           {locale === 'en' ? listing.store.nameEn : listing.store.nameAr}
                         </h4>
                         <p className="text-sm font-bold text-green-700">{text.storeListing}</p>
@@ -582,7 +583,7 @@ export function ListingDetailsPage({ id }: { id: string }) {
                   ) : (
                     <div className="mb-4 flex items-center gap-3">
                       <AvatarWithBanBadge
-                        src={listing.user?.avatar}
+                        src={resolveMediaUrl(listing.user?.avatar) || null}
                         alt={listing.user?.fullName ?? ''}
                         size={56}
                         isBlocked={listing.user?.isBlocked}
@@ -707,6 +708,7 @@ export function ListingDetailsPage({ id }: { id: string }) {
 
 function SimilarCard({ item }: { item: ListingDetails }) {
   const { locale, localizedPath, m } = useI18n();
+  const storeName = item.store ? (locale === 'en' ? item.store.nameEn : item.store.nameAr) : null;
 
   return (
     <Link className="cursor-pointer overflow-hidden rounded-lg border border-gray-200 transition hover:shadow-md" href={localizedPath(`/listing/${item.id}`)}>
@@ -725,6 +727,16 @@ function SimilarCard({ item }: { item: ListingDetails }) {
           titleClassName="line-clamp-1 text-sm"
           className="mb-2"
         />
+        {storeName && item.store ? (
+          <div className="mb-2">
+            <ListingStoreChip
+              name={storeName}
+              slug={item.store.slug}
+              logoUrl={item.store.logoUrl}
+              storeHref={localizedPath(`/stores/${item.store.slug}`)}
+            />
+          </div>
+        ) : null}
         <p className="mb-1 font-bold text-green-600">{formatPrice(item.price, item.currency, locale)}</p>
         <p className="text-xs text-gray-500">{getListingLocationLabel(item.city, item.wilayah, item.area, locale) || '-'}</p>
       </div>

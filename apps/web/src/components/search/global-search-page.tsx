@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { SiteFooter } from '@/components/home/site-footer';
 import { ListingCardsSkeleton } from '@/components/listings/listing-card-skeleton';
 import { ListingMediaCover } from '@/components/listings/listing-media-cover';
+import { ListingStoreChip } from '@/components/listings/listing-store-chip';
 import { ListingTitleWithVerified } from '@/components/trust-badge/listing-verified-badge';
 import { VerifiedBadge } from '@/components/trust-badge/verified-badge';
 import { UserSiteHeader, SiteHeaderSearch } from '@/components/navigation/user-site-header';
@@ -33,6 +34,12 @@ type Listing = {
   wilayah?: string | null;
   area?: string | null;
   images?: Array<{ imageUrl: string }>;
+  store?: {
+    nameAr: string;
+    nameEn: string;
+    slug: string;
+    logoUrl?: string | null;
+  } | null;
   trustBadgeApproved?: boolean;
 };
 
@@ -204,36 +211,53 @@ export function GlobalSearchPage() {
                   </Link>
                 </div>
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-                  {listings.map((listing) => (
-                    <Link
-                      key={listing.id}
-                      href={localizedPath(`/listing/${listing.id}`)}
-                      className="overflow-hidden rounded-xl bg-white shadow-sm transition hover:shadow-md"
-                    >
-                      <div className="relative">
-                        <ListingMediaCover
-                          items={listing.images}
-                          alt={listing.title}
-                          fallbackSrc={fallbackImage}
-                          className="h-44 w-full"
-                          imageClassName="h-44 w-full"
-                        />
-                      </div>
-                      <div className="p-4">
-                        <ListingTitleWithVerified
-                          title={listing.title}
-                          verified={listing.trustBadgeApproved}
-                          label={m.trustBadge.verifiedLabel}
-                          titleClassName="line-clamp-1 text-sm"
-                          className="mb-2"
-                        />
-                        <p className="font-bold text-green-600">
-                          {listing.price ? `${listing.price} ${listing.currency}` : '-'}
-                        </p>
-                        <p className="mt-1 text-sm text-gray-500">{getListingLocationLabel(listing.city, listing.wilayah, listing.area, locale) || '-'}</p>
-                      </div>
-                    </Link>
-                  ))}
+                  {listings.map((listing) => {
+                    const storeName = listing.store
+                      ? locale === 'en'
+                        ? listing.store.nameEn
+                        : listing.store.nameAr
+                      : null;
+                    return (
+                      <Link
+                        key={listing.id}
+                        href={localizedPath(`/listing/${listing.id}`)}
+                        className="overflow-hidden rounded-xl bg-white shadow-sm transition hover:shadow-md"
+                      >
+                        <div className="relative">
+                          <ListingMediaCover
+                            items={listing.images}
+                            alt={listing.title}
+                            fallbackSrc={fallbackImage}
+                            className="h-44 w-full"
+                            imageClassName="h-44 w-full"
+                          />
+                        </div>
+                        <div className="p-4">
+                          <ListingTitleWithVerified
+                            title={listing.title}
+                            verified={listing.trustBadgeApproved}
+                            label={m.trustBadge.verifiedLabel}
+                            titleClassName="line-clamp-1 text-sm"
+                            className="mb-2"
+                          />
+                          {storeName && listing.store ? (
+                            <div className="mb-2">
+                              <ListingStoreChip
+                                name={storeName}
+                                slug={listing.store.slug}
+                                logoUrl={listing.store.logoUrl}
+                                storeHref={localizedPath(`/stores/${listing.store.slug}`)}
+                              />
+                            </div>
+                          ) : null}
+                          <p className="font-bold text-green-600">
+                            {listing.price ? `${listing.price} ${listing.currency}` : '-'}
+                          </p>
+                          <p className="mt-1 text-sm text-gray-500">{getListingLocationLabel(listing.city, listing.wilayah, listing.area, locale) || '-'}</p>
+                        </div>
+                      </Link>
+                    );
+                  })}
                 </div>
               </section>
             ) : null}

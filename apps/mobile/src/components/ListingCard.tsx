@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from './AppText';
 import { ListingCoverImage } from './ListingCoverImage';
@@ -30,6 +30,7 @@ export function ListingCard({
   const category = getCategoryName(listing, locale);
   const isFeatured = Boolean(listing.promotion);
   const storeName = listing.store ? (locale === 'en' ? listing.store.nameEn : listing.store.nameAr) : null;
+  const storeLogo = listing.store?.logoUrl ?? null;
   const contentRtl = locale === 'ar';
 
   const content = (
@@ -51,20 +52,6 @@ export function ListingCard({
             <AppText style={styles.badgeText}>{listing.promotion?.plan?.badgeLabel ?? featuredLabel}</AppText>
           </View>
         ) : null}
-        {storeName && listing.store ? (
-          <Pressable
-            style={styles.storeBadge}
-            onPress={(event) => {
-              event.stopPropagation?.();
-              if (onStorePress) onStorePress(listing.store!.slug);
-            }}
-            disabled={!onStorePress}
-          >
-            <AppText style={styles.storeBadgeText} numberOfLines={1}>
-              {storeName}
-            </AppText>
-          </Pressable>
-        ) : null}
         {category ? (
           <View style={styles.category}>
             <AppText style={styles.categoryText}>{category}</AppText>
@@ -78,6 +65,27 @@ export function ListingCard({
           </AppText>
           {listing.trustBadgeApproved ? <VerifiedBadge /> : null}
         </View>
+        {storeName && listing.store ? (
+          <Pressable
+            style={[styles.storeRow, contentRtl && styles.storeRowRtl]}
+            onPress={(event) => {
+              event.stopPropagation?.();
+              if (onStorePress) onStorePress(listing.store!.slug);
+            }}
+            disabled={!onStorePress}
+          >
+            <View style={styles.storeAvatar}>
+              {storeLogo ? (
+                <Image source={{ uri: storeLogo }} style={styles.storeAvatarImage} />
+              ) : (
+                <AppText style={styles.storeAvatarFallback}>{storeName.slice(0, 1)}</AppText>
+              )}
+            </View>
+            <AppText style={styles.storeName} numberOfLines={1}>
+              {storeName}
+            </AppText>
+          </Pressable>
+        ) : null}
         <AppText style={[styles.price, contentRtl ? styles.textRtl : styles.textLtr]}>{formatPrice(listing.price, listing.currency, locale)}</AppText>
         <AppText style={[styles.location, contentRtl ? styles.textRtl : styles.textLtr]} numberOfLines={1}>
           {getListingLocationLabel(listing.city, listing.wilayah, listing.area, locale) || '-'}
@@ -147,20 +155,46 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800'
   },
-  storeBadge: {
-    position: 'absolute',
-    left: 12,
-    top: 44,
-    backgroundColor: 'rgba(15,23,42,0.82)',
-    borderRadius: radius.sm,
-    paddingHorizontal: 10,
+  storeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+    backgroundColor: colors.brandSoft,
+    borderRadius: 999,
     paddingVertical: 4,
-    maxWidth: '70%'
+    paddingHorizontal: 6
   },
-  storeBadgeText: {
+  storeRowRtl: {
+    flexDirection: 'row-reverse',
+    alignSelf: 'flex-end'
+  },
+  storeAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: colors.brand,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  storeAvatarImage: {
+    width: '100%',
+    height: '100%'
+  },
+  storeAvatarFallback: {
     color: '#fff',
     fontSize: 11,
     fontWeight: '800'
+  },
+  storeName: {
+    flexShrink: 1,
+    color: colors.ink,
+    fontSize: 12,
+    fontWeight: '800',
+    paddingRight: 4
   },
   category: {
     position: 'absolute',

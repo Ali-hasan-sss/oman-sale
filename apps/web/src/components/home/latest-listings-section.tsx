@@ -2,12 +2,12 @@
 
 import { ArrowUpLeft, MapPin } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
 import { ListingCardsSkeleton } from '@/components/listings/listing-card-skeleton';
 import { FavoriteButton } from '@/components/listings/favorite-button';
 import { ListingMediaCover } from '@/components/listings/listing-media-cover';
+import { ListingStoreChip } from '@/components/listings/listing-store-chip';
 import { ListingTitleWithVerified } from '@/components/trust-badge/listing-verified-badge';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
@@ -38,6 +38,7 @@ type Listing = {
     nameAr: string;
     nameEn: string;
     slug: string;
+    logoUrl?: string | null;
   } | null;
   trustBadgeApproved?: boolean;
 };
@@ -50,7 +51,6 @@ const placeholderImage = '/logo.png';
 
 export function LatestListingsSection() {
   const { locale, localizedPath, m } = useI18n();
-  const router = useRouter();
   const [listings, setListings] = useState<Listing[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
@@ -137,19 +137,6 @@ export function LatestListingsSection() {
                       {listing.promotion?.plan?.badgeLabel ?? m.common.featured}
                     </span>
                   ) : null}
-                  {storeName && listing.store ? (
-                    <button
-                      type="button"
-                      className="absolute left-3 top-12 z-10 max-w-[70%] truncate rounded-md bg-slate-900/80 px-3 py-1 text-xs font-bold text-white backdrop-blur-sm transition hover:bg-slate-900"
-                      onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        router.push(localizedPath(`/stores/${listing.store!.slug}`));
-                      }}
-                    >
-                      {storeName}
-                    </button>
-                  ) : null}
                   {category ? (
                     <span className="absolute bottom-3 right-3 rounded-md bg-black/60 px-3 py-1 text-xs text-white backdrop-blur-sm">
                       {category}
@@ -165,6 +152,16 @@ export function LatestListingsSection() {
                     titleClassName="truncate text-base"
                     className="mb-2"
                   />
+                  {storeName && listing.store ? (
+                    <div className="mb-3">
+                      <ListingStoreChip
+                        name={storeName}
+                        slug={listing.store.slug}
+                        logoUrl={listing.store.logoUrl}
+                        storeHref={localizedPath(`/stores/${listing.store.slug}`)}
+                      />
+                    </div>
+                  ) : null}
                   <p className="mb-3 text-xl font-black text-brand-600">{formatPrice(listing.price, listing.currency)}</p>
                   <div className="flex items-center gap-1 text-sm text-slate-500">
                     <MapPin size={16} className="text-slate-400" />
