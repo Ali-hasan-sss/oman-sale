@@ -280,6 +280,7 @@ export function MainShell() {
             key={selectedCategoryId}
             categoryId={selectedCategoryId}
             onListingPress={openListingDetail}
+            onStorePress={openStoreDetail}
           />
         ) : (
           <HomeScreen {...homeScreenProps} />
@@ -293,9 +294,9 @@ export function MainShell() {
           <StoresBrowseScreen onStorePress={openStoreDetail} />
         );
       case 'offers':
-        return <OffersScreen onListingPress={openListingDetail} />;
+        return <OffersScreen onListingPress={openListingDetail} onStorePress={openStoreDetail} />;
       case 'myOffers':
-        return <MyOffersScreen onListingPress={openListingDetail} />;
+        return <MyOffersScreen onListingPress={openListingDetail} onStorePress={openStoreDetail} />;
       case 'chat':
         return <ChatScreen onConversationPress={openChatConversation} />;
       case 'chatConversation':
@@ -389,7 +390,7 @@ export function MainShell() {
           <NewsScreen onOpenArticle={openArticleDetail} />
         );
       case 'favorites':
-        return <FavoritesScreen onListingPress={openListingDetail} />;
+        return <FavoritesScreen onListingPress={openListingDetail} onStorePress={openStoreDetail} />;
       case 'search':
         return (
           <GlobalSearchScreen

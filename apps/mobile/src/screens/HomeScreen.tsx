@@ -79,6 +79,7 @@ export function HomeScreen({ onBrowseOffers, onListingPress, onCategoryPress, on
                 featuredLabel={t.common.featured}
                 layout="horizontal"
                 onPress={() => onListingPress(item.id)}
+                onStorePress={onStorePress}
               />
             )}
           />

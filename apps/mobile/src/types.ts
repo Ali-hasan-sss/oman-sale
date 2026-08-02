@@ -92,6 +92,7 @@ export type Listing = {
     nameEn: string;
     slug: string;
     logoUrl?: string | null;
+    phone?: string | null;
     trustBadgeApproved?: boolean;
   } | null;
 };

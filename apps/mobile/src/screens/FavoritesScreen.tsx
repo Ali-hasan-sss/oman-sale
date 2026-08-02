@@ -12,9 +12,10 @@ import { colors } from '../theme';
 
 type FavoritesScreenProps = {
   onListingPress: (listingId: string) => void;
+  onStorePress?: (slug: string) => void;
 };
 
-export function FavoritesScreen({ onListingPress }: FavoritesScreenProps) {
+export function FavoritesScreen({ onListingPress, onStorePress }: FavoritesScreenProps) {
   const { locale, t, isRtl } = useI18n();
   const { scrollBottomPadding } = useScreenInsets();
   const accessToken = useAuthStore((state) => state.accessToken);
@@ -68,6 +69,7 @@ export function FavoritesScreen({ onListingPress }: FavoritesScreenProps) {
             locale={locale}
             featuredLabel={t.common.featured}
             onPress={() => onListingPress(listing.id)}
+            onStorePress={onStorePress}
           />
         ))
       )}

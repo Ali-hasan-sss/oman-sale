@@ -312,6 +312,7 @@ export function GlobalSearchScreen({
               locale={locale}
               featuredLabel={t.common.featured}
               onPress={() => onListingPress(listing.id)}
+              onStorePress={onStorePress}
             />
           ))}
         </View>

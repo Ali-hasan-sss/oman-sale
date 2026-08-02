@@ -2,6 +2,7 @@
 
 import { ArrowUpLeft, MapPin } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
 import { ListingCardsSkeleton } from '@/components/listings/listing-card-skeleton';
@@ -32,6 +33,12 @@ type Listing = {
       badgeLabel?: string | null;
     };
   } | null;
+  store?: {
+    id: string;
+    nameAr: string;
+    nameEn: string;
+    slug: string;
+  } | null;
   trustBadgeApproved?: boolean;
 };
 
@@ -43,6 +50,7 @@ const placeholderImage = '/logo.png';
 
 export function LatestListingsSection() {
   const { locale, localizedPath, m } = useI18n();
+  const router = useRouter();
   const [listings, setListings] = useState<Listing[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
@@ -91,6 +99,11 @@ export function LatestListingsSection() {
             const category =
               (locale === 'en' ? listing.category?.nameEn : listing.category?.nameAr) ?? listing.category?.name ?? '';
             const isFeatured = Boolean(listing.promotion);
+            const storeName = listing.store
+              ? locale === 'en'
+                ? listing.store.nameEn
+                : listing.store.nameAr
+              : null;
 
             return (
               <Link
@@ -117,12 +130,25 @@ export function LatestListingsSection() {
                         return next;
                       });
                     }}
-                    className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 transition hover:scale-110 hover:bg-white"
+                    className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 transition hover:scale-110 hover:bg-white"
                   />
                   {isFeatured ? (
                     <span className="absolute left-3 top-3 rounded-md bg-brand-500 px-3 py-1 text-xs font-bold text-white">
                       {listing.promotion?.plan?.badgeLabel ?? m.common.featured}
                     </span>
+                  ) : null}
+                  {storeName && listing.store ? (
+                    <button
+                      type="button"
+                      className="absolute left-3 top-12 z-10 max-w-[70%] truncate rounded-md bg-slate-900/80 px-3 py-1 text-xs font-bold text-white backdrop-blur-sm transition hover:bg-slate-900"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        router.push(localizedPath(`/stores/${listing.store!.slug}`));
+                      }}
+                    >
+                      {storeName}
+                    </button>
                   ) : null}
                   {category ? (
                     <span className="absolute bottom-3 right-3 rounded-md bg-black/60 px-3 py-1 text-xs text-white backdrop-blur-sm">

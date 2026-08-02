@@ -62,6 +62,7 @@ type ListingDetails = {
     nameEn: string;
     slug: string;
     logoUrl?: string | null;
+    phone?: string | null;
     trustBadgeApproved?: boolean;
   } | null;
   trustBadgeApproved?: boolean;
@@ -225,7 +226,11 @@ export function ListingDetailsPage({ id }: { id: string }) {
   const activeItem = galleryItems[activeImage] ?? galleryItems[0];
   const selectedMediaUrl = activeItem ? resolveMediaUrl(activeItem.imageUrl) : fallbackImage;
   const categoryName = listing ? getCategoryName(listing, locale) : '';
-  const phone = listing?.contactPhone || listing?.user?.phone || '';
+  const phone =
+    listing?.contactPhone?.trim() ||
+    listing?.store?.phone?.trim() ||
+    listing?.user?.phone?.trim() ||
+    '';
 
   const share = () => {
     if (navigator.share) {

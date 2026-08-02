@@ -30,6 +30,7 @@ type AdminAdDetail = {
   createdAt: string;
   deletedAt?: string | null;
   user?: { fullName: string; email: string; phone?: string | null } | null;
+  store?: { phone?: string | null } | null;
   category?: { name?: string; nameAr?: string; nameEn?: string } | null;
   images?: Array<{ imageUrl: string; mediaType?: string }>;
   promotion?: {
@@ -219,7 +220,7 @@ export function AdminAdViewModal({ adId, onClose, onChanged }: AdminAdViewModalP
                 label={text.location}
                 value={getListingLocationLabel(ad.city, ad.wilayah, ad.area, locale) || '-'}
               />
-              <DetailItem label={text.phone} value={ad.contactPhone || ad.user?.phone || '-'} />
+              <DetailItem label={text.phone} value={ad.contactPhone || ad.store?.phone || ad.user?.phone || '-'} />
               <DetailItem
                 label={text.promotionScore}
                 value={`${promotionName(ad)} · ${promotionScore(ad).toLocaleString(locale === 'ar' ? 'ar-OM' : 'en-US')}`}

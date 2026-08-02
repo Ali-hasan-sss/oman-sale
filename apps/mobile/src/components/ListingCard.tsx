@@ -14,9 +14,17 @@ type ListingCardProps = {
   featuredLabel: string;
   layout?: 'vertical' | 'horizontal';
   onPress?: () => void;
+  onStorePress?: (slug: string) => void;
 };
 
-export function ListingCard({ listing, locale, featuredLabel, layout = 'vertical', onPress }: ListingCardProps) {
+export function ListingCard({
+  listing,
+  locale,
+  featuredLabel,
+  layout = 'vertical',
+  onPress,
+  onStorePress
+}: ListingCardProps) {
   const isHorizontal = layout === 'horizontal';
   const image = listing.images?.[0]?.imageUrl;
   const category = getCategoryName(listing, locale);
@@ -43,10 +51,19 @@ export function ListingCard({ listing, locale, featuredLabel, layout = 'vertical
             <AppText style={styles.badgeText}>{listing.promotion?.plan?.badgeLabel ?? featuredLabel}</AppText>
           </View>
         ) : null}
-        {storeName ? (
-          <View style={styles.storeBadge}>
-            <AppText style={styles.storeBadgeText}>{storeName}</AppText>
-          </View>
+        {storeName && listing.store ? (
+          <Pressable
+            style={styles.storeBadge}
+            onPress={(event) => {
+              event.stopPropagation?.();
+              if (onStorePress) onStorePress(listing.store!.slug);
+            }}
+            disabled={!onStorePress}
+          >
+            <AppText style={styles.storeBadgeText} numberOfLines={1}>
+              {storeName}
+            </AppText>
+          </Pressable>
         ) : null}
         {category ? (
           <View style={styles.category}>

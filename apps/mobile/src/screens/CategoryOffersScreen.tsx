@@ -50,6 +50,7 @@ type AppliedFilters = {
 type CategoryOffersScreenProps = {
   categoryId: string;
   onListingPress: (listingId: string) => void;
+  onStorePress?: (slug: string) => void;
 };
 
 const emptyDraft = (): CategoryFiltersDraft => ({
@@ -84,7 +85,7 @@ const countActiveFilters = (applied: AppliedFilters, rootCategoryId: string, sub
   return count;
 };
 
-export function CategoryOffersScreen({ categoryId, onListingPress }: CategoryOffersScreenProps) {
+export function CategoryOffersScreen({ categoryId, onListingPress, onStorePress }: CategoryOffersScreenProps) {
   const { locale, t, isRtl } = useI18n();
   const { scrollBottomPadding } = useScreenInsets();
   const categories = useListingsStore((state) => state.categories);
@@ -449,6 +450,7 @@ export function CategoryOffersScreen({ categoryId, onListingPress }: CategoryOff
           locale={locale}
           featuredLabel={t.common.featured}
           onPress={() => onListingPress(item.id)}
+          onStorePress={onStorePress}
         />
       )}
     />

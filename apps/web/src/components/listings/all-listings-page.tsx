@@ -884,6 +884,7 @@ function ListingCard({
   onFavoriteChange: (favorited: boolean) => void;
 }) {
   const { locale, localizedPath, m } = useI18n();
+  const router = useRouter();
   const categoryName =
     (locale === 'en' ? listing.category?.nameEn : listing.category?.nameAr) ?? listing.category?.name ?? '';
   const isFeatured = Boolean(listing.promotion);
@@ -904,17 +905,25 @@ function ListingCard({
           adId={listing.id}
           initialFavorited={isFavorited}
           onChange={onFavoriteChange}
-          className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 transition-all hover:scale-110 hover:bg-white"
+          className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 transition-all hover:scale-110 hover:bg-white"
         />
         {isFeatured ? (
           <span className="absolute left-3 top-3 rounded-md bg-green-500 px-3 py-1 text-xs font-bold text-white">
             {badgeLabel}
           </span>
         ) : null}
-        {storeName ? (
-          <span className="absolute left-3 top-12 rounded-md bg-slate-900/80 px-3 py-1 text-xs font-bold text-white backdrop-blur-sm">
+        {storeName && listing.store ? (
+          <button
+            type="button"
+            className="absolute left-3 top-12 z-10 max-w-[70%] truncate rounded-md bg-slate-900/80 px-3 py-1 text-xs font-bold text-white backdrop-blur-sm transition hover:bg-slate-900"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              router.push(localizedPath(`/stores/${listing.store!.slug}`));
+            }}
+          >
             {storeName}
-          </span>
+          </button>
         ) : null}
         {categoryName ? (
           <span className="absolute bottom-3 right-3 rounded-md bg-black/60 px-3 py-1 text-xs text-white backdrop-blur-sm">

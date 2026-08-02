@@ -10,12 +10,14 @@ const storeSummarySelect = {
   nameEn: true,
   slug: true,
   logoUrl: true,
+  phone: true,
   trustBadgeStatus: true
 } satisfies Prisma.StoreSelect;
 
 const userSummarySelect = {
   id: true,
   fullName: true,
+  phone: true,
   trustBadgeStatus: true
 } satisfies Prisma.UserSelect;
 

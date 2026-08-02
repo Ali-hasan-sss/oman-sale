@@ -144,7 +144,11 @@ export function ListingDetailScreen({
     return urls && urls.length > 0 ? urls : [];
   }, [listing]);
 
-  const phone = listing?.contactPhone || listing?.user?.phone || '';
+  const phone =
+    listing?.contactPhone?.trim() ||
+    listing?.store?.phone?.trim() ||
+    listing?.user?.phone?.trim() ||
+    '';
   const categoryName = listing ? getCategoryName(listing, locale) : '';
   const memberYear = listing?.user?.createdAt ? new Date(listing.user.createdAt).getFullYear() : '-';
 
@@ -502,6 +506,7 @@ export function ListingDetailScreen({
                   featuredLabel={t.common.featured}
                   layout="horizontal"
                   onPress={() => onOpenListing(item.id)}
+                  onStorePress={onOpenStore}
                 />
               ))}
             </ScrollView>

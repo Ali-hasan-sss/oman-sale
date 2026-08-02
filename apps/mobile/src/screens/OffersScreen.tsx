@@ -13,9 +13,10 @@ import { colors, radius } from '../theme';
 
 type OffersScreenProps = {
   onListingPress: (listingId: string) => void;
+  onStorePress?: (slug: string) => void;
 };
 
-export function OffersScreen({ onListingPress }: OffersScreenProps) {
+export function OffersScreen({ onListingPress, onStorePress }: OffersScreenProps) {
   const { locale, t, isRtl } = useI18n();
   const { scrollBottomPadding } = useScreenInsets();
   const listings = useListingsStore((state) => state.all);
@@ -104,6 +105,7 @@ export function OffersScreen({ onListingPress }: OffersScreenProps) {
           locale={locale}
           featuredLabel={t.common.featured}
           onPress={() => onListingPress(item.id)}
+          onStorePress={onStorePress}
         />
       )}
     />

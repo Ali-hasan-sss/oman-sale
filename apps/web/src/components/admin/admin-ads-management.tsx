@@ -43,6 +43,7 @@ type AdminAd = {
   createdAt: string;
   deletedAt?: string | null;
   user?: { fullName: string; email: string; phone?: string | null } | null;
+  store?: { phone?: string | null } | null;
   category?: Category | null;
   images?: Array<{ imageUrl: string; mediaType?: string }>;
   promotion?: {
@@ -595,7 +596,7 @@ export function AdminAdsManagement() {
                 label={text.location}
                 value={getListingLocationLabel(viewingAd.city, viewingAd.wilayah, viewingAd.area, locale) || '-'}
               />
-              <DetailItem label={text.phone} value={viewingAd.contactPhone || viewingAd.user?.phone || '-'} />
+              <DetailItem label={text.phone} value={viewingAd.contactPhone || viewingAd.store?.phone || viewingAd.user?.phone || '-'} />
               <DetailItem label={text.promotionScore} value={`${promotionName(viewingAd)} · ${promotionScore(viewingAd).toLocaleString(locale === 'ar' ? 'ar-OM' : 'en-US')}`} />
               <DetailItem label={text.createdAt} value={new Intl.DateTimeFormat(locale === 'ar' ? 'ar-OM' : 'en-US').format(new Date(viewingAd.createdAt))} />
             </div>
