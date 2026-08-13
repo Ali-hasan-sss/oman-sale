@@ -1141,13 +1141,13 @@ function CategoryTreeRow({
           <span className="mt-1 w-10 shrink-0" />
         )}
 
-        <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+        <span className="inline-flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
           {category.iconImageUrl ? (
-            <CategoryIcon icon={category.icon} iconImageUrl={category.iconImageUrl} size={20} />
+            <CategoryIcon icon={category.icon} iconImageUrl={category.iconImageUrl} size={28} />
           ) : IconPreview ? (
-            <IconPreview size={20} />
+            <IconPreview size={28} />
           ) : (
-            <CategoryIcon icon={category.icon} size={20} />
+            <CategoryIcon icon={category.icon} size={28} />
           )}
         </span>
 

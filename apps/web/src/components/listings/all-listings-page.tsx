@@ -973,11 +973,11 @@ function CategoryFilterChip({
       }`}
     >
       <span
-        className={`flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full ${
+        className={`flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full ${
           active && variant === 'top' ? 'bg-white/20' : 'bg-white'
         }`}
       >
-        <CategoryIcon icon={category.icon} iconImageUrl={category.iconImageUrl} size={18} />
+        <CategoryIcon icon={category.icon} iconImageUrl={category.iconImageUrl} size={24} />
       </span>
       <span>{category.name}</span>
     </button>
