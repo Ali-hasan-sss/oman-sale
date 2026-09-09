@@ -2,6 +2,7 @@ import { Modal, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from './AppText';
 import { useI18n } from '../i18n';
+import { rowDirection } from '../lib/layout-direction';
 import { colors, radius } from '../theme';
 
 type ConfirmDialogProps = {
@@ -31,9 +32,9 @@ export function ConfirmDialog({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
       <View style={styles.backdrop}>
         <View style={styles.card}>
-          <AppText style={[styles.title, isRtl ? styles.rtl : styles.ltr]}>{title}</AppText>
-          <AppText style={[styles.message, isRtl ? styles.rtl : styles.ltr]}>{message}</AppText>
-          <View style={[styles.actions, isRtl && styles.actionsRtl]}>
+          <AppText style={styles.title}>{title}</AppText>
+          <AppText style={styles.message}>{message}</AppText>
+          <View style={[styles.actions, rowDirection(isRtl)]}>
             <Pressable style={[styles.button, styles.cancelButton]} onPress={onCancel}>
               <AppText style={styles.cancelText}>{cancelLabel}</AppText>
             </Pressable>
@@ -78,11 +79,7 @@ const styles = StyleSheet.create({
     marginBottom: 20
   },
   actions: {
-    flexDirection: 'row',
     gap: 10
-  },
-  actionsRtl: {
-    flexDirection: 'row-reverse'
   },
   button: {
     flex: 1,
@@ -110,11 +107,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '800',
     fontSize: 14
-  },
-  rtl: {
-    textAlign: 'right'
-  },
-  ltr: {
-    textAlign: 'left'
   }
 });

@@ -8,7 +8,6 @@ import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { siteContactEmail } from '@/lib/site-contact';
 import { siteInvoiceConfig } from '@/lib/site-invoice';
-import { SiteBrandMark } from '@/components/navigation/site-brand-mark';
 
 type FooterCategory = {
   id: string;
@@ -60,11 +59,8 @@ export function SiteFooter() {
       <div className="site-container py-12">
         <div className="grid grid-cols-1 gap-8 border-b border-slate-800 pb-12 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <div className="mb-4 flex items-center gap-3">
-              <span className="flex h-20 w-20 items-center justify-center overflow-hidden">
-                <img src="/logo.png" alt="Oman Sale" className="h-full w-full object-contain" />
-              </span>
-              <SiteBrandMark variant="hero" className="text-start" />
+            <div className="mb-4 flex items-center">
+              <img src="/logo.png" alt="Oman Sale" className="h-24 w-auto" />
             </div>
             <p className="mb-6 text-sm leading-relaxed text-slate-400">{m.footer.description}</p>
             <div className="space-y-3 text-sm">

@@ -69,7 +69,7 @@ type ListingDetails = {
   trustBadgeApproved?: boolean;
 };
 
-const fallbackImage = '/logo.png';
+const fallbackImage = '/icon.png';
 
 const fakePromptStorageKey = (listingId: string) => `oman_sale_listing_fake_prompt_${listingId}`;
 

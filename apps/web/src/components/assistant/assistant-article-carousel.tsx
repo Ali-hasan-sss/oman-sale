@@ -11,7 +11,7 @@ type AssistantArticleCarouselProps = {
   articles: AssistantArticleCard[];
 };
 
-const placeholderImage = '/logo.png';
+const placeholderImage = '/icon.png';
 
 export function AssistantArticleCarousel({ articles }: AssistantArticleCarouselProps) {
   const { localizedPath, m } = useI18n();

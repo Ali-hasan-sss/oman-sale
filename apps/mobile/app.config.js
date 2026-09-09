@@ -21,6 +21,23 @@ const googleServicesPath =
   process.env.GOOGLE_SERVICES_JSON?.trim() || path.resolve(__dirname, 'google-services.json');
 const hasGoogleServices = fs.existsSync(googleServicesPath);
 
+// iOS Firebase / Google Sign-In — GoogleService-Info.plist from Firebase Console.
+const googleServicesInfoPath =
+  process.env.GOOGLE_SERVICES_INFO_PLIST?.trim() || path.resolve(__dirname, 'GoogleService-Info.plist');
+const hasGoogleServicesInfo = fs.existsSync(googleServicesInfoPath);
+
+function readReversedClientId(plistPath) {
+  try {
+    const plist = fs.readFileSync(plistPath, 'utf8');
+    const match = plist.match(/<key>REVERSED_CLIENT_ID<\/key>\s*<string>([^<]+)<\/string>/);
+    return match?.[1]?.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+const iosUrlScheme = hasGoogleServicesInfo ? readReversedClientId(googleServicesInfoPath) : null;
+
 module.exports = () => {
   const apiUrl = process.env.EXPO_PUBLIC_API_URL?.trim() || productionApiUrl;
 
@@ -52,11 +69,21 @@ module.exports = () => {
         permissions: ['INTERNET', 'ACCESS_NETWORK_STATE', 'POST_NOTIFICATIONS'],
         ...(hasGoogleServices ? { googleServicesFile: googleServicesPath } : {})
       },
+      ios: {
+        ...appJson.expo.ios,
+        infoPlist: {
+          ...(appJson.expo.ios?.infoPlist ?? {}),
+          ITSAppUsesNonExemptEncryption: false
+        },
+        ...(hasGoogleServicesInfo ? { googleServicesFile: './GoogleService-Info.plist' } : {})
+      },
       plugins: [
         'expo-asset',
         'expo-font',
         'expo-av',
-        '@react-native-google-signin/google-signin',
+        iosUrlScheme
+          ? ['@react-native-google-signin/google-signin', { iosUrlScheme }]
+          : '@react-native-google-signin/google-signin',
         [
           'expo-notifications',
           {
@@ -68,15 +95,24 @@ module.exports = () => {
           {
             android: {
               usesCleartextTraffic: false,
-              // Android 7.0+ (API 24), includes Android 12 (API 31).
+              // Android 7.0+ (API 24). Google Play requires targetSdk 36 for new uploads.
               minSdkVersion: 24,
-              compileSdkVersion: 35,
-              // 34: broader sideload compatibility; use 35 for Play Store later.
-              targetSdkVersion: 34,
-              newArchEnabled: false,
+              compileSdkVersion: 36,
+              targetSdkVersion: 36,
+              buildToolsVersion: '36.0.0',
+              newArchEnabled: true,
               softwareKeyboardLayoutMode: 'pan',
               // Helps native libs install on older devices (arm32/arm64/x86).
               useLegacyPackaging: true
+            },
+            // Google Sign-In pulls AppCheckCore 11.3+, which fails Expo's static
+            // CocoaPods install unless these pods generate module maps.
+            ios: {
+              extraPods: [
+                { name: 'AppCheckCore', version: '11.2.0' },
+                { name: 'GoogleUtilities', modular_headers: true },
+                { name: 'RecaptchaInterop', modular_headers: true }
+              ]
             }
           }
         ]

@@ -14,6 +14,7 @@ import { AppTextInput } from '../components/AppTextInput';
 import { EmptyState } from '../components/EmptyState';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
+import { rowDirection } from '../lib/layout-direction';
 import {
   fetchArticleCategories,
   fetchArticles,
@@ -113,7 +114,7 @@ export function NewsScreen({ onOpenArticle }: NewsScreenProps) {
           <AppText style={[styles.title, textAlign]}>{text.pageTitle}</AppText>
           <AppText style={[styles.subtitle, textAlign]}>{text.pageSubtitle}</AppText>
 
-          <View style={styles.searchRow}>
+          <View style={[styles.searchRow, rowDirection(isRtl)]}>
             <AppTextInput
               value={query}
               onChangeText={setQuery}
@@ -126,7 +127,7 @@ export function NewsScreen({ onOpenArticle }: NewsScreenProps) {
             </Pressable>
           </View>
 
-          <View style={styles.chips}>
+          <View style={[styles.chips, rowDirection(isRtl)]}>
             <Pressable
               style={[styles.chip, !categorySlug && styles.chipActive]}
               onPress={() => setCategorySlug('')}
@@ -202,7 +203,6 @@ const styles = StyleSheet.create({
     lineHeight: 22
   },
   searchRow: {
-    flexDirection: 'row-reverse',
     gap: 8,
     marginBottom: 12
   },
@@ -220,7 +220,6 @@ const styles = StyleSheet.create({
     fontWeight: '800'
   },
   chips: {
-    flexDirection: 'row-reverse',
     flexWrap: 'wrap',
     gap: 8,
     marginBottom: 16

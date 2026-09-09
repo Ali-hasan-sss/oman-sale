@@ -28,8 +28,8 @@ if (firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId) {
 
     self.registration.showNotification(title, {
       body,
-      icon: '/logo.png',
-      badge: '/logo.png',
+      icon: '/icon.png',
+      badge: '/icon.png',
       data: payload.data || {}
     });
   });

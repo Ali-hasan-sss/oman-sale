@@ -5,6 +5,7 @@ import { ListingCoverImage } from './ListingCoverImage';
 import { VerifiedBadge } from './VerifiedBadge';
 import { formatPrice, getCategoryName } from '../data';
 import { getListingLocationLabel } from '../lib/oman-locations';
+import { alignSelfStart, insetEnd, insetStart, rowDirection } from '../lib/layout-direction';
 import type { Listing, Locale } from '../types';
 import { colors, radius, shadow } from '../theme';
 
@@ -13,6 +14,7 @@ type ListingCardProps = {
   locale: Locale;
   featuredLabel: string;
   layout?: 'vertical' | 'horizontal';
+  embedded?: boolean;
   onPress?: () => void;
   onStorePress?: (slug: string) => void;
 };
@@ -22,6 +24,7 @@ export function ListingCard({
   locale,
   featuredLabel,
   layout = 'vertical',
+  embedded = false,
   onPress,
   onStorePress
 }: ListingCardProps) {
@@ -35,39 +38,33 @@ export function ListingCard({
 
   const content = (
     <>
-      <View
-        style={[
-          styles.imageWrap,
-          isHorizontal && styles.imageWrapHorizontal,
-          !image && styles.imageWrapNoPhoto
-        ]}
-      >
+      <View style={[styles.imageWrap, isHorizontal && styles.imageWrapHorizontal]}>
         <ListingCoverImage
           uri={image}
           variant={isHorizontal ? 'cardHorizontal' : 'card'}
           style={styles.cover}
         />
         {isFeatured ? (
-          <View style={styles.badge}>
+          <View style={[styles.badge, insetStart(contentRtl, 12)]}>
             <AppText style={styles.badgeText}>{listing.promotion?.plan?.badgeLabel ?? featuredLabel}</AppText>
           </View>
         ) : null}
         {category ? (
-          <View style={styles.category}>
+          <View style={[styles.category, insetEnd(contentRtl, 12)]}>
             <AppText style={styles.categoryText}>{category}</AppText>
           </View>
         ) : null}
       </View>
       <View style={[styles.body, isHorizontal && styles.bodyHorizontal]}>
-        <View style={styles.titleRow}>
-          <AppText style={[styles.title, contentRtl ? styles.textRtl : styles.textLtr, styles.titleFlex]} numberOfLines={1}>
+        <View style={[styles.titleRow, rowDirection(contentRtl)]}>
+          <AppText style={[styles.title, styles.titleFlex]} numberOfLines={1}>
             {listing.title}
           </AppText>
           {listing.trustBadgeApproved ? <VerifiedBadge /> : null}
         </View>
         {storeName && listing.store ? (
           <Pressable
-            style={[styles.storeRow, contentRtl && styles.storeRowRtl]}
+            style={[styles.storeRow, rowDirection(contentRtl), alignSelfStart(contentRtl)]}
             onPress={(event) => {
               event.stopPropagation?.();
               if (onStorePress) onStorePress(listing.store!.slug);
@@ -86,30 +83,32 @@ export function ListingCard({
             </AppText>
           </Pressable>
         ) : null}
-        <AppText style={[styles.price, contentRtl ? styles.textRtl : styles.textLtr]}>{formatPrice(listing.price, listing.currency, locale)}</AppText>
-        <AppText style={[styles.location, contentRtl ? styles.textRtl : styles.textLtr]} numberOfLines={1}>
+        <AppText style={styles.price}>{formatPrice(listing.price, listing.currency, locale)}</AppText>
+        <AppText style={styles.location} numberOfLines={1}>
           {getListingLocationLabel(listing.city, listing.wilayah, listing.area, locale) || '-'}
         </AppText>
       </View>
     </>
   );
 
+  const cardStyle = [
+    styles.card,
+    isHorizontal && styles.cardHorizontal,
+    embedded && styles.cardEmbedded
+  ];
+
   if (onPress) {
     return (
       <Pressable
         onPress={onPress}
-        style={({ pressed }) => [
-          styles.card,
-          isHorizontal && styles.cardHorizontal,
-          pressed && styles.cardPressed
-        ]}
+        style={({ pressed }) => [cardStyle, pressed && styles.cardPressed]}
       >
         {content}
       </Pressable>
     );
   }
 
-  return <View style={[styles.card, isHorizontal && styles.cardHorizontal]}>{content}</View>;
+  return <View style={cardStyle}>{content}</View>;
 }
 
 const styles = StyleSheet.create({
@@ -124,6 +123,16 @@ const styles = StyleSheet.create({
     width: 268,
     marginBottom: 0
   },
+  cardEmbedded: {
+    marginBottom: 0,
+    borderRadius: 0,
+    backgroundColor: 'transparent',
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 0
+  },
   cardPressed: {
     opacity: 0.92
   },
@@ -134,9 +143,6 @@ const styles = StyleSheet.create({
   imageWrapHorizontal: {
     height: 152
   },
-  imageWrapNoPhoto: {
-    backgroundColor: 'transparent'
-  },
   cover: {
     width: '100%',
     height: '100%'
@@ -144,7 +150,6 @@ const styles = StyleSheet.create({
   badge: {
     position: 'absolute',
     top: 12,
-    left: 12,
     backgroundColor: colors.brand,
     borderRadius: radius.sm,
     paddingHorizontal: 10,
@@ -156,20 +161,14 @@ const styles = StyleSheet.create({
     fontWeight: '800'
   },
   storeRow: {
-    flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     marginBottom: 8,
-    alignSelf: 'flex-start',
     maxWidth: '100%',
     backgroundColor: colors.brandSoft,
     borderRadius: 999,
     paddingVertical: 4,
     paddingHorizontal: 6
-  },
-  storeRowRtl: {
-    flexDirection: 'row-reverse',
-    alignSelf: 'flex-end'
   },
   storeAvatar: {
     width: 24,
@@ -199,7 +198,6 @@ const styles = StyleSheet.create({
   category: {
     position: 'absolute',
     bottom: 12,
-    right: 12,
     backgroundColor: 'rgba(15,23,42,0.72)',
     borderRadius: radius.sm,
     paddingHorizontal: 10,
@@ -211,7 +209,8 @@ const styles = StyleSheet.create({
     fontWeight: '700'
   },
   body: {
-    padding: 14
+    padding: 14,
+    width: '100%'
   },
   bodyHorizontal: {
     paddingVertical: 12,
@@ -224,16 +223,10 @@ const styles = StyleSheet.create({
     marginBottom: 6
   },
   titleRow: {
-    flexDirection: 'row',
+    width: '100%',
     alignItems: 'center',
     gap: 6,
     marginBottom: 6
-  },
-  titleRowRtl: {
-    flexDirection: 'row-reverse'
-  },
-  titleRowLtr: {
-    flexDirection: 'row'
   },
   titleFlex: {
     flex: 1
@@ -247,11 +240,5 @@ const styles = StyleSheet.create({
   location: {
     color: colors.muted,
     fontSize: 13
-  },
-  textRtl: {
-    textAlign: 'right'
-  },
-  textLtr: {
-    textAlign: 'left'
   }
 });

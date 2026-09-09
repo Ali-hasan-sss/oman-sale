@@ -82,7 +82,7 @@ type AdminUserAdsResponse = {
 
 type AdsFilter = 'active' | 'deleted';
 
-const fallbackImage = '/logo.png';
+const fallbackImage = '/icon.png';
 const ADS_PAGE_SIZE = 20;
 
 export function AdminUserDetails({ userId }: { userId: string }) {

@@ -21,8 +21,8 @@ export default function AdminLoginPage() {
         <div className="grid w-full grid-cols-1 overflow-hidden rounded-3xl bg-white shadow-soft lg:grid-cols-2">
           <section className="hidden bg-gradient-to-br from-brand-700 to-brand-900 p-10 text-white lg:block">
             <div className="mb-20 flex items-center gap-3">
-              <span className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-sm">
-                <img src="/logo.png" alt="Oman Sale" className="h-full w-full object-contain p-1" />
+              <span className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-black shadow-sm">
+                <img src="/icon.png" alt="Oman Sale" className="h-full w-full object-contain" />
               </span>
               <div>
                 <h1 className="text-2xl font-black">Oman Sale</h1>

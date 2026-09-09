@@ -17,6 +17,7 @@ import { ChatListSkeleton } from '../components/skeleton';
 import { formatChatRelativeTime } from '../data';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
+import { rowDirection } from '../lib/layout-direction';
 import { hasMorePages } from '../lib/pagination';
 import { getCachedChatConversations, setCachedChatConversations } from '../lib/screen-data-cache';
 import { fetchConversations } from '../services/chat.service';
@@ -180,7 +181,7 @@ export function ChatScreen({ onConversationPress }: ChatScreenProps) {
 
     return (
       <Pressable
-        style={[styles.row, isRtl && styles.rowRtl]}
+        style={[styles.row, rowDirection(isRtl)]}
         onPress={() => onConversationPress(conversation.id)}
       >
         <View style={styles.thumbWrap}>
@@ -192,8 +193,8 @@ export function ChatScreen({ onConversationPress }: ChatScreenProps) {
           ) : null}
         </View>
         <View style={styles.body}>
-          <View style={[styles.top, isRtl && styles.topRtl]}>
-            <View style={[styles.nameRow, isRtl && styles.nameRowRtl]}>
+          <View style={[styles.top, rowDirection(isRtl)]}>
+            <View style={[styles.nameRow, rowDirection(isRtl)]}>
               <AppText style={[styles.name, isRtl ? styles.rtl : styles.ltr]} numberOfLines={1}>
                 {other?.fullName ?? '-'}
               </AppText>
@@ -218,7 +219,7 @@ export function ChatScreen({ onConversationPress }: ChatScreenProps) {
             {lastMessage?.content ?? text.noMessages}
           </AppText>
           {hasUnread ? (
-            <View style={[styles.unreadRow, isRtl && styles.unreadRowRtl]}>
+            <View style={[styles.unreadRow, rowDirection(isRtl)]}>
               <View style={styles.unreadDot} />
               <AppText style={styles.unreadLabel}>{text.newMessage}</AppText>
             </View>

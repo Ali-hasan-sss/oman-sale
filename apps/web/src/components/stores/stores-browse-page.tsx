@@ -47,7 +47,7 @@ type StoresResponse = {
   limit: number;
 };
 
-const fallbackImage = '/logo.png';
+const fallbackImage = '/icon.png';
 
 export function StoresBrowsePage() {
   const { dir, locale, localizedPath, m } = useI18n();

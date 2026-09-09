@@ -1,7 +1,7 @@
 import { getListingCoverMedia, getListingThumbnailMedia, isListingVideo } from '@/lib/listing-media';
 import { resolveMediaUrl } from '@/lib/media-url';
 
-const fallbackAdImage = '/logo.png';
+const fallbackAdImage = '/icon.png';
 
 export function AdminAdMediaThumb({
   images,

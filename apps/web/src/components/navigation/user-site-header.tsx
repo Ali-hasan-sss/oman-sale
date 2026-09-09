@@ -7,7 +7,6 @@ import { Suspense, type KeyboardEvent, type ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 
 import { MobileNavMenu } from '@/components/navigation/mobile-nav-menu';
-import { SiteBrandMark } from '@/components/navigation/site-brand-mark';
 import { UserSiteHeaderNav } from '@/components/navigation/user-site-header-nav';
 import { GlobalHeaderSearch } from '@/components/navigation/global-header-search';
 import {
@@ -35,19 +34,15 @@ export function UserSiteHeader({ variant = 'default', sticky = true, children }:
     <header id="site-header" className={headerClass}>
       <div className="site-container py-3 sm:py-4">
         <div className={`flex items-center justify-between gap-2 sm:gap-3 md:gap-4 ${children ? 'mb-3 sm:mb-4' : ''}`}>
-          <Link href={localizedPath('/')} className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <Link href={localizedPath('/')} className="flex shrink-0 items-center">
             {variant === 'hero' ? (
-              <>
-                <span className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-white/95 shadow-lg sm:h-16 sm:w-16">
-                  <img src="/logo.png" alt="Oman Sale" className="h-full w-full object-contain p-1.5" />
-                </span>
-                <SiteBrandMark variant="hero" className="hidden md:flex" />
-              </>
+              <img
+                src="/logo.png"
+                alt="Oman Sale"
+                className="h-14 w-auto drop-shadow-lg sm:h-16"
+              />
             ) : (
-              <>
-                <img src="/logo.png" alt="Oman Sale" className="h-12 w-auto sm:h-14" />
-                <SiteBrandMark variant="light" className="hidden md:flex" />
-              </>
+              <img src="/logo.png" alt="Oman Sale" className="h-14 w-auto sm:h-16" />
             )}
           </Link>
           <MobileNavMenu variant={variant === 'hero' ? 'hero' : 'light'} />

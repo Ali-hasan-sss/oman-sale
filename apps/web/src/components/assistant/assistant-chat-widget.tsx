@@ -175,8 +175,8 @@ export function AssistantChatWidget() {
           <header className="flex shrink-0 items-center justify-between gap-2 border-b border-[#EFEFEF] bg-white px-4 py-3">
             <div className="flex min-w-0 items-center gap-2.5">
               <div className="flex shrink-0 items-center gap-1.5">
-                <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-white ring-1 ring-brand-100">
-                  <img src="/logo.png" alt="Oman Sale" className="h-7 w-7 object-contain" />
+                <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-black ring-1 ring-brand-100">
+                  <img src="/icon.png" alt="Oman Sale" className="h-7 w-7 object-contain" />
                 </span>
                 <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 text-white shadow-sm">
                   <Bot className="h-4 w-4" />

@@ -34,8 +34,8 @@ export default function NotFoundPage() {
             <div className="absolute -bottom-24 -right-20 h-56 w-56 rounded-full bg-desert-100 blur-3xl" />
 
             <div className="relative mx-auto max-w-2xl">
-              <Link href={localizedPath('/')} className="mx-auto mb-8 flex h-20 w-20 items-center justify-center overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
-                <img src="/logo.png" alt="Oman Sale" className="h-full w-full object-contain p-2" />
+              <Link href={localizedPath('/')} className="mx-auto mb-8 flex justify-center">
+                <img src="/logo.png" alt="Oman Sale" className="h-24 w-auto" />
               </Link>
 
               <p className="mb-3 text-7xl font-black text-brand-600 md:text-8xl">{text.eyebrow}</p>

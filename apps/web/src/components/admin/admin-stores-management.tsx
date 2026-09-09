@@ -103,7 +103,7 @@ type StoresResponse = {
 const inputClass = 'w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-100';
 const filterSelectClass =
   'h-11 min-w-[9.5rem] rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-brand-100';
-const fallbackImage = '/logo.png';
+const fallbackImage = '/icon.png';
 const thClass = 'px-2 py-2 align-middle text-start text-xs font-bold text-slate-500 lg:px-2.5';
 const tdClass = 'px-2 py-2 align-middle text-start text-xs text-slate-900 lg:px-2.5';
 

@@ -20,6 +20,7 @@ import { ListingCard } from '../components/ListingCard';
 import { ListingListSkeleton } from '../components/skeleton';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
+import { horizontalListNeedsAlignStart, itemsAlignStart, rowDirection } from '../lib/layout-direction';
 import { hasMorePages } from '../lib/pagination';
 import {
   buildSubcategoryFilterLevels,
@@ -180,7 +181,7 @@ export function CategoryOffersScreen({ categoryId, onListingPress, onStorePress 
 
   useEffect(() => {
     requestAnimationFrame(() => {
-      if (isRtl) {
+      if (horizontalListNeedsAlignStart(isRtl)) {
         sortScrollRef.current?.scrollToEnd({ animated: false });
       } else {
         sortScrollRef.current?.scrollTo({ x: 0, animated: false });
@@ -387,14 +388,13 @@ export function CategoryOffersScreen({ categoryId, onListingPress, onStorePress 
         activeFilterCount={activeFilterCount}
       />
 
-      <View style={[styles.sortRow, isRtl ? styles.sortRowRtl : styles.sortRowLtr]}>
+      <View style={[styles.sortRow, itemsAlignStart(isRtl)]}>
         <AppText style={[styles.sortLabel, isRtl ? styles.rtl : styles.ltr]}>{t.categoryOffers.sortBy}</AppText>
         <ScrollView
           ref={sortScrollRef}
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={isRtl ? styles.sortScrollViewRtl : styles.sortScrollViewLtr}
-          contentContainerStyle={[styles.sortScroll, isRtl && styles.sortScrollContentRtl]}
+          contentContainerStyle={[styles.sortScroll, rowDirection(isRtl)]}
         >
           {sortOptions.map((option) => (
             <Pressable

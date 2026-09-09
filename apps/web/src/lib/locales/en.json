@@ -1297,7 +1297,7 @@
     "send": "Send message",
     "typing": "Thinking",
     "welcome": "Hi! 👋 I'm your Oman Sale assistant — how can I help?",
-    "welcomeHint": "I can search listings and stores, explain subscription and promotion pricing, and answer questions about any platform feature.",
+    "welcomeHint": "I can search listings, stores, and news, explain subscription and promotion pricing, and help you post a listing or create a store from the menu or account.",
     "viewStore": "View store",
     "viewAllStores": "View all stores",
     "errorGeneric": "Could not reach the assistant. Please try again.",

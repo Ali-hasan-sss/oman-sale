@@ -18,8 +18,13 @@ export async function fetchPromotionPlans() {
   return Array.isArray(response.data.data) ? response.data.data : [];
 }
 
-export async function promoteAdRequest(payload: { adId: string; planId: string; days: number }) {
-  const response = await http.post<ApiEnvelope<unknown>>(API_ENDPOINTS.promotions.adPromotions, payload);
+export async function promoteAdRequest(
+  payload: { adId: string; planId: string; days: number },
+  locale?: string
+) {
+  const response = await http.post<
+    ApiEnvelope<{ promotion?: unknown; checkout?: { paymentUrl?: string } }>
+  >(API_ENDPOINTS.promotions.adPromotions, payload, { params: locale ? { locale } : undefined });
   return response.data.data;
 }
 

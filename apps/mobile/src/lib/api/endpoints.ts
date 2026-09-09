@@ -37,7 +37,11 @@ export const API_ENDPOINTS = {
     similar: (id: string) => `/ads/${id}/similar`,
     favorite: (id: string) => `/ads/${id}/favorite`,
     report: (id: string) => `/ads/${id}/reports`,
+    sold: (id: string) => `/ads/${id}/sold`,
     promote: (id: string) => `/ads/${id}/promote`
+  },
+  checkout: {
+    paidListings: '/checkout/paid-listings'
   },
   categories: {
     list: '/categories',

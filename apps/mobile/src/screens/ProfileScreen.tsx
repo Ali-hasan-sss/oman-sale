@@ -22,6 +22,7 @@ import { ProfileSkeleton } from '../components/skeleton';
 import { VerificationCodeInput } from '../components/VerificationCodeInput';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
+import { rowDirection } from '../lib/layout-direction';
 import {
   changePasswordRequest,
   fetchCurrentUser,
@@ -342,12 +343,12 @@ export function ProfileScreen({ onLogin, onManageStore, onCreateStore }: Profile
         </View>
 
         <View style={styles.card}>
-          <View style={[styles.titleWithBadge, isRtl && styles.titleWithBadgeRtl]}>
+          <View style={[styles.titleWithBadge, rowDirection(isRtl)]}>
             <AppText style={[styles.cardTitle, textAlign]}>{t.profile.personalInfo}</AppText>
             {user?.trustBadgeApproved ? <VerifiedBadge size="md" /> : null}
           </View>
 
-          <View style={[styles.avatarRow, isRtl && styles.avatarRowRtl]}>
+          <View style={[styles.avatarRow, rowDirection(isRtl)]}>
             <AvatarWithBanBadge
               uri={avatar}
               fallbackLabel={avatarInitial}
@@ -358,8 +359,8 @@ export function ProfileScreen({ onLogin, onManageStore, onCreateStore }: Profile
 
             <View style={styles.avatarActions}>
               <AppText style={[styles.avatarHint, textAlign]}>{t.profile.avatarHint}</AppText>
-              <View style={[styles.avatarButtons, isRtl && styles.avatarButtonsRtl]}>
-                <Pressable style={styles.secondaryButton} onPress={pickAvatar}>
+              <View style={[styles.avatarButtons, rowDirection(isRtl)]}>
+                <Pressable style={[styles.secondaryButton, rowDirection(isRtl)]} onPress={pickAvatar}>
                   <Ionicons name="camera-outline" size={18} color={colors.brandDark} />
                   <AppText style={styles.secondaryButtonText}>{t.profile.changePhoto}</AppText>
                 </Pressable>

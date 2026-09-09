@@ -26,8 +26,13 @@ export type StorePlan = {
   descriptionEn: string;
   sortOrder?: number;
   isAdminFree?: boolean;
+  trialDays?: number;
+  trialAvailable?: boolean;
+  trialMaxListings?: number;
   pricing: StorePlanPricing[];
 };
+
+export type StoreBusinessType = 'COMMERCIAL' | 'HOME';
 
 export type CreateStorePayload = {
   nameAr: string;
@@ -36,12 +41,15 @@ export type CreateStorePayload = {
   bioEn?: string;
   phone: string;
   nationalId: string;
-  commercialRegistrationNumber: string;
+  businessType: StoreBusinessType;
+  commercialRegistrationNumber?: string;
   rootCategoryId: string;
   storeTypeId: string;
   city: string;
+  wilayah: string;
   planId: string;
   billingPeriod: StoreBillingPeriod;
+  activationMode?: 'trial' | 'plan';
   logoUrl?: string;
   coverUrl?: string;
 };

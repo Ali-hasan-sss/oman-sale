@@ -3,6 +3,7 @@ import { Image, Linking, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useI18n } from '../i18n';
+import { rowDirection } from '../lib/layout-direction';
 import { useChatStore } from '../stores';
 import { colors } from '../theme';
 import { AppText } from './AppText';
@@ -27,13 +28,13 @@ export function ChatThreadBar({ onBack }: ChatThreadBarProps) {
 
   return (
     <View style={[styles.shell, { paddingTop: safeInsets.top }]} pointerEvents="box-none">
-      <View style={styles.row} pointerEvents="auto">
+      <View style={[styles.row, rowDirection(isRtl)]} pointerEvents="auto">
         <Pressable style={styles.iconBtn} onPress={onBack}>
           <Ionicons name={isRtl ? 'arrow-forward' : 'arrow-back'} size={22} color={colors.ink} />
         </Pressable>
 
         {isLoading ? (
-          <View style={styles.peerRow}>
+          <View style={[styles.peerRow, rowDirection(isRtl)]}>
             <Skeleton width={44} height={44} borderRadius={22} />
             <View style={styles.peerMeta}>
               <Skeleton width={120} height={16} />
@@ -41,7 +42,7 @@ export function ChatThreadBar({ onBack }: ChatThreadBarProps) {
             </View>
           </View>
         ) : (
-          <View style={styles.peerRow}>
+          <View style={[styles.peerRow, rowDirection(isRtl)]}>
             <View style={styles.avatar}>
               {peerAvatar ? (
                 <Image source={{ uri: peerAvatar }} style={styles.avatarImage} />
@@ -53,7 +54,7 @@ export function ChatThreadBar({ onBack }: ChatThreadBarProps) {
               <AppText style={[styles.peerName, isRtl && styles.textRtl]} numberOfLines={1}>
                 {peerName || '-'}
               </AppText>
-              <View style={styles.statusRow}>
+              <View style={[styles.statusRow, rowDirection(isRtl)]}>
                 <View style={[styles.statusDot, isOtherOnline ? styles.statusDotOnline : styles.statusDotOffline]} />
                 <AppText style={styles.statusText}>{isOtherOnline ? text.online : text.offline}</AppText>
               </View>

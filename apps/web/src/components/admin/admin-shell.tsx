@@ -141,8 +141,8 @@ export function AdminShell({ children }: PropsWithChildren) {
       <div className="shrink-0 border-b border-slate-100 p-5">
         <div className="flex items-center justify-between gap-3">
           <Link href={localizedPath('/admin')} className="flex items-center gap-3">
-            <span className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
-              <img src="/logo.png" alt="Oman Sale" className="h-full w-full object-contain p-1" />
+            <span className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-black shadow-sm ring-1 ring-slate-200">
+              <img src="/icon.png" alt="Oman Sale" className="h-full w-full object-contain" />
             </span>
             <div>
               <p className="text-lg font-black">Oman Sale</p>

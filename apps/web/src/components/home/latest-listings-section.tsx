@@ -47,7 +47,7 @@ type ListingsResponse = {
   items: Listing[];
 };
 
-const placeholderImage = '/logo.png';
+const placeholderImage = '/icon.png';
 
 export function LatestListingsSection() {
   const { locale, localizedPath, m } = useI18n();

@@ -18,12 +18,13 @@ import { ListingCard } from '../components/ListingCard';
 import { StoreDetailSkeleton } from '../components/skeleton';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
+import { alignSelfStart, rowDirection } from '../lib/layout-direction';
 import { getCityLabel } from '../lib/oman-cities';
 import { fetchPublicStoreAds, fetchPublicStoreBySlug, type PublicStore } from '../services/stores.service';
 import type { Listing } from '../types';
 import { colors, radius, shadow } from '../theme';
 
-const fallbackLogo = require('../../assets/nav-logo.png');
+const fallbackLogo = require('../../assets/logo-symbol.png');
 const PAGE_SIZE = 12;
 
 type StoreDetailScreenProps = {
@@ -164,12 +165,12 @@ export function StoreDetailScreen({ slug, onListingPress }: StoreDetailScreenPro
             <Image source={fallbackLogo} style={styles.logoFallback} resizeMode="contain" />
           )}
         </View>
-        <View style={[styles.nameRow, isRtl && styles.nameRowRtl]}>
+        <View style={[styles.nameRow, rowDirection(isRtl)]}>
           <AppText style={[styles.storeName, textAlign]}>{storeName}</AppText>
           {store.trustBadgeApproved ? <VerifiedBadge size="md" /> : null}
         </View>
         {typeName ? (
-          <View style={styles.typeBadge}>
+          <View style={[styles.typeBadge, alignSelfStart(isRtl)]}>
             <AppText style={styles.typeBadgeText}>{typeName}</AppText>
           </View>
         ) : null}
@@ -177,13 +178,13 @@ export function StoreDetailScreen({ slug, onListingPress }: StoreDetailScreenPro
 
         <View style={styles.metaRow}>
           {cityLabel ? (
-            <View style={styles.cityBadge}>
+            <View style={[styles.cityBadge, rowDirection(isRtl)]}>
               <Ionicons name="location-outline" size={16} color={colors.brandDark} />
               <AppText style={styles.cityText}>{cityLabel}</AppText>
             </View>
           ) : null}
           {store.phone ? (
-            <Pressable style={styles.phoneButton} onPress={() => Linking.openURL(`tel:${store.phone}`)}>
+            <Pressable style={[styles.phoneButton, rowDirection(isRtl)]} onPress={() => Linking.openURL(`tel:${store.phone}`)}>
               <Ionicons name="call-outline" size={18} color={colors.brandDark} />
               <AppText style={[styles.phoneText, styles.ltr]}>
                 {store.phone}
@@ -196,7 +197,7 @@ export function StoreDetailScreen({ slug, onListingPress }: StoreDetailScreenPro
         </View>
 
         {store.owner ? (
-          <View style={[styles.ownerRow, isRtl && styles.ownerRowRtl]}>
+          <View style={[styles.ownerRow, rowDirection(isRtl)]}>
             {store.owner.avatar ? (
               <Image source={{ uri: store.owner.avatar }} style={styles.ownerAvatar} />
             ) : (
@@ -212,7 +213,7 @@ export function StoreDetailScreen({ slug, onListingPress }: StoreDetailScreenPro
       </View>
 
       <View style={styles.listingsSection}>
-        <View style={[styles.listingsHeader, isRtl && styles.listingsHeaderRtl]}>
+        <View style={[styles.listingsHeader, rowDirection(isRtl)]}>
           <AppText style={[styles.listingsTitle, textAlign]}>{text.storeListings}</AppText>
           <AppText style={styles.listingsCount}>
             {total.toLocaleString(locale === 'ar' ? 'ar-OM' : 'en-US')}
@@ -301,13 +302,9 @@ const styles = StyleSheet.create({
     color: colors.ink
   },
   nameRow: {
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 8,
     marginBottom: 4
-  },
-  nameRowRtl: {
-    flexDirection: 'row'
   },
   category: {
     color: colors.brandDark,
@@ -316,7 +313,6 @@ const styles = StyleSheet.create({
     marginBottom: 8
   },
   typeBadge: {
-    alignSelf: 'flex-start',
     marginBottom: 8,
     borderRadius: radius.pill,
     backgroundColor: '#ecfdf5',
@@ -340,7 +336,6 @@ const styles = StyleSheet.create({
     marginBottom: 8
   },
   cityBadge: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
@@ -357,7 +352,6 @@ const styles = StyleSheet.create({
     fontSize: 13
   },
   phoneButton: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
@@ -376,7 +370,6 @@ const styles = StyleSheet.create({
     fontSize: 13
   },
   ownerRow: {
-    flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     marginTop: 8,
@@ -411,13 +404,9 @@ const styles = StyleSheet.create({
     padding: 16
   },
   listingsHeader: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 12
-  },
-  listingsHeaderRtl: {
-    flexDirection: 'row-reverse'
   },
   listingsTitle: {
     fontSize: 20,

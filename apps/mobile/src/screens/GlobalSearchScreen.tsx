@@ -15,6 +15,7 @@ import { ListingCard } from '../components/ListingCard';
 import { ListingListSkeleton } from '../components/skeleton';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
+import { rowDirection } from '../lib/layout-direction';
 import { getCityLabel } from '../lib/oman-cities';
 import { fetchArticles, type ArticleSummary } from '../services/articles.service';
 import { fetchCategories, fetchFilteredListings, type CategoryOption } from '../services/listings.service';
@@ -27,7 +28,7 @@ import { fetchPublicStores, type PublicStore } from '../services/stores.service'
 import type { Listing } from '../types';
 import { colors, radius, shadow } from '../theme';
 
-const fallbackLogo = require('../../assets/nav-logo.png');
+const fallbackLogo = require('../../assets/logo-symbol.png');
 const RESULT_LIMIT = 8;
 const MIN_SUGGESTIONS_LENGTH = 1;
 const SUGGESTIONS_DEBOUNCE_MS = 300;
@@ -299,7 +300,7 @@ export function GlobalSearchScreen({
 
       {query && !isLoading && listings.length > 0 ? (
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
+          <View style={[styles.sectionHeader, rowDirection(isRtl)]}>
             <AppText style={[styles.sectionTitle, textAlign]}>{text.listings}</AppText>
             <Pressable onPress={onBrowseOffers}>
               <AppText style={styles.viewAll}>{text.viewAll}</AppText>
@@ -320,7 +321,7 @@ export function GlobalSearchScreen({
 
       {query && !isLoading && articles.length > 0 ? (
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
+          <View style={[styles.sectionHeader, rowDirection(isRtl)]}>
             <AppText style={[styles.sectionTitle, textAlign]}>{text.articles}</AppText>
             <Pressable onPress={onBrowseNews}>
               <AppText style={styles.viewAll}>{text.viewAll}</AppText>
@@ -351,7 +352,7 @@ export function GlobalSearchScreen({
 
       {query && !isLoading && stores.length > 0 ? (
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
+          <View style={[styles.sectionHeader, rowDirection(isRtl)]}>
             <AppText style={[styles.sectionTitle, textAlign]}>{text.stores}</AppText>
             <Pressable onPress={onBrowseStores}>
               <AppText style={styles.viewAll}>{text.viewAll}</AppText>
@@ -507,7 +508,6 @@ const styles = StyleSheet.create({
     gap: 10
   },
   sectionHeader: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12

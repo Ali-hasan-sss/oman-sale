@@ -15,9 +15,9 @@ export const metadata: Metadata = {
   title: 'Oman Sale',
   description: 'Universal listing platform for products, services, jobs, logistics and more.',
   icons: {
-    icon: '/logo.png',
-    shortcut: '/logo.png',
-    apple: '/logo.png'
+    icon: '/icon.png',
+    shortcut: '/icon.png',
+    apple: '/icon.png'
   }
 };
 

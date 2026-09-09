@@ -12,7 +12,7 @@ type AssistantStoreCarouselProps = {
   stores: AssistantStoreCard[];
 };
 
-const placeholderImage = '/logo.png';
+const placeholderImage = '/icon.png';
 
 export function AssistantStoreCarousel({ stores }: AssistantStoreCarouselProps) {
   const { locale, localizedPath, m } = useI18n();

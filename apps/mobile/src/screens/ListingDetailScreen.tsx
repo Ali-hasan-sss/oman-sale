@@ -19,8 +19,9 @@ import { ListingCard } from '../components/ListingCard';
 import { ListingCoverImage } from '../components/ListingCoverImage';
 import { ListingImageModal } from '../components/ListingImageModal';
 import { ListingDetailSkeleton } from '../components/skeleton';
-import { fallbackListings, formatListingDate, formatPrice, getCategoryName } from '../data';
+import { formatListingDate, formatPrice, getCategoryName } from '../data';
 import { getListingLocationLabel } from '../lib/oman-locations';
+import { insetEnd, rowDirection } from '../lib/layout-direction';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
 import {
@@ -45,20 +46,6 @@ type ListingDetailScreenProps = {
   onOpenChat: (conversationId: string) => void;
   onOpenStore?: (slug: string) => void;
 };
-
-function isDemoId(id: string) {
-  return id.startsWith('demo-');
-}
-
-function loadDemoListing(id: string) {
-  const listing = fallbackListings.find((item) => item.id === id);
-  if (!listing) throw new Error('not found');
-  return listing;
-}
-
-function loadDemoSimilar(id: string) {
-  return fallbackListings.filter((item) => item.id !== id);
-}
 
 export function ListingDetailScreen({
   listingId,
@@ -100,20 +87,13 @@ export function ListingDetailScreen({
     setShowPhone(false);
     setActiveImage(0);
     try {
-      if (isDemoId(listingId)) {
-        const detail = loadDemoListing(listingId);
-        setListing(detail);
-        setSimilar(loadDemoSimilar(listingId));
-        setCachedListing(listingId, detail);
-      } else {
-        const [detail, related] = await Promise.all([
-          fetchListingById(listingId),
-          fetchSimilarListings(listingId)
-        ]);
-        setListing(detail);
-        setSimilar(related);
-        setCachedListing(listingId, detail);
-      }
+      const [detail, related] = await Promise.all([
+        fetchListingById(listingId),
+        fetchSimilarListings(listingId)
+      ]);
+      setListing(detail);
+      setSimilar(related);
+      setCachedListing(listingId, detail);
     } catch {
       if (!cached) {
         setListing(null);
@@ -130,7 +110,7 @@ export function ListingDetailScreen({
   }, [load]);
 
   useEffect(() => {
-    if (!accessToken || isDemoId(listingId)) {
+    if (!accessToken) {
       setIsFavorited(false);
       return;
     }
@@ -169,7 +149,6 @@ export function ListingDetailScreen({
       onLoginRequired();
       return;
     }
-    if (isDemoId(listingId)) return;
     setIsTogglingFavorite(true);
     try {
       if (isFavorited) {
@@ -207,7 +186,7 @@ export function ListingDetailScreen({
   };
 
   const submitReport = async () => {
-    if (!listing || isDemoId(listing.id)) return;
+    if (!listing) return;
     const reason = reportReason.trim();
     if (reason.length < 5) {
       setReportError(text.reportError);
@@ -287,7 +266,7 @@ export function ListingDetailScreen({
           ) : (
             <ListingCoverImage uri={null} variant="hero" style={styles.heroPlaceholder} />
           )}
-          <View style={[styles.heroActions, isRtl ? styles.heroActionsRtl : styles.heroActionsLtr]}>
+          <View style={[styles.heroActions, rowDirection(isRtl), insetEnd(isRtl, 12)]}>
             <Pressable style={styles.heroActionBtn} onPress={() => void shareListing()}>
               <Ionicons name="share-social-outline" size={20} color={colors.ink} />
             </Pressable>
@@ -304,7 +283,7 @@ export function ListingDetailScreen({
             </Pressable>
           </View>
           {imageUrls.length > 1 ? (
-            <View style={[styles.imageCountBadge, isRtl && styles.imageCountBadgeRtl]}>
+            <View style={[styles.imageCountBadge, rowDirection(isRtl), insetEnd(isRtl, 14)]}>
               <Ionicons name="images-outline" size={14} color="#fff" />
               <AppText style={styles.imageCountText}>{imageUrls.length}</AppText>
             </View>
@@ -315,7 +294,7 @@ export function ListingDetailScreen({
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={[styles.thumbs, isRtl && styles.thumbsRtl]}
+            contentContainerStyle={[styles.thumbs, rowDirection(isRtl)]}
           >
             {imageUrls.map((uri, index) => (
               <Pressable
@@ -330,7 +309,7 @@ export function ListingDetailScreen({
         ) : null}
 
         <View style={styles.card}>
-          <View style={styles.badges}>
+          <View style={[styles.badges, rowDirection(isRtl)]}>
             {categoryName ? (
               <View style={styles.categoryBadge}>
                 <AppText style={styles.categoryBadgeText}>{categoryName}</AppText>
@@ -343,7 +322,7 @@ export function ListingDetailScreen({
             ) : null}
           </View>
 
-          <View style={[styles.titleRow, contentRtl ? styles.titleRowRtl : styles.titleRowLtr]}>
+          <View style={[styles.titleRow, rowDirection(contentRtl)]}>
             <AppText style={[styles.title, contentRtl ? styles.textRtl : styles.textLtr, styles.titleFlex]}>{listing.title}</AppText>
             {listing.trustBadgeApproved ? <VerifiedBadge size="md" /> : null}
           </View>
@@ -355,7 +334,7 @@ export function ListingDetailScreen({
             {formatPrice(listing.price, listing.currency, locale)}
           </AppText>
 
-          <View style={[styles.metaRow, isRtl && styles.metaRowRtl]}>
+          <View style={[styles.metaRow, rowDirection(isRtl)]}>
             <MetaItem icon="location-outline" label={location} rtl={contentRtl} />
             <MetaItem
               icon="calendar-outline"
@@ -373,12 +352,10 @@ export function ListingDetailScreen({
           <AppText style={[styles.description, contentRtl ? styles.textRtl : styles.textLtr]}>
             {listing.description || '-'}
           </AppText>
-          {!isDemoId(listing.id) ? (
-            <Pressable style={styles.reportBtn} onPress={openReportModal}>
-              <Ionicons name="flag-outline" size={18} color={colors.danger} />
-              <AppText style={styles.reportBtnText}>{text.report}</AppText>
-            </Pressable>
-          ) : null}
+          <Pressable style={[styles.reportBtn, rowDirection(isRtl)]} onPress={openReportModal}>
+            <Ionicons name="flag-outline" size={18} color={colors.danger} />
+            <AppText style={styles.reportBtnText}>{text.report}</AppText>
+          </Pressable>
           {reportError && !reportOpen ? <AppText style={styles.reportInlineError}>{reportError}</AppText> : null}
         </View>
 
@@ -388,7 +365,7 @@ export function ListingDetailScreen({
           </AppText>
           {listing.store && onOpenStore ? (
             <Pressable
-              style={[styles.sellerRow, isRtl && styles.sellerRowRtl, styles.sellerRowLink]}
+              style={[styles.sellerRow, rowDirection(isRtl), styles.sellerRowLink]}
               onPress={() => onOpenStore(listing.store!.slug)}
             >
               <AvatarWithBanBadge
@@ -401,7 +378,7 @@ export function ListingDetailScreen({
                 badgeLabel={listing.user?.isBlocked ? t.profile.accountBlocked : undefined}
               />
               <View style={styles.sellerBody}>
-                <View style={[styles.sellerNameRow, contentRtl ? styles.sellerNameRowRtl : styles.sellerNameRowLtr]}>
+                <View style={[styles.sellerNameRow, rowDirection(contentRtl)]}>
                   <AppText style={[styles.sellerName, contentRtl ? styles.textRtl : styles.textLtr, styles.sellerNameFlex]}>
                     {locale === 'en' ? listing.store.nameEn : listing.store.nameAr}
                   </AppText>
@@ -413,7 +390,7 @@ export function ListingDetailScreen({
               </View>
             </Pressable>
           ) : (
-            <View style={[styles.sellerRow, isRtl && styles.sellerRowRtl]}>
+            <View style={[styles.sellerRow, rowDirection(isRtl)]}>
               <AvatarWithBanBadge
                 uri={listing.store?.logoUrl ?? listing.user?.avatar}
                 fallbackLabel={
@@ -428,7 +405,7 @@ export function ListingDetailScreen({
                 badgeLabel={listing.user?.isBlocked ? t.profile.accountBlocked : undefined}
               />
               <View style={styles.sellerBody}>
-                <View style={[styles.sellerNameRow, contentRtl ? styles.sellerNameRowRtl : styles.sellerNameRowLtr]}>
+                <View style={[styles.sellerNameRow, rowDirection(contentRtl)]}>
                   <AppText style={[styles.sellerName, contentRtl ? styles.textRtl : styles.textLtr, styles.sellerNameFlex]}>
                     {listing.store
                       ? locale === 'en'
@@ -445,7 +422,7 @@ export function ListingDetailScreen({
             </View>
           )}
 
-          <Pressable style={styles.primaryBtn} onPress={() => setShowPhone(true)}>
+          <Pressable style={[styles.primaryBtn, rowDirection(isRtl)]} onPress={() => setShowPhone(true)}>
             <Ionicons name="call-outline" size={20} color="#fff" />
             <AppText style={styles.primaryBtnText}>
               {showPhone ? phone || text.phoneUnavailable : text.showPhone}
@@ -453,14 +430,14 @@ export function ListingDetailScreen({
           </Pressable>
 
           {showPhone && phone ? (
-            <Pressable style={styles.outlineBtn} onPress={callSeller}>
+            <Pressable style={[styles.outlineBtn, rowDirection(isRtl)]} onPress={callSeller}>
               <Ionicons name="call" size={20} color={colors.brand} />
               <AppText style={styles.outlineBtnText}>{text.callSeller}</AppText>
             </Pressable>
           ) : null}
 
           <Pressable
-            style={[styles.outlineBtn, isOpeningChat && styles.btnDisabled]}
+            style={[styles.outlineBtn, rowDirection(isRtl), isOpeningChat && styles.btnDisabled]}
             onPress={openChat}
             disabled={isOpeningChat}
           >
@@ -496,7 +473,7 @@ export function ListingDetailScreen({
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={[styles.similarScroll, isRtl && styles.similarScrollRtl]}
+              contentContainerStyle={[styles.similarScroll, rowDirection(isRtl)]}
             >
               {similar.map((item) => (
                 <ListingCard
@@ -537,9 +514,9 @@ export function ListingDetailScreen({
               multiline
               style={[styles.reportInput, contentRtl ? styles.textRtl : styles.textLtr]}
             />
-            <View style={[styles.modalActions, isRtl && styles.modalActionsRtl]}>
+            <View style={[styles.modalActions, rowDirection(isRtl)]}>
               <Pressable
-                style={[styles.primaryBtn, styles.modalPrimaryBtn, isSubmittingReport && styles.btnDisabled]}
+                style={[styles.primaryBtn, styles.modalPrimaryBtn, rowDirection(isRtl), isSubmittingReport && styles.btnDisabled]}
                 onPress={submitReport}
                 disabled={isSubmittingReport}
               >
@@ -549,7 +526,7 @@ export function ListingDetailScreen({
                   <AppText style={styles.primaryBtnText}>{text.reportSubmit}</AppText>
                 )}
               </Pressable>
-              <Pressable style={styles.outlineBtn} onPress={() => setReportOpen(false)}>
+              <Pressable style={[styles.outlineBtn, rowDirection(isRtl)]} onPress={() => setReportOpen(false)}>
                 <AppText style={styles.outlineBtnText}>{text.reportCancel}</AppText>
               </Pressable>
             </View>
@@ -570,7 +547,7 @@ function MetaItem({
   rtl: boolean;
 }) {
   return (
-    <View style={[styles.metaItem, rtl && styles.metaItemRtl]}>
+    <View style={[styles.metaItem, rowDirection(rtl)]}>
       <Ionicons name={icon} size={15} color={colors.muted} />
       <AppText style={[styles.metaLabel, rtl ? styles.textRtl : styles.textLtr]} numberOfLines={1}>
         {label}
@@ -619,14 +596,7 @@ const styles = StyleSheet.create({
   heroActions: {
     position: 'absolute',
     top: 12,
-    flexDirection: 'row',
     gap: 8
-  },
-  heroActionsLtr: {
-    right: 12
-  },
-  heroActionsRtl: {
-    left: 12
   },
   heroActionBtn: {
     width: 40,
@@ -650,8 +620,6 @@ const styles = StyleSheet.create({
   imageCountBadge: {
     position: 'absolute',
     bottom: 14,
-    right: 14,
-    flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     backgroundColor: 'rgba(15,23,42,0.72)',

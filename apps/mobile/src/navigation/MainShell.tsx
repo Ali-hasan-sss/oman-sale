@@ -2,6 +2,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   BackHandler,
+  Dimensions,
   PanResponder,
   Platform,
   StatusBar as RNStatusBar,
@@ -81,8 +82,10 @@ export function MainShell() {
   const [selectedArticleSlug, setSelectedArticleSlug] = useState<string | null>(null);
   const [navTransition, setNavTransition] = useState<ScreenTransitionKind>('tab');
   const drawerOpenRef = useRef(drawerOpen);
+  const isRtlRef = useRef(isRtl);
   const screenHistoryRef = useRef<ScreenName[]>(['home']);
   drawerOpenRef.current = drawerOpen;
+  isRtlRef.current = isRtl;
 
   const pushScreen = (next: ScreenName) => {
     if (next === screen) return;
@@ -237,17 +240,27 @@ export function MainShell() {
 
   const edgePanResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: (_, gesture) =>
-        !drawerOpenRef.current && gesture.x0 <= edgeSwipeWidth,
-      onMoveShouldSetPanResponder: (_, gesture) =>
-        !drawerOpenRef.current &&
-        gesture.x0 <= edgeSwipeWidth &&
-        gesture.dx > 12 &&
-        Math.abs(gesture.dy) < Math.abs(gesture.dx),
+      onStartShouldSetPanResponder: (_, gesture) => {
+        if (drawerOpenRef.current) return false;
+        const width = Dimensions.get('window').width;
+        return isRtlRef.current
+          ? gesture.x0 <= edgeSwipeWidth
+          : gesture.x0 >= width - edgeSwipeWidth;
+      },
+      onMoveShouldSetPanResponder: (_, gesture) => {
+        if (drawerOpenRef.current) return false;
+        const width = Dimensions.get('window').width;
+        const fromEdge = isRtlRef.current
+          ? gesture.x0 <= edgeSwipeWidth && gesture.dx > 12
+          : gesture.x0 >= width - edgeSwipeWidth && gesture.dx < -12;
+        return fromEdge && Math.abs(gesture.dy) < Math.abs(gesture.dx);
+      },
       onPanResponderRelease: (_, gesture) => {
-        if (!drawerOpenRef.current && gesture.dx >= openSwipeThreshold) {
-          setDrawerOpen(true);
-        }
+        if (drawerOpenRef.current) return;
+        const opened = isRtlRef.current
+          ? gesture.dx >= openSwipeThreshold
+          : gesture.dx <= -openSwipeThreshold;
+        if (opened) setDrawerOpen(true);
       }
     })
   ).current;
@@ -318,6 +331,7 @@ export function MainShell() {
           <MyStoreScreen
             onCreateStore={() => pushScreen('addStore')}
             onOpenListing={openListingDetail}
+            onAddListing={() => navigate('addOffer')}
           />
         );
       case 'login':
@@ -495,6 +509,7 @@ export function MainShell() {
           <View
             style={[
               styles.edgeSwipeZone,
+              isRtl ? styles.edgeSwipeZoneLtr : styles.edgeSwipeZoneRtl,
               isChatConversation && [styles.edgeSwipeZoneChat, { top: chatEdgeSwipeTopInset }]
             ]}
             pointerEvents="box-none"
@@ -575,6 +590,7 @@ export function MainShell() {
         hidden={hideAssistant}
         onListingPress={openListingDetail}
         onStorePress={openStoreDetail}
+        onArticlePress={openArticleDetail}
         onNavigate={navigate}
         onLogin={() => pushScreen('login')}
         onRegister={() => pushScreen('register')}
@@ -615,11 +631,17 @@ const styles = StyleSheet.create({
   },
   edgeSwipeZone: {
     position: 'absolute',
-    left: 0,
     top: 0,
     bottom: 0,
     width: edgeSwipeWidth,
-    zIndex: 5
+    zIndex: 5,
+    direction: 'ltr'
+  },
+  edgeSwipeZoneLtr: {
+    left: 0
+  },
+  edgeSwipeZoneRtl: {
+    right: 0
   },
   edgeSwipeZoneChat: {
     bottom: chatEdgeSwipeBottomInset

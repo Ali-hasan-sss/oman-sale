@@ -12,6 +12,7 @@ import {
 import { useKeyboardAwareScrollHandler } from './KeyboardAwareScrollView';
 import { useI18n } from '../i18n';
 import { fontFamilyForLocale } from '../fonts';
+import { textDirection } from '../lib/layout-direction';
 import { colors } from '../theme';
 
 export const AppTextInput = forwardRef<TextInput, TextInputProps>(function AppTextInput(
@@ -19,11 +20,13 @@ export const AppTextInput = forwardRef<TextInput, TextInputProps>(function AppTe
   ref
 ) {
   const scrollIntoView = useKeyboardAwareScrollHandler();
-  const { locale } = useI18n();
+  const { locale, isRtl } = useI18n();
   const flat = StyleSheet.flatten(style) as TextStyle | undefined;
   const resolvedStyle: TextStyle[] = [
     !flat?.color ? { color: colors.ink } : null,
     style,
+    textDirection(isRtl, flat?.textAlign),
+    flat?.writingDirection ? { writingDirection: flat.writingDirection } : null,
     flat?.fontFamily ? null : { fontFamily: fontFamilyForLocale(locale, flat?.fontWeight), fontWeight: 'normal' }
   ].filter(Boolean) as TextStyle[];
 

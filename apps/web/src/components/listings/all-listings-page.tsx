@@ -155,7 +155,7 @@ const listingsPageMessages = {
   }
 };
 
-const fallbackImage = '/logo.png';
+const fallbackImage = '/icon.png';
 
 export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}) {
   const { dir, locale, localizedPath } = useI18n();

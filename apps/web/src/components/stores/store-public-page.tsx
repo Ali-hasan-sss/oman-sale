@@ -57,7 +57,7 @@ type ListingsResponse = {
   limit: number;
 };
 
-const fallbackImage = '/logo.png';
+const fallbackImage = '/icon.png';
 
 export function StorePublicPage({ slug }: { slug: string }) {
   const { dir, locale, localizedPath, m } = useI18n();

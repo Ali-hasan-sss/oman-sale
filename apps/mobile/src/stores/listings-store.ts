@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 
-import { fallbackListings } from '../data';
 import { getApiErrorCode, isAccountBlockedError } from '../lib/api-errors';
 import { hasMorePages } from '../lib/pagination';
 import type { CategoryOption } from '../services/listings.service';
@@ -10,7 +9,8 @@ import {
   fetchCategories,
   fetchFavoriteListings,
   fetchLatestListings,
-  fetchMyListings
+  fetchMyListings,
+  type CreateListingPayload
 } from '../services/listings.service';
 import type { Listing, Locale } from '../types';
 import { useAuthStore } from './auth-store';
@@ -53,17 +53,7 @@ type ListingsState = {
   loadMy: (options?: { refresh?: boolean }) => Promise<void>;
   loadFavorites: (options?: { refresh?: boolean }) => Promise<void>;
   loadCategories: (locale: Locale, options?: { refresh?: boolean }) => Promise<void>;
-  createListing: (payload: {
-    title: string;
-    description: string;
-    type: string;
-    price: number;
-    city: string;
-    wilayah: string;
-    categoryId: string;
-    imageUrls: string[];
-    storeId?: string;
-  }) => Promise<{ ok: true; id: string } | { ok: false; error: string; errorCode?: string; apiError?: unknown }>;
+  createListing: (payload: CreateListingPayload) => Promise<{ ok: true; id: string } | { ok: false; error: string; errorCode?: string; apiError?: unknown }>;
   resetMy: () => void;
   resetFavorites: () => void;
 };
@@ -107,7 +97,7 @@ export const useListingsStore = create<ListingsState>((set, get) => ({
     });
     try {
       const result = await fetchLatestListings(1, LATEST_PAGE_SIZE);
-      const items = result.items.length > 0 ? result.items : fallbackListings;
+      const items = result.items;
       set({
         latest: items,
         latestPage: 1,
@@ -116,7 +106,7 @@ export const useListingsStore = create<ListingsState>((set, get) => ({
       });
     } catch {
       if (!get().hasLoadedLatest) {
-        set({ latest: fallbackListings, latestPage: 0, latestHasMore: false, listingsError: 'latest' });
+        set({ latest: [], latestPage: 0, latestHasMore: false, listingsError: 'latest' });
       }
     } finally {
       set({ isLoadingLatest: false, isRefreshingLatest: false });
@@ -158,7 +148,7 @@ export const useListingsStore = create<ListingsState>((set, get) => ({
     });
     try {
       const result = await fetchAllListings(1, ALL_PAGE_SIZE);
-      const items = result.items.length > 0 ? result.items : fallbackListings;
+      const items = result.items;
       set({
         all: items,
         allPage: 1,
@@ -167,7 +157,7 @@ export const useListingsStore = create<ListingsState>((set, get) => ({
       });
     } catch {
       if (!get().hasLoadedAll) {
-        set({ all: fallbackListings, allPage: 0, allHasMore: false, listingsError: 'all' });
+        set({ all: [], allPage: 0, allHasMore: false, listingsError: 'all' });
       }
     } finally {
       set({ isLoadingAll: false, isRefreshingAll: false });

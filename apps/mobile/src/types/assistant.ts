@@ -32,6 +32,17 @@ export type AssistantStoreCard = {
   categoryName?: string | null;
 };
 
+export type AssistantArticleCard = {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  coverImageUrl: string;
+  views: number;
+  publishedAt?: string | null;
+  categoryName?: string | null;
+};
+
 export type QuickReplyIntent =
   | 'pricing_overview'
   | 'search_car_showrooms'
@@ -49,6 +60,7 @@ export type AssistantMessage = {
   createdAt: string;
   listings?: AssistantListingCard[];
   stores?: AssistantStoreCard[];
+  articles?: AssistantArticleCard[];
   actions?: AssistantAction[];
 };
 
@@ -56,5 +68,6 @@ export type AssistantChatResult = {
   reply: string;
   listings: AssistantListingCard[];
   stores: AssistantStoreCard[];
+  articles: AssistantArticleCard[];
   actions: AssistantAction[];
 };

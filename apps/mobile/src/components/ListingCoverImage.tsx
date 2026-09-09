@@ -1,30 +1,15 @@
-import {
-  Image,
-  StyleSheet,
-  View,
-  type ImageStyle,
-  type StyleProp,
-  type ViewStyle
-} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Image, StyleSheet, View, type ImageStyle, type StyleProp, type ViewStyle } from 'react-native';
 
 import { colors } from '../theme';
 
-const listingLogo = require('../../assets/splash-logo.png');
-
 export type ListingCoverVariant = 'card' | 'cardHorizontal' | 'thumb' | 'hero';
 
-const LOGO_SIZE: Record<ListingCoverVariant, { width: number; height: number }> = {
-  card: { width: 132, height: 88 },
-  cardHorizontal: { width: 108, height: 72 },
-  thumb: { width: 40, height: 40 },
-  hero: { width: 200, height: 120 }
-};
-
-const PLACEHOLDER_PADDING: Record<ListingCoverVariant, number> = {
-  card: 20,
-  cardHorizontal: 16,
-  thumb: 6,
-  hero: 28
+const ICON_SIZE: Record<ListingCoverVariant, number> = {
+  card: 40,
+  cardHorizontal: 36,
+  thumb: 18,
+  hero: 56
 };
 
 type ListingCoverImageProps = {
@@ -40,11 +25,9 @@ export function ListingCoverImage({ uri, variant = 'card', style }: ListingCover
     );
   }
 
-  const logoSize = LOGO_SIZE[variant];
-
   return (
-    <View style={[styles.placeholder, { padding: PLACEHOLDER_PADDING[variant] }, style]}>
-      <Image source={listingLogo} style={[styles.logo, logoSize]} resizeMode="contain" />
+    <View style={[styles.placeholder, style]}>
+      <Ionicons name="image-outline" size={ICON_SIZE[variant]} color={colors.muted} />
     </View>
   );
 }
@@ -60,10 +43,6 @@ const styles = StyleSheet.create({
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'transparent'
-  },
-  logo: {
-    maxWidth: '100%',
-    maxHeight: '100%'
+    backgroundColor: colors.brandSoft
   }
 });

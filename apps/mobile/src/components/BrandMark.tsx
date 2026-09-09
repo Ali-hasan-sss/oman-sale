@@ -16,7 +16,7 @@ const styles = StyleSheet.create({
   mark: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff'
+    backgroundColor: '#000'
   },
   logo: {
     width: '88%',

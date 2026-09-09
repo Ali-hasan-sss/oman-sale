@@ -130,7 +130,7 @@ export async function fetchCategories(locale: string) {
   return unwrapListItems(response.data.data);
 }
 
-export async function createListingRequest(payload: {
+export type CreateListingPayload = {
   title: string;
   description: string;
   type: string;
@@ -139,14 +139,50 @@ export async function createListingRequest(payload: {
   wilayah: string;
   categoryId: string;
   imageUrls: string[];
+  videoUrl?: string;
+  filterOptionIds?: string[];
+  modelYear?: number;
   storeId?: string;
-}) {
+};
+
+export async function createListingRequest(payload: CreateListingPayload) {
   const response = await http.post<ApiEnvelope<{ id: string }>>(API_ENDPOINTS.ads.root, {
     ...payload,
-    currency: 'OMR',
-    imageUrls: payload.imageUrls
+    currency: 'OMR'
   });
   return response.data.data;
+}
+
+export async function checkoutPaidListingRequest(
+  payload: { ad: CreateListingPayload; planId: string; days: number },
+  locale: string
+) {
+  const response = await http.post<ApiEnvelope<{ checkout?: { paymentUrl?: string } }>>(
+    API_ENDPOINTS.checkout.paidListings,
+    payload,
+    { params: { locale } }
+  );
+  return response.data.data;
+}
+
+export async function updateListingRequest(
+  listingId: string,
+  payload: { title: string; description: string; price?: number; city?: string; wilayah?: string }
+) {
+  const response = await http.patch<ApiEnvelope<Listing>>(API_ENDPOINTS.ads.byId(listingId), payload);
+  return response.data.data;
+}
+
+export async function deleteListingRequest(listingId: string) {
+  await http.delete(API_ENDPOINTS.ads.byId(listingId));
+}
+
+export async function markListingSoldRequest(listingId: string) {
+  await http.post(API_ENDPOINTS.ads.sold(listingId));
+}
+
+export async function unmarkListingSoldRequest(listingId: string) {
+  await http.delete(API_ENDPOINTS.ads.sold(listingId));
 }
 
 export async function toggleFavoriteRequest(listingId: string) {

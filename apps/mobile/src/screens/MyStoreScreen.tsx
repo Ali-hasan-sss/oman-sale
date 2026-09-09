@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
-  Linking,
   Pressable,
   StyleSheet,
   View
@@ -21,6 +20,8 @@ import { KeyboardAwareScrollView } from '../components/KeyboardAwareScrollView';
 import { MyStoreScreenSkeleton } from '../components/skeleton';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
+import { rowDirection } from '../lib/layout-direction';
+import { buildBannerAdWebsitePath, openWebPaymentPage, openWebsitePage } from '../lib/open-external-web';
 import { formatPlanVatBreakdown } from '../lib/plan-pricing';
 import { canActivateStorePlanWithoutPayment } from '../lib/store-plan-activation';
 import {
@@ -53,9 +54,10 @@ import { colors, radius, shadow } from '../theme';
 type MyStoreScreenProps = {
   onCreateStore: () => void;
   onOpenListing: (id: string) => void;
+  onAddListing: () => void;
 };
 
-export function MyStoreScreen({ onCreateStore, onOpenListing }: MyStoreScreenProps) {
+export function MyStoreScreen({ onCreateStore, onOpenListing, onAddListing }: MyStoreScreenProps) {
   const { locale, t, isRtl } = useI18n();
   const { scrollBottomPadding } = useScreenInsets();
   const text = t.myStore;
@@ -265,7 +267,8 @@ export function MyStoreScreen({ onCreateStore, onOpenListing }: MyStoreScreenPro
             ? await renewStoreSubscriptionRequest(store.id, locale)
             : await subscribeStoreRequest(store.id, options!, locale);
       if (result.checkout?.paymentUrl) {
-        await Linking.openURL(result.checkout.paymentUrl);
+        await openWebPaymentPage(result.checkout.paymentUrl);
+        setMessage(t.common.paymentOpenedMessage);
         return;
       }
       setShowUpgradePanel(false);
@@ -349,7 +352,7 @@ export function MyStoreScreen({ onCreateStore, onOpenListing }: MyStoreScreenPro
         </Pressable>
       </View>
 
-      <View style={styles.logoRow}>
+      <View style={[styles.logoRow, rowDirection(isRtl)]}>
         <View style={styles.logoWrap}>
           {logoUrl ? (
             <Image source={{ uri: logoUrl }} style={styles.logo} />
@@ -362,7 +365,7 @@ export function MyStoreScreen({ onCreateStore, onOpenListing }: MyStoreScreenPro
         </Pressable>
       </View>
 
-      <View style={[styles.nameRow, isRtl && styles.nameRowRtl]}>
+      <View style={[styles.nameRow, rowDirection(isRtl)]}>
         <AppText style={[styles.storeName, textAlign]}>{storeName}</AppText>
         {store.trustBadgeApproved ? <VerifiedBadge size="md" /> : null}
       </View>
@@ -405,7 +408,7 @@ export function MyStoreScreen({ onCreateStore, onOpenListing }: MyStoreScreenPro
                 {text.listingsBaselineHint}: {carriedOverListings} + {text.listingsPlanAllowanceHint}: {planListingAllowance} = {text.listingsTotalHint}: {effectiveMaxListings}
               </AppText>
             ) : null}
-            <View style={styles.gaugeRow}>
+            <View style={[styles.gaugeRow, rowDirection(isRtl)]}>
               <SubscriptionRingGauge
                 title={text.listingsUsage}
                 used={listings.length}
@@ -466,6 +469,12 @@ export function MyStoreScreen({ onCreateStore, onOpenListing }: MyStoreScreenPro
             ) : null}
           </View>
         ) : null}
+        <Pressable
+          style={[styles.secondaryButton, { marginTop: 12 }]}
+          onPress={() => void openWebsitePage(locale, buildBannerAdWebsitePath())}
+        >
+          <AppText style={styles.upgradeButtonText}>{t.common.requestBannerAd}</AppText>
+        </Pressable>
         {showUpgradePanel ? (
           <View style={styles.upgradePanel}>
             <AppText style={[styles.upgradeTitle, textAlign]}>{text.upgradeTitle}</AppText>
@@ -483,7 +492,7 @@ export function MyStoreScreen({ onCreateStore, onOpenListing }: MyStoreScreenPro
                       <Pressable onPress={() => setSelectedUpgradePlanId(plan.id)}>
                         <AppText style={[styles.planName, textAlign]}>{planName}</AppText>
                       </Pressable>
-                      <View style={styles.billingRow}>
+                      <View style={[styles.billingRow, rowDirection(isRtl)]}>
                         {STORE_BILLING_PERIODS.map((period) => {
                           const row = plan.pricing.find((pricing) => pricing.billingPeriod === period);
                           if (!row) return null;
@@ -585,7 +594,12 @@ export function MyStoreScreen({ onCreateStore, onOpenListing }: MyStoreScreenPro
       <StoreTrustBadgePanel storeId={store.id} />
 
       <View style={styles.card}>
-        <AppText style={[styles.cardTitle, textAlign]}>{text.storeListings}</AppText>
+        <View style={[styles.listingsHeader, rowDirection(isRtl)]}>
+          <AppText style={[styles.cardTitle, textAlign]}>{text.storeListings}</AppText>
+          <Pressable style={styles.addListingButton} onPress={onAddListing}>
+            <AppText style={styles.addListingButtonText}>{text.addListing}</AppText>
+          </Pressable>
+        </View>
         {listings.length === 0 ? (
           <AppText style={[styles.meta, textAlign]}>{text.noListings}</AppText>
         ) : (
@@ -639,7 +653,7 @@ const styles = StyleSheet.create({
     right: 12
   },
   coverBtnText: { fontWeight: '700', color: colors.brandDark, fontSize: 12 },
-  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: -28, paddingHorizontal: 8 },
+  logoRow: { alignItems: 'center', gap: 12, marginTop: -28, paddingHorizontal: 8 },
   logoWrap: {
     width: 72,
     height: 72,
@@ -654,9 +668,8 @@ const styles = StyleSheet.create({
   },
   logo: { width: '100%', height: '100%' },
   storeName: { fontSize: 20, fontWeight: '800', color: colors.ink, marginTop: 8 },
-  nameRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginTop: 8 },
-  nameRowRtl: { flexDirection: 'row' },
-  gaugeRow: { flexDirection: 'row-reverse', gap: 10, marginTop: 12 },
+  nameRow: { alignItems: 'center', gap: 8, marginTop: 8 },
+  gaugeRow: { gap: 10, marginTop: 12 },
   fieldLabel: { fontWeight: '700', color: colors.ink, marginTop: 8 },
   input: {
     borderWidth: 1,
@@ -695,6 +708,9 @@ const styles = StyleSheet.create({
     ...shadow
   },
   cardTitle: { fontSize: 18, fontWeight: '800', color: colors.ink },
+  listingsHeader: { alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 },
+  addListingButton: { backgroundColor: colors.brandSoft, borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 8 },
+  addListingButtonText: { color: colors.brandDark, fontWeight: '800', fontSize: 12 },
   statusBadge: { color: colors.brandDark, fontWeight: '700' },
   meta: { color: colors.muted, fontSize: 14 },
   trialHint: {
@@ -720,7 +736,7 @@ const styles = StyleSheet.create({
   },
   planCardSelected: { borderColor: colors.brand, backgroundColor: '#f0fdf4' },
   planName: { fontSize: 16, fontWeight: '800', color: colors.ink },
-  billingRow: { flexDirection: 'row', gap: 8 },
+  billingRow: { gap: 8 },
   billingChip: {
     flex: 1,
     borderWidth: 1,

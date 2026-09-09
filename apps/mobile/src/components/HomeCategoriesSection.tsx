@@ -5,6 +5,7 @@ import { AppText } from './AppText';
 import { CategoryChipsSkeleton } from './skeleton';
 import { SectionTitle } from './SectionTitle';
 import { useI18n } from '../i18n';
+import { rowDirection } from '../lib/layout-direction';
 import { CategoryIcon } from '../lib/category-icons';
 import type { CategoryOption } from '../services/listings.service';
 import { useListingsStore } from '../stores';
@@ -19,19 +20,18 @@ type CategoryChipProps = {
   iconImageUrl?: string | null;
   adsCount: number;
   adsLabel: string;
-  isRtl: boolean;
 };
 
-function CategoryChip({ label, icon, iconImageUrl, adsCount, adsLabel, isRtl }: CategoryChipProps) {
+function CategoryChip({ label, icon, iconImageUrl, adsCount, adsLabel }: CategoryChipProps) {
   return (
     <View style={styles.chip}>
       <View style={styles.iconWrap}>
         <CategoryIcon icon={icon} iconImageUrl={iconImageUrl} size={30} color={colors.brandDark} />
       </View>
-      <AppText style={[styles.chipText, isRtl && styles.chipTextRtl]} numberOfLines={1}>
+      <AppText style={styles.chipText} numberOfLines={1}>
         {label}
       </AppText>
-      <AppText style={[styles.chipMeta, isRtl && styles.chipTextRtl]}>
+      <AppText style={styles.chipMeta}>
         {adsCount} {adsLabel}
       </AppText>
     </View>
@@ -63,27 +63,23 @@ export function HomeCategoriesSection({ onCategoryPress }: HomeCategoriesSection
     [categories]
   );
 
+  const showSkeleton = isLoading && !hasLoadedCategories && rootCategories.length === 0;
+
+  if (!showSkeleton && rootCategories.length === 0) {
+    return null;
+  }
+
   return (
     <View style={styles.section}>
       <SectionTitle title={t.home.categories} />
 
-      {isLoading && !hasLoadedCategories && rootCategories.length === 0 ? (
+      {showSkeleton ? (
         <CategoryChipsSkeleton count={5} />
-      ) : rootCategories.length === 0 ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
-          {t.home.categoryNames.map((name) => (
-            <CategoryChip key={name} label={name} adsCount={0} isRtl={isRtl} adsLabel={adsLabel} />
-          ))}
-        </ScrollView>
       ) : (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, rowDirection(isRtl)]}
         >
           {rootCategories.map((category) => (
             <Pressable
@@ -98,7 +94,6 @@ export function HomeCategoriesSection({ onCategoryPress }: HomeCategoriesSection
                 iconImageUrl={category.iconImageUrl}
                 adsCount={category._count?.ads ?? 0}
                 adsLabel={adsLabel}
-                isRtl={isRtl}
               />
             </Pressable>
           ))}
@@ -113,21 +108,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 10
   },
-  loader: {
-    alignSelf: 'flex-start',
-    marginVertical: 8
-  },
-  scrollRtl: {
-    direction: 'rtl'
-  },
   scrollContent: {
-    flexDirection: 'row',
     alignItems: 'stretch',
     gap: 10,
     paddingEnd: 4
-  },
-  scrollContentRtl: {
-    flexDirection: 'row-reverse'
   },
   chip: {
     width: 140,
@@ -161,9 +145,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 18
-  },
-  chipTextRtl: {
-    textAlign: 'center'
   },
   chipMeta: {
     marginTop: 6,

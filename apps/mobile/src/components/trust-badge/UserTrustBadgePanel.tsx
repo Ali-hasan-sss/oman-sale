@@ -6,6 +6,7 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from '../AppText';
 import { VerifiedBadge } from '../VerifiedBadge';
 import { useI18n } from '../../i18n';
+import { rowDirection } from '../../lib/layout-direction';
 import { uploadVerificationDocument } from '../../services/media.service';
 import {
   fetchUserTrustBadge,
@@ -15,7 +16,7 @@ import {
 import { colors, radius } from '../../theme';
 
 export function UserTrustBadgePanel() {
-  const { t } = useI18n();
+  const { t, isRtl } = useI18n();
   const text = t.trustBadge;
   const [data, setData] = useState<UserTrustBadge | null>(null);
   const [documentType, setDocumentType] = useState<'NATIONAL_ID' | 'PASSPORT'>('NATIONAL_ID');
@@ -122,7 +123,7 @@ export function UserTrustBadgePanel() {
 
   return (
     <View style={styles.card}>
-      <View style={styles.titleRow}>
+      <View style={[styles.titleRow, rowDirection(isRtl)]}>
         <AppText style={styles.title}>{text.userTitle}</AppText>
         {data?.trustBadgeApproved ? <VerifiedBadge size="md" /> : null}
       </View>
@@ -144,7 +145,7 @@ export function UserTrustBadgePanel() {
       {canSubmit ? (
         <>
           <AppText style={styles.label}>{text.documentType}</AppText>
-          <View style={styles.typeRow}>
+          <View style={[styles.typeRow, rowDirection(isRtl)]}>
             {(['NATIONAL_ID', 'PASSPORT'] as const).map((type) => (
               <Pressable
                 key={type}
@@ -199,7 +200,6 @@ const styles = StyleSheet.create({
     marginTop: 16
   },
   titleRow: {
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 8,
     marginBottom: 8
@@ -248,7 +248,6 @@ const styles = StyleSheet.create({
     marginBottom: 8
   },
   typeRow: {
-    flexDirection: 'row-reverse',
     gap: 8,
     marginBottom: 12
   },

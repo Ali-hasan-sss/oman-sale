@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from './AppText';
 import { useI18n } from '../i18n';
+import { rowDirection } from '../lib/layout-direction';
 import { colors, radius } from '../theme';
 
 type ErrorNoticeProps = {
@@ -14,9 +15,9 @@ export function ErrorNotice({ message, onDismiss }: ErrorNoticeProps) {
   const { isRtl } = useI18n();
 
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, rowDirection(isRtl)]}>
       <Ionicons name="alert-circle-outline" size={22} color={colors.danger} />
-      <AppText style={[styles.message, isRtl ? styles.rtl : styles.ltr]}>{message}</AppText>
+      <AppText style={styles.message}>{message}</AppText>
       {onDismiss ? (
         <Pressable onPress={onDismiss} hitSlop={8}>
           <Ionicons name="close" size={20} color={colors.danger} />
@@ -28,7 +29,6 @@ export function ErrorNotice({ message, onDismiss }: ErrorNoticeProps) {
 
 const styles = StyleSheet.create({
   wrap: {
-    flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     backgroundColor: '#fef2f2',
@@ -45,11 +45,5 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 13,
     lineHeight: 18
-  },
-  rtl: {
-    textAlign: 'right'
-  },
-  ltr: {
-    textAlign: 'left'
   }
 });

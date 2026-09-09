@@ -677,7 +677,7 @@ export function AdminAdsManagement() {
   );
 }
 
-const fallbackAdImage = '/logo.png';
+const fallbackAdImage = '/icon.png';
 
 function AdminAdMediaThumb({
   images,

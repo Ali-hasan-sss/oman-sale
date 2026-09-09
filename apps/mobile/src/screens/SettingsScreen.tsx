@@ -5,6 +5,7 @@ import { useScreenInsets } from '../hooks/use-screen-insets';
 
 import { AppText } from '../components/AppText';
 import { useI18n } from '../i18n';
+import { rowDirection } from '../lib/layout-direction';
 import { colors, radius } from '../theme';
 
 type SettingsScreenProps = {
@@ -34,9 +35,9 @@ export function SettingsScreen({ onOpenTerms, onOpenPrivacy, onOpenRefund }: Set
       <AppText style={[styles.title, isRtl ? styles.rtl : styles.ltr]}>{t.settings.title}</AppText>
       <AppText style={[styles.subtitle, isRtl ? styles.rtl : styles.ltr]}>{t.settings.subtitle}</AppText>
       {items.map((item) => (
-        <Pressable key={item.label} style={[styles.row, isRtl && styles.rowRtl]} onPress={item.onPress}>
+        <Pressable key={item.label} style={[styles.row, rowDirection(isRtl)]} onPress={item.onPress}>
           <Ionicons name={item.icon} size={22} color={colors.brand} />
-          <AppText style={[styles.label, isRtl ? styles.labelRtl : styles.labelLtr]}>{item.label}</AppText>
+          <AppText style={styles.label}>{item.label}</AppText>
         </Pressable>
       ))}
     </ScrollView>
@@ -59,16 +60,12 @@ const styles = StyleSheet.create({
     marginBottom: 16
   },
   row: {
-    flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     backgroundColor: colors.surface,
     borderRadius: radius.md,
     padding: 16,
     marginBottom: 10
-  },
-  rowRtl: {
-    flexDirection: 'row-reverse'
   },
   label: {
     flex: 1,

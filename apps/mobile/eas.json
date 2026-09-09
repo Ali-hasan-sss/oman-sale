@@ -60,6 +60,11 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "eyass.shaaban@outlook.de",
+        "appleTeamId": "J92V8WAHAX"
+      }
+    }
   }
 }

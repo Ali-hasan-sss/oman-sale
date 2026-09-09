@@ -1,20 +1,31 @@
 import { Linking } from 'react-native';
 
+import { getWebsiteOrigin, openExternalWebPage } from './open-external-web';
 import type { ScreenName } from '../types';
+
+function openWebPath(href: string) {
+  const url = href.startsWith('http') ? href : `${getWebsiteOrigin()}${href.startsWith('/') ? href : `/${href}`}`;
+  void openExternalWebPage(url);
+}
 
 export function handleAssistantAction(
   href: string,
   handlers: {
     onListingPress: (id: string) => void;
     onStorePress: (slug: string) => void;
+    onArticlePress: (slug: string) => void;
     onNavigate: (screen: ScreenName) => void;
     onLogin: () => void;
     onRegister: () => void;
     onClose: () => void;
   }
 ) {
-  if (href.startsWith('mailto:') || href.startsWith('tel:') || href.startsWith('http')) {
+  if (href.startsWith('mailto:') || href.startsWith('tel:')) {
     void Linking.openURL(href);
+    return;
+  }
+  if (href.startsWith('http')) {
+    void openExternalWebPage(href);
     return;
   }
 
@@ -31,6 +42,19 @@ export function handleAssistantAction(
   if (storeMatch?.[1] && storeMatch[1] !== 'create') {
     handlers.onClose();
     handlers.onStorePress(storeMatch[1]);
+    return;
+  }
+
+  const newsMatch = path.match(/^\/news\/([^/?#]+)/);
+  if (newsMatch?.[1]) {
+    handlers.onClose();
+    handlers.onArticlePress(newsMatch[1]);
+    return;
+  }
+
+  if (path.startsWith('/banner-ad') || path.startsWith('/tourism') || path.startsWith('/destination')) {
+    openWebPath(href);
+    handlers.onClose();
     return;
   }
 
@@ -58,6 +82,10 @@ export function handleAssistantAction(
   }
   if (path.startsWith('/chats')) {
     handlers.onNavigate('chat');
+    return;
+  }
+  if (path.startsWith('/news')) {
+    handlers.onNavigate('news');
     return;
   }
   if (path.startsWith('/login')) {

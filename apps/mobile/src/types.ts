@@ -61,6 +61,7 @@ export type Listing = {
   area?: string | null;
   views?: number;
   createdAt?: string;
+  expiresAt?: string | null;
   contactPhone?: string | null;
   isSold?: boolean;
   isActive?: boolean;
@@ -82,7 +83,10 @@ export type Listing = {
     trustBadgeApproved?: boolean;
   } | null;
   promotion?: {
+    endsAt?: string | null;
     plan?: {
+      nameAr?: string;
+      nameEn?: string;
       badgeLabel?: string | null;
     } | null;
   } | null;

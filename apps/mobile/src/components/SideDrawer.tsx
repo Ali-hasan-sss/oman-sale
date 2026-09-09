@@ -7,6 +7,7 @@ import { AppText } from './AppText';
 
 import { useAuthStore } from '../stores';
 import { useI18n } from '../i18n';
+import { rowDirection } from '../lib/layout-direction';
 import { fetchMyStores } from '../services/stores.service';
 import { getAppName, getAppVersionLabel } from '../lib/app-version';
 import type { ScreenName } from '../types';
@@ -31,7 +32,8 @@ export function SideDrawer({ visible, onClose, onNavigate, onLogoutRequest }: Si
   const { t, toggleLocale, isRtl } = useI18n();
   const insets = useSafeAreaInsets();
   const user = useAuthStore((state) => state.user);
-  const hiddenOffset = -drawerWidth;
+  const opensFromLeft = isRtl;
+  const hiddenOffset = opensFromLeft ? -drawerWidth : drawerWidth;
   const translateX = useRef(new Animated.Value(hiddenOffset)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const [shouldRender, setShouldRender] = useState(visible);
@@ -145,7 +147,7 @@ export function SideDrawer({ visible, onClose, onNavigate, onLogoutRequest }: Si
       <Animated.View
         style={[
           styles.drawer,
-          styles.drawerLtr,
+          isRtl ? styles.drawerFromLeft : styles.drawerFromRight,
           {
             width: drawerWidth,
             top: insets.top,
@@ -154,16 +156,16 @@ export function SideDrawer({ visible, onClose, onNavigate, onLogoutRequest }: Si
           }
         ]}
       >
-        <View style={styles.headerCard}>
+        <View style={[styles.headerCard, rowDirection(isRtl)]}>
+          <UserAvatar avatar={user?.avatar} name={user?.fullName} />
           <View style={styles.headerText}>
-            <AppText style={[styles.name, isRtl ? styles.textRtl : styles.textLtr]} numberOfLines={1}>
+            <AppText style={styles.name} numberOfLines={1}>
               {user?.fullName ?? t.common.guest}
             </AppText>
-            <AppText style={[styles.email, isRtl ? styles.textRtl : styles.textLtr]} numberOfLines={2}>
+            <AppText style={styles.email} numberOfLines={2}>
               {user?.email ?? t.common.guestHint}
             </AppText>
           </View>
-          <UserAvatar avatar={user?.avatar} name={user?.fullName} />
         </View>
 
         <ScrollView
@@ -176,7 +178,7 @@ export function SideDrawer({ visible, onClose, onNavigate, onLogoutRequest }: Si
           {items.map((item) => (
             <Pressable
               key={item.screen}
-              style={styles.item}
+              style={[styles.item, rowDirection(isRtl)]}
               onPress={() => {
                 onClose();
                 onNavigate(item.screen);
@@ -185,24 +187,24 @@ export function SideDrawer({ visible, onClose, onNavigate, onLogoutRequest }: Si
               <View style={styles.iconBubble}>
                 <Ionicons name={item.icon} size={21} color={colors.brand} />
               </View>
-              <AppText style={[styles.itemLabel, isRtl ? styles.textRtl : styles.textLtr]} numberOfLines={2}>
+              <AppText style={styles.itemLabel} numberOfLines={2}>
                 {item.label}
               </AppText>
               <Ionicons name={chevronIcon} size={18} color={colors.muted} />
             </Pressable>
           ))}
 
-          <Pressable style={styles.item} onPress={toggleLocale}>
+          <Pressable style={[styles.item, rowDirection(isRtl)]} onPress={toggleLocale}>
             <View style={styles.iconBubble}>
               <Ionicons name="language-outline" size={21} color={colors.brand} />
             </View>
-            <AppText style={[styles.itemLabel, isRtl ? styles.textRtl : styles.textLtr]}>{t.common.language}</AppText>
+            <AppText style={styles.itemLabel}>{t.common.language}</AppText>
             <Ionicons name={chevronIcon} size={18} color={colors.muted} />
           </Pressable>
 
           {user ? (
             <Pressable
-              style={styles.item}
+              style={[styles.item, rowDirection(isRtl)]}
               onPress={() => {
                 onClose();
                 onLogoutRequest?.();
@@ -211,7 +213,7 @@ export function SideDrawer({ visible, onClose, onNavigate, onLogoutRequest }: Si
               <View style={[styles.iconBubble, styles.dangerBubble]}>
                 <Ionicons name="log-out-outline" size={21} color={colors.danger} />
               </View>
-              <AppText style={[styles.itemLabel, { color: colors.danger }, isRtl ? styles.textRtl : styles.textLtr]}>
+              <AppText style={[styles.itemLabel, { color: colors.danger }]}>
                 {t.common.logout}
               </AppText>
               <Ionicons name={chevronIcon} size={18} color={colors.danger} />
@@ -219,7 +221,7 @@ export function SideDrawer({ visible, onClose, onNavigate, onLogoutRequest }: Si
           ) : (
             <>
               <Pressable
-                style={styles.item}
+                style={[styles.item, rowDirection(isRtl)]}
                 onPress={() => {
                   onClose();
                   onNavigate('login');
@@ -228,11 +230,11 @@ export function SideDrawer({ visible, onClose, onNavigate, onLogoutRequest }: Si
                 <View style={styles.iconBubble}>
                   <Ionicons name="log-in-outline" size={21} color={colors.brand} />
                 </View>
-                <AppText style={[styles.itemLabel, isRtl ? styles.textRtl : styles.textLtr]}>{t.common.login}</AppText>
+                <AppText style={styles.itemLabel}>{t.common.login}</AppText>
                 <Ionicons name={chevronIcon} size={18} color={colors.muted} />
               </Pressable>
               <Pressable
-                style={styles.item}
+                style={[styles.item, rowDirection(isRtl)]}
                 onPress={() => {
                   onClose();
                   onNavigate('register');
@@ -241,7 +243,7 @@ export function SideDrawer({ visible, onClose, onNavigate, onLogoutRequest }: Si
                 <View style={styles.iconBubble}>
                   <Ionicons name="person-add-outline" size={21} color={colors.brand} />
                 </View>
-                <AppText style={[styles.itemLabel, isRtl ? styles.textRtl : styles.textLtr]}>{t.common.register}</AppText>
+                <AppText style={styles.itemLabel}>{t.common.register}</AppText>
                 <Ionicons name={chevronIcon} size={18} color={colors.muted} />
               </Pressable>
             </>
@@ -249,10 +251,10 @@ export function SideDrawer({ visible, onClose, onNavigate, onLogoutRequest }: Si
         </ScrollView>
 
         <View style={styles.footer}>
-          <AppText style={[styles.footerAppName, isRtl ? styles.textRtl : styles.textLtr]} numberOfLines={1}>
+          <AppText style={styles.footerAppName} numberOfLines={1}>
             {getAppName()}
           </AppText>
-          <AppText style={[styles.footerVersion, isRtl ? styles.textRtl : styles.textLtr]}>
+          <AppText style={styles.footerVersion}>
             {t.common.appVersion}: {getAppVersionLabel()}
           </AppText>
         </View>
@@ -300,14 +302,19 @@ const styles = StyleSheet.create({
     elevation: 12,
     overflow: 'hidden'
   },
-  drawerLtr: {
+  drawerFromLeft: {
     left: 0,
     borderTopRightRadius: 28,
     borderBottomRightRadius: 28,
     shadowOffset: { width: 8, height: 0 }
   },
+  drawerFromRight: {
+    right: 0,
+    borderTopLeftRadius: 28,
+    borderBottomLeftRadius: 28,
+    shadowOffset: { width: -8, height: 0 }
+  },
   headerCard: {
-    flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     marginBottom: 16,
@@ -359,7 +366,6 @@ const styles = StyleSheet.create({
     fontSize: 12
   },
   item: {
-    flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     minHeight: 58,
@@ -387,12 +393,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: colors.ink
-  },
-  textLtr: {
-    textAlign: 'left'
-  },
-  textRtl: {
-    textAlign: 'right'
   },
   footer: {
     marginTop: 8,

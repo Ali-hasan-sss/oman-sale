@@ -13,6 +13,7 @@ import { AppTextInput } from '../AppTextInput';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { ComposerDock } from '../KeyboardInsets';
 import { useI18n } from '../../i18n';
+import { rowDirection } from '../../lib/layout-direction';
 import { type ArticleComment, updateArticleComment } from '../../services/articles.service';
 import { colors, radius } from '../../theme';
 import { COMMENT_MAX_LENGTH, useArticleComments } from './use-article-comments';
@@ -104,7 +105,7 @@ export function ArticleCommentComposer({ body, setBody, submit, submitting }: Ar
   const textAlign = isRtl ? styles.rtl : styles.ltr;
   return (
     <ComposerDock style={styles.composerDock}>
-      <View style={[styles.composer, isRtl && styles.composerRtl]}>
+      <View style={[styles.composer, rowDirection(isRtl)]}>
         <AppTextInput
           value={body}
           onChangeText={(value) => setBody(value.slice(0, COMMENT_MAX_LENGTH))}
@@ -194,6 +195,7 @@ function CommentItem({
   onLoginRequired,
   isLoggedIn
 }: CommentItemProps) {
+  const { isRtl } = useI18n();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(comment.body);
   const [saving, setSaving] = useState(false);
@@ -223,7 +225,7 @@ function CommentItem({
 
   return (
     <View style={styles.commentCard}>
-      <View style={styles.commentHeader}>
+      <View style={[styles.commentHeader, rowDirection(isRtl)]}>
         {comment.user.avatar ? (
           <Image source={{ uri: comment.user.avatar }} style={styles.avatar} />
         ) : (
@@ -242,7 +244,7 @@ function CommentItem({
       {editing ? (
         <>
           <AppTextInput value={draft} onChangeText={setDraft} multiline style={styles.editInput} />
-          <View style={styles.commentActions}>
+          <View style={[styles.commentActions, rowDirection(isRtl)]}>
             <Pressable style={styles.actionButton} onPress={() => setEditing(false)}>
               <AppText style={styles.actionCancel}>{labels.cancel}</AppText>
             </Pressable>
@@ -277,7 +279,7 @@ function CommentItem({
       )}
 
       {isOwner && !editing ? (
-        <View style={styles.commentActions}>
+        <View style={[styles.commentActions, rowDirection(isRtl)]}>
           <Pressable style={styles.actionButton} onPress={() => setEditing(true)}>
             <AppText style={styles.actionEdit}>{labels.edit}</AppText>
           </Pressable>
@@ -316,7 +318,6 @@ const styles = StyleSheet.create({
     marginBottom: 10
   },
   commentHeader: {
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 10,
     marginBottom: 8
@@ -372,7 +373,6 @@ const styles = StyleSheet.create({
     marginBottom: 8
   },
   commentActions: {
-    flexDirection: 'row-reverse',
     gap: 8,
     marginTop: 10
   },
@@ -427,7 +427,6 @@ const styles = StyleSheet.create({
     zIndex: 30
   },
   composer: {
-    flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     paddingHorizontal: 12,

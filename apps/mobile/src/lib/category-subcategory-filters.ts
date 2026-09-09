@@ -70,3 +70,41 @@ export const buildSubcategoryFilterLevels = <T extends CategoryRef>(
 
   return levels;
 };
+
+export const isSubcategoryPathComplete = <T extends CategoryRef>(
+  categories: T[],
+  rootId: string,
+  selectedPath: string[]
+) => {
+  if (!rootId) return false;
+
+  const levels = buildSubcategoryFilterLevels(categories, rootId, selectedPath, () => '', '');
+  if (levels.some((level) => level.options.length > 0 && !level.selectedId)) return false;
+
+  const effectiveId = getEffectiveCategoryId(rootId, selectedPath);
+  return getDirectChildCategories(categories, effectiveId).length === 0;
+};
+
+export const PASSENGER_CARS_SLUG = 'passenger-cars';
+export const MODEL_YEAR_MIN = 1900;
+export const MODEL_YEAR_MAX = new Date().getFullYear() + 2;
+
+export const isCategoryUnderSlug = <T extends { id: string; parentId?: string | null; slug?: string }>(
+  categories: T[],
+  categoryId: string,
+  ancestorSlug: string
+) => {
+  let current = categories.find((category) => category.id === categoryId);
+
+  while (current) {
+    if (current.slug === ancestorSlug) return true;
+    current = current.parentId ? categories.find((category) => category.id === current!.parentId) : undefined;
+  }
+
+  return false;
+};
+
+export const selectFilterOption = (currentOptionIds: string[], filterOptionIds: string[], optionId: string) => {
+  const withoutSameFilter = currentOptionIds.filter((id) => !filterOptionIds.includes(id));
+  return [...withoutSameFilter, optionId];
+};

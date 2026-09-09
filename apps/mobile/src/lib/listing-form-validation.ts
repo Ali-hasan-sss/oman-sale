@@ -1,3 +1,4 @@
+import { MODEL_YEAR_MAX, MODEL_YEAR_MIN } from './category-subcategory-filters';
 import { omanGovernorateValues, omanWilayahValues } from './oman-locations';
 
 export type ListingFormValues = {
@@ -7,6 +8,7 @@ export type ListingFormValues = {
   city: string;
   wilayah: string;
   price: string;
+  modelYear?: string;
 };
 
 export type ListingValidationMessages = {
@@ -15,10 +17,20 @@ export type ListingValidationMessages = {
   descriptionRequired: string;
   descriptionMin: string;
   categoryRequired: string;
+  subcategoryRequired: string;
+  filterRequired: string;
   cityRequired: string;
   wilayahRequired: string;
   priceRequired: string;
   priceInvalid: string;
+  modelYearRequired: string;
+};
+
+export type ListingFormValidationContext = {
+  rootCategoryId?: string;
+  subcategoryComplete?: boolean;
+  filtersComplete?: boolean;
+  requiresModelYear?: boolean;
 };
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -46,7 +58,8 @@ export function isValidListingPrice(value: string): boolean {
 
 export function validateListingForm(
   values: ListingFormValues,
-  messages: ListingValidationMessages
+  messages: ListingValidationMessages,
+  context: ListingFormValidationContext = {}
 ): Record<string, string> {
   const errors: Record<string, string> = {};
   const title = values.title.trim();
@@ -58,8 +71,23 @@ export function validateListingForm(
   if (!description) errors.description = messages.descriptionRequired;
   else if (description.length < 10) errors.description = messages.descriptionMin;
 
-  if (!values.categoryId || !uuidPattern.test(values.categoryId)) {
+  if (!context.rootCategoryId) {
     errors.categoryId = messages.categoryRequired;
+  } else if (context.subcategoryComplete === false) {
+    errors.subcategoryPath = messages.subcategoryRequired;
+  } else if (!values.categoryId || !uuidPattern.test(values.categoryId)) {
+    errors.categoryId = messages.categoryRequired;
+  }
+
+  if (context.filtersComplete === false) {
+    errors.filters = messages.filterRequired;
+  }
+
+  if (context.requiresModelYear) {
+    const year = Number(values.modelYear);
+    if (!values.modelYear || Number.isNaN(year) || year < MODEL_YEAR_MIN || year > MODEL_YEAR_MAX) {
+      errors.modelYear = messages.modelYearRequired;
+    }
   }
 
   if (!values.city || !omanGovernorateValues.includes(values.city)) {

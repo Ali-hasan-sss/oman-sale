@@ -19,6 +19,7 @@ import { ChatThreadSkeleton } from '../components/skeleton';
 import { CHAT_THREAD_BAR_BODY_HEIGHT } from '../constants/chat-layout';
 import { formatChatTime, formatPrice } from '../data';
 import { useI18n } from '../i18n';
+import { alignSelfEnd, alignSelfStart, insetEnd, itemsAlignStart, rowDirection } from '../lib/layout-direction';
 import { getListingLocationLabel } from '../lib/oman-locations';
 import { getRealtimeSocket } from '../lib/realtime/socket';
 import {
@@ -302,7 +303,11 @@ export function ChatConversationScreen({
       {showAdCard ? (
         <View style={[styles.adCardWrap, { marginTop: threadTopInset }]}>
           <Pressable
-            style={[styles.adCard, isRtl && styles.adCardRtl]}
+            style={[
+              styles.adCard,
+              rowDirection(isRtl),
+              isRtl ? styles.adCardPadRtl : styles.adCardPadLtr
+            ]}
             onPress={() => onOpenListing(conversation.ad.id)}
           >
             <ListingCoverImage uri={adImage} variant="thumb" style={styles.adImage} />
@@ -319,7 +324,7 @@ export function ChatConversationScreen({
             <Ionicons name={isRtl ? 'chevron-back' : 'chevron-forward'} size={18} color={colors.muted} />
           </Pressable>
           <Pressable
-            style={[styles.adCardClose, isRtl && styles.adCardCloseRtl]}
+            style={[styles.adCardClose, insetEnd(isRtl, 10)]}
             onPress={() => {
               setAdCardVisible(false);
               scrollToBottom(false);
@@ -351,8 +356,8 @@ export function ChatConversationScreen({
         }}
         ListFooterComponent={
           isOtherTyping ? (
-            <View style={[styles.typingRow, isRtl ? styles.typingRowRtl : styles.typingRowLtr]}>
-              <View style={[styles.typingBubble, isRtl && styles.typingBubbleRtl]}>
+            <View style={[styles.typingRow, itemsAlignStart(isRtl)]}>
+              <View style={[styles.typingBubble, rowDirection(isRtl)]}>
                 <AppText style={styles.typingText}>{text.typing}</AppText>
                 <View style={styles.typingDots}>
                   <View style={styles.typingDot} />
@@ -365,13 +370,7 @@ export function ChatConversationScreen({
         }
         renderItem={({ item }) => {
           const mine = item.senderId === user?.id;
-          const rowAlign = mine
-            ? isRtl
-              ? styles.bubbleRowMineRtl
-              : styles.bubbleRowMine
-            : isRtl
-              ? styles.bubbleRowOtherRtl
-              : styles.bubbleRowOther;
+          const rowAlign = mine ? alignSelfEnd(isRtl) : alignSelfStart(isRtl);
           const bubbleCorner = mine
             ? isRtl
               ? styles.bubbleMineRtl
@@ -384,7 +383,7 @@ export function ChatConversationScreen({
               <View style={[styles.bubble, styles.bubbleBase, bubbleCorner]}>
                 <AppText style={[styles.bubbleText, mine && styles.bubbleTextMine]}>{item.content}</AppText>
               </View>
-              <View style={[styles.bubbleMeta, mine ? styles.bubbleMetaMine : styles.bubbleMetaOther]}>
+              <View style={[styles.bubbleMeta, rowDirection(isRtl), mine ? alignSelfEnd(isRtl) : alignSelfStart(isRtl)]}>
                 <AppText style={styles.bubbleTime}>{formatChatTime(item.createdAt, locale)}</AppText>
                 {mine ? (
                   <Ionicons
@@ -405,7 +404,7 @@ export function ChatConversationScreen({
       {error ? <AppText style={styles.sendError}>{error}</AppText> : null}
 
       <ComposerDock style={styles.composerDock}>
-        <View style={[styles.composer, isRtl && styles.composerRtl]}>
+        <View style={[styles.composer, rowDirection(isRtl)]}>
           <TextInput
             value={draft}
             onChangeText={updateDraft}
@@ -480,16 +479,16 @@ const styles = StyleSheet.create({
     overflow: 'hidden'
   },
   adCard: {
-    flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     paddingTop: 10,
-    paddingBottom: 10,
+    paddingBottom: 10
+  },
+  adCardPadLtr: {
     paddingLeft: 12,
     paddingRight: 40
   },
-  adCardRtl: {
-    flexDirection: 'row-reverse',
+  adCardPadRtl: {
     paddingLeft: 36,
     paddingRight: 10
   },
@@ -674,7 +673,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface
   },
   composer: {
-    flexDirection: 'row',
     alignItems: 'flex-end',
     gap: 8,
     paddingHorizontal: 10,

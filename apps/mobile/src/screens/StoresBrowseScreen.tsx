@@ -22,7 +22,7 @@ import { getCityLabel, omanCities } from '../lib/oman-cities';
 import { fetchPublicStores, fetchStoreTypes, type PublicStore, type StoreType } from '../services/stores.service';
 import { colors, radius, shadow } from '../theme';
 
-const fallbackLogo = require('../../assets/nav-logo.png');
+const fallbackLogo = require('../../assets/logo-symbol.png');
 const PAGE_SIZE = 12;
 const CONTENT_PADDING = 16;
 const CARD_GAP = 12;

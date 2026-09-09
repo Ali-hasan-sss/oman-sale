@@ -303,7 +303,7 @@ const labels = {
   }
 } as const;
 
-const fallbackImage = '/logo.png';
+const fallbackImage = '/icon.png';
 
 export function MyStorePage() {
   const router = useRouter();

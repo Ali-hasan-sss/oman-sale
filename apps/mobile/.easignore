@@ -1,6 +1,22 @@
-node_modules
+# When .easignore exists it controls the EAS upload set. Keep it aligned with
+# .gitignore and also drop local native trees so iOS cloud builds stay small.
 .expo
-dist
+android
+ios
+web-build
+*.orig.*
+node_modules
+build-output/
+*.apk
+*.aab
 *.log
-.env
-.env.local
+credentials.json
+credentials/
+*.keystore
+*.jks
+*.p12
+*.p8
+
+# Firebase configs are gitignored but required on EAS workers.
+!google-services.json
+!GoogleService-Info.plist

@@ -11,7 +11,7 @@ type AssistantListingCarouselProps = {
   listings: AssistantListingCard[];
 };
 
-const placeholderImage = '/logo.png';
+const placeholderImage = '/icon.png';
 
 function formatPrice(price: number | null, currency: string, locale: string) {
   if (price === null) return locale === 'ar' ? 'اتفاق' : 'Negotiable';

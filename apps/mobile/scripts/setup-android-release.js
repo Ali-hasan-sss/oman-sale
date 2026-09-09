@@ -94,18 +94,12 @@ if (!props.includes('OMANSALE_UPLOAD_STORE_FILE')) {
 const kotlinStabilityBlock = `
 # Avoid intermittent "Could not connect to Kotlin compile daemon" on Windows
 kotlin.compiler.execution.strategy=in-process
-org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8
+org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8 -Duser.language=en -Duser.country=US
 `;
 
 if (!props.includes('kotlin.compiler.execution.strategy')) {
   fs.appendFileSync(gradleProps, kotlinStabilityBlock, 'utf8');
   console.log('→ Added Kotlin in-process compiler settings to gradle.properties');
-}
-
-if (props.includes('newArchEnabled=true')) {
-  props = props.replace('newArchEnabled=true', 'newArchEnabled=false');
-  fs.writeFileSync(gradleProps, props, 'utf8');
-  console.log('→ Disabled newArchEnabled in gradle.properties');
 }
 
 if (!gradle.includes('root = file("../../")')) {
@@ -125,6 +119,22 @@ if (fs.existsSync(envPath)) {
     envContent = `${envContent.trimEnd()}\nEXPO_NO_METRO_WORKSPACE_ROOT=1\n`;
     fs.writeFileSync(envPath, envContent, 'utf8');
     console.log('→ Added EXPO_NO_METRO_WORKSPACE_ROOT=1 to .env (monorepo Metro root fix)');
+  }
+}
+
+// Keep android/app/build.gradle versionCode/versionName in sync with version.json
+const versionFile = path.join(mobileRoot, 'version.json');
+if (fs.existsSync(versionFile) && fs.existsSync(buildGradle)) {
+  const versionInfo = JSON.parse(fs.readFileSync(versionFile, 'utf8'));
+  const nextCode = Number(versionInfo.versionCode) || 1;
+  const nextName = typeof versionInfo.version === 'string' ? versionInfo.version : '0.1.0';
+  let synced = fs.readFileSync(buildGradle, 'utf8');
+  const before = synced;
+  synced = synced.replace(/versionCode\s+\d+/, `versionCode ${nextCode}`);
+  synced = synced.replace(/versionName\s+"[^"]*"/, `versionName "${nextName}"`);
+  if (synced !== before) {
+    fs.writeFileSync(buildGradle, synced, 'utf8');
+    console.log(`→ Synced android versionCode=${nextCode}, versionName=${nextName} from version.json`);
   }
 }
 

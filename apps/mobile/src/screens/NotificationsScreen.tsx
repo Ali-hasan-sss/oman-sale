@@ -1,12 +1,14 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { EmptyState } from '../components/EmptyState';
+import { AppText } from '../components/AppText';
 import { useI18n } from '../i18n';
+import { rowDirection } from '../lib/layout-direction';
 import { useNotificationsStore } from '../stores/notifications-store';
 import { colors } from '../theme';
 
 export function NotificationsScreen() {
-  const { locale, t } = useI18n();
+  const { locale, t, isRtl } = useI18n();
   const items = useNotificationsStore((state) => state.items);
   const unreadCount = useNotificationsStore((state) => state.unreadCount);
   const markRead = useNotificationsStore((state) => state.markRead);
@@ -22,11 +24,11 @@ export function NotificationsScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.headerRow}>
-        <Text style={styles.title}>{t.common.notifications}</Text>
+      <View style={[styles.headerRow, rowDirection(isRtl)]}>
+        <AppText style={styles.title}>{t.common.notifications}</AppText>
         {unreadCount > 0 ? (
           <Pressable onPress={() => void markAllRead()} style={styles.markAllButton}>
-            <Text style={styles.markAllText}>{t.common.markAllRead}</Text>
+            <AppText style={styles.markAllText}>{t.common.markAllRead}</AppText>
           </Pressable>
         ) : null}
       </View>
@@ -45,11 +47,11 @@ export function NotificationsScreen() {
                 }}
                 style={[styles.card, !item.isRead && styles.cardUnread]}
               >
-                <Text style={styles.cardTitle}>{text.title}</Text>
-                <Text style={styles.cardBody}>{text.body}</Text>
-                <Text style={styles.cardDate}>
+                <AppText style={styles.cardTitle}>{text.title}</AppText>
+                <AppText style={styles.cardBody}>{text.body}</AppText>
+                <AppText style={styles.cardDate}>
                   {new Date(item.createdAt).toLocaleString(locale === 'ar' ? 'ar-OM' : 'en-GB')}
-                </Text>
+                </AppText>
               </Pressable>
             );
           })
@@ -65,7 +67,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background
   },
   headerRow: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 18,

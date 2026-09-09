@@ -2,6 +2,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Image,
+  Keyboard,
   Modal,
   Platform,
   Pressable,
@@ -11,12 +12,13 @@ import {
   useWindowDimensions,
   View
 } from 'react-native';
+import { useKeyboardState } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '../AppText';
-import { ComposerDock } from '../KeyboardInsets';
 import { AssistantListingCarousel } from './AssistantListingCarousel';
 import { AssistantStoreCarousel } from './AssistantStoreCarousel';
+import { AssistantArticleCarousel } from './AssistantArticleCarousel';
 import { AssistantTypingIndicator } from './AssistantTypingIndicator';
 import { useAssistantChat } from '../../hooks/use-assistant-chat';
 import { useI18n } from '../../i18n';
@@ -32,6 +34,7 @@ type AssistantChatWidgetProps = {
   hidden?: boolean;
   onListingPress: (id: string) => void;
   onStorePress: (slug: string) => void;
+  onArticlePress: (slug: string) => void;
   onNavigate: (screen: ScreenName) => void;
   onLogin: () => void;
   onRegister: () => void;
@@ -53,6 +56,7 @@ export function AssistantChatWidget({
   hidden,
   onListingPress,
   onStorePress,
+  onArticlePress,
   onNavigate,
   onLogin,
   onRegister
@@ -61,6 +65,10 @@ export function AssistantChatWidget({
   const { width: windowWidth } = useWindowDimensions();
   const a = t.assistant;
   const insets = useSafeAreaInsets();
+  const { height: trackedKeyboardHeight, isVisible: trackedKeyboardOpen } = useKeyboardState();
+  const [fallbackKeyboardHeight, setFallbackKeyboardHeight] = useState(0);
+  const keyboardHeight = trackedKeyboardHeight || fallbackKeyboardHeight;
+  const keyboardOpen = trackedKeyboardOpen || fallbackKeyboardHeight > 0;
   const user = useAuthStore((state) => state.user);
   const isAuthenticated = Boolean(user);
   const [open, setOpen] = useState(false);
@@ -89,10 +97,25 @@ export function AssistantChatWidget({
   );
 
   useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const show = Keyboard.addListener(showEvent, (event) => {
+      setFallbackKeyboardHeight(event.endCoordinates.height);
+    });
+    const hide = Keyboard.addListener(hideEvent, () => {
+      setFallbackKeyboardHeight(0);
+    });
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+
+  useEffect(() => {
     if (!open) return;
     const timer = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
     return () => clearTimeout(timer);
-  }, [messages, isLoading, open]);
+  }, [messages, isLoading, open, keyboardOpen]);
 
   if (hidden) return null;
 
@@ -102,6 +125,7 @@ export function AssistantChatWidget({
     handleAssistantAction(href, {
       onListingPress,
       onStorePress,
+      onArticlePress,
       onNavigate,
       onLogin,
       onRegister,
@@ -136,16 +160,23 @@ export function AssistantChatWidget({
         </View>
       ) : null}
 
-      <Modal visible={open} animationType="slide" transparent onRequestClose={close}>
+      <Modal visible={open} animationType="slide" transparent statusBarTranslucent onRequestClose={close}>
         <View style={styles.modalRoot}>
           <Pressable style={styles.backdrop} onPress={close} />
-          <View style={styles.panel}>
+          <View
+            style={[
+              styles.panel,
+              keyboardOpen
+                ? { marginBottom: keyboardHeight, maxHeight: '100%' }
+                : { paddingBottom: Math.max(insets.bottom, 8) }
+            ]}
+          >
             <View style={styles.header}>
               <View style={styles.headerBrand}>
                 <View style={styles.headerBrandIcons}>
                   <View style={styles.logoImageWrap}>
                     <Image
-                      source={require('../../../assets/nav-logo.png')}
+                      source={require('../../../assets/logo-symbol.png')}
                       style={styles.logoImage}
                       resizeMode="contain"
                       {...(Platform.OS === 'android' ? { resizeMethod: 'resize' as const } : {})}
@@ -208,6 +239,20 @@ export function AssistantChatWidget({
                           }}
                         />
                       </View>
+                    ) : message.articles && message.articles.length > 0 ? (
+                      <View style={styles.richBubble}>
+                        <AppText style={[styles.bubbleText, isRtl ? styles.rtl : styles.ltr]}>{displayContent}</AppText>
+                        <AssistantArticleCarousel
+                          articles={message.articles}
+                          locale={locale}
+                          viewsLabel={t.articles.views}
+                          readLabel={a.viewArticle}
+                          onArticlePress={(slug) => {
+                            close();
+                            onArticlePress(slug);
+                          }}
+                        />
+                      </View>
                     ) : (
                       <View style={[styles.bubble, isUser ? styles.userBubble : styles.botBubble]}>
                         <AppText style={[styles.bubbleText, isUser ? styles.userText : styles.botText, isRtl ? styles.rtl : styles.ltr]}>
@@ -251,6 +296,7 @@ export function AssistantChatWidget({
               ) : null}
             </ScrollView>
 
+            {!keyboardOpen ? (
             <View style={styles.chipsWrap}>
               {a.quickReplies.map((chip) => (
                 <Pressable
@@ -267,11 +313,11 @@ export function AssistantChatWidget({
                 </Pressable>
               ))}
             </View>
+            ) : null}
 
             {error ? <AppText style={styles.error}>{error}</AppText> : null}
 
-            <ComposerDock>
-              <View style={styles.composer}>
+            <View style={styles.composer}>
                 <TextInput
                   value={draft}
                   onChangeText={setDraft}
@@ -291,7 +337,6 @@ export function AssistantChatWidget({
                   <Ionicons name="arrow-up" size={18} color="#fff" />
                 </Pressable>
               </View>
-            </ComposerDock>
           </View>
         </View>
       </Modal>
@@ -357,13 +402,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 8,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#d1fae5'
+    backgroundColor: '#000000',
+    borderWidth: 0,
   },
   logoImage: {
     width: 28,
-    height: 32
+    height: 28
   },
   botIconWrap: {
     width: 36,

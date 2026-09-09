@@ -5,6 +5,7 @@ import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { ListingImageModal } from '../ListingImageModal';
 import { AppText } from '../AppText';
 import { useI18n } from '../../i18n';
+import { insetEnd, rowDirection } from '../../lib/layout-direction';
 import { colors, radius, shadow } from '../../theme';
 
 type ArticleImageGalleryProps = {
@@ -34,7 +35,7 @@ export function ArticleImageGallery({ images }: ArticleImageGalleryProps) {
       >
         <Image source={{ uri: selectedImage }} style={styles.heroImage} resizeMode="cover" />
         {images.length > 1 ? (
-          <View style={[styles.imageCountBadge, isRtl && styles.imageCountBadgeRtl]}>
+          <View style={[styles.imageCountBadge, rowDirection(isRtl), insetEnd(isRtl, 14)]}>
             <Ionicons name="images-outline" size={14} color="#fff" />
             <AppText style={styles.imageCountText}>
               {activeIndex + 1}/{images.length}
@@ -47,7 +48,7 @@ export function ArticleImageGallery({ images }: ArticleImageGalleryProps) {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={[styles.thumbs, isRtl && styles.thumbsRtl]}
+          contentContainerStyle={[styles.thumbs, rowDirection(isRtl)]}
         >
           {images.map((uri, index) => (
             <Pressable

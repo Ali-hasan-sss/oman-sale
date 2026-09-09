@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import { FlatList, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
+import { EmptyState } from '../components/EmptyState';
 import { HeroBannersSection } from '../components/HeroBannersSection';
 import { HomeCategoriesSection } from '../components/HomeCategoriesSection';
 import { HomeHeroSection } from '../components/HomeHeroSection';
@@ -10,6 +11,7 @@ import { SectionTitle } from '../components/SectionTitle';
 import { ListingCardSkeletonRow } from '../components/skeleton';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
+import { rowDirection } from '../lib/layout-direction';
 import { useListingsStore } from '../stores';
 import { colors } from '../theme';
 
@@ -64,6 +66,8 @@ export function HomeScreen({ onBrowseOffers, onListingPress, onCategoryPress, on
         <SectionTitle title={t.home.latest} actionLabel={t.common.viewAll} onAction={onBrowseOffers} />
         {showLatestSkeleton ? (
           <ListingCardSkeletonRow count={3} layout="horizontal" />
+        ) : listings.length === 0 ? (
+          <EmptyState message={t.offers.empty} />
         ) : (
           <FlatList
             horizontal
@@ -71,7 +75,7 @@ export function HomeScreen({ onBrowseOffers, onListingPress, onCategoryPress, on
             data={listings}
             keyExtractor={(item) => item.id}
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.latestScroll}
+            contentContainerStyle={[styles.latestScroll, rowDirection(isRtl)]}
             renderItem={({ item }) => (
               <ListingCard
                 listing={item}
@@ -95,16 +99,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 10
   },
-  latestScrollRtl: {
-    direction: 'rtl'
-  },
   latestScroll: {
-    flexDirection: 'row',
     gap: 12,
     paddingEnd: 4,
     paddingBottom: 4
-  },
-  latestScrollContentRtl: {
-    flexDirection: 'row-reverse'
   }
 });

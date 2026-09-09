@@ -6,6 +6,7 @@ import { AppText } from './AppText';
 import { AppTextInput } from './AppTextInput';
 import { Skeleton } from './skeleton';
 import { getWilayahsForGovernorate, omanGovernorates } from '../lib/oman-locations';
+import { rowDirection } from '../lib/layout-direction';
 import type { SubcategoryFilterLevel } from '../lib/category-subcategory-filters';
 import type { CategoryFilter, CategoryOption } from '../services/listings.service';
 import { colors, radius, shadow } from '../theme';
@@ -74,13 +75,13 @@ function FilterSection({
   return (
     <View style={styles.filterSection}>
       <Pressable
-        style={[styles.filterSectionHeader, isRtl && styles.filterSectionHeaderRtl]}
+        style={[styles.filterSectionHeader, rowDirection(isRtl)]}
         onPress={() => setOpen((current) => !current)}
       >
         <AppText style={[styles.filterSectionTitle, isRtl && styles.rtl]}>{title}</AppText>
         <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={colors.muted} />
       </Pressable>
-      {open ? <View style={[styles.chipWrap, isRtl && styles.chipWrapRtl]}>{children}</View> : null}
+      {open ? <View style={[styles.chipWrap, rowDirection(isRtl)]}>{children}</View> : null}
     </View>
   );
 }
@@ -241,7 +242,7 @@ export function CategoryFiltersPanel({
               ) : null}
 
               <FilterSection title={messages.priceRange} isRtl={isRtl}>
-                <View style={[styles.priceRow, isRtl && styles.priceRowRtl]}>
+                <View style={[styles.priceRow, rowDirection(isRtl)]}>
                   <AppTextInput
                     value={draft.minPrice}
                     onChangeText={(minPrice) => onDraftChange({ minPrice })}
@@ -264,7 +265,7 @@ export function CategoryFiltersPanel({
             </ScrollView>
           )}
 
-          <View style={[styles.actions, isRtl && styles.actionsRtl]}>
+          <View style={[styles.actions, rowDirection(isRtl)]}>
             <Pressable style={styles.applyButton} onPress={onApply}>
               <AppText style={styles.applyButtonText}>{messages.applyFilters}</AppText>
             </Pressable>

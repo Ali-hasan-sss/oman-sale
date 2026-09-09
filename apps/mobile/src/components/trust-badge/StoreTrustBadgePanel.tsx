@@ -6,6 +6,7 @@ import { AppText } from '../AppText';
 import { AppTextInput } from '../AppTextInput';
 import { VerifiedBadge } from '../VerifiedBadge';
 import { useI18n } from '../../i18n';
+import { rowDirection } from '../../lib/layout-direction';
 import { uploadVerificationDocument } from '../../services/media.service';
 import {
   fetchStoreTrustBadge,
@@ -28,7 +29,7 @@ const fieldLabelMap = {
 } as const;
 
 export function StoreTrustBadgePanel({ storeId }: StoreTrustBadgePanelProps) {
-  const { t } = useI18n();
+  const { t, isRtl } = useI18n();
   const text = t.trustBadge;
   const [data, setData] = useState<StoreTrustBadge | null>(null);
   const [documents, setDocuments] = useState<Record<DocumentField, string>>({
@@ -131,7 +132,7 @@ export function StoreTrustBadgePanel({ storeId }: StoreTrustBadgePanelProps) {
 
   return (
     <View style={styles.card}>
-      <View style={styles.titleRow}>
+      <View style={[styles.titleRow, rowDirection(isRtl)]}>
         <AppText style={styles.title}>{text.storeTitle}</AppText>
         {data?.trustBadgeApproved ? <VerifiedBadge size="md" /> : null}
       </View>
@@ -216,7 +217,6 @@ const styles = StyleSheet.create({
     marginTop: 16
   },
   titleRow: {
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 8,
     marginBottom: 8

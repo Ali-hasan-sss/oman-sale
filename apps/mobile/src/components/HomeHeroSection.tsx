@@ -16,6 +16,7 @@ import {
 import { AppText } from './AppText';
 import { HomeHeroSkeleton } from './skeleton';
 import { useI18n } from '../i18n';
+import { alignSelfStart } from '../lib/layout-direction';
 import {
   getCachedHeroSlides,
   isHeroSlidesLoaded,
@@ -75,7 +76,7 @@ function HeroSlideCard({ slide, width, isRtl, isCarousel, onBrowseOffers }: Hero
         {slide.subtitle}
       </AppText>
       <Pressable
-        style={[styles.heroButton, isRtl ? styles.heroButtonRtl : styles.heroButtonLtr]}
+        style={[styles.heroButton, alignSelfStart(isRtl)]}
         onPress={() => resolveHeroAction(slide.buttonLink, onBrowseOffers)}
       >
         <AppText style={styles.heroButtonText}>{slide.buttonLabel}</AppText>
@@ -406,12 +407,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     paddingHorizontal: 14,
     paddingVertical: 9
-  },
-  heroButtonLtr: {
-    alignSelf: 'flex-start'
-  },
-  heroButtonRtl: {
-    alignSelf: 'flex-end'
   },
   heroButtonText: {
     color: colors.brandDark,

@@ -14,11 +14,23 @@ import { AppText } from '../components/AppText';
 import { AppTextInput } from '../components/AppTextInput';
 import { KeyboardAwareScrollView } from '../components/KeyboardAwareScrollView';
 import { ErrorNotice } from '../components/ErrorNotice';
+import { ListingAdMediaPicker } from '../components/ListingAdMediaPicker';
 import { SuccessNotice } from '../components/SuccessNotice';
 import { FormFieldsSkeleton } from '../components/skeleton';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
-import { buildCategoryTree, flattenCategoryTreeWithPath } from '../lib/category-tree';
+import { buildCategoryTree } from '../lib/category-tree';
+import {
+  buildSubcategoryFilterLevels,
+  getEffectiveCategoryId,
+  isCategoryUnderSlug,
+  isSubcategoryPathComplete,
+  MODEL_YEAR_MAX,
+  MODEL_YEAR_MIN,
+  PASSENGER_CARS_SLUG,
+  selectFilterOption,
+  updateSubcategoryPath
+} from '../lib/category-subcategory-filters';
 import { getValidationFieldErrors, resolveApiErrorMessage } from '../lib/api-errors';
 import {
   parseListingPrice,
@@ -26,20 +38,20 @@ import {
   validateListingForm
 } from '../lib/listing-form-validation';
 import { getWilayahsForGovernorate, omanGovernorates } from '../lib/oman-locations';
-import type { CategoryOption } from '../services/listings.service';
+import { horizontalListNeedsAlignStart, rowDirection } from '../lib/layout-direction';
+import type { CategoryFilter, CategoryOption } from '../services/listings.service';
+import { checkoutPaidListingRequest, fetchCategoryFilters } from '../services/listings.service';
+import { openWebPaymentPage } from '../lib/open-external-web';
 import { formatPlanVatBreakdown } from '../lib/plan-pricing';
 import {
   fetchPromotionPlans,
   getPlanPrice,
-  promoteAdRequest,
   sortPromotionPlansByPrice,
   type PromotionPlan
 } from '../services/promotions.service';
 import { fetchMyStores, type OwnerStore } from '../services/stores.service';
 import { useAuthStore, useListingsStore } from '../stores';
 import { colors, radius, shadow } from '../theme';
-
-const DESCRIPTION_MIN_FOR_PLANS = 10;
 const DURATION_OPTIONS = [
   { days: 7, labelKey: 'oneWeek' as const },
   { days: 14, labelKey: 'twoWeeks' as const },
@@ -55,7 +67,7 @@ const getCategoryLabel = (category: CategoryOption, locale: 'ar' | 'en') =>
 
 const alignChipScroll = (ref: React.RefObject<ScrollViewType | null>, isRtl: boolean) => {
   requestAnimationFrame(() => {
-    if (isRtl) {
+    if (horizontalListNeedsAlignStart(isRtl)) {
       ref.current?.scrollToEnd({ animated: false });
     } else {
       ref.current?.scrollTo({ x: 0, animated: false });
@@ -80,12 +92,19 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
   const errorBannerRef = useRef<View>(null);
   const plansFetchStartedRef = useRef(false);
 
-  const [categoryId, setCategoryId] = useState('');
+  const [rootCategoryId, setRootCategoryId] = useState('');
+  const [subcategoryPath, setSubcategoryPath] = useState<string[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
   const [city, setCity] = useState('');
   const [wilayah, setWilayah] = useState('');
+  const [modelYear, setModelYear] = useState('');
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [categoryFilters, setCategoryFilters] = useState<CategoryFilter[]>([]);
+  const [selectedFilterOptionIds, setSelectedFilterOptionIds] = useState<string[]>([]);
+  const [isCategoryFiltersLoading, setIsCategoryFiltersLoading] = useState(false);
 
   const [plans, setPlans] = useState<PromotionPlan[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState('');
@@ -95,6 +114,7 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
   const [ownerStore, setOwnerStore] = useState<OwnerStore | null>(null);
   const [publishSource, setPublishSource] = useState<'store' | 'personal'>('personal');
   const [publishSuccess, setPublishSuccess] = useState(false);
+  const [paymentOnWeb, setPaymentOnWeb] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -105,6 +125,9 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
       descriptionRequired: t.errors.fieldDescriptionRequired,
       descriptionMin: t.errors.fieldDescriptionMin,
       categoryRequired: t.errors.fieldCategoryRequired,
+      subcategoryRequired: t.errors.fieldSubcategoryRequired,
+      filterRequired: t.errors.fieldFilterRequired,
+      modelYearRequired: t.errors.fieldModelYearRequired,
       cityRequired: t.errors.fieldCityRequired,
       wilayahRequired: t.errors.fieldWilayahRequired,
       priceRequired: t.errors.fieldPriceRequired,
@@ -140,14 +163,31 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
     });
   };
 
-  const descriptionReady = description.trim().length >= DESCRIPTION_MIN_FOR_PLANS;
-
-  const categoryOptions = useMemo(() => {
-    const tree = buildCategoryTree(categories);
-    return flattenCategoryTreeWithPath(tree, (category) => getCategoryLabel(category, locale));
-  }, [categories, locale]);
-
+  const categoryTree = useMemo(() => buildCategoryTree(categories), [categories]);
+  const categoryId = getEffectiveCategoryId(rootCategoryId, subcategoryPath);
+  const subcategoryLevels = useMemo(
+    () =>
+      rootCategoryId
+        ? buildSubcategoryFilterLevels(
+            categories,
+            rootCategoryId,
+            subcategoryPath,
+            (category) => getCategoryLabel(category, locale),
+            t.addOffer.subcategories
+          )
+        : [],
+    [categories, locale, rootCategoryId, subcategoryPath, t.addOffer.subcategories]
+  );
+  const subcategoryComplete = isSubcategoryPathComplete(categories, rootCategoryId, subcategoryPath);
   const selectedCategory = categories.find((item) => item.id === categoryId);
+  const isPassengerCarsCategory = isCategoryUnderSlug(categories, categoryId, PASSENGER_CARS_SLUG);
+  const filtersComplete =
+    categoryFilters.length === 0 ||
+    categoryFilters.every((filter) => filter.options.some((option) => selectedFilterOptionIds.includes(option.id)));
+  const modelYearOptions = useMemo(
+    () => Array.from({ length: MODEL_YEAR_MAX - MODEL_YEAR_MIN + 1 }, (_, index) => String(MODEL_YEAR_MAX - index)),
+    []
+  );
   const displayPlans = useMemo(
     () => sortPromotionPlansByPrice(plans, duration),
     [plans, duration]
@@ -175,18 +215,27 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
   }, [accessToken]);
 
   useEffect(() => {
-    loadCategories(locale, { refresh: useListingsStore.getState().hasLoadedCategories })
-      .then(() => {
-        const first = useListingsStore.getState().categories[0]?.id ?? '';
-        setCategoryId((current) => current || first);
-      })
-      .catch(() => undefined);
+    loadCategories(locale, { refresh: useListingsStore.getState().hasLoadedCategories }).catch(() => undefined);
   }, [locale, loadCategories]);
 
   useEffect(() => {
     alignChipScroll(categoryScrollRef, isRtl);
     alignChipScroll(cityScrollRef, isRtl);
-  }, [isRtl, locale, categoryOptions.length]);
+  }, [isRtl, locale, categoryTree.length]);
+
+  useEffect(() => {
+    if (!subcategoryComplete || !categoryId) {
+      setCategoryFilters([]);
+      setSelectedFilterOptionIds([]);
+      return;
+    }
+
+    setIsCategoryFiltersLoading(true);
+    fetchCategoryFilters(categoryId, locale)
+      .then((filters) => setCategoryFilters(Array.isArray(filters) ? filters : []))
+      .catch(() => setCategoryFilters([]))
+      .finally(() => setIsCategoryFiltersLoading(false));
+  }, [categoryId, locale, subcategoryComplete]);
 
   useEffect(() => {
     plansFetchStartedRef.current = false;
@@ -196,35 +245,32 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
   }, [locale]);
 
   useEffect(() => {
-    if (!descriptionReady) {
-      return;
-    }
-
-    if (plansFetchStartedRef.current) {
-      return;
-    }
-
+    if (plansFetchStartedRef.current) return;
     plansFetchStartedRef.current = true;
     setIsLoadingPlans(true);
     setPlansError(false);
 
     fetchPromotionPlans()
       .then((items) => {
-        const sorted = sortPromotionPlansByPrice(items, duration);
         setPlans(items);
-        setSelectedPlanId(sorted[0]?.id ?? '');
       })
       .catch(() => {
         setPlans([]);
         setPlansError(true);
       })
       .finally(() => setIsLoadingPlans(false));
-  }, [descriptionReady, locale]);
+  }, [locale]);
 
   const submit = async () => {
     const nextFieldErrors = validateListingForm(
-      { title, description, categoryId, city, wilayah, price },
-      validationMessages
+      { title, description, categoryId, city, wilayah, price, modelYear },
+      validationMessages,
+      {
+        rootCategoryId,
+        subcategoryComplete,
+        filtersComplete,
+        requiresModelYear: isPassengerCarsCategory
+      }
     );
 
     if (Object.keys(nextFieldErrors).length > 0) {
@@ -238,17 +284,47 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
     setSubmitError('');
     setFieldErrors({});
 
-    const result = await createListing({
+    const adPayload = {
       title: title.trim(),
       description: description.trim(),
       type: selectedCategory.type,
       price: parseListingPrice(price),
       city,
       wilayah,
-      categoryId: selectedCategory.id,
-      imageUrls: [],
+      categoryId,
+      imageUrls,
+      videoUrl: videoUrl ?? undefined,
+      filterOptionIds: selectedFilterOptionIds,
+      ...(isPassengerCarsCategory ? { modelYear: Number(modelYear) } : {}),
       ...(isStorePublish && ownerStore ? { storeId: ownerStore.id } : {})
-    });
+    };
+
+    if (selectedPlan && !isStorePublish) {
+      try {
+        const checkout = await checkoutPaidListingRequest(
+          { ad: adPayload, planId: selectedPlan.id, days: duration },
+          locale
+        );
+        if (checkout.checkout?.paymentUrl) {
+          await openWebPaymentPage(checkout.checkout.paymentUrl);
+          setPaymentOnWeb(true);
+          setPublishSuccess(true);
+          return;
+        }
+      } catch (checkoutError) {
+        const apiFieldErrors = getValidationFieldErrors(checkoutError, t.errors);
+        if (Object.keys(apiFieldErrors).length > 0) {
+          setFieldErrors(apiFieldErrors);
+        }
+        setSubmitError(resolveApiErrorMessage(checkoutError, t.errors, t.addOffer.createError));
+        return;
+      }
+
+      setPublishSuccess(true);
+      return;
+    }
+
+    const result = await createListing(adPayload);
 
     if (!result.ok) {
       const apiFieldErrors = getValidationFieldErrors(result.apiError, t.errors);
@@ -259,15 +335,6 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
       return;
     }
 
-    if (selectedPlan && !isStorePublish) {
-      try {
-        await promoteAdRequest({ adId: result.id, planId: selectedPlan.id, days: duration });
-      } catch {
-        setSubmitError(t.addOffer.createError);
-        return;
-      }
-    }
-
     setPublishSuccess(true);
   };
 
@@ -276,11 +343,11 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
     setTitle('');
     setDescription('');
     setPrice('');
+    setImageUrls([]);
+    setVideoUrl(null);
     setFieldErrors({});
-    setPlans([]);
     setSelectedPlanId('');
     setSubmitError('');
-    plansFetchStartedRef.current = false;
     onPublished?.();
   };
 
@@ -299,8 +366,8 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
     return (
       <KeyboardAwareScrollView contentContainerStyle={[styles.content, { paddingBottom: scrollBottomPadding }]}>
         <SuccessNotice
-          title={t.addOffer.successTitle}
-          message={t.addOffer.success}
+          title={paymentOnWeb ? t.common.paymentOpenedTitle : t.addOffer.successTitle}
+          message={paymentOnWeb ? t.common.paymentOpenedMessage : t.addOffer.success}
           actionLabel={t.addOffer.viewMyOffers}
           onAction={handleSuccessAction}
         />
@@ -331,37 +398,138 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
                 setTitle(value);
                 clearFieldError('title');
               }}
+              placeholder={t.addOffer.titlePlaceholder}
               style={[styles.input, fieldErrorStyle(fieldErrors.title), isRtl ? styles.inputRtl : styles.inputLtr]}
               placeholderTextColor={colors.muted}
             />
           </Field>
 
-          <Field error={fieldErrors.categoryId} label={t.addOffer.category} isRtl={isRtl}>
+          <Field error={fieldErrors.categoryId || fieldErrors.subcategoryPath} label={t.addOffer.category} isRtl={isRtl}>
             <ScrollView
               ref={categoryScrollRef}
               horizontal
               showsHorizontalScrollIndicator={false}
-              style={isRtl ? styles.chipScrollRtl : styles.chipScrollLtr}
-              contentContainerStyle={[styles.chipRow, isRtl && styles.chipRowRtl]}
+              contentContainerStyle={[styles.chipRow, rowDirection(isRtl)]}
             >
-              {categoryOptions.map((category) => {
-                const active = category.id === categoryId;
+              {categoryTree.map((category) => {
+                const active = category.id === rootCategoryId;
                 return (
                   <Pressable
                     key={category.id}
                     style={[styles.chip, active && styles.chipActive]}
                     onPress={() => {
-                      setCategoryId(category.id);
+                      setRootCategoryId(category.id);
+                      setSubcategoryPath([]);
+                      setSelectedFilterOptionIds([]);
+                      setCategoryFilters([]);
+                      setModelYear('');
                       clearFieldError('categoryId');
+                      clearFieldError('subcategoryPath');
+                      clearFieldError('filters');
                     }}
                   >
                     <AppText style={[styles.chipText, active && styles.chipTextActive, isRtl ? styles.chipRtl : styles.chipLtr]}>
-                      {category.label}
+                      {getCategoryLabel(category, locale)}
                     </AppText>
                   </Pressable>
                 );
               })}
             </ScrollView>
+
+            {subcategoryLevels.map((level) => (
+              <View key={`${level.parentId}-${level.levelIndex}`} style={styles.subcategoryBlock}>
+                <AppText style={[styles.subcategoryTitle, isRtl ? styles.rtl : styles.ltr]}>{level.title}</AppText>
+                <View style={[styles.wrapChips, rowDirection(isRtl)]}>
+                  {level.options.map((category) => {
+                    const active = level.selectedId === category.id;
+                    return (
+                      <Pressable
+                        key={category.id}
+                        style={[styles.chip, active && styles.chipActive]}
+                        onPress={() => {
+                          setSubcategoryPath((current) => updateSubcategoryPath(current, level.levelIndex, category.id));
+                          setSelectedFilterOptionIds([]);
+                          clearFieldError('subcategoryPath');
+                          clearFieldError('categoryId');
+                          clearFieldError('filters');
+                        }}
+                      >
+                        <AppText style={[styles.chipText, active && styles.chipTextActive]}>
+                          {getCategoryLabel(category, locale)}
+                        </AppText>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            ))}
+
+            {subcategoryComplete && (categoryFilters.length > 0 || isCategoryFiltersLoading) ? (
+              <View style={styles.subcategoryBlock}>
+                <AppText style={[styles.subcategoryTitle, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.categoryFilters}</AppText>
+                {isCategoryFiltersLoading ? (
+                  <AppText style={[styles.promotionHint, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.loadingFilters}</AppText>
+                ) : (
+                  categoryFilters.map((filter) => (
+                    <View key={filter.id} style={styles.filterGroup}>
+                      <AppText style={[styles.filterTitle, isRtl ? styles.rtl : styles.ltr]}>{filter.title}</AppText>
+                      <View style={[styles.wrapChips, rowDirection(isRtl)]}>
+                        {filter.options.map((option) => {
+                          const active = selectedFilterOptionIds.includes(option.id);
+                          return (
+                            <Pressable
+                              key={option.id}
+                              style={[styles.chip, active && styles.chipActive]}
+                              onPress={() => {
+                                setSelectedFilterOptionIds((current) =>
+                                  selectFilterOption(
+                                    current,
+                                    filter.options.map((item) => item.id),
+                                    option.id
+                                  )
+                                );
+                                clearFieldError('filters');
+                              }}
+                            >
+                              <AppText style={[styles.chipText, active && styles.chipTextActive]}>{option.label}</AppText>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  ))
+                )}
+                {fieldErrors.filters ? (
+                  <AppText style={[styles.fieldError, isRtl ? styles.rtl : styles.ltr]}>{fieldErrors.filters}</AppText>
+                ) : null}
+              </View>
+            ) : null}
+
+            {subcategoryComplete && isPassengerCarsCategory ? (
+              <View style={styles.subcategoryBlock}>
+                <AppText style={[styles.subcategoryTitle, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.modelYear}</AppText>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.chipRow, rowDirection(isRtl)]}>
+                  {modelYearOptions.slice(0, 30).map((year) => {
+                    const active = modelYear === year;
+                    return (
+                      <Pressable
+                        key={year}
+                        style={[styles.chip, active && styles.chipActive]}
+                        onPress={() => {
+                          setModelYear(year);
+                          clearFieldError('modelYear');
+                        }}
+                      >
+                        <AppText style={[styles.chipText, active && styles.chipTextActive]}>{year}</AppText>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+                {fieldErrors.modelYear ? (
+                  <AppText style={[styles.fieldError, isRtl ? styles.rtl : styles.ltr]}>{fieldErrors.modelYear}</AppText>
+                ) : null}
+              </View>
+            ) : null}
           </Field>
 
           <Field error={fieldErrors.city} label={t.addOffer.city} isRtl={isRtl}>
@@ -369,8 +537,7 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
               ref={cityScrollRef}
               horizontal
               showsHorizontalScrollIndicator={false}
-              style={isRtl ? styles.chipScrollRtl : styles.chipScrollLtr}
-              contentContainerStyle={[styles.chipRow, isRtl && styles.chipRowRtl]}
+              contentContainerStyle={[styles.chipRow, rowDirection(isRtl)]}
             >
               {omanGovernorates.map((governorate) => {
                 const active = governorate.value === city;
@@ -400,8 +567,7 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                style={isRtl ? styles.chipScrollRtl : styles.chipScrollLtr}
-                contentContainerStyle={[styles.chipRow, isRtl && styles.chipRowRtl]}
+                contentContainerStyle={[styles.chipRow, rowDirection(isRtl)]}
               >
                 {getWilayahsForGovernorate(city).map((wilayahOption) => {
                   const active = wilayahOption.value === wilayah;
@@ -433,6 +599,7 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
                 clearFieldError('price');
               }}
               keyboardType="decimal-pad"
+              placeholder={t.addOffer.pricePlaceholder}
               style={[styles.input, fieldErrorStyle(fieldErrors.price), isRtl ? styles.inputRtl : styles.inputLtr]}
               placeholderTextColor={colors.muted}
             />
@@ -446,6 +613,7 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
                 clearFieldError('description');
               }}
               multiline
+              placeholder={t.addOffer.descriptionPlaceholder}
               style={[
                 styles.input,
                 styles.textarea,
@@ -455,6 +623,26 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
               placeholderTextColor={colors.muted}
             />
           </Field>
+
+          <ListingAdMediaPicker
+            imageUrls={imageUrls}
+            videoUrl={videoUrl}
+            onImageUrlsChange={setImageUrls}
+            onVideoUrlChange={setVideoUrl}
+            labels={{
+              images: t.addOffer.images,
+              uploadTitle: t.addOffer.uploadTitle,
+              uploadHint: t.addOffer.uploadHint,
+              video: t.addOffer.video,
+              videoTitle: t.addOffer.videoTitle,
+              videoHint: t.addOffer.videoHint,
+              uploading: t.addOffer.uploading,
+              removeImage: t.addOffer.removeImage,
+              uploadError: t.addOffer.uploadError
+            }}
+            isRtl={isRtl}
+            disabled={isSubmitting}
+          />
 
           {canPublishFromStore ? (
             <View style={styles.promotionSection}>
@@ -477,7 +665,7 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
                   style={[styles.publishSourceCard, publishSource === 'personal' && styles.publishSourceCardActive]}
                   onPress={() => {
                     setPublishSource('personal');
-                    setSelectedPlanId((current) => current || plans[0]?.id || '');
+                    setSelectedPlanId('');
                   }}
                 >
                   <AppText style={[styles.publishSourceTitle, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.publishFromPersonal}</AppText>
@@ -492,7 +680,7 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
               <AppText style={[styles.promotionTitle, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.publishFromStore}</AppText>
               <AppText style={[styles.promotionSubtitle, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.publishFromStoreHint}</AppText>
             </View>
-          ) : descriptionReady ? (
+          ) : (
             <View style={styles.promotionSection}>
               <AppText style={[styles.promotionTitle, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.adType}</AppText>
               <AppText style={[styles.promotionSubtitle, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.adTypeSubtitle}</AppText>
@@ -511,9 +699,21 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
                   <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
-                    style={isRtl ? styles.chipScrollRtl : styles.chipScrollLtr}
-                    contentContainerStyle={[styles.planRow, isRtl && styles.chipRowRtl]}
+                    contentContainerStyle={[styles.planRow, rowDirection(isRtl)]}
                   >
+                    <Pressable
+                      style={[styles.planCard, !selectedPlanId && styles.planCardActive]}
+                      onPress={() => setSelectedPlanId('')}
+                    >
+                      {!selectedPlanId ? (
+                        <View style={styles.planCheck}>
+                          <Ionicons name="checkmark" size={14} color="#fff" />
+                        </View>
+                      ) : null}
+                      <AppText style={[styles.planName, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.normalAd}</AppText>
+                      <AppText style={[styles.planDescription, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.free}</AppText>
+                      <AppText style={[styles.planPrice, !selectedPlanId && styles.planPriceActive]}>{t.addOffer.free}</AppText>
+                    </Pressable>
                     {displayPlans.map((plan) => {
                       const active = plan.id === selectedPlanId;
                       const name = locale === 'en' ? plan.nameEn : plan.nameAr;
@@ -538,7 +738,7 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
                               <Ionicons name="checkmark" size={14} color="#fff" />
                             </View>
                           ) : null}
-                          <View style={[styles.planHeader, isRtl && styles.planHeaderRtl]}>
+                          <View style={[styles.planHeader, rowDirection(isRtl)]}>
                             <AppText style={[styles.planName, isRtl ? styles.rtl : styles.ltr]} numberOfLines={1}>
                               {name}
                             </AppText>
@@ -563,7 +763,7 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
                   {selectedPlan ? (
                     <View style={styles.durationBlock}>
                       <AppText style={[styles.durationLabel, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.duration}</AppText>
-                      <View style={[styles.durationRow, isRtl && styles.durationRowRtl]}>
+                      <View style={[styles.durationRow, rowDirection(isRtl)]}>
                         {DURATION_OPTIONS.map((option) => {
                           const active = duration === option.days;
                           const label = t.addOffer[option.labelKey];
@@ -609,15 +809,15 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
                 </>
               )}
             </View>
-          ) : !canPublishFromStore ? (
-            <AppText style={[styles.promotionHint, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.promotionHint}</AppText>
-          ) : null}
+          )}
 
-          <Pressable style={[styles.submit, !canSubmit && styles.submitDisabled]} onPress={submit} disabled={!canSubmit}>
+          <Pressable style={[styles.submit, !canSubmit && styles.submitDisabled]} onPress={() => void submit()} disabled={!canSubmit}>
             {isSubmitting ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <AppText style={styles.submitText}>{t.addOffer.publish}</AppText>
+              <AppText style={styles.submitText}>
+                {selectedPlan && !isStorePublish ? t.addOffer.proceedToPayment : t.addOffer.publish}
+              </AppText>
             )}
           </Pressable>
         </>
@@ -700,21 +900,9 @@ const styles = StyleSheet.create({
   chipError: {
     borderColor: colors.danger
   },
-  chipScrollLtr: {
-    direction: 'ltr',
-    alignSelf: 'flex-start'
-  },
-  chipScrollRtl: {
-    direction: 'rtl',
-    alignSelf: 'flex-end'
-  },
   chipRow: {
-    flexDirection: 'row',
     gap: 8,
     paddingHorizontal: 2
-  },
-  chipRowRtl: {
-    flexDirection: 'row-reverse'
   },
   chip: {
     backgroundColor: colors.surface,
@@ -741,6 +929,27 @@ const styles = StyleSheet.create({
   },
   chipLtr: {
     textAlign: 'left'
+  },
+  wrapChips: {
+    flexWrap: 'wrap',
+    gap: 8
+  },
+  subcategoryBlock: {
+    marginTop: 12
+  },
+  subcategoryTitle: {
+    fontWeight: '800',
+    color: colors.ink,
+    marginBottom: 8
+  },
+  filterGroup: {
+    marginBottom: 10
+  },
+  filterTitle: {
+    fontWeight: '700',
+    color: colors.muted,
+    marginBottom: 6,
+    fontSize: 13
   },
   promotionHint: {
     color: colors.muted,
@@ -851,14 +1060,10 @@ const styles = StyleSheet.create({
     zIndex: 1
   },
   planHeader: {
-    flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     marginBottom: 6,
     paddingEnd: 24
-  },
-  planHeaderRtl: {
-    flexDirection: 'row-reverse'
   },
   planName: {
     flex: 1,
@@ -909,12 +1114,8 @@ const styles = StyleSheet.create({
     marginBottom: 8
   },
   durationRow: {
-    flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8
-  },
-  durationRowRtl: {
-    flexDirection: 'row-reverse'
   },
   durationChip: {
     flex: 1,

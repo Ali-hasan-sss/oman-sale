@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from './AppText';
 import { useI18n } from '../i18n';
+import { rowDirection } from '../lib/layout-direction';
 import { colors } from '../theme';
 
 type SectionTitleProps = {
@@ -14,11 +15,11 @@ export function SectionTitle({ title, actionLabel, onAction }: SectionTitleProps
   const { isRtl } = useI18n();
 
   return (
-    <View style={styles.row}>
-      <AppText style={[styles.title, isRtl ? styles.titleRtl : styles.titleLtr]}>{title}</AppText>
+    <View style={[styles.row, rowDirection(isRtl)]}>
+      <AppText style={styles.title}>{title}</AppText>
       {actionLabel && onAction ? (
         <Pressable onPress={onAction}>
-          <AppText style={[styles.action, isRtl ? styles.actionRtl : styles.actionLtr]}>{actionLabel}</AppText>
+          <AppText style={styles.action}>{actionLabel}</AppText>
         </Pressable>
       ) : null}
     </View>
@@ -27,13 +28,9 @@ export function SectionTitle({ title, actionLabel, onAction }: SectionTitleProps
 
 const styles = StyleSheet.create({
   row: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 14
-  },
-  rowRtl: {
-    flexDirection: 'row-reverse'
   },
   title: {
     fontSize: 22,
@@ -41,21 +38,9 @@ const styles = StyleSheet.create({
     color: colors.ink,
     flex: 1
   },
-  titleLtr: {
-    textAlign: 'left'
-  },
-  titleRtl: {
-    textAlign: 'right'
-  },
   action: {
     fontSize: 14,
     fontWeight: '700',
     color: colors.brand
-  },
-  actionLtr: {
-    textAlign: 'right'
-  },
-  actionRtl: {
-    textAlign: 'left'
   }
 });

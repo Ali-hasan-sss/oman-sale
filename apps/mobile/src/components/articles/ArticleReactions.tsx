@@ -3,6 +3,7 @@ import { ActivityIndicator, Modal, Pressable, StyleSheet, View } from 'react-nat
 
 import { AppText } from '../AppText';
 import { useI18n } from '../../i18n';
+import { rowDirection } from '../../lib/layout-direction';
 import {
   fetchArticleReactions,
   removeArticleReaction,
@@ -21,7 +22,7 @@ type ArticleReactionsProps = {
 };
 
 export function ArticleReactions({ articleId, onLoginRequired, isLoggedIn }: ArticleReactionsProps) {
-  const { t } = useI18n();
+  const { t, isRtl } = useI18n();
   const text = t.articles;
   const [data, setData] = useState<ArticleReactionsData | null>(null);
   const [open, setOpen] = useState(false);
@@ -62,7 +63,7 @@ export function ArticleReactions({ articleId, onLoginRequired, isLoggedIn }: Art
   return (
     <View style={styles.wrap}>
       <Pressable
-        style={[styles.reactButton, data.userReaction && styles.reactButtonActive]}
+        style={[styles.reactButton, rowDirection(isRtl), data.userReaction && styles.reactButtonActive]}
         onPress={() => {
           if (!isLoggedIn) {
             onLoginRequired();
@@ -79,7 +80,7 @@ export function ArticleReactions({ articleId, onLoginRequired, isLoggedIn }: Art
       </Pressable>
 
       {data.total > 0 ? (
-        <View style={styles.summary}>
+        <View style={[styles.summary, rowDirection(isRtl)]}>
           {topReactions.map((type) => (
             <AppText key={type} style={styles.summaryEmoji}>
               {data.emojis[type]}
@@ -92,7 +93,7 @@ export function ArticleReactions({ articleId, onLoginRequired, isLoggedIn }: Art
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable style={styles.modalBackdrop} onPress={() => setOpen(false)}>
           <View style={styles.picker}>
-            <View style={styles.pickerGrid}>
+            <View style={[styles.pickerGrid, rowDirection(isRtl)]}>
               {REACTION_ORDER.map((type) => (
                 <Pressable
                   key={type}
@@ -121,7 +122,6 @@ const styles = StyleSheet.create({
     marginBottom: 8
   },
   reactButton: {
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     alignSelf: 'flex-start',
     gap: 8,
@@ -147,7 +147,6 @@ const styles = StyleSheet.create({
     color: colors.brandDark
   },
   summary: {
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 4,
     marginTop: 10
@@ -172,7 +171,6 @@ const styles = StyleSheet.create({
     padding: 16
   },
   pickerGrid: {
-    flexDirection: 'row-reverse',
     flexWrap: 'wrap',
     justifyContent: 'center',
     gap: 8

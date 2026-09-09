@@ -10,20 +10,24 @@
     "splash": {
       "image": "./assets/splash-logo.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#000000"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.omansale.mobile"
+      "bundleIdentifier": "com.omansale.mobile",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "buildNumber": "5"
     },
     "android": {
       "package": "com.omansale.mobile",
       "softwareKeyboardLayoutMode": "pan",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon-foreground.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#000000"
       },
-      "versionCode": 5
+      "versionCode": 15
     },
     "extra": {
       "supportsRTL": true,
@@ -38,7 +42,10 @@
         "expo-build-properties",
         {
           "android": {
-            "softwareKeyboardLayoutMode": "resize"
+            "softwareKeyboardLayoutMode": "resize",
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36,
+            "buildToolsVersion": "36.0.0"
           }
         }
       ]

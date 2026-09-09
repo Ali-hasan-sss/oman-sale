@@ -6,10 +6,11 @@ import { PrimaryButton } from './PrimaryButton';
 import { StoreCirclesSkeleton } from './skeleton';
 import { SectionTitle } from './SectionTitle';
 import { useI18n } from '../i18n';
+import { rowDirection } from '../lib/layout-direction';
 import { fetchPublicStores, type PublicStore } from '../services/stores.service';
 import { colors, radius } from '../theme';
 
-const fallbackLogo = require('../../assets/nav-logo.png');
+const fallbackLogo = require('../../assets/logo-symbol.png');
 
 type HomeStoresSectionProps = {
   onBrowseStores: () => void;
@@ -64,7 +65,7 @@ export function HomeStoresSection({ onBrowseStores, onStorePress }: HomeStoresSe
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, rowDirection(isRtl)]}
         >
           {stores.map((store) => {
             const name = locale === 'en' ? store.nameEn : store.nameAr;
@@ -81,7 +82,7 @@ export function HomeStoresSection({ onBrowseStores, onStorePress }: HomeStoresSe
                     <Image source={fallbackLogo} style={styles.avatarFallback} resizeMode="contain" />
                   )}
                 </View>
-                <AppText style={[styles.name, isRtl && styles.nameRtl]} numberOfLines={2}>
+                <AppText style={styles.name} numberOfLines={2}>
                   {name}
                 </AppText>
               </Pressable>
@@ -100,17 +101,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 10
   },
-  scrollRtl: {
-    direction: 'rtl'
-  },
   scrollContent: {
-    flexDirection: 'row',
     gap: 14,
     paddingEnd: 4,
     paddingBottom: 4
-  },
-  scrollContentRtl: {
-    flexDirection: 'row-reverse'
   },
   item: {
     width: 84,
@@ -147,9 +141,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.ink,
     lineHeight: 16
-  },
-  nameRtl: {
-    textAlign: 'center'
   },
   browseButton: {
     marginTop: 12

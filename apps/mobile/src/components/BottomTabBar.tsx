@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from './AppText';
 import { useI18n } from '../i18n';
+import { rowDirection } from '../lib/layout-direction';
 import type { ScreenName } from '../types';
 import { colors, shadow } from '../theme';
 
@@ -21,7 +22,7 @@ const startTabs: TabKey[] = ['home', 'offers'];
 const endTabs: TabKey[] = ['myOffers', 'chat'];
 
 export function BottomTabBar({ activeScreen, onChange, onAddPress, chatUnreadCount = 0 }: BottomTabBarProps) {
-  const { t } = useI18n();
+  const { t, isRtl } = useI18n();
   const insets = useSafeAreaInsets();
 
   const labels: Record<TabKey, string> = {
@@ -60,10 +61,10 @@ export function BottomTabBar({ activeScreen, onChange, onAddPress, chatUnreadCou
 
   return (
     <View style={[styles.wrapper, { paddingBottom: Math.max(insets.bottom, 10) }]}>
-      <View style={styles.bar}>
-        <View style={styles.group}>{startTabs.map(renderTab)}</View>
+      <View style={[styles.bar, rowDirection(isRtl)]}>
+        <View style={[styles.group, rowDirection(isRtl)]}>{startTabs.map(renderTab)}</View>
         <View style={styles.fabSpace} />
-        <View style={styles.group}>{endTabs.map(renderTab)}</View>
+        <View style={[styles.group, rowDirection(isRtl)]}>{endTabs.map(renderTab)}</View>
       </View>
       <Pressable style={styles.fab} onPress={onAddPress}>
         <Ionicons name="add" size={34} color="#fff" />
@@ -81,14 +82,12 @@ const styles = StyleSheet.create({
   },
   bar: {
     minHeight: 64,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 8
   },
   group: {
     flex: 1,
-    flexDirection: 'row',
     justifyContent: 'space-around'
   },
   fabSpace: {
@@ -125,7 +124,8 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 11,
     fontWeight: '700',
-    color: colors.muted
+    color: colors.muted,
+    textAlign: 'center'
   },
   labelActive: {
     color: colors.brand

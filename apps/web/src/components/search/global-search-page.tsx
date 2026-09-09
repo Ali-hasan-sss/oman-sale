@@ -72,7 +72,7 @@ type TourismDestination = {
   imageUrl: string;
 };
 
-const fallbackImage = '/logo.png';
+const fallbackImage = '/icon.png';
 
 export function GlobalSearchPage() {
   const { dir, locale, localizedPath, m } = useI18n();

@@ -110,6 +110,7 @@ export function useAssistantChat(
         createdAt: new Date().toISOString(),
         listings: data.listings,
         stores: data.stores,
+        articles: data.articles ?? [],
         actions: data.actions
       };
       const updated = [...nextMessages, assistantMessage];

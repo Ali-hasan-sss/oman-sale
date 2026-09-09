@@ -19,28 +19,29 @@ import type { GetPlatformInfoToolArgs } from './assistant.types';
 const PLATFORM_COPY = {
   ar: {
     overview:
-      'Oman Sale منصة عمانية للبيع والشراء: إعلانات فردية، متاجر بخطط اشتراك، تمييز العروض، دردشة بين المستخدمين، المفضلة، وطلبات بنرات إعلانية. الدفع عبر ثواني (Thawani).',
+      'Oman Sale منصة عمانية للبيع والشراء على الموقع وتطبيق الجوال: إعلانات فردية، متاجر بخطط اشتراك، تمييز العروض، دردشة، مفضلة، أخبار، وبنرات في الصفحة الرئيسية. الواجهة العربية من اليمين لليسار، والإنجليزية من اليسار لليمين. الدفع عبر ثواني (Thawani).',
     features: [
-      { title: 'إعلانات متنوعة', detail: 'سيارات، عقارات، إلكترونيات، وظائف، خدمات، وأكثر.' },
-      { title: 'متاجر احترافية', detail: 'أنشئ متجراً بخطط شهرية/سنوية مع فترة تجريبية وتمييز تلقائي للإعلانات حسب الخطة.' },
-      { title: 'تمييز العروض', detail: 'خطط ترويج متعددة (مميز، مميز جداً، كامل التميز) بأسعار أسبوعية وشهرية.' },
-      { title: 'دردشة مباشرة', detail: 'تواصل مع البائعين والمشترين داخل المنصة.' },
-      { title: 'المفضلة', detail: 'احفظ الإعلانات التي تهمك للرجوع إليها لاحقاً.' },
-      { title: 'بنرات إعلانية', detail: 'اطلب بنراً يظهر في الصفحة الرئيسية.' },
-      { title: 'دعم وتغطية', detail: 'تغطية محافظات عمان مع فريق دعم عبر البريد والهاتف.' }
+      { title: 'إعلانات متنوعة', detail: 'سيارات، عقارات، إلكترونيات، وظائف، خدمات، وأكثر — مع فئات فرعية وفلاتر حسب التصنيف.' },
+      { title: 'متاجر احترافية', detail: 'أنشئ متجراً واحداً لكل حساب: تصنيف، نوع نشاط، خطة شهرية أو سنوية، تجربة مجانية إن وُجدت، وتمييز تلقائي حسب الخطة.' },
+      { title: 'تمييز العروض', detail: 'خطط ترويج (مميز، مميز جداً، كامل التميز) أسبوع/أسبوعين/شهر. يمكن الترقية أثناء النشر أو لاحقاً من بطاقة الإعلان في «إعلاناتي».' },
+      { title: 'دردشة مباشرة', detail: 'تواصل مع البائع من صفحة الإعلان، أو تابع المحادثات من تبويب «دردشاتي».' },
+      { title: 'المفضلة', detail: 'احفظ الإعلانات بأيقونة القلب، ثم راجعها من القائمة أو الملف الشخصي.' },
+      { title: 'الأخبار', detail: 'مقالات وأخبار داخل التطبيق (القائمة الجانبية → الأخبار) وعلى الموقع.' },
+      { title: 'بنرات إعلانية', detail: 'بنرات الصفحة الرئيسية تُطلب من الموقع عبر «طلب بنر إعلاني».' },
+      { title: 'دعم وتغطية', detail: 'تغطية محافظات وولايات عمان مع دعم عبر البريد والهاتف.' }
     ],
     createStore:
-      'لإنشاء متجر على Oman Sale:\n1) سجّل الدخول\n2) افتح «إنشاء متجر»\n3) اختر الفئة الرئيسية (مثل: سيارات أو عقارات)\n4) اختر نوع المتجر (مثل: معرض سيارات، مكتب عقاري، سوبرماركت، أو إلكترونيات)\n5) اختر خطة الاشتراك (شهري أو سنوي)\n6) ابدأ بالفترة التجريبية إن وُجدت، أو أكمل الدفع عبر ثواني.\n\n📌 أمثلة: معرض سيارات في فئة السيارات، أو مكتب عقاري في فئة العقارات.',
+      'لإنشاء متجر على Oman Sale (الموقع والتطبيق):\n1) سجّل الدخول\n2) افتح «إنشاء متجر» من القائمة الجانبية أو الملف الشخصي — أو من «متجري» إن لم يكن لديك متجر. لا يوجد بنر إنشاء متجر في الصفحة الرئيسية.\n3) أدخل اسم المتجر بالعربية والإنجليزية، الهاتف، والرقم المدني\n4) اختر نوع النشاط: منزلي أو تجاري (السجل التجاري مطلوب للتجاري)\n5) اختر المحافظة والولاية، ثم الفئة الرئيسية ونوع المتجر (مثل معرض سيارات أو مكتب عقاري)\n6) اختر خطة الاشتراك (شهري أو سنوي)\n7) ابدأ بالفترة التجريبية إن وُجدت، أو ادفع عبر ثواني.\n\n📌 حساب واحد = متجر واحد. الأسعار تختلف حسب الفئة ونوع المتجر.',
     promoteListing:
-      'لتمييز إعلان: افتح «إعلاناتي»، اختر الإعلان، اضغط «ترقية»، ثم اختر خطة التمييز والمدة (أسبوع، أسبوعين، شهر). الإعلانات المميزة تظهر أولاً في البحث.',
+      'لتمييز إعلان: افتح تبويب «إعلاناتي». كل إعلان داخل بطاقة فيها أزرار مباشرة: عرض، تعديل، ترويج، تعيين كمباع، وحذف. اضغط «ترويج» على البطاقة، ثم اختر الخطة والمدة (أسبوع، أسبوعين، شهر). يمكنك أيضاً اختيار التمييز أثناء نشر الإعلان. الإعلانات المميزة تظهر أولاً في البحث.',
     postAd:
-      'لنشر إعلان: سجّل الدخول، اضغط «أضف إعلان»، اختر الفئة، أضف العنوان والوصف والصور والسعر، ثم انشر. يمكنك تمييزه لاحقاً من «إعلاناتي».',
+      'لنشر إعلان: سجّل الدخول ثم اضغط «أضف إعلان» (في التطبيق من التبويب/الإضافة، وعلى الموقع من أضف إعلان).\n1) اختر الفئة ثم التصنيف الفرعي والفلاتر المطلوبة\n2) أضف العنوان والوصف والصور (وفيديو اختياري) والسعر\n3) حدّد المحافظة والولاية\n4) انشر كإعلان شخصي أو من متجرك إن وُجد\n5) يمكنك تمييزه عند النشر أو لاحقاً من بطاقة الإعلان في «إعلاناتي».',
     chat:
-      'الدردشة متاحة للمستخدمين المسجلين. افتح صفحة الإعلان واضغط للتواصل، أو ادخل «دردشاتي» لمتابعة محادثاتك.',
-    favorites: 'المفضلة متاحة بعد تسجيل الدخول. احفظ أي إعلان بالضغط على أيقونة المفضلة.',
+      'الدردشة للمستخدمين المسجّلين. افتح الإعلان واضغط للتواصل مع البائع، أو ادخل تبويب «دردشاتي» لمتابعة المحادثات.',
+    favorites: 'المفضلة بعد تسجيل الدخول: اضغط أيقونة القلب على الإعلان، ثم راجعها من القائمة أو الملف الشخصي.',
     bannerAds:
-      'لطلب بنر إعلاني في الصفحة الرئيسية: سجّل الدخول وافتح «طلب بنر إعلاني»، أرفق التفاصيل وادفع عبر ثواني.',
-    payments: 'المدفوعات على Oman Sale تتم عبر بوابة ثواني (Thawani) — اشتراكات المتاجر، تمييز الإعلانات، والبنرات.',
+      'لطلب بنر في الصفحة الرئيسية: من الموقع سجّل الدخول وافتح «طلب بنر إعلاني»، أرفق التفاصيل وادفع عبر ثواني. التطبيق يعرض البنرات في الرئيسية، وطلب البنر يتم عبر الموقع.',
+    payments: 'المدفوعات عبر بوابة ثواني (Thawani): اشتراكات المتاجر، تمييز الإعلانات، وبنرات الموقع.',
     contact: 'تواصل معنا: info@omansale.om | هاتف: +968 2456 7890 | مسقط، سلطنة عمان.',
     storePlansNote:
       '📌 ملاحظة: خطط المتاجر متاحة باشتراك شهري أو سنوي. الأسعار تختلف حسب نوع المتجر والفئة — مثل معارض السيارات، المكاتب العقارية، السوبرماركت، الإلكترونيات، والملابس. الأسعار أدناه لكل فئة على حدة وقد تشمل خصومات أو فترة تجريبية.',
@@ -48,26 +49,28 @@ const PLATFORM_COPY = {
   },
   en: {
     overview:
-      'Oman Sale is an Omani marketplace for buying and selling: individual listings, subscription stores, listing promotions, in-app chat, favorites, and homepage banner ads. Payments via Thawani.',
+      'Oman Sale is an Omani marketplace on the website and the mobile app: individual listings, subscription stores, listing promotions, chat, favorites, news, and homepage banners. Arabic UI is RTL; English is LTR. Payments via Thawani.',
     features: [
-      { title: 'Wide categories', detail: 'Cars, real estate, electronics, jobs, services, and more.' },
-      { title: 'Professional stores', detail: 'Create a store with monthly/yearly plans, optional trial, and auto-promotion on listings per plan.' },
-      { title: 'Listing promotions', detail: 'Multiple promotion tiers (Featured, Super Featured, Fully Featured) with weekly and monthly pricing.' },
-      { title: 'Direct chat', detail: 'Message buyers and sellers inside the platform.' },
-      { title: 'Favorites', detail: 'Save listings you like for later.' },
-      { title: 'Banner ads', detail: 'Request a wide banner on the homepage.' },
-      { title: 'Support & coverage', detail: 'Coverage across Oman with email and phone support.' }
+      { title: 'Wide categories', detail: 'Cars, real estate, electronics, jobs, services, and more — with subcategories and category filters.' },
+      { title: 'Professional stores', detail: 'One store per account: classification, activity type, monthly/yearly plan, optional trial, and auto-promotion per plan.' },
+      { title: 'Listing promotions', detail: 'Featured tiers with 1 week / 2 weeks / 1 month pricing. Promote while posting or later from the listing card in My Listings.' },
+      { title: 'Direct chat', detail: 'Message the seller from a listing, or open the My Chats tab.' },
+      { title: 'Favorites', detail: 'Save listings with the heart icon, then open Favorites from the menu or profile.' },
+      { title: 'News', detail: 'Articles in the app (side menu → News) and on the website.' },
+      { title: 'Banner ads', detail: 'Homepage banners are requested on the website via Request Banner Ad.' },
+      { title: 'Support & coverage', detail: 'Coverage across Oman governorates and wilayats, with email and phone support.' }
     ],
     createStore:
-      'To create a store on Oman Sale:\n1) Sign in\n2) Open Create Store\n3) Pick a root category (e.g. Cars or Real Estate)\n4) Choose a store type (e.g. car showroom, real estate office, supermarket, or electronics shop)\n5) Select a subscription plan (monthly or yearly)\n6) Start with a free trial if available, or complete payment via Thawani.\n\n📌 Examples: a car showroom under Cars, or a real estate office under Real Estate.',
+      'To create a store on Oman Sale (website and app):\n1) Sign in\n2) Open Create Store from the side menu or Profile — or from My Store if you do not have one yet. There is no create-store banner on Home.\n3) Enter Arabic and English store names, phone, and national ID\n4) Choose activity type: home or commercial (commercial registration is required for commercial)\n5) Pick governorate and wilayah, then the root category and store type (e.g. car showroom or real estate office)\n6) Select a subscription plan (monthly or yearly)\n7) Start a free trial if available, or pay via Thawani.\n\n📌 One account = one store. Prices vary by category and store type.',
     promoteListing:
-      'To promote a listing: open My Listings, pick an ad, tap Promote, choose a plan and duration (1 week, 2 weeks, 1 month). Promoted listings rank higher in search.',
+      'To promote a listing: open the My Listings tab. Each listing is a card with inline actions: View, Edit, Promote, Mark sold, and Delete. Tap Promote on the card, then choose a plan and duration (1 week, 2 weeks, 1 month). You can also add a promotion while posting. Promoted listings rank higher in search.',
     postAd:
-      'To post a listing: sign in, tap Add Listing, choose a category, add title, description, photos, and price, then publish. Promote it later from My Listings.',
-    chat: 'Chat is available for signed-in users. Open a listing to contact the seller, or go to My Chats.',
-    favorites: 'Favorites require sign-in. Save any listing with the favorite button.',
-    bannerAds: 'To request a homepage banner: sign in, open Request Banner Ad, submit details, and pay via Thawani.',
-    payments: 'Payments on Oman Sale use Thawani — store subscriptions, listing promotions, and banner ads.',
+      'To post a listing: sign in, then tap Post Ad / Add Listing.\n1) Choose the category, subcategory, and required filters\n2) Add title, description, photos (optional video), and price\n3) Set governorate and wilayah\n4) Publish as a personal listing or from your store if you have one\n5) Promote at publish time or later from the listing card in My Listings.',
+    chat: 'Chat is for signed-in users. Open a listing to contact the seller, or go to the My Chats tab.',
+    favorites: 'Favorites require sign-in. Save a listing with the heart icon, then open Favorites from the menu or profile.',
+    bannerAds:
+      'To request a homepage banner: on the website, sign in, open Request Banner Ad, submit details, and pay via Thawani. The app can show homepage banners; the request form is on the website.',
+    payments: 'Payments on Oman Sale use Thawani — store subscriptions, listing promotions, and website banner ads.',
     contact: 'Contact us: info@omansale.om | Phone: +968 2456 7890 | Muscat, Sultanate of Oman.',
     storePlansNote:
       '📌 Note: Store plans are available on monthly or yearly billing. Prices vary by store type and category — e.g. car showrooms, real estate offices, supermarkets, electronics, and clothing. Prices below are per category and may include discounts or a free trial.',
