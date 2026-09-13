@@ -106,7 +106,9 @@ const envSchema = z.object({
   /** JSON string of Firebase service account (single line). Required for Google sign-in token verification. */
   FIREBASE_SERVICE_ACCOUNT_JSON: z.string().optional(),
   /** Google OAuth web client ID. Used to verify the audience of native (mobile) Google ID tokens. */
-  GOOGLE_WEB_CLIENT_ID: z.string().optional()
+  GOOGLE_WEB_CLIENT_ID: z.string().optional(),
+  /** iOS bundle ID used as the audience of Sign in with Apple identity tokens. */
+  APPLE_CLIENT_ID: z.string().default('com.omansale.mobile')
 });
 
 export const env = envSchema.parse(process.env);

@@ -30,6 +30,14 @@ export async function googleAuthRequest(idToken: string) {
   return response.data.data;
 }
 
+export async function appleAuthRequest(identityToken: string, fullName?: string) {
+  const response = await http.post<ApiEnvelope<AuthSession>>(API_ENDPOINTS.auth.apple, {
+    identityToken,
+    ...(fullName ? { fullName } : {})
+  });
+  return response.data.data;
+}
+
 export async function registerStartRequest(payload: { fullName: string; email: string; locale: Locale }) {
   await http.post(API_ENDPOINTS.auth.registerStart, payload);
 }

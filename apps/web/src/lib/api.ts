@@ -28,7 +28,7 @@ type UserTokens = UserAuthSession['tokens'];
 
 let refreshPromise: Promise<UserTokens> | undefined;
 
-const authPassthroughPaths = ['/auth/login', '/auth/register', '/auth/google', '/auth/admin/login', '/auth/refresh'];
+const authPassthroughPaths = ['/auth/login', '/auth/register', '/auth/google', '/auth/apple', '/auth/admin/login', '/auth/refresh'];
 
 const isAuthPassthroughRequest = (url?: string) => {
   if (!url) return false;

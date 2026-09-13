@@ -2,10 +2,14 @@ import Constants from 'expo-constants';
 
 const extra = (Constants.expoConfig?.extra ?? {}) as Record<string, string | undefined>;
 
-export function isFirebaseConfigured() {
-  return Constants.appOwnership !== 'expo' && Boolean(extra.googleWebClientId);
+export function getGoogleWebClientId() {
+  return extra.googleWebClientId?.trim() || process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID?.trim() || '';
 }
 
-export function getGoogleWebClientId() {
-  return extra.googleWebClientId ?? '';
+export function isExpoGo() {
+  return Constants.appOwnership === 'expo';
+}
+
+export function isFirebaseConfigured() {
+  return Boolean(getGoogleWebClientId());
 }

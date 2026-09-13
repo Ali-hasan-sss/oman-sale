@@ -194,6 +194,7 @@ model User {
   password         String
   avatar           String?
   googleId         String?   @unique
+  appleId          String?   @unique
   profileCompleted Boolean   @default(true)
   role             UserRole  @default(USER)
   bio              String?

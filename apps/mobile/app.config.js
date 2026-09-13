@@ -71,6 +71,7 @@ module.exports = () => {
       },
       ios: {
         ...appJson.expo.ios,
+        usesAppleSignIn: true,
         infoPlist: {
           ...(appJson.expo.ios?.infoPlist ?? {}),
           ITSAppUsesNonExemptEncryption: false
@@ -84,6 +85,7 @@ module.exports = () => {
         iosUrlScheme
           ? ['@react-native-google-signin/google-signin', { iosUrlScheme }]
           : '@react-native-google-signin/google-signin',
+        'expo-apple-authentication',
         [
           'expo-notifications',
           {

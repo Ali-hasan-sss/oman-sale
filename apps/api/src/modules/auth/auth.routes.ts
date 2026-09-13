@@ -13,6 +13,7 @@ import {
   emailCodeSchema,
   forgotPasswordSchema,
   googleAuthSchema,
+  appleAuthSchema,
   loginSchema,
   phoneCodeSchema,
   refreshTokenSchema,
@@ -63,6 +64,7 @@ authRoutes.post(
 
 authRoutes.post('/login', validateRequest({ body: loginSchema }), asyncHandler(authController.login));
 authRoutes.post('/google', validateRequest({ body: googleAuthSchema }), asyncHandler(authController.googleAuth));
+authRoutes.post('/apple', validateRequest({ body: appleAuthSchema }), asyncHandler(authController.appleAuth));
 authRoutes.post(
   '/complete-profile/send-phone',
   requireAuth,

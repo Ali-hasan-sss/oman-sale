@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 import { setupApiInterceptors } from '../lib/api/interceptors';
 import { setupApiLogging } from '../lib/api/logger';
+import { signInWithAppleNative } from '../lib/apple-auth';
 import { signInWithGoogleNative, signOutGoogleNative } from '../lib/google-auth';
 import {
   clearStoredSession,
@@ -17,6 +18,7 @@ import {
   forgotPasswordRequest,
   getApiErrorMessage,
   googleAuthRequest,
+  appleAuthRequest,
   isEmailVerificationRequiredError,
   loginRequest,
   refreshTokensRequest,
@@ -51,6 +53,7 @@ type AuthState = {
     | { ok: false; error: string; errorCode?: string }
   >;
   googleSignIn: () => Promise<AuthSuccess | { ok: false; error: string; errorCode?: string; cancelled?: boolean }>;
+  appleSignIn: () => Promise<AuthSuccess | { ok: false; error: string; errorCode?: string; cancelled?: boolean }>;
   verifyEmail: (email: string, code: string) => Promise<AuthSuccess | { ok: false; error: string; errorCode?: string }>;
   resendVerification: (email: string, locale: Locale) => Promise<{ ok: true } | { ok: false; error: string; errorCode?: string }>;
   forgotPassword: (email: string, locale: Locale) => Promise<{ ok: true } | { ok: false; error: string; errorCode?: string }>;
@@ -175,13 +178,36 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (error instanceof Error && error.message === 'GOOGLE_SIGN_IN_CANCELLED') {
         return { ok: false, error: 'cancelled', cancelled: true };
       }
-      if (
-        error instanceof Error &&
-        (error.message === 'FIREBASE_NOT_CONFIGURED' || error.message === 'GOOGLE_NATIVE_UNAVAILABLE')
-      ) {
+      if (error instanceof Error && error.message === 'FIREBASE_NOT_CONFIGURED') {
         return { ok: false, error: 'FIREBASE_NOT_CONFIGURED', errorCode: 'FIREBASE_NOT_CONFIGURED' };
       }
+      if (error instanceof Error && error.message === 'GOOGLE_NATIVE_UNAVAILABLE') {
+        return { ok: false, error: 'GOOGLE_NATIVE_UNAVAILABLE', errorCode: 'GOOGLE_NATIVE_UNAVAILABLE' };
+      }
       const message = getApiErrorMessage(error, 'google');
+      set({ authError: message });
+      return { ok: false, error: message, errorCode: getApiErrorCode(error) };
+    } finally {
+      set({ isAuthenticating: false });
+    }
+  },
+
+  appleSignIn: async () => {
+    set({ isAuthenticating: true, authError: undefined });
+    try {
+      const { identityToken, fullName } = await signInWithAppleNative();
+      const session = await appleAuthRequest(identityToken, fullName);
+      await get().setSession(session);
+      await refreshCurrentUser();
+      return { ok: true, profileCompleted: isProfileComplete(get().user) };
+    } catch (error) {
+      if (error instanceof Error && error.message === 'APPLE_SIGN_IN_CANCELLED') {
+        return { ok: false, error: 'cancelled', cancelled: true };
+      }
+      if (error instanceof Error && error.message === 'APPLE_NATIVE_UNAVAILABLE') {
+        return { ok: false, error: 'APPLE_NATIVE_UNAVAILABLE', errorCode: 'APPLE_NATIVE_UNAVAILABLE' };
+      }
+      const message = getApiErrorMessage(error, 'apple');
       set({ authError: message });
       return { ok: false, error: message, errorCode: getApiErrorCode(error) };
     } finally {

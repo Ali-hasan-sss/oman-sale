@@ -1,6 +1,4 @@
-import Constants from 'expo-constants';
-
-import { getGoogleWebClientId, isFirebaseConfigured } from './firebase';
+import { getGoogleWebClientId, isExpoGo, isFirebaseConfigured } from './firebase';
 
 let configured = false;
 
@@ -22,7 +20,7 @@ type GoogleSigninModule = {
 };
 
 function loadGoogleSignin(): GoogleSigninModule | null {
-  if (Constants.appOwnership === 'expo') return null;
+  if (isExpoGo()) return null;
 
   try {
     // Lazy require so Expo Go (which lacks the native module) doesn't crash at

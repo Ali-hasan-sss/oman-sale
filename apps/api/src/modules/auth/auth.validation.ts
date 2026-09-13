@@ -62,6 +62,11 @@ export const googleAuthSchema = z.object({
   idToken: z.string().min(1)
 });
 
+export const appleAuthSchema = z.object({
+  identityToken: z.string().min(1),
+  fullName: z.string().min(1).optional()
+});
+
 export const completeProfilePhoneSchema = z.object({
   phone: z.string().min(6),
   locale: z.enum(['ar', 'en']).default('ar'),
@@ -95,6 +100,7 @@ export type ForgotPasswordDto = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordDto = z.infer<typeof resetPasswordSchema>;
 export type ChangePasswordDto = z.infer<typeof changePasswordSchema>;
 export type GoogleAuthDto = z.infer<typeof googleAuthSchema>;
+export type AppleAuthDto = z.infer<typeof appleAuthSchema>;
 export type CompleteProfilePhoneDto = z.infer<typeof completeProfilePhoneSchema>;
 export type CompleteProfilePhoneVerifyDto = z.infer<typeof completeProfilePhoneVerifySchema>;
 export type CompleteProfileDto = z.infer<typeof completeProfileSchema>;

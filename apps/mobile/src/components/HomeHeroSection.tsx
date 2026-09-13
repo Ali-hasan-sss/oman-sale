@@ -32,7 +32,6 @@ type HomeHeroSectionProps = {
 
 const SLIDE_INTERVAL_MS = 3000;
 const HERO_HEIGHT = 220;
-const HERO_OVERLAY: [string, string] = ['rgba(15,159,103,0.45)', 'rgba(8,122,80,0.55)'];
 
 const resolveHeroAction = (link: string, onBrowseOffers: () => void) => {
   if (/^https?:\/\//i.test(link)) {
@@ -93,9 +92,7 @@ function HeroSlideCard({ slide, width, isRtl, isCarousel, onBrowseOffers }: Hero
           imageStyle={styles.heroImageFill}
           resizeMode="cover"
         >
-          <LinearGradient colors={HERO_OVERLAY} style={[styles.heroOverlay, isCarousel && styles.heroOverlayCarousel]}>
-            {content}
-          </LinearGradient>
+          <View style={[styles.heroOverlay, isCarousel && styles.heroOverlayCarousel]}>{content}</View>
         </ImageBackground>
       </View>
     );

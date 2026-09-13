@@ -27,8 +27,8 @@ export function useKeyboardBottomInset(): number {
   return 0;
 }
 
-export function composerBottomPadding(_keyboardOpen: boolean, safeBottom: number, min = 10) {
-  return Math.max(safeBottom, min);
+export function composerBottomPadding(keyboardOpen: boolean, safeBottom: number, min = 10) {
+  return keyboardOpen ? min : Math.max(safeBottom, min);
 }
 
 /** @deprecated Use ComposerDock */
@@ -71,6 +71,15 @@ export function ScreenKeyboardAvoiding({ children, style }: ScreenKeyboardAvoidi
       behavior="padding"
       keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
     >
+      {children}
+    </KCKeyboardAvoidingView>
+  );
+}
+
+/** Chat thread: shrink the list so the last message stays above the composer/keyboard. */
+export function ChatKeyboardAvoiding({ children, style }: ScreenKeyboardAvoidingProps) {
+  return (
+    <KCKeyboardAvoidingView style={[{ flex: 1 }, style]} behavior="padding" keyboardVerticalOffset={0}>
       {children}
     </KCKeyboardAvoidingView>
   );

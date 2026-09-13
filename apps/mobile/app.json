@@ -18,6 +18,7 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
+      "usesAppleSignIn": true,
       "buildNumber": "5"
     },
     "android": {

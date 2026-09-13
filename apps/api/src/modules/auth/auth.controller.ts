@@ -83,6 +83,11 @@ export class AuthController {
     return res.json({ data: result });
   }
 
+  async appleAuth(req: Request, res: Response) {
+    const result = await authService.appleAuth(req.body);
+    return res.json({ data: result });
+  }
+
   async completeProfileSendPhone(req: Request, res: Response) {
     const result = await authService.completeProfileSendPhone(req.user!.id, req.body);
     return res.json({ data: result });

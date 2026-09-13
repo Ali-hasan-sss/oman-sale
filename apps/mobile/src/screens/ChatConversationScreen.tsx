@@ -28,7 +28,11 @@ import {
   markConversationReadRequest,
   sendChatMessageRequest
 } from '../services/chat.service';
-import { ComposerDock, useKeyboardOpen } from '../components/KeyboardInsets';
+import {
+  ChatKeyboardAvoiding,
+  composerBottomPadding,
+  useKeyboardOpen
+} from '../components/KeyboardInsets';
 import { useAuthStore, useChatStore } from '../stores';
 import type { ChatConversation, ChatMessage } from '../types';
 import { colors, radius, shadow } from '../theme';
@@ -274,6 +278,7 @@ export function ChatConversationScreen({
   const renderShell = (children: ReactNode) => <View style={styles.root}>{children}</View>;
   const showAdCard = adCardVisible && !keyboardOpen;
   const threadTopInset = safeInsets.top + CHAT_THREAD_BAR_BODY_HEIGHT;
+  const composerPadBottom = composerBottomPadding(keyboardOpen, safeInsets.bottom);
 
   if (isLoading && !conversation) {
     return renderShell(
@@ -299,7 +304,7 @@ export function ChatConversationScreen({
   const adImage = conversation.ad.images?.[0]?.imageUrl;
 
   return renderShell(
-    <View style={styles.chatBody}>
+    <ChatKeyboardAvoiding style={styles.chatBody}>
       {showAdCard ? (
         <View style={[styles.adCardWrap, { marginTop: threadTopInset }]}>
           <Pressable
@@ -347,8 +352,9 @@ export function ChatConversationScreen({
         contentContainerStyle={[
           styles.messagesContent,
           !showAdCard && { paddingTop: threadTopInset },
-          messages.length > 0 && styles.messagesContentAnchored,
-          messages.length === 0 && !isOtherTyping && styles.messagesContentEmpty
+          messages.length === 0 && !isOtherTyping
+            ? styles.messagesContentEmpty
+            : styles.messagesContentAnchored
         ]}
         onContentSizeChange={() => scrollToBottom(false)}
         onLayout={() => {
@@ -403,8 +409,8 @@ export function ChatConversationScreen({
 
       {error ? <AppText style={styles.sendError}>{error}</AppText> : null}
 
-      <ComposerDock style={styles.composerDock}>
-        <View style={[styles.composer, rowDirection(isRtl)]}>
+      <View style={styles.composerDock}>
+        <View style={[styles.composer, rowDirection(isRtl), { paddingBottom: composerPadBottom }]}>
           <TextInput
             value={draft}
             onChangeText={updateDraft}
@@ -427,8 +433,8 @@ export function ChatConversationScreen({
             )}
           </Pressable>
         </View>
-      </ComposerDock>
-    </View>
+      </View>
+    </ChatKeyboardAvoiding>
   );
 }
 
@@ -545,12 +551,14 @@ const styles = StyleSheet.create({
   },
   messagesContentEmpty: {
     flexGrow: 1,
-    justifyContent: 'center'
+    justifyContent: 'flex-start'
   },
   emptyMessages: {
     textAlign: 'center',
     color: colors.muted,
-    fontWeight: '700'
+    fontWeight: '700',
+    alignSelf: 'stretch',
+    paddingTop: 8
   },
   typingRow: {
     marginTop: 4
@@ -676,7 +684,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: 8,
     paddingHorizontal: 10,
-    paddingVertical: 10,
+    paddingTop: 10,
     backgroundColor: colors.surface,
     borderTopWidth: 1,
     borderTopColor: colors.line

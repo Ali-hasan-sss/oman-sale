@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { AuthCodePurpose, UserRole } from '@prisma/client';
 
 import { env } from '../../config/env';
+import { verifyAppleIdentityToken } from '../../shared/apple/apple-auth';
 import { ErrorCodes } from '../../shared/constants/error-codes';
 import { verifyGoogleIdToken } from '../../shared/firebase/firebase-admin';
 import { sendAuthCodeEmail } from '../../shared/email/mailer';
@@ -31,6 +32,7 @@ import type {
   EmailCodeDto,
   ForgotPasswordDto,
   GoogleAuthDto,
+  AppleAuthDto,
   LoginDto,
   PhoneCodeDto,
   RefreshTokenDto,
@@ -237,6 +239,47 @@ export class AuthService {
         email: googleUser.email,
         googleId: googleUser.googleId,
         avatar: googleUser.avatar,
+        password
+      });
+    }
+
+    if (!user.isActive || user.isBlocked) {
+      throw new ApiError(
+        403,
+        'Account is not allowed',
+        user.isBlocked ? ErrorCodes.ACCOUNT_BLOCKED : ErrorCodes.ACCOUNT_INACTIVE
+      );
+    }
+
+    return this.buildAuthResponse(user);
+  }
+
+  async appleAuth(dto: AppleAuthDto): Promise<{ user: AuthUserResponse; tokens: AuthTokens }> {
+    const appleUser = await verifyAppleIdentityToken(dto.identityToken);
+    const fullName = dto.fullName?.trim();
+    let user = await authRepository.findByAppleId(appleUser.appleId);
+
+    if (!user && appleUser.email) {
+      user = await authRepository.findByEmail(appleUser.email);
+      if (user && !user.deletedAt) {
+        user = await authRepository.linkAppleAccount(user.id, {
+          appleId: appleUser.appleId,
+          fullName
+        });
+      }
+    }
+
+    if (!user || user.deletedAt) {
+      const email = appleUser.email;
+      if (!email) {
+        throw new ApiError(400, 'Apple account email is required');
+      }
+
+      const password = await hashPassword(randomUUID());
+      user = await authRepository.createAppleUser({
+        fullName: fullName || email.split('@')[0] || 'User',
+        email,
+        appleId: appleUser.appleId,
         password
       });
     }

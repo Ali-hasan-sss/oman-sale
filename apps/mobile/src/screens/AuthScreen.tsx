@@ -5,6 +5,7 @@ import { PhoneVerificationResend, type PhoneVerificationChannel } from '../compo
 import { ResendCodeButton } from '../components/auth/ResendCodeButton';
 import { AppText } from '../components/AppText';
 import { AppTextInput } from '../components/AppTextInput';
+import { AppleSignInButton } from '../components/AppleSignInButton';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { KeyboardAwareScrollView } from '../components/KeyboardAwareScrollView';
 import { ScreenKeyboardAvoiding } from '../components/KeyboardInsets';
@@ -13,6 +14,7 @@ import { PrimaryButton } from '../components/PrimaryButton';
 import { VerificationCodeInput } from '../components/VerificationCodeInput';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
+import { isAppleSignInSupported } from '../lib/apple-auth';
 import { isFirebaseConfigured } from '../lib/firebase';
 import { isValidPhoneE164 } from '../lib/phone/phone-utils';
 import {
@@ -56,6 +58,7 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
   const scrollContentStyle = [styles.content, { paddingBottom: scrollBottomPadding }];
   const login = useAuthStore((state) => state.login);
   const googleSignIn = useAuthStore((state) => state.googleSignIn);
+  const appleSignIn = useAuthStore((state) => state.appleSignIn);
   const verifyEmail = useAuthStore((state) => state.verifyEmail);
   const resendVerification = useAuthStore((state) => state.resendVerification);
   const forgotPassword = useAuthStore((state) => state.forgotPassword);
@@ -84,6 +87,7 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
   const textAlign = isRtl ? styles.rtl : styles.ltr;
   const inputAlign = isRtl ? styles.inputRtl : styles.inputLtr;
   const showGoogleSignIn = isFirebaseConfigured();
+  const showAppleSignIn = isAppleSignInSupported();
 
   useEffect(() => {
     if (!isRegister) {
@@ -178,11 +182,35 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
         return;
       }
       if ('cancelled' in result && result.cancelled) return;
+      if (result.errorCode === 'GOOGLE_NATIVE_UNAVAILABLE') {
+        setError(t.auth.googleExpoGoUnavailable);
+        return;
+      }
       if (result.errorCode === 'FIREBASE_NOT_CONFIGURED') {
         setError(t.auth.googleNotConfigured);
         return;
       }
       setError(resolveAuthErrorMessage(result.errorCode, t.auth.googleSignInError, t.errors));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const submitAppleSignIn = async () => {
+    setError('');
+    setIsSubmitting(true);
+    try {
+      const result = await appleSignIn();
+      if (result.ok) {
+        finishAuth(result.profileCompleted);
+        return;
+      }
+      if ('cancelled' in result && result.cancelled) return;
+      if (result.errorCode === 'APPLE_NATIVE_UNAVAILABLE') {
+        setError(t.auth.appleExpoGoUnavailable);
+        return;
+      }
+      setError(resolveAuthErrorMessage(result.errorCode, t.auth.appleSignInError, t.errors));
     } finally {
       setIsSubmitting(false);
     }
@@ -333,15 +361,24 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
     }
   };
 
-  const renderGoogleSection = (socialLabel: string) =>
-    showGoogleSignIn ? (
+  const renderSocialSection = (socialLabel: string) =>
+    showGoogleSignIn || showAppleSignIn ? (
       <View style={styles.socialSection}>
         <AppText style={[styles.socialLabel, textAlign]}>{socialLabel}</AppText>
-        <GoogleSignInButton
-          label={t.auth.googleSignIn}
-          onPress={submitGoogleSignIn}
-          disabled={isSubmitting}
-        />
+        {showGoogleSignIn ? (
+          <GoogleSignInButton
+            label={t.auth.googleSignIn}
+            onPress={submitGoogleSignIn}
+            disabled={isSubmitting}
+          />
+        ) : null}
+        {showAppleSignIn ? (
+          <AppleSignInButton
+            label={t.auth.appleSignIn}
+            onPress={submitAppleSignIn}
+            disabled={isSubmitting}
+          />
+        ) : null}
       </View>
     ) : null;
 
@@ -539,7 +576,7 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
 
         {error ? <AppText style={[styles.error, textAlign]}>{error}</AppText> : null}
         <PrimaryButton label={t.auth.nextButton} onPress={startRegistration} loading={isSubmitting} style={styles.submitSpacing} />
-        {renderGoogleSection(t.auth.socialRegister)}
+        {renderSocialSection(t.auth.socialRegister)}
         <Pressable onPress={() => onSwitchMode('login')}>
           <AppText style={[styles.switch, textAlign]}>{t.auth.switchToLogin}</AppText>
         </Pressable>
@@ -677,7 +714,7 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
       {error ? <AppText style={[styles.error, textAlign]}>{error}</AppText> : null}
 
       <PrimaryButton label={t.auth.submitLogin} onPress={submitLoginForm} loading={isSubmitting} style={styles.submitSpacing} />
-      {renderGoogleSection(t.auth.socialLogin)}
+      {renderSocialSection(t.auth.socialLogin)}
       <Pressable onPress={() => onSwitchMode('register')}>
         <AppText style={[styles.switch, textAlign]}>{t.auth.switchToRegister}</AppText>
       </Pressable>

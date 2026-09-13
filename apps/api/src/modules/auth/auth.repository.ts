@@ -18,6 +18,10 @@ export class AuthRepository {
     return prisma.user.findFirst({ where: { googleId, deletedAt: null } });
   }
 
+  findByAppleId(appleId: string) {
+    return prisma.user.findFirst({ where: { appleId, deletedAt: null } });
+  }
+
   createUser(data: { fullName: string; email: string; phone: string; password: string }) {
     return prisma.user.create({
       data: {
@@ -55,6 +59,35 @@ export class AuthRepository {
       data: {
         googleId: data.googleId,
         ...(data.avatar ? { avatar: data.avatar } : {}),
+        isVerified: true
+      }
+    });
+  }
+
+  createAppleUser(data: {
+    fullName: string;
+    email: string;
+    appleId: string;
+    password: string;
+  }) {
+    return prisma.user.create({
+      data: {
+        fullName: data.fullName,
+        email: data.email,
+        appleId: data.appleId,
+        password: data.password,
+        isVerified: true,
+        profileCompleted: false
+      }
+    });
+  }
+
+  linkAppleAccount(userId: string, data: { appleId: string; fullName?: string }) {
+    return prisma.user.update({
+      where: { id: userId },
+      data: {
+        appleId: data.appleId,
+        ...(data.fullName ? { fullName: data.fullName } : {}),
         isVerified: true
       }
     });
