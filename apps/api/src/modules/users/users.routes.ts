@@ -47,4 +47,5 @@ usersRoutes.post(
   validateRequest({ body: verifyPhoneSchema }),
   asyncHandler(usersController.verifyPhone)
 );
+usersRoutes.delete('/me', requireAuth, ensureActiveUserAllowIncomplete, asyncHandler(usersController.deleteOwnAccount));
 usersRoutes.get('/', requireAuth, authorize(UserRole.ADMIN), asyncHandler(usersController.list));

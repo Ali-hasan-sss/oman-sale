@@ -527,7 +527,15 @@ const dictionary = {
       storeTitle: 'متجري',
       storeSubtitle: 'إدارة شعار المتجر والغلاف ومراقبة الاشتراك.',
       manageStore: 'إدارة المتجر',
-      createStore: 'إنشاء متجر'
+      createStore: 'إنشاء متجر',
+      deleteAccount: 'حذف الحساب',
+      deleteAccountTitle: 'حذف الحساب',
+      deleteAccountHint: 'يحذف حسابك وبياناتك الشخصية نهائياً. لا يمكن التراجع عن هذا الإجراء.',
+      deleteAccountMessage:
+        'سيتم حذف حسابك وبياناتك الشخصية وإعلاناتك ومتاجرك نهائياً. لا يمكن استعادة الحساب بعد الحذف.',
+      deleteAccountConfirm: 'حذف نهائي',
+      deleting: 'جاري الحذف...',
+      deleteAccountError: 'تعذر حذف الحساب. حاول مرة أخرى.'
     },
     settings: {
       title: 'الإعدادات',
@@ -536,7 +544,8 @@ const dictionary = {
       privacy: 'سياسة الخصوصية',
       terms: 'شروط الاستخدام',
       refund: 'سياسة الاسترداد',
-      help: 'المساعدة والدعم'
+      help: 'المساعدة والدعم',
+      deleteAccount: 'حذف الحساب'
     },
     legal: {
       termsTitle: 'شروط الاستخدام',
@@ -1142,7 +1151,15 @@ const dictionary = {
       storeTitle: 'My store',
       storeSubtitle: 'Manage store branding, subscription and store listings.',
       manageStore: 'Manage store',
-      createStore: 'Create store'
+      createStore: 'Create store',
+      deleteAccount: 'Delete account',
+      deleteAccountTitle: 'Delete account',
+      deleteAccountHint: 'Permanently deletes your account and personal data. This cannot be undone.',
+      deleteAccountMessage:
+        'Your account, personal data, listings, and stores will be permanently deleted. This cannot be undone.',
+      deleteAccountConfirm: 'Delete permanently',
+      deleting: 'Deleting...',
+      deleteAccountError: 'Could not delete the account. Please try again.'
     },
     settings: {
       title: 'Settings',
@@ -1151,7 +1168,8 @@ const dictionary = {
       privacy: 'Privacy policy',
       terms: 'Terms of use',
       refund: 'Refund policy',
-      help: 'Help and support'
+      help: 'Help and support',
+      deleteAccount: 'Delete account'
     },
     legal: {
       termsTitle: 'Terms of use',

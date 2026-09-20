@@ -24,7 +24,8 @@ export const API_ENDPOINTS = {
     me: '/users/me',
     changePassword: '/users/me/password',
     requestEmailChange: '/users/me/email-change',
-    verifyEmailChange: '/users/me/email-change/verify'
+    verifyEmailChange: '/users/me/email-change/verify',
+    deleteMe: '/users/me'
   },
   ads: {
     root: '/ads',

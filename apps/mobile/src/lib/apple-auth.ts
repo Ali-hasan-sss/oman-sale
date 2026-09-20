@@ -48,9 +48,6 @@ export async function signInWithAppleNative(): Promise<{ identityToken: string; 
   const appleAuth = loadAppleAuth();
   if (!appleAuth) throw new Error('APPLE_NATIVE_UNAVAILABLE');
 
-  const available = await appleAuth.isAvailableAsync().catch(() => false);
-  if (!available) throw new Error('APPLE_NATIVE_UNAVAILABLE');
-
   try {
     const credential = await appleAuth.signInAsync({
       requestedScopes: [appleAuth.AppleAuthenticationScope.FULL_NAME, appleAuth.AppleAuthenticationScope.EMAIL]

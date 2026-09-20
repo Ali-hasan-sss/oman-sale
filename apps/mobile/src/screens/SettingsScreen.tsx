@@ -1,11 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useScreenInsets } from '../hooks/use-screen-insets';
 
 import { AppText } from '../components/AppText';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useI18n } from '../i18n';
 import { rowDirection } from '../lib/layout-direction';
+import { deleteAccountRequest } from '../services/user.service';
+import { useAuthStore } from '../stores';
 import { colors, radius } from '../theme';
 
 type SettingsScreenProps = {
@@ -17,6 +21,10 @@ type SettingsScreenProps = {
 export function SettingsScreen({ onOpenTerms, onOpenPrivacy, onOpenRefund }: SettingsScreenProps) {
   const { t, isRtl, toggleLocale } = useI18n();
   const { scrollBottomPadding } = useScreenInsets();
+  const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   const items = [
     { label: t.common.language, icon: 'language-outline' as const, onPress: toggleLocale },
@@ -27,24 +35,64 @@ export function SettingsScreen({ onOpenTerms, onOpenPrivacy, onOpenRefund }: Set
     { label: t.settings.help, icon: 'help-circle-outline' as const }
   ];
 
+  const confirmDeleteAccount = async () => {
+    setIsDeletingAccount(true);
+    try {
+      await deleteAccountRequest();
+      setDeleteConfirmOpen(false);
+      await logout();
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
+
   return (
-    <ScrollView
-      contentContainerStyle={[styles.content, { paddingBottom: scrollBottomPadding }]}
-      showsVerticalScrollIndicator={false}
-    >
-      <AppText style={[styles.title, isRtl ? styles.rtl : styles.ltr]}>{t.settings.title}</AppText>
-      <AppText style={[styles.subtitle, isRtl ? styles.rtl : styles.ltr]}>{t.settings.subtitle}</AppText>
-      {items.map((item) => (
-        <Pressable key={item.label} style={[styles.row, rowDirection(isRtl)]} onPress={item.onPress}>
-          <Ionicons name={item.icon} size={22} color={colors.brand} />
-          <AppText style={styles.label}>{item.label}</AppText>
-        </Pressable>
-      ))}
-    </ScrollView>
+    <View style={styles.flex}>
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: scrollBottomPadding }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <AppText style={[styles.title, isRtl ? styles.rtl : styles.ltr]}>{t.settings.title}</AppText>
+        <AppText style={[styles.subtitle, isRtl ? styles.rtl : styles.ltr]}>{t.settings.subtitle}</AppText>
+        {items.map((item) => (
+          <Pressable key={item.label} style={[styles.row, rowDirection(isRtl)]} onPress={item.onPress}>
+            <Ionicons name={item.icon} size={22} color={colors.brand} />
+            <AppText style={styles.label}>{item.label}</AppText>
+          </Pressable>
+        ))}
+        {user ? (
+          <Pressable
+            style={[styles.row, rowDirection(isRtl)]}
+            onPress={() => setDeleteConfirmOpen(true)}
+            disabled={isDeletingAccount}
+          >
+            <Ionicons name="trash-outline" size={22} color={colors.danger} />
+            <AppText style={[styles.label, styles.dangerLabel]}>{t.settings.deleteAccount}</AppText>
+          </Pressable>
+        ) : null}
+      </ScrollView>
+      <ConfirmDialog
+        visible={deleteConfirmOpen}
+        title={t.profile.deleteAccountTitle}
+        message={t.profile.deleteAccountMessage}
+        confirmLabel={isDeletingAccount ? t.profile.deleting : t.profile.deleteAccountConfirm}
+        cancelLabel={t.common.cancel}
+        destructive
+        onCancel={() => {
+          if (!isDeletingAccount) setDeleteConfirmOpen(false);
+        }}
+        onConfirm={() => {
+          if (!isDeletingAccount) void confirmDeleteAccount();
+        }}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1
+  },
   content: {
     padding: 16,
     flexGrow: 1
@@ -73,11 +121,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.ink
   },
-  labelLtr: {
-    textAlign: 'left'
-  },
-  labelRtl: {
-    textAlign: 'right'
+  dangerLabel: {
+    color: colors.danger
   },
   rtl: {
     textAlign: 'right'

@@ -31,6 +31,10 @@ export class UsersController {
     res.json({ data: await usersService.verifyPhone(req.user!.id, req.body) });
   }
 
+  async deleteOwnAccount(req: Request, res: Response) {
+    res.json({ data: await usersService.deleteOwnAccount(req.user!.id) });
+  }
+
   async list(_req: Request, res: Response) {
     res.json({ data: await usersService.list() });
   }

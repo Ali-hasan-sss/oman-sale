@@ -1,45 +1,65 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet } from 'react-native';
-
-import { AppText } from './AppText';
-import { radius } from '../theme';
+import type { ComponentType } from 'react';
+import { Platform, StyleSheet, View } from 'react-native';
 
 type AppleSignInButtonProps = {
   disabled?: boolean;
-  label: string;
+  variant?: 'sign-in' | 'sign-up';
   onPress: () => void;
 };
 
-export function AppleSignInButton({ disabled, label, onPress }: AppleSignInButtonProps) {
+type AppleAuthUi = {
+  AppleAuthenticationButton: ComponentType<{
+    buttonType: number;
+    buttonStyle: number;
+    cornerRadius: number;
+    style: object;
+    onPress: () => void;
+  }>;
+  AppleAuthenticationButtonType: { SIGN_IN: number; SIGN_UP: number };
+  AppleAuthenticationButtonStyle: { BLACK: number };
+};
+
+function loadAppleAuthUi(): AppleAuthUi | null {
+  if (Platform.OS !== 'ios') return null;
+  try {
+    return require('expo-apple-authentication') as AppleAuthUi;
+  } catch {
+    return null;
+  }
+}
+
+export function AppleSignInButton({ disabled, variant = 'sign-in', onPress }: AppleSignInButtonProps) {
+  const appleAuth = loadAppleAuthUi();
+  if (!appleAuth?.AppleAuthenticationButton) return null;
+
+  const NativeButton = appleAuth.AppleAuthenticationButton;
+
   return (
-    <Pressable
-      style={[styles.button, disabled && styles.disabled]}
-      onPress={onPress}
-      disabled={disabled}
-    >
-      <Ionicons name="logo-apple" size={20} color="#fff" />
-      <AppText style={styles.label}>{label}</AppText>
-    </Pressable>
+    <View pointerEvents={disabled ? 'none' : 'auto'} style={[styles.wrap, disabled && styles.disabled]}>
+      <NativeButton
+        buttonType={
+          variant === 'sign-up'
+            ? appleAuth.AppleAuthenticationButtonType.SIGN_UP
+            : appleAuth.AppleAuthenticationButtonType.SIGN_IN
+        }
+        buttonStyle={appleAuth.AppleAuthenticationButtonStyle.BLACK}
+        cornerRadius={12}
+        style={styles.nativeButton}
+        onPress={onPress}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    borderRadius: radius.md,
-    backgroundColor: '#000',
-    paddingVertical: 14,
-    paddingHorizontal: 16
+  wrap: {
+    width: '100%'
+  },
+  nativeButton: {
+    width: '100%',
+    height: 48
   },
   disabled: {
     opacity: 0.7
-  },
-  label: {
-    fontWeight: '800',
-    color: '#fff',
-    fontSize: 15
   }
 });

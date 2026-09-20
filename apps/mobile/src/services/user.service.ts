@@ -37,3 +37,7 @@ export async function verifyEmailChangeRequest(email: string, code: string) {
   });
   return response.data.data;
 }
+
+export async function deleteAccountRequest() {
+  await http.delete(API_ENDPOINTS.users.deleteMe);
+}

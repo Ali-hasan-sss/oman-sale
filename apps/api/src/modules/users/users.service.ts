@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { AuthCodePurpose, Prisma } from '@prisma/client';
 
 import { env } from '../../config/env';
@@ -133,6 +135,16 @@ export class UsersService {
 
     await setUserVerifiedPhone(userId, phone);
     return { verified: true };
+  }
+
+  async deleteOwnAccount(userId: string) {
+    const user = await usersRepository.findById(userId);
+    if (!user) throw new ApiError(404, 'User not found');
+
+    const passwordHash = await hashPassword(randomUUID());
+    await usersRepository.deleteOwnAccount(userId, passwordHash);
+    forceDisconnectUserSockets(userId);
+    return { deleted: true };
   }
 
   async assertPhoneVerifiedForAction(userId: string, phone: string) {

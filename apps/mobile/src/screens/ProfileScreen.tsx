@@ -14,6 +14,7 @@ import {
 
 import { AppText } from '../components/AppText';
 import { AppTextInput } from '../components/AppTextInput';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { AvatarWithBanBadge } from '../components/AvatarWithBanBadge';
 import { UserTrustBadgePanel } from '../components/trust-badge/UserTrustBadgePanel';
 import { VerifiedBadge } from '../components/VerifiedBadge';
@@ -25,6 +26,7 @@ import { useI18n } from '../i18n';
 import { rowDirection } from '../lib/layout-direction';
 import {
   changePasswordRequest,
+  deleteAccountRequest,
   fetchCurrentUser,
   requestEmailChangeRequest,
   updateProfileRequest,
@@ -89,6 +91,7 @@ export function ProfileScreen({ onLogin, onManageStore, onCreateStore }: Profile
   const accessToken = useAuthStore((state) => state.accessToken);
   const setSession = useAuthStore((state) => state.setSession);
   const setTokens = useAuthStore((state) => state.setTokens);
+  const logout = useAuthStore((state) => state.logout);
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -114,6 +117,9 @@ export function ProfileScreen({ onLogin, onManageStore, onCreateStore }: Profile
   const [emailMessage, setEmailMessage] = useState('');
   const [emailError, setEmailError] = useState('');
   const [ownerStore, setOwnerStore] = useState<OwnerStore | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [deleteAccountError, setDeleteAccountError] = useState('');
 
   const textAlign = isRtl ? styles.rtl : styles.ltr;
   const inputAlign = isRtl ? styles.inputRtl : styles.inputLtr;
@@ -295,6 +301,20 @@ export function ProfileScreen({ onLogin, onManageStore, onCreateStore }: Profile
     }
   };
 
+  const confirmDeleteAccount = async () => {
+    setDeleteAccountError('');
+    setIsDeletingAccount(true);
+    try {
+      await deleteAccountRequest();
+      setDeleteConfirmOpen(false);
+      await logout();
+    } catch {
+      setDeleteAccountError(t.profile.deleteAccountError);
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
+
   if (!user) {
     return (
       <View style={[styles.guestWrap, { paddingBottom: scrollBottomPadding }]}>
@@ -321,6 +341,7 @@ export function ProfileScreen({ onLogin, onManageStore, onCreateStore }: Profile
   const avatarInitial = (fullName || user.fullName || '?').slice(0, 1).toUpperCase();
 
   return (
+    <View style={styles.flex}>
     <KeyboardAwareScrollView
       style={styles.flex}
       contentContainerStyle={scrollContentStyle}
@@ -522,7 +543,39 @@ export function ProfileScreen({ onLogin, onManageStore, onCreateStore }: Profile
             </Pressable>
           )}
         </SectionCard>
+
+        <SectionCard icon="trash-outline">
+          <AppText style={[styles.cardTitle, textAlign]}>{t.profile.deleteAccountTitle}</AppText>
+          <AppText style={[styles.fieldHint, textAlign]}>{t.profile.deleteAccountHint}</AppText>
+          {deleteAccountError ? <MessageBanner tone="error" message={deleteAccountError} /> : null}
+          <Pressable
+            style={[styles.dangerButton, isDeletingAccount && styles.buttonDisabled]}
+            onPress={() => setDeleteConfirmOpen(true)}
+            disabled={isDeletingAccount}
+          >
+            {isDeletingAccount ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <AppText style={styles.primaryButtonText}>{t.profile.deleteAccount}</AppText>
+            )}
+          </Pressable>
+        </SectionCard>
     </KeyboardAwareScrollView>
+    <ConfirmDialog
+      visible={deleteConfirmOpen}
+      title={t.profile.deleteAccountTitle}
+      message={t.profile.deleteAccountMessage}
+      confirmLabel={isDeletingAccount ? t.profile.deleting : t.profile.deleteAccountConfirm}
+      cancelLabel={t.common.cancel}
+      destructive
+      onCancel={() => {
+        if (!isDeletingAccount) setDeleteConfirmOpen(false);
+      }}
+      onConfirm={() => {
+        if (!isDeletingAccount) void confirmDeleteAccount();
+      }}
+    />
+    </View>
   );
 }
 
@@ -712,6 +765,13 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     backgroundColor: colors.brand,
+    borderRadius: radius.md,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 8
+  },
+  dangerButton: {
+    backgroundColor: colors.danger,
     borderRadius: radius.md,
     paddingVertical: 14,
     alignItems: 'center',

@@ -361,21 +361,17 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
     }
   };
 
-  const renderSocialSection = (socialLabel: string) =>
+  const renderSocialSection = (socialLabel: string, appleVariant: 'sign-in' | 'sign-up') =>
     showGoogleSignIn || showAppleSignIn ? (
       <View style={styles.socialSection}>
         <AppText style={[styles.socialLabel, textAlign]}>{socialLabel}</AppText>
+        {showAppleSignIn ? (
+          <AppleSignInButton variant={appleVariant} onPress={submitAppleSignIn} disabled={isSubmitting} />
+        ) : null}
         {showGoogleSignIn ? (
           <GoogleSignInButton
             label={t.auth.googleSignIn}
             onPress={submitGoogleSignIn}
-            disabled={isSubmitting}
-          />
-        ) : null}
-        {showAppleSignIn ? (
-          <AppleSignInButton
-            label={t.auth.appleSignIn}
-            onPress={submitAppleSignIn}
             disabled={isSubmitting}
           />
         ) : null}
@@ -576,7 +572,7 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
 
         {error ? <AppText style={[styles.error, textAlign]}>{error}</AppText> : null}
         <PrimaryButton label={t.auth.nextButton} onPress={startRegistration} loading={isSubmitting} style={styles.submitSpacing} />
-        {renderSocialSection(t.auth.socialRegister)}
+        {renderSocialSection(t.auth.socialRegister, 'sign-up')}
         <Pressable onPress={() => onSwitchMode('login')}>
           <AppText style={[styles.switch, textAlign]}>{t.auth.switchToLogin}</AppText>
         </Pressable>
@@ -714,7 +710,7 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
       {error ? <AppText style={[styles.error, textAlign]}>{error}</AppText> : null}
 
       <PrimaryButton label={t.auth.submitLogin} onPress={submitLoginForm} loading={isSubmitting} style={styles.submitSpacing} />
-      {renderSocialSection(t.auth.socialLogin)}
+      {renderSocialSection(t.auth.socialLogin, 'sign-in')}
       <Pressable onPress={() => onSwitchMode('register')}>
         <AppText style={[styles.switch, textAlign]}>{t.auth.switchToRegister}</AppText>
       </Pressable>
