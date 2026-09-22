@@ -30,6 +30,7 @@ export function CompleteProfileScreen({ onSuccess, onNeedsLogin }: CompleteProfi
   const completeProfileSendPhone = useAuthStore((state) => state.completeProfileSendPhone);
   const completeProfileVerifyPhone = useAuthStore((state) => state.completeProfileVerifyPhone);
   const completeProfile = useAuthStore((state) => state.completeProfile);
+  const skipCompleteProfile = useAuthStore((state) => state.skipCompleteProfile);
 
   const [step, setStep] = useState<CompleteStep>('details');
   const [fullName, setFullName] = useState(user?.fullName ?? '');
@@ -116,6 +117,21 @@ export function CompleteProfileScreen({ onSuccess, onNeedsLogin }: CompleteProfi
         phone: phone.trim(),
         password
       });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      onSuccess();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const skipProfile = async () => {
+    setError('');
+    setIsSubmitting(true);
+    try {
+      const result = await skipCompleteProfile();
       if (!result.ok) {
         setError(result.error);
         return;
@@ -254,6 +270,9 @@ export function CompleteProfileScreen({ onSuccess, onNeedsLogin }: CompleteProfi
         loading={isSubmitting}
         style={styles.submitSpacing}
       />
+      <Pressable onPress={skipProfile} disabled={isSubmitting}>
+        <AppText style={[styles.link, textAlign]}>{t.auth.completeProfileSkip}</AppText>
+      </Pressable>
     </KeyboardAwareScrollView>
     </ScreenKeyboardAvoiding>
   );

@@ -210,7 +210,7 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
         setError(t.auth.appleExpoGoUnavailable);
         return;
       }
-      setError(resolveAuthErrorMessage(result.errorCode, t.auth.appleSignInError, t.errors));
+      setError(resolveAuthErrorMessage(result.errorCode, result.error || t.auth.appleSignInError, t.errors));
     } finally {
       setIsSubmitting(false);
     }

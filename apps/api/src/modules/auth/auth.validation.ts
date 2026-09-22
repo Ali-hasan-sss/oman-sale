@@ -64,7 +64,14 @@ export const googleAuthSchema = z.object({
 
 export const appleAuthSchema = z.object({
   identityToken: z.string().min(1),
-  fullName: z.string().min(1).optional()
+  fullName: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() ? value.trim() : undefined),
+    z.string().min(1).optional()
+  ),
+  email: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() ? value.trim().toLowerCase() : undefined),
+    z.string().email().optional()
+  )
 });
 
 export const completeProfilePhoneSchema = z.object({

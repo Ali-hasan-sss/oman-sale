@@ -54,6 +54,11 @@ const sanitizeUser = (user: AuthUserResponse): AuthUserResponse =>
     profileCompleted: user.profileCompleted
   });
 
+function appleFallbackEmail(appleId: string) {
+  const slug = appleId.replace(/[^a-zA-Z0-9]/g, '').slice(0, 48) || 'user';
+  return `apple.${slug}@privaterelay.omansale.om`;
+}
+
 export class AuthService {
   async registerStart(dto: RegisterStartDto) {
     const email = dto.email.trim().toLowerCase();
@@ -243,6 +248,10 @@ export class AuthService {
       });
     }
 
+    if (!user.profileCompleted) {
+      user = await authRepository.markProfileCompleted(user.id);
+    }
+
     if (!user.isActive || user.isBlocked) {
       throw new ApiError(
         403,
@@ -257,10 +266,11 @@ export class AuthService {
   async appleAuth(dto: AppleAuthDto): Promise<{ user: AuthUserResponse; tokens: AuthTokens }> {
     const appleUser = await verifyAppleIdentityToken(dto.identityToken);
     const fullName = dto.fullName?.trim();
+    const email = appleUser.email || dto.email;
     let user = await authRepository.findByAppleId(appleUser.appleId);
 
-    if (!user && appleUser.email) {
-      user = await authRepository.findByEmail(appleUser.email);
+    if (!user && email) {
+      user = await authRepository.findByEmail(email);
       if (user && !user.deletedAt) {
         user = await authRepository.linkAppleAccount(user.id, {
           appleId: appleUser.appleId,
@@ -270,18 +280,18 @@ export class AuthService {
     }
 
     if (!user || user.deletedAt) {
-      const email = appleUser.email;
-      if (!email) {
-        throw new ApiError(400, 'Apple account email is required');
-      }
-
+      const accountEmail = email || appleFallbackEmail(appleUser.appleId);
       const password = await hashPassword(randomUUID());
       user = await authRepository.createAppleUser({
-        fullName: fullName || email.split('@')[0] || 'User',
-        email,
+        fullName: fullName || accountEmail.split('@')[0] || 'User',
+        email: accountEmail,
         appleId: appleUser.appleId,
         password
       });
+    }
+
+    if (!user.profileCompleted) {
+      user = await authRepository.markProfileCompleted(user.id);
     }
 
     if (!user.isActive || user.isBlocked) {
@@ -351,6 +361,15 @@ export class AuthService {
     });
     await clearUserVerifiedPhone(userId);
 
+    return { user: sanitizeUser(updated) };
+  }
+
+  async skipCompleteProfile(userId: string): Promise<{ user: AuthUserResponse }> {
+    const user = await authRepository.findById(userId);
+    if (!user || user.deletedAt) throw new ApiError(404, 'User not found');
+    if (user.profileCompleted) return { user: sanitizeUser(user) };
+
+    const updated = await authRepository.markProfileCompleted(userId);
     return { user: sanitizeUser(updated) };
   }
 

@@ -19,7 +19,10 @@
         "ITSAppUsesNonExemptEncryption": false
       },
       "usesAppleSignIn": true,
-      "buildNumber": "8"
+      "entitlements": {
+        "com.apple.developer.applesignin": ["Default"]
+      },
+      "buildNumber": "9"
     },
     "android": {
       "package": "com.omansale.mobile",

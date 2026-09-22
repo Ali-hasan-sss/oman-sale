@@ -36,12 +36,19 @@ export type VerifiedAppleToken = {
   emailVerified: boolean;
 };
 
+function allowedAppleAudiences(): string[] {
+  const audiences = new Set(['com.omansale.mobile']);
+  const configured = env.APPLE_CLIENT_ID?.trim();
+  if (configured) audiences.add(configured);
+  return [...audiences];
+}
+
 async function fetchAppleJwks(): Promise<AppleJwk[]> {
   if (cachedJwks && Date.now() - cachedJwks.fetchedAt < JWKS_TTL_MS) {
     return cachedJwks.keys;
   }
 
-  const response = await fetch(APPLE_JWKS_URL);
+  const response = await fetch(APPLE_JWKS_URL, { signal: AbortSignal.timeout(8000) });
   if (!response.ok) throw new ApiError(503, 'Apple sign-in is temporarily unavailable');
 
   const body = (await response.json()) as AppleJwks;
@@ -61,7 +68,6 @@ function jwkToPublicKey(jwk: AppleJwk): KeyObject {
 }
 
 export async function verifyAppleIdentityToken(identityToken: string): Promise<VerifiedAppleToken> {
-  const audience = env.APPLE_CLIENT_ID?.trim() || 'com.omansale.mobile';
   const decoded = jwt.decode(identityToken, { complete: true });
   if (!decoded || typeof decoded === 'string' || !decoded.header.kid) {
     throw new ApiError(401, 'Invalid Apple token');
@@ -76,9 +82,17 @@ export async function verifyAppleIdentityToken(identityToken: string): Promise<V
     payload = jwt.verify(identityToken, jwkToPublicKey(jwk), {
       algorithms: ['RS256'],
       issuer: APPLE_ISSUER,
-      audience
+      clockTolerance: 120
     }) as AppleJwtPayload;
   } catch {
+    throw new ApiError(401, 'Invalid Apple token');
+  }
+
+  const tokenAudiences = (Array.isArray(payload.aud) ? payload.aud : [payload.aud]).filter(
+    (value): value is string => typeof value === 'string' && value.length > 0
+  );
+  const allowed = allowedAppleAudiences();
+  if (!tokenAudiences.some((audience) => allowed.includes(audience))) {
     throw new ApiError(401, 'Invalid Apple token');
   }
 

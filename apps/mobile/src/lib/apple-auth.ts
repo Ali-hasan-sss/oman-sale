@@ -9,6 +9,7 @@ type AppleFullName = {
 
 type AppleCredential = {
   identityToken?: string | null;
+  email?: string | null;
   fullName?: AppleFullName | null;
 };
 
@@ -44,7 +45,11 @@ export function formatAppleFullName(name?: AppleFullName | null) {
   return fullName || undefined;
 }
 
-export async function signInWithAppleNative(): Promise<{ identityToken: string; fullName?: string }> {
+export async function signInWithAppleNative(): Promise<{
+  identityToken: string;
+  fullName?: string;
+  email?: string;
+}> {
   const appleAuth = loadAppleAuth();
   if (!appleAuth) throw new Error('APPLE_NATIVE_UNAVAILABLE');
 
@@ -53,15 +58,19 @@ export async function signInWithAppleNative(): Promise<{ identityToken: string; 
       requestedScopes: [appleAuth.AppleAuthenticationScope.FULL_NAME, appleAuth.AppleAuthenticationScope.EMAIL]
     });
     const identityToken = credential.identityToken?.trim();
-    if (!identityToken) throw new Error('APPLE_SIGN_IN_CANCELLED');
+    if (!identityToken) throw new Error('APPLE_SIGN_IN_FAILED');
+
+    const email = credential.email?.trim().toLowerCase();
 
     return {
       identityToken,
-      fullName: formatAppleFullName(credential.fullName)
+      fullName: formatAppleFullName(credential.fullName),
+      ...(email ? { email } : {})
     };
   } catch (error) {
     const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : '';
     if (code === 'ERR_REQUEST_CANCELED') throw new Error('APPLE_SIGN_IN_CANCELLED');
+    if (error instanceof Error && error.message === 'APPLE_SIGN_IN_FAILED') throw error;
     throw error;
   }
 }

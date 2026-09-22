@@ -15,6 +15,7 @@ import {
   completeProfileRequest,
   completeProfileSendPhoneRequest,
   completeProfileVerifyPhoneRequest,
+  skipCompleteProfileRequest,
   forgotPasswordRequest,
   getApiErrorMessage,
   googleAuthRequest,
@@ -65,6 +66,7 @@ type AuthState = {
   completeProfileSendPhone: (phone: string, locale: Locale, channel?: PhoneVerificationChannel) => Promise<{ ok: true } | { ok: false; error: string; errorCode?: string }>;
   completeProfileVerifyPhone: (phone: string, code: string) => Promise<{ ok: true } | { ok: false; error: string; errorCode?: string }>;
   completeProfile: (payload: { fullName: string; phone: string; password: string }) => Promise<AuthSuccess | { ok: false; error: string; errorCode?: string }>;
+  skipCompleteProfile: () => Promise<AuthSuccess | { ok: false; error: string; errorCode?: string }>;
   refreshAccessToken: () => Promise<AuthTokens>;
   markAccountRestricted: (reason: 'blocked' | 'inactive') => Promise<void>;
 };
@@ -151,7 +153,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const session = await loginRequest(email, password);
       await get().setSession(session);
-      await refreshCurrentUser();
+      try {
+        await refreshCurrentUser();
+      } catch {
+        // Keep the login session even if a follow-up profile fetch fails.
+      }
       return { ok: true, profileCompleted: isProfileComplete(get().user) };
     } catch (error) {
       if (isEmailVerificationRequiredError(error)) {
@@ -195,10 +201,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   appleSignIn: async () => {
     set({ isAuthenticating: true, authError: undefined });
     try {
-      const { identityToken, fullName } = await signInWithAppleNative();
-      const session = await appleAuthRequest(identityToken, fullName);
+      const { identityToken, fullName, email } = await signInWithAppleNative();
+      const session = await appleAuthRequest(identityToken, fullName, email);
       await get().setSession(session);
-      await refreshCurrentUser();
+      try {
+        await refreshCurrentUser();
+      } catch {
+        // Keep the Apple session even if a follow-up profile fetch fails.
+      }
       return { ok: true, profileCompleted: isProfileComplete(get().user) };
     } catch (error) {
       if (error instanceof Error && error.message === 'APPLE_SIGN_IN_CANCELLED') {
@@ -305,6 +315,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isAuthenticating: true, authError: undefined });
     try {
       const user = await completeProfileRequest(payload);
+      await get().setUser(user);
+      return { ok: true, profileCompleted: true };
+    } catch (error) {
+      const message = getApiErrorMessage(error, 'completeProfile');
+      set({ authError: message });
+      return { ok: false, error: message, errorCode: getApiErrorCode(error) };
+    } finally {
+      set({ isAuthenticating: false });
+    }
+  },
+
+  skipCompleteProfile: async () => {
+    set({ isAuthenticating: true, authError: undefined });
+    try {
+      const user = await skipCompleteProfileRequest();
       await get().setUser(user);
       return { ok: true, profileCompleted: true };
     } catch (error) {

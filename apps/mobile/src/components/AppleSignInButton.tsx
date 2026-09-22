@@ -35,7 +35,7 @@ export function AppleSignInButton({ disabled, variant = 'sign-in', onPress }: Ap
   const NativeButton = appleAuth.AppleAuthenticationButton;
 
   return (
-    <View pointerEvents={disabled ? 'none' : 'auto'} style={[styles.wrap, disabled && styles.disabled]}>
+    <View pointerEvents={disabled ? 'none' : 'auto'} collapsable={false} style={[styles.wrap, disabled && styles.disabled]}>
       <NativeButton
         buttonType={
           variant === 'sign-up'
@@ -57,7 +57,8 @@ const styles = StyleSheet.create({
   },
   nativeButton: {
     width: '100%',
-    height: 48
+    height: 48,
+    minHeight: 44
   },
   disabled: {
     opacity: 0.7

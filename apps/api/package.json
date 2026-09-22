@@ -18,7 +18,8 @@
     "prisma:deploy:pg": "node scripts/migrate-deploy-pg.cjs",
     "verify:hero-platform": "node scripts/verify-hero-platform.cjs",
     "prisma:seed": "node prisma/seed.cjs",
-    "prisma:seed:tsx": "tsx prisma/seed.ts"
+    "prisma:seed:tsx": "tsx prisma/seed.ts",
+    "ensure:app-store-review-user": "node scripts/ensure-app-store-review-user.cjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1063.0",

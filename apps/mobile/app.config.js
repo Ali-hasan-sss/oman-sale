@@ -72,6 +72,10 @@ module.exports = () => {
       ios: {
         ...appJson.expo.ios,
         usesAppleSignIn: true,
+        entitlements: {
+          ...(appJson.expo.ios?.entitlements ?? {}),
+          'com.apple.developer.applesignin': ['Default']
+        },
         infoPlist: {
           ...(appJson.expo.ios?.infoPlist ?? {}),
           ITSAppUsesNonExemptEncryption: false

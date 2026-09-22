@@ -48,7 +48,7 @@ export class AuthRepository {
         password: data.password,
         avatar: data.avatar,
         isVerified: true,
-        profileCompleted: false
+        profileCompleted: true
       }
     });
   }
@@ -59,7 +59,8 @@ export class AuthRepository {
       data: {
         googleId: data.googleId,
         ...(data.avatar ? { avatar: data.avatar } : {}),
-        isVerified: true
+        isVerified: true,
+        profileCompleted: true
       }
     });
   }
@@ -77,7 +78,7 @@ export class AuthRepository {
         appleId: data.appleId,
         password: data.password,
         isVerified: true,
-        profileCompleted: false
+        profileCompleted: true
       }
     });
   }
@@ -88,8 +89,16 @@ export class AuthRepository {
       data: {
         appleId: data.appleId,
         ...(data.fullName ? { fullName: data.fullName } : {}),
-        isVerified: true
+        isVerified: true,
+        profileCompleted: true
       }
+    });
+  }
+
+  markProfileCompleted(userId: string) {
+    return prisma.user.update({
+      where: { id: userId },
+      data: { profileCompleted: true, isVerified: true }
     });
   }
 

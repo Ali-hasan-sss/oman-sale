@@ -102,6 +102,11 @@ export class AuthController {
     const result = await authService.completeProfile(req.user!.id, req.body);
     return res.json({ data: result });
   }
+
+  async skipCompleteProfile(req: Request, res: Response) {
+    const result = await authService.skipCompleteProfile(req.user!.id);
+    return res.json({ data: result });
+  }
 }
 
 export const authController = new AuthController();

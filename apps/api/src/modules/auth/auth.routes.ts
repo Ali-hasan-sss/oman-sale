@@ -83,6 +83,7 @@ authRoutes.post(
   validateRequest({ body: completeProfileSchema }),
   asyncHandler(authController.completeProfile)
 );
+authRoutes.post('/complete-profile/skip', requireAuth, asyncHandler(authController.skipCompleteProfile));
 authRoutes.post(
   '/admin/login',
   validateRequest({ body: loginSchema }),

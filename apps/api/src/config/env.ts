@@ -108,7 +108,10 @@ const envSchema = z.object({
   /** Google OAuth web client ID. Used to verify the audience of native (mobile) Google ID tokens. */
   GOOGLE_WEB_CLIENT_ID: z.string().optional(),
   /** iOS bundle ID used as the audience of Sign in with Apple identity tokens. */
-  APPLE_CLIENT_ID: z.string().default('com.omansale.mobile')
+  APPLE_CLIENT_ID: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() ? value.trim() : undefined),
+    z.string().default('com.omansale.mobile')
+  )
 });
 
 export const env = envSchema.parse(process.env);

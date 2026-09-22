@@ -18,7 +18,8 @@ export const API_ENDPOINTS = {
     resetPassword: '/auth/reset-password',
     completeProfileSendPhone: '/auth/complete-profile/send-phone',
     completeProfileVerifyPhone: '/auth/complete-profile/verify-phone',
-    completeProfile: '/auth/complete-profile'
+    completeProfile: '/auth/complete-profile',
+    completeProfileSkip: '/auth/complete-profile/skip'
   },
   users: {
     me: '/users/me',

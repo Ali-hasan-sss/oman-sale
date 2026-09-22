@@ -30,10 +30,11 @@ export async function googleAuthRequest(idToken: string) {
   return response.data.data;
 }
 
-export async function appleAuthRequest(identityToken: string, fullName?: string) {
+export async function appleAuthRequest(identityToken: string, fullName?: string, email?: string) {
   const response = await http.post<ApiEnvelope<AuthSession>>(API_ENDPOINTS.auth.apple, {
     identityToken,
-    ...(fullName ? { fullName } : {})
+    ...(fullName ? { fullName } : {}),
+    ...(email ? { email } : {})
   });
   return response.data.data;
 }
@@ -122,6 +123,11 @@ export async function completeProfileVerifyPhoneRequest(phone: string, code: str
 
 export async function completeProfileRequest(payload: { fullName: string; phone: string; password: string }) {
   const response = await http.post<ApiEnvelope<{ user: User }>>(API_ENDPOINTS.auth.completeProfile, payload);
+  return response.data.data.user;
+}
+
+export async function skipCompleteProfileRequest() {
+  const response = await http.post<ApiEnvelope<{ user: User }>>(API_ENDPOINTS.auth.completeProfileSkip);
   return response.data.data.user;
 }
 
