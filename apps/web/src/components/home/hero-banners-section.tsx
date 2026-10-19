@@ -60,8 +60,8 @@ export function AdBannerSlot({ placement = 'HOME_BELOW_HERO', variant = 'feature
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const copy = bannerPlacementCopy[placement][locale];
-  const title = copy.title;
-  const subtitle = copy.subtitle;
+  const [title, setTitle] = useState(copy.title);
+  const [subtitle, setSubtitle] = useState(copy.subtitle);
   const showHeading = variant !== 'inline';
   const advertiseHref = localizedPath(`/banner-ad?placement=${placement}`);
   const advertiseLabel = locale === 'en' ? 'Advertise in this banner' : 'أعلن في هذا البنر';
@@ -89,6 +89,31 @@ export function AdBannerSlot({ placement = 'HOME_BELOW_HERO', variant = 'feature
       setLoopIndex((current) => current + 1);
     }, INTERVAL_MS);
   }, [clearAutoPlay, hasLoop]);
+
+  useEffect(() => {
+    setTitle(copy.title);
+    setSubtitle(copy.subtitle);
+    if (!showHeading) return undefined;
+
+    let cancelled = false;
+    api
+      .get<{
+        data: { titleAr?: string | null; titleEn?: string | null; subtitleAr?: string | null; subtitleEn?: string | null };
+      }>('/banner-requests/pricing', { params: { placement } })
+      .then((response) => {
+        if (cancelled) return;
+        const data = response.data.data;
+        const nextTitle = (locale === 'en' ? data.titleEn : data.titleAr)?.trim();
+        const nextSubtitle = (locale === 'en' ? data.subtitleEn : data.subtitleAr)?.trim();
+        if (nextTitle) setTitle(nextTitle);
+        if (nextSubtitle) setSubtitle(nextSubtitle);
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [copy.subtitle, copy.title, locale, placement, showHeading]);
 
   useEffect(() => {
     let cancelled = false;

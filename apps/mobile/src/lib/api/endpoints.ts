@@ -75,6 +75,9 @@ export const API_ENDPOINTS = {
     slides: '/hero/slides',
     banners: '/hero/banners'
   },
+  bannerRequests: {
+    pricing: '/banner-requests/pricing'
+  },
   promotions: {
     plans: '/promotions/plans',
     adPromotions: '/promotions/ad-promotions'

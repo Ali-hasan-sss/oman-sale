@@ -16,6 +16,10 @@ type BannerPricing = {
   minDays: number;
   maxDays: number;
   isActive: boolean;
+  titleAr?: string | null;
+  titleEn?: string | null;
+  subtitleAr?: string | null;
+  subtitleEn?: string | null;
 };
 
 type BannerRequest = {
@@ -73,6 +77,10 @@ export function AdminBannerRequestsManagement({
   const isAr = locale === 'ar';
   const [placementFilter, setPlacementFilter] = useState<BannerPlacement | 'ALL'>(lockedPlacement ?? 'ALL');
   const activePlacement = lockedPlacement ?? placementFilter;
+  const showsPublicHeading =
+    activePlacement === 'HOME_BELOW_HERO' ||
+    activePlacement === 'HOME_BELOW_CATEGORIES' ||
+    activePlacement === 'HOME_BELOW_ARTICLES';
   const [, setPricing] = useState<BannerPricing | null>(null);
   const [requests, setRequests] = useState<BannerRequest[]>([]);
   const [filter, setFilter] = useState('PENDING_APPROVAL');
@@ -84,6 +92,10 @@ export function AdminBannerRequestsManagement({
   const [pricePerDay, setPricePerDay] = useState('2');
   const [minDays, setMinDays] = useState('1');
   const [maxDays, setMaxDays] = useState('90');
+  const [titleAr, setTitleAr] = useState('');
+  const [titleEn, setTitleEn] = useState('');
+  const [subtitleAr, setSubtitleAr] = useState('');
+  const [subtitleEn, setSubtitleEn] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
@@ -101,10 +113,17 @@ export function AdminBannerRequestsManagement({
         const pricingResponse = await adminApi().get<{ data: BannerPricing }>('/admin/banner-pricing', {
           params: { placement: activePlacement }
         });
-        setPricing(pricingResponse.data.data);
-        setPricePerDay(String(pricingResponse.data.data.pricePerDay));
-        setMinDays(String(pricingResponse.data.data.minDays));
-        setMaxDays(String(pricingResponse.data.data.maxDays));
+        const pricing = pricingResponse.data.data;
+        const fallbackAr = bannerPlacementCopy[activePlacement].ar;
+        const fallbackEn = bannerPlacementCopy[activePlacement].en;
+        setPricing(pricing);
+        setPricePerDay(String(pricing.pricePerDay));
+        setMinDays(String(pricing.minDays));
+        setMaxDays(String(pricing.maxDays));
+        setTitleAr(pricing.titleAr?.trim() || fallbackAr.title);
+        setTitleEn(pricing.titleEn?.trim() || fallbackEn.title);
+        setSubtitleAr(pricing.subtitleAr?.trim() || fallbackAr.subtitle);
+        setSubtitleEn(pricing.subtitleEn?.trim() || fallbackEn.subtitle);
       } else {
         setPricing(null);
       }
@@ -132,10 +151,11 @@ export function AdminBannerRequestsManagement({
         pricePerDay: Number(pricePerDay),
         minDays: Number(minDays),
         maxDays: Number(maxDays),
-        isActive: true
+        isActive: true,
+        ...(showsPublicHeading ? { titleAr, titleEn, subtitleAr, subtitleEn } : {})
       });
       setPricing(response.data.data);
-      setMessage(isAr ? 'تم حفظ التسعير.' : 'Pricing saved.');
+      setMessage(isAr ? 'تم حفظ العنوان والتسعير.' : 'Title and pricing saved.');
     } catch {
       setError(isAr ? 'تعذر حفظ التسعير.' : 'Could not save pricing.');
     } finally {
@@ -235,7 +255,35 @@ export function AdminBannerRequestsManagement({
           {isAr ? 'اختر بنراً لتحديد سعر الإعلان فيه.' : 'Choose a banner to set its advertising price.'}
         </p>
       ) : (
-      <form onSubmit={savePricing} className="mb-8 grid gap-4 rounded-2xl bg-slate-50 p-4 md:grid-cols-4">
+      <form onSubmit={savePricing} className="mb-8 space-y-4 rounded-2xl bg-slate-50 p-4">
+        {showsPublicHeading ? (
+          <>
+        <p className="text-sm text-slate-500">
+          {isAr
+            ? 'العنوان الرئيسي والفرعي يظهران للزائر في الرئيسية. اسم البنر في لوحة الإدارة يبقى للتمييز فقط.'
+            : 'The main title and subtitle are what visitors see on the homepage. The banner name in the admin stays for identification only.'}
+        </p>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-sm font-bold text-slate-700">{isAr ? 'العنوان الرئيسي بالعربية' : 'Arabic main title'}</label>
+            <input value={titleAr} onChange={(event) => setTitleAr(event.target.value)} className={inputClass} maxLength={200} />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-bold text-slate-700">{isAr ? 'العنوان الرئيسي بالإنجليزية' : 'English main title'}</label>
+            <input value={titleEn} onChange={(event) => setTitleEn(event.target.value)} className={inputClass} maxLength={200} />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-bold text-slate-700">{isAr ? 'العنوان الفرعي بالعربية' : 'Arabic subtitle'}</label>
+            <input value={subtitleAr} onChange={(event) => setSubtitleAr(event.target.value)} className={inputClass} maxLength={200} />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-bold text-slate-700">{isAr ? 'العنوان الفرعي بالإنجليزية' : 'English subtitle'}</label>
+            <input value={subtitleEn} onChange={(event) => setSubtitleEn(event.target.value)} className={inputClass} maxLength={200} />
+          </div>
+        </div>
+          </>
+        ) : null}
+        <div className="grid gap-4 md:grid-cols-4">
         <div>
           <label className="mb-1 block text-sm font-bold text-slate-700">
             {isAr ? 'السعر لليوم (ر.ع)' : 'Price per day (OMR)'}
@@ -252,8 +300,9 @@ export function AdminBannerRequestsManagement({
         </div>
         <div className="flex items-end">
           <button type="submit" disabled={savingPricing} className="w-full rounded-xl bg-brand-600 px-4 py-2.5 font-bold text-white hover:bg-brand-700 disabled:opacity-60">
-            {savingPricing ? (isAr ? 'جاري الحفظ...' : 'Saving...') : isAr ? 'حفظ التسعير' : 'Save pricing'}
+            {savingPricing ? (isAr ? 'جاري الحفظ...' : 'Saving...') : isAr ? 'حفظ' : 'Save'}
           </button>
+        </div>
         </div>
       </form>
       )}

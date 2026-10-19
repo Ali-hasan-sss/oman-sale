@@ -13,12 +13,18 @@ export const createBannerRequestSchema = z.object({
   durationDays: z.coerce.number().int().min(1).max(365)
 });
 
+const optionalCopy = z.string().trim().max(200).optional().nullable();
+
 export const updateBannerPricingSchema = z.object({
   placement: bannerPlacementSchema.optional(),
   pricePerDay: z.coerce.number().positive(),
   minDays: z.coerce.number().int().min(1).max(365).optional(),
   maxDays: z.coerce.number().int().min(1).max(365).optional(),
-  isActive: z.boolean().optional()
+  isActive: z.boolean().optional(),
+  titleAr: optionalCopy,
+  titleEn: optionalCopy,
+  subtitleAr: optionalCopy,
+  subtitleEn: optionalCopy
 });
 
 export const bannerPricingQuerySchema = z.object({

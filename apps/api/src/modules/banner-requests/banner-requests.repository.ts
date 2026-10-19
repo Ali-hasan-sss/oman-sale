@@ -9,7 +9,16 @@ export class BannerRequestsRepository {
 
   upsertPricing(
     placement: BannerPlacement,
-    data: { pricePerDay: number; minDays: number; maxDays: number; isActive: boolean }
+    data: {
+      pricePerDay: number;
+      minDays: number;
+      maxDays: number;
+      isActive: boolean;
+      titleAr?: string | null;
+      titleEn?: string | null;
+      subtitleAr?: string | null;
+      subtitleEn?: string | null;
+    }
   ) {
     return prisma.bannerPricing.upsert({
       where: { placement },

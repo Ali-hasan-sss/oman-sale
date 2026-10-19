@@ -46,15 +46,15 @@ export const bannerPlacementCopy: Record<BannerPlacement, { ar: PlacementCopy; e
   HOME_BELOW_CATEGORIES: {
     ar: {
       admin: 'بنر الرئيسية الثاني',
-      title: 'بنر الرئيسية الثاني',
-      subtitle: 'مساحة إعلانية في الصفحة الرئيسية.',
+      title: 'تسوق حسب الفئة',
+      subtitle: 'إعلانات مختارة ضمن الأقسام الأكثر تصفحاً.',
       requestTitle: 'إعلان في بنر الرئيسية الثاني',
       requestSubtitle: 'ارفع إعلانك ليظهر في بنر الرئيسية الثاني بعد الدفع وموافقة الإدارة'
     },
     en: {
       admin: 'Homepage banner 2',
-      title: 'Homepage banner 2',
-      subtitle: 'An advertising slot on the homepage.',
+      title: 'Shop by category',
+      subtitle: 'Selected ads across the categories people browse most.',
       requestTitle: 'Ad in homepage banner 2',
       requestSubtitle: 'Submit your ad to appear in homepage banner 2 after payment and admin approval'
     }
@@ -62,15 +62,15 @@ export const bannerPlacementCopy: Record<BannerPlacement, { ar: PlacementCopy; e
   HOME_BELOW_ARTICLES: {
     ar: {
       admin: 'بنر الرئيسية الثالث',
-      title: 'بنر الرئيسية الثالث',
-      subtitle: 'مساحة إعلانية في الصفحة الرئيسية.',
+      title: 'اكتشف المزيد',
+      subtitle: 'عروض ومحتوى مختار بعد أحدث المقالات.',
       requestTitle: 'إعلان في بنر الرئيسية الثالث',
       requestSubtitle: 'ارفع إعلانك ليظهر في بنر الرئيسية الثالث بعد الدفع وموافقة الإدارة'
     },
     en: {
       admin: 'Homepage banner 3',
-      title: 'Homepage banner 3',
-      subtitle: 'An advertising slot on the homepage.',
+      title: 'Discover more',
+      subtitle: 'Selected offers and highlights after the latest articles.',
       requestTitle: 'Ad in homepage banner 3',
       requestSubtitle: 'Submit your ad to appear in homepage banner 3 after payment and admin approval'
     }

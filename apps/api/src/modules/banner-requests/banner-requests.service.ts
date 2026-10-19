@@ -56,7 +56,11 @@ export class BannerRequestsService {
       pricePerDay: Number(pricing.pricePerDay),
       minDays: pricing.minDays,
       maxDays: pricing.maxDays,
-      isActive: pricing.isActive
+      isActive: pricing.isActive,
+      titleAr: pricing.titleAr,
+      titleEn: pricing.titleEn,
+      subtitleAr: pricing.subtitleAr,
+      subtitleEn: pricing.subtitleEn
     };
   }
 
@@ -90,7 +94,11 @@ export class BannerRequestsService {
       pricePerDay: input.pricePerDay,
       minDays,
       maxDays,
-      isActive: input.isActive ?? pricing?.isActive ?? true
+      isActive: input.isActive ?? pricing?.isActive ?? true,
+      titleAr: input.titleAr === undefined ? pricing?.titleAr ?? null : input.titleAr || null,
+      titleEn: input.titleEn === undefined ? pricing?.titleEn ?? null : input.titleEn || null,
+      subtitleAr: input.subtitleAr === undefined ? pricing?.subtitleAr ?? null : input.subtitleAr || null,
+      subtitleEn: input.subtitleEn === undefined ? pricing?.subtitleEn ?? null : input.subtitleEn || null
     });
 
     return {
@@ -99,7 +107,11 @@ export class BannerRequestsService {
       pricePerDay: Number(updated.pricePerDay),
       minDays: updated.minDays,
       maxDays: updated.maxDays,
-      isActive: updated.isActive
+      isActive: updated.isActive,
+      titleAr: updated.titleAr,
+      titleEn: updated.titleEn,
+      subtitleAr: updated.subtitleAr,
+      subtitleEn: updated.subtitleEn
     };
   }
 

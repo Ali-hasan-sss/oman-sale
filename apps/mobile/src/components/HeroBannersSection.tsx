@@ -21,7 +21,7 @@ import {
   setCachedHeroBanners
 } from '../lib/screen-data-cache';
 import { openWebsitePage } from '../lib/open-external-web';
-import { fetchHeroBanners } from '../services/hero.service';
+import { fetchBannerPublicCopy, fetchHeroBanners } from '../services/hero.service';
 import type { HeroBanner } from '../types';
 import { colors, radius, shadow } from '../theme';
 
@@ -99,7 +99,22 @@ type HeroBannersSectionProps = {
 
 export function HeroBannersSection({ placement = 'HOME_BELOW_HERO', flush = false }: HeroBannersSectionProps) {
   const { locale, t, isRtl } = useI18n();
-  const showHeading = placement === 'HOME_BELOW_HERO';
+  const showHeading =
+    placement === 'HOME_BELOW_HERO' || placement === 'HOME_BELOW_CATEGORIES' || placement === 'HOME_BELOW_ARTICLES';
+  const fallbackTitle =
+    placement === 'HOME_BELOW_CATEGORIES'
+      ? t.home.banner2Title
+      : placement === 'HOME_BELOW_ARTICLES'
+        ? t.home.banner3Title
+        : t.home.bannersTitle;
+  const fallbackSubtitle =
+    placement === 'HOME_BELOW_CATEGORIES'
+      ? t.home.banner2Subtitle
+      : placement === 'HOME_BELOW_ARTICLES'
+        ? t.home.banner3Subtitle
+        : t.home.bannersSubtitle;
+  const [title, setTitle] = useState(fallbackTitle);
+  const [subtitle, setSubtitle] = useState(fallbackSubtitle);
   const [banners, setBanners] = useState<HeroBanner[]>(() => getCachedHeroBanners(locale, placement));
   const [isLoading, setIsLoading] = useState(() => !isHeroBannersLoaded(locale, placement));
   const [activeIndex, setActiveIndex] = useState(0);
@@ -112,6 +127,27 @@ export function HeroBannersSection({ placement = 'HOME_BELOW_HERO', flush = fals
   const bannerHeight = slideWidth > 0 ? slideWidth / BANNER_ASPECT : 0;
   const loopBanners = useMemo(() => buildLoopBanners(banners), [banners]);
   const hasLoop = banners.length > 1;
+
+  useEffect(() => {
+    setTitle(fallbackTitle);
+    setSubtitle(fallbackSubtitle);
+    if (!showHeading) return undefined;
+
+    let cancelled = false;
+    fetchBannerPublicCopy(placement)
+      .then((data) => {
+        if (cancelled) return;
+        const nextTitle = (locale === 'en' ? data.titleEn : data.titleAr)?.trim();
+        const nextSubtitle = (locale === 'en' ? data.subtitleEn : data.subtitleAr)?.trim();
+        if (nextTitle) setTitle(nextTitle);
+        if (nextSubtitle) setSubtitle(nextSubtitle);
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fallbackSubtitle, fallbackTitle, locale, placement, showHeading]);
 
   useEffect(() => {
     let cancelled = false;
@@ -247,10 +283,8 @@ export function HeroBannersSection({ placement = 'HOME_BELOW_HERO', flush = fals
       <View style={[styles.section, flush && styles.sectionFlush]}>
         {showHeading ? (
           <View style={styles.header}>
-            <AppText style={[styles.title, isRtl ? styles.rtl : styles.ltr]}>{t.home.bannersTitle}</AppText>
-            {t.home.bannersSubtitle ? (
-              <AppText style={[styles.subtitle, isRtl ? styles.rtl : styles.ltr]}>{t.home.bannersSubtitle}</AppText>
-            ) : null}
+            <AppText style={[styles.title, isRtl ? styles.rtl : styles.ltr]}>{title}</AppText>
+            {subtitle ? <AppText style={[styles.subtitle, isRtl ? styles.rtl : styles.ltr]}>{subtitle}</AppText> : null}
           </View>
         ) : null}
         <Pressable style={styles.emptyBanner} onPress={openAdvertisePage}>
@@ -274,10 +308,8 @@ export function HeroBannersSection({ placement = 'HOME_BELOW_HERO', flush = fals
     <View style={[styles.section, flush && styles.sectionFlush]}>
       {showHeading ? (
         <View style={styles.header}>
-          <AppText style={[styles.title, isRtl ? styles.rtl : styles.ltr]}>{t.home.bannersTitle}</AppText>
-          {t.home.bannersSubtitle ? (
-            <AppText style={[styles.subtitle, isRtl ? styles.rtl : styles.ltr]}>{t.home.bannersSubtitle}</AppText>
-          ) : null}
+          <AppText style={[styles.title, isRtl ? styles.rtl : styles.ltr]}>{title}</AppText>
+          {subtitle ? <AppText style={[styles.subtitle, isRtl ? styles.rtl : styles.ltr]}>{subtitle}</AppText> : null}
         </View>
       ) : null}
 
