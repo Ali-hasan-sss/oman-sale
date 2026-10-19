@@ -2,11 +2,102 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Oman Sale identity. Edit colors only in this block.
+ * White, logo brick red (#F32B2B), and logo green (#4BBB78).
+ * Values are RGB channels so Tailwind opacity utilities keep working.
+ */
+:root {
+  --oman-white: 255 255 255;
+
+  --oman-green-50: 243 251 246;
+  --oman-green-100: 221 245 230;
+  --oman-green-200: 187 232 204;
+  --oman-green-300: 134 214 166;
+  --oman-green-400: 75 187 120;
+  --oman-green-500: 45 168 100;
+  --oman-green-600: 22 140 78;
+  --oman-green-700: 17 112 62;
+  --oman-green-800: 14 86 48;
+  --oman-green-900: 10 64 36;
+  --oman-green-950: 6 40 22;
+
+  --oman-brick-50: 255 241 240;
+  --oman-brick-100: 255 224 222;
+  --oman-brick-200: 255 199 195;
+  --oman-brick-300: 255 157 150;
+  --oman-brick-400: 255 106 98;
+  --oman-brick-500: 243 43 43;
+  --oman-brick-600: 214 32 32;
+  --oman-brick-700: 176 24 24;
+  --oman-brick-800: 140 20 20;
+  --oman-brick-900: 110 18 18;
+
+  --oman-ink-900: 15 23 42;
+  --oman-ink-950: 2 6 23;
+
+  --oman-green-600-hex: #168c4e;
+  --oman-green-700-hex: #10703e;
+  --oman-green-500-hex: #2da864;
+  --oman-green-400-hex: #4bbb78;
+  --oman-brick-500-hex: #f32b2b;
+  --oman-brick-600-hex: #d62020;
+}
+
+.ad-banner-frame {
+  display: block;
+  width: 100%;
+  aspect-ratio: 990 / 250;
+}
+
+.ad-banner-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(
+    105deg,
+    var(--oman-brick-500-hex) 0%,
+    #ffffff 36%,
+    #ffffff 64%,
+    var(--oman-green-400-hex) 100%
+  );
+  color: rgb(var(--oman-ink-900));
+  text-decoration: none;
+}
+
+.ad-banner-empty:hover {
+  filter: saturate(1.08);
+}
+
+.route-progress-bar {
+  background: linear-gradient(
+    90deg,
+    var(--oman-brick-500-hex) 0%,
+    #ffffff 50%,
+    var(--oman-green-400-hex) 100%
+  );
+  box-shadow: 0 0 10px rgb(var(--oman-brick-500) / 0.35);
+}
+
+a.btn-quick-sell,
+button.btn-quick-sell,
+span.btn-quick-sell {
+  background-color: var(--oman-green-600-hex);
+  color: #fff;
+}
+
+a.btn-quick-sell:hover,
+button.btn-quick-sell:hover,
+span.btn-quick-sell:hover {
+  background-color: var(--oman-green-700-hex);
+  color: #fff;
+}
+
 body {
   min-height: 100vh;
   min-height: 100dvh;
-  background: #f8fafc;
-  color: #0f172a;
+  background: rgb(var(--oman-white));
+  color: rgb(var(--oman-ink-900));
   font-family: var(--font-cairo), 'Cairo', sans-serif;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -98,8 +189,20 @@ html {
 }
 
 ::selection {
-  background: #10b981;
-  color: #ffffff;
+  background: rgb(var(--oman-brick-500));
+  color: rgb(var(--oman-white));
+}
+
+.site-page-shell > footer::before {
+  content: '';
+  display: block;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    rgb(var(--oman-brick-500)) 0 34%,
+    rgb(var(--oman-white)) 34% 66%,
+    rgb(var(--oman-green-500)) 66% 100%
+  );
 }
 
 .thin-scrollbar,

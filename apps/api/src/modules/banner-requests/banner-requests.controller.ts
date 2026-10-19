@@ -1,16 +1,22 @@
 import type { Request, Response } from 'express';
 
+import { resolveBannerPlacement } from '../banners/banner-placements';
 import { getRequiredParam } from '../../shared/utils/request';
 import { bannerRequestsService } from './banner-requests.service';
 import type { ListBannerRequestsQuery } from './banner-requests.validation';
 
 export class BannerRequestsController {
-  async getPricing(_req: Request, res: Response) {
-    res.json({ data: await bannerRequestsService.getPricing() });
+  async getPricing(req: Request, res: Response) {
+    res.json({ data: await bannerRequestsService.getPricing(resolveBannerPlacement(req.query.placement)) });
   }
 
   async quote(req: Request, res: Response) {
-    res.json({ data: await bannerRequestsService.quotePrice(Number(req.query.durationDays)) });
+    res.json({
+      data: await bannerRequestsService.quotePrice(
+        Number(req.query.durationDays),
+        resolveBannerPlacement(req.query.placement)
+      )
+    });
   }
 
   async create(req: Request, res: Response) {

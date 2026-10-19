@@ -11,6 +11,7 @@ import { ArticleImageGallery } from '../components/articles/ArticleImageGallery'
 import { ArticleReactions } from '../components/articles/ArticleReactions';
 import { AppText } from '../components/AppText';
 import { EmptyState } from '../components/EmptyState';
+import { HeroBannersSection } from '../components/HeroBannersSection';
 import { KeyboardAwareScrollView } from '../components/KeyboardAwareScrollView';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
@@ -112,6 +113,9 @@ export function ArticleDetailScreen({ slug, onLoginRequired }: ArticleDetailScre
             {article.views} {text.views}
             {article.publishedAt ? ` • ${new Date(article.publishedAt).toLocaleDateString()}` : ''}
           </AppText>
+          <View style={styles.bannerSlot}>
+            <HeroBannersSection placement="ARTICLE" flush />
+          </View>
           <AppText style={[styles.articleBody, textAlign]}>{body}</AppText>
 
           <ArticleReactions articleId={article.id} isLoggedIn={isLoggedIn} onLoginRequired={onLoginRequired} />
@@ -175,6 +179,9 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 18,
     color: colors.muted
+  },
+  bannerSlot: {
+    marginBottom: 20
   },
   articleBody: {
     color: colors.ink,

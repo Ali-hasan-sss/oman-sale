@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+import { AdBannerSlot } from '@/components/home/hero-banners-section';
 import { SiteFooter } from '@/components/home/site-footer';
 import { UserSiteHeader } from '@/components/navigation/user-site-header';
 import { FavoriteButton } from '@/components/listings/favorite-button';
@@ -247,6 +248,7 @@ export function StorePublicPage({ slug }: { slug: string }) {
           </section>
 
           <main className="site-container pb-12">
+            <AdBannerSlot placement="STORE" variant="inline" />
             <section className="mb-8">
               <div className="mb-6 flex items-center justify-between gap-4">
                 <h2 className="text-2xl font-black text-gray-900">{text.storeListings}</h2>

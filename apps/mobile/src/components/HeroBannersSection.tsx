@@ -20,6 +20,7 @@ import {
   isHeroBannersLoaded,
   setCachedHeroBanners
 } from '../lib/screen-data-cache';
+import { openWebsitePage } from '../lib/open-external-web';
 import { fetchHeroBanners } from '../services/hero.service';
 import type { HeroBanner } from '../types';
 import { colors, radius, shadow } from '../theme';
@@ -78,10 +79,29 @@ function BannerCard({ banner, width, height, isRtl, onPress }: BannerCardProps) 
   );
 }
 
-export function HeroBannersSection() {
+export type AdBannerPlacement =
+  | 'HOME_BELOW_HERO'
+  | 'HOME_BELOW_CATEGORIES'
+  | 'HOME_BELOW_ARTICLES'
+  | 'CATEGORIES'
+  | 'OFFERS'
+  | 'ARTICLES'
+  | 'ARTICLE'
+  | 'STORES'
+  | 'STORE'
+  | 'SEARCH'
+  | 'LISTING';
+
+type HeroBannersSectionProps = {
+  placement?: AdBannerPlacement;
+  flush?: boolean;
+};
+
+export function HeroBannersSection({ placement = 'HOME_BELOW_HERO', flush = false }: HeroBannersSectionProps) {
   const { locale, t, isRtl } = useI18n();
-  const [banners, setBanners] = useState<HeroBanner[]>(() => getCachedHeroBanners(locale));
-  const [isLoading, setIsLoading] = useState(() => !isHeroBannersLoaded(locale));
+  const showHeading = placement === 'HOME_BELOW_HERO';
+  const [banners, setBanners] = useState<HeroBanner[]>(() => getCachedHeroBanners(locale, placement));
+  const [isLoading, setIsLoading] = useState(() => !isHeroBannersLoaded(locale, placement));
   const [activeIndex, setActiveIndex] = useState(0);
   const [slideWidth, setSlideWidth] = useState(0);
   const listRef = useRef<FlatList<HeroBanner>>(null);
@@ -95,19 +115,20 @@ export function HeroBannersSection() {
 
   useEffect(() => {
     let cancelled = false;
-    const hadCache = isHeroBannersLoaded(locale);
+    const hadCache = isHeroBannersLoaded(locale, placement);
 
     if (hadCache) {
-      setBanners(getCachedHeroBanners(locale));
+      setBanners(getCachedHeroBanners(locale, placement));
       setIsLoading(false);
     } else {
+      setBanners([]);
       setIsLoading(true);
     }
 
-    fetchHeroBanners(locale)
+    fetchHeroBanners(locale, placement)
       .then((items) => {
         if (!cancelled) {
-          setCachedHeroBanners(locale, items);
+          setCachedHeroBanners(locale, items, placement);
           setBanners(items);
           setActiveIndex(0);
           loopIndexRef.current = 0;
@@ -115,7 +136,7 @@ export function HeroBannersSection() {
       })
       .catch(() => {
         if (!cancelled) {
-          setCachedHeroBanners(locale, []);
+          setCachedHeroBanners(locale, [], placement);
           setBanners([]);
           setActiveIndex(0);
           loopIndexRef.current = 0;
@@ -128,7 +149,7 @@ export function HeroBannersSection() {
     return () => {
       cancelled = true;
     };
-  }, [locale]);
+  }, [locale, placement]);
 
   const openLink = (url: string) => {
     const target = normalizeExternalUrl(url);
@@ -217,21 +238,51 @@ export function HeroBannersSection() {
     startAutoPlay();
   };
 
-  if (!isLoading && banners.length === 0) return null;
+  const openAdvertisePage = () => {
+    openWebsitePage(locale, `/banner-ad?placement=${placement}`).catch(() => undefined);
+  };
+
+  if (!isLoading && banners.length === 0) {
+    return (
+      <View style={[styles.section, flush && styles.sectionFlush]}>
+        {showHeading ? (
+          <View style={styles.header}>
+            <AppText style={[styles.title, isRtl ? styles.rtl : styles.ltr]}>{t.home.bannersTitle}</AppText>
+            {t.home.bannersSubtitle ? (
+              <AppText style={[styles.subtitle, isRtl ? styles.rtl : styles.ltr]}>{t.home.bannersSubtitle}</AppText>
+            ) : null}
+          </View>
+        ) : null}
+        <Pressable style={styles.emptyBanner} onPress={openAdvertisePage}>
+          <LinearGradient
+            colors={['#f32b2b', '#ffffff', '#ffffff', '#4bbb78']}
+            locations={[0, 0.36, 0.64, 1]}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={styles.emptyFill}
+          >
+            <AppText style={styles.emptyText}>{t.home.advertiseInBanner}</AppText>
+          </LinearGradient>
+        </Pressable>
+      </View>
+    );
+  }
 
   const bannerSkeletonHeight = slideWidth > 0 ? slideWidth / BANNER_ASPECT : 120;
 
   return (
-    <View style={styles.section}>
-      <View style={styles.header}>
-        <AppText style={[styles.title, isRtl ? styles.rtl : styles.ltr]}>{t.home.bannersTitle}</AppText>
-        {t.home.bannersSubtitle ? (
-          <AppText style={[styles.subtitle, isRtl ? styles.rtl : styles.ltr]}>{t.home.bannersSubtitle}</AppText>
-        ) : null}
-      </View>
+    <View style={[styles.section, flush && styles.sectionFlush]}>
+      {showHeading ? (
+        <View style={styles.header}>
+          <AppText style={[styles.title, isRtl ? styles.rtl : styles.ltr]}>{t.home.bannersTitle}</AppText>
+          {t.home.bannersSubtitle ? (
+            <AppText style={[styles.subtitle, isRtl ? styles.rtl : styles.ltr]}>{t.home.bannersSubtitle}</AppText>
+          ) : null}
+        </View>
+      ) : null}
 
       <View style={[styles.carouselWrap, bannerHeight > 0 && { height: bannerHeight }]} onLayout={handleLayout}>
-        {isLoading && !isHeroBannersLoaded(locale) && banners.length === 0 ? (
+        {isLoading && !isHeroBannersLoaded(locale, placement) && banners.length === 0 ? (
           <HeroBannerSkeleton height={bannerSkeletonHeight} />
         ) : slideWidth > 0 && bannerHeight > 0 ? (
           hasLoop ? (
@@ -294,6 +345,11 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     marginBottom: 4
   },
+  sectionFlush: {
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    marginBottom: 0
+  },
   header: {
     marginBottom: 10
   },
@@ -319,6 +375,24 @@ const styles = StyleSheet.create({
   placeholder: {
     aspectRatio: BANNER_ASPECT,
     backgroundColor: colors.brandSoft
+  },
+  emptyBanner: {
+    width: '100%',
+    aspectRatio: BANNER_ASPECT,
+    borderRadius: radius.lg,
+    overflow: 'hidden'
+  },
+  emptyFill: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16
+  },
+  emptyText: {
+    color: colors.ink,
+    fontSize: 18,
+    fontWeight: '900',
+    textAlign: 'center'
   },
   card: {
     borderRadius: radius.lg,

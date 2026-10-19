@@ -7,6 +7,7 @@ import { asyncHandler } from '../../shared/utils/async-handler';
 import { validateRequest } from '../../shared/validators/validate-request';
 import { bannerRequestsController } from './banner-requests.controller';
 import {
+  bannerPricingQuerySchema,
   confirmThawaniBannerPaymentSchema,
   createBannerRequestSchema,
   quoteBannerRequestSchema
@@ -14,7 +15,11 @@ import {
 
 export const bannerRequestsRoutes = Router();
 
-bannerRequestsRoutes.get('/pricing', asyncHandler(bannerRequestsController.getPricing));
+bannerRequestsRoutes.get(
+  '/pricing',
+  validateRequest({ query: bannerPricingQuerySchema }),
+  asyncHandler(bannerRequestsController.getPricing)
+);
 bannerRequestsRoutes.get(
   '/quote',
   validateRequest({ query: quoteBannerRequestSchema }),

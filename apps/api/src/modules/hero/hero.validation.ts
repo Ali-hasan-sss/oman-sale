@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { imageReferenceSchema } from '../../shared/utils/media-reference';
+import { bannerPlacementSchema } from '../banners/banner-placements';
 
 export const listHeroSlidesQuerySchema = z.object({
   locale: z.enum(['ar', 'en']).optional(),
@@ -39,7 +40,17 @@ export const updateHeroSlideSchema = z.object({
   isActive: z.boolean().optional()
 });
 
+export const listHeroBannersQuerySchema = z.object({
+  locale: z.enum(['ar', 'en']).optional(),
+  placement: bannerPlacementSchema.optional()
+});
+
+export const listAdminHeroBannersQuerySchema = z.object({
+  placement: bannerPlacementSchema.optional()
+});
+
 export const createHeroBannerSchema = z.object({
+  placement: bannerPlacementSchema.optional(),
   sortOrder: z.coerce.number().int().min(0).optional(),
   imageUrl: imageReferenceSchema,
   textAr: z.string().max(200).optional().nullable(),
@@ -56,6 +67,8 @@ export type ListHeroSlidesQuery = z.infer<typeof listHeroSlidesQuerySchema>;
 export type ListAdminHeroSlidesQuery = z.infer<typeof listAdminHeroSlidesQuerySchema>;
 export type CreateHeroBannerInput = z.infer<typeof createHeroBannerSchema>;
 export type UpdateHeroBannerInput = z.infer<typeof updateHeroBannerSchema>;
+export type ListHeroBannersQuery = z.infer<typeof listHeroBannersQuerySchema>;
+export type ListAdminHeroBannersQuery = z.infer<typeof listAdminHeroBannersQuerySchema>;
 
 const headerNavLinkSchema = z
   .string()

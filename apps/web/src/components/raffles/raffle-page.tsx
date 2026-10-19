@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Trophy } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { AdBannerSlot } from '@/components/home/hero-banners-section';
 import { SiteFooter } from '@/components/home/site-footer';
 import { SiteHeaderSearch, UserSiteHeader } from '@/components/navigation/user-site-header';
 import { api } from '@/lib/api';
@@ -75,6 +76,7 @@ export function RafflePage() {
         <SiteHeaderSearch />
       </UserSiteHeader>
       <main className="mx-auto max-w-4xl px-4 py-10">
+        <AdBannerSlot placement="RAFFLE" variant="inline" />
         <div className="rounded-3xl bg-white p-6 shadow-sm md:p-8">
           <div className="mb-6 flex items-center gap-3">
             <div className="rounded-2xl bg-brand-50 p-3 text-brand-700">

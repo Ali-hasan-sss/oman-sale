@@ -103,6 +103,7 @@ export const API_ENDPOINTS = {
   },
   articles: {
     list: '/articles',
+    latest: '/articles/latest',
     categories: '/articles/categories',
     bySlug: (slug: string) => `/articles/${slug}`,
     comments: (articleId: string) => `/articles/${articleId}/comments`,

@@ -12,6 +12,7 @@ import {
 import { AppText } from '../components/AppText';
 import { AppTextInput } from '../components/AppTextInput';
 import { EmptyState } from '../components/EmptyState';
+import { HeroBannersSection } from '../components/HeroBannersSection';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
 import { rowDirection } from '../lib/layout-direction';
@@ -113,6 +114,9 @@ export function NewsScreen({ onOpenArticle }: NewsScreenProps) {
         <View>
           <AppText style={[styles.title, textAlign]}>{text.pageTitle}</AppText>
           <AppText style={[styles.subtitle, textAlign]}>{text.pageSubtitle}</AppText>
+          <View style={styles.bannerSlot}>
+            <HeroBannersSection placement="ARTICLES" flush />
+          </View>
 
           <View style={[styles.searchRow, rowDirection(isRtl)]}>
             <AppTextInput
@@ -201,6 +205,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     color: colors.muted,
     lineHeight: 22
+  },
+  bannerSlot: {
+    marginBottom: 20
   },
   searchRow: {
     gap: 8,

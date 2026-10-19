@@ -1,7 +1,7 @@
 'use client';
 
+import { AdminBannerPlacements } from '@/components/admin/admin-banner-placements';
 import { AdminHeaderButtonsManagement } from '@/components/admin/admin-header-buttons-management';
-import { AdminHeroBannersManagement } from '@/components/admin/admin-hero-banners-management';
 import { AdminHeroManagement } from '@/components/admin/admin-hero-management';
 import { useI18n } from '@/lib/i18n';
 
@@ -39,7 +39,7 @@ export function AdminHeroPage() {
         <AdminHeroManagement />
       </div>
       <div id="hero-banners" className="scroll-mt-24">
-        <AdminHeroBannersManagement />
+        <AdminBannerPlacements />
       </div>
     </div>
   );

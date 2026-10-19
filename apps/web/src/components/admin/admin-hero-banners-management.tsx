@@ -5,6 +5,7 @@ import { FormEvent, useCallback, useEffect, useState } from 'react';
 
 import { ImageUploader } from '@/components/media/image-uploader';
 import { adminApi } from '@/lib/admin-auth';
+import { bannerPlacementCopy, type BannerPlacement } from '@/lib/banner-placements';
 import { useI18n } from '@/lib/i18n';
 import { resolveMediaUrl } from '@/lib/media-url';
 
@@ -29,8 +30,9 @@ const emptyForm = (): HeroBannerForm => ({
   isActive: true
 });
 
-export function AdminHeroBannersManagement() {
-  const { m } = useI18n();
+export function AdminHeroBannersManagement({ placement = 'HOME_BELOW_HERO' }: { placement?: BannerPlacement }) {
+  const { locale, m } = useI18n();
+  const placementLabel = bannerPlacementCopy[placement][locale].admin;
   const [banners, setBanners] = useState<HeroBannerRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,14 +45,16 @@ export function AdminHeroBannersManagement() {
     setLoading(true);
     setError(null);
     try {
-      const response = await adminApi().get<{ data: HeroBannerRecord[] }>('/admin/hero-banners');
+      const response = await adminApi().get<{ data: HeroBannerRecord[] }>('/admin/hero-banners', {
+        params: { placement }
+      });
       setBanners(response.data.data);
     } catch {
       setError(m.admin.bannerLoadError);
     } finally {
       setLoading(false);
     }
-  }, [m.admin.bannerLoadError]);
+  }, [m.admin.bannerLoadError, placement]);
 
   useEffect(() => {
     void loadBanners();
@@ -98,9 +102,9 @@ export function AdminHeroBannersManagement() {
     setError(null);
     try {
       if (editingId) {
-        await adminApi().patch(`/admin/hero-banners/${editingId}`, form);
+        await adminApi().patch(`/admin/hero-banners/${editingId}`, { ...form, placement });
       } else {
-        await adminApi().post('/admin/hero-banners', form);
+        await adminApi().post('/admin/hero-banners', { ...form, placement });
       }
       closeForm();
       await loadBanners();
@@ -127,7 +131,9 @@ export function AdminHeroBannersManagement() {
     <section className="space-y-6 rounded-3xl border border-slate-200 bg-white/70 p-4 shadow-sm md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-black text-slate-900">{m.admin.bannerManagement}</h2>
+          <h3 className="text-xl font-black text-slate-900">
+            {locale === 'ar' ? `صور بنر ${placementLabel}` : `${placementLabel} images`}
+          </h3>
           <p className="mt-1 text-sm text-slate-500">{m.admin.bannerManagementHint}</p>
         </div>
         <button
@@ -254,7 +260,7 @@ export function AdminHeroBannersManagement() {
         <p className="text-sm text-slate-500">{m.admin.loading}</p>
       ) : banners.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center text-sm text-slate-500">
-          {m.admin.bannerEmpty}
+          {locale === 'ar' ? `لا توجد بنرات في «${placementLabel}».` : `No banners in “${placementLabel}”.`}
         </p>
       ) : (
         <div className="grid gap-4">

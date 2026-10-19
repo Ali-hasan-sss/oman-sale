@@ -1,5 +1,6 @@
-import { BannerRequestStatus } from '@prisma/client';
+import { BannerPlacement, BannerRequestStatus } from '@prisma/client';
 
+import { DEFAULT_BANNER_PLACEMENT } from '../banners/banner-placements';
 import { ApiError } from '../../shared/utils/api-error';
 import { resolveMediaUrl } from '../../shared/utils/media-reference';
 import type { BannerRequestIntentPayload } from '../checkout/checkout-intent-materialization.service';
@@ -21,6 +22,7 @@ const mapRequest = (request: NonNullable<Awaited<ReturnType<typeof bannerRequest
   linkUrl: request.linkUrl,
   textAr: request.textAr,
   textEn: request.textEn,
+  placement: request.placement,
   durationDays: request.durationDays,
   totalPrice: Number(request.totalPrice),
   status: request.status,
@@ -42,14 +44,15 @@ const mapRequest = (request: NonNullable<Awaited<ReturnType<typeof bannerRequest
 });
 
 export class BannerRequestsService {
-  async getPricing() {
-    const pricing = await bannerRequestsRepository.getActivePricing();
+  async getPricing(placement: BannerPlacement = DEFAULT_BANNER_PLACEMENT) {
+    const pricing = await bannerRequestsRepository.getPricingByPlacement(placement);
     if (!pricing) {
       throw new ApiError(404, 'Banner pricing is not configured');
     }
 
     return {
       id: pricing.id,
+      placement: pricing.placement,
       pricePerDay: Number(pricing.pricePerDay),
       minDays: pricing.minDays,
       maxDays: pricing.maxDays,
@@ -57,13 +60,17 @@ export class BannerRequestsService {
     };
   }
 
-  async quotePrice(durationDays: number) {
-    const pricing = await this.getPricing();
+  async quotePrice(durationDays: number, placement: BannerPlacement = DEFAULT_BANNER_PLACEMENT) {
+    const pricing = await this.getPricing(placement);
+    if (!pricing.isActive) {
+      throw new ApiError(400, 'Banner advertising is not available for this placement');
+    }
     if (durationDays < pricing.minDays || durationDays > pricing.maxDays) {
       throw new ApiError(400, `Duration must be between ${pricing.minDays} and ${pricing.maxDays} days`);
     }
 
     return {
+      placement: pricing.placement,
       durationDays,
       pricePerDay: pricing.pricePerDay,
       totalPrice: Number((pricing.pricePerDay * durationDays).toFixed(3))
@@ -71,26 +78,24 @@ export class BannerRequestsService {
   }
 
   async updatePricing(input: UpdateBannerPricingInput) {
-    const pricing = await bannerRequestsRepository.getActivePricing();
-    if (!pricing) {
-      throw new ApiError(404, 'Banner pricing is not configured');
-    }
-
-    const minDays = input.minDays ?? pricing.minDays;
-    const maxDays = input.maxDays ?? pricing.maxDays;
+    const placement = input.placement ?? DEFAULT_BANNER_PLACEMENT;
+    const pricing = await bannerRequestsRepository.getPricingByPlacement(placement);
+    const minDays = input.minDays ?? pricing?.minDays ?? 1;
+    const maxDays = input.maxDays ?? pricing?.maxDays ?? 90;
     if (minDays > maxDays) {
       throw new ApiError(400, 'Minimum days cannot exceed maximum days');
     }
 
-    const updated = await bannerRequestsRepository.updatePricing(pricing.id, {
+    const updated = await bannerRequestsRepository.upsertPricing(placement, {
       pricePerDay: input.pricePerDay,
       minDays,
       maxDays,
-      isActive: input.isActive
+      isActive: input.isActive ?? pricing?.isActive ?? true
     });
 
     return {
       id: updated.id,
+      placement: updated.placement,
       pricePerDay: Number(updated.pricePerDay),
       minDays: updated.minDays,
       maxDays: updated.maxDays,
@@ -99,9 +104,11 @@ export class BannerRequestsService {
   }
 
   async createRequest(userId: string, input: CreateBannerRequestInput, locale?: 'ar' | 'en') {
-    const quote = await this.quotePrice(input.durationDays);
+    const placement = input.placement ?? DEFAULT_BANNER_PLACEMENT;
+    const quote = await this.quotePrice(input.durationDays, placement);
 
     const payload: BannerRequestIntentPayload = {
+      placement,
       imageUrl: input.imageUrl.trim(),
       linkUrl: input.linkUrl.trim(),
       textAr: input.textAr?.trim() || null,
@@ -136,7 +143,7 @@ export class BannerRequestsService {
   }
 
   async listForAdmin(query: ListBannerRequestsQuery = {}) {
-    const requests = await bannerRequestsRepository.listForAdmin(query.status);
+    const requests = await bannerRequestsRepository.listForAdmin(query.status, query.placement);
     return requests.map((request) => mapRequest(request as NonNullable<Awaited<ReturnType<typeof bannerRequestsRepository.findById>>>));
   }
 
@@ -152,6 +159,7 @@ export class BannerRequestsService {
 
     const result = await bannerRequestsRepository.approveRequest({
       requestId: request.id,
+      placement: request.placement,
       imageUrl: request.imageUrl,
       linkUrl: request.linkUrl,
       textAr: request.textAr,

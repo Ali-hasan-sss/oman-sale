@@ -15,6 +15,7 @@ import {
 import { AppText } from '../components/AppText';
 import { AppTextInput } from '../components/AppTextInput';
 import { EmptyState } from '../components/EmptyState';
+import { HeroBannersSection } from '../components/HeroBannersSection';
 import { FilterChipsSkeleton, StoreBrowseGridSkeleton } from '../components/skeleton';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
@@ -173,6 +174,7 @@ export function StoresBrowseScreen({ onStorePress }: StoresBrowseScreenProps) {
       <AppText style={[styles.meta, textAlign]}>
         {total.toLocaleString(locale === 'ar' ? 'ar-OM' : 'en-US')} {text.results}
       </AppText>
+      <HeroBannersSection placement="STORES" flush />
 
       <View style={styles.searchRow}>
         <AppTextInput

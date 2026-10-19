@@ -1,4 +1,4 @@
-import { BannerRequestStatus, CheckoutIntentKind } from '@prisma/client';
+import { BannerPlacement, BannerRequestStatus, CheckoutIntentKind } from '@prisma/client';
 
 import { AppEvents } from '../../shared/constants/events';
 import { createSlug } from '../../shared/utils/slug';
@@ -48,6 +48,7 @@ export type ListingPromotionIntentPayload = {
 };
 
 export type BannerRequestIntentPayload = {
+  placement?: BannerPlacement;
   imageUrl: string;
   linkUrl: string;
   textAr?: string | null;
@@ -153,6 +154,7 @@ async function materializeListingPromotion(userId: string, payload: ListingPromo
 async function materializeBannerRequest(userId: string, payload: BannerRequestIntentPayload) {
   const request = await bannerRequestsRepository.createRequest({
     userId,
+    placement: payload.placement ?? BannerPlacement.HOME_BELOW_HERO,
     imageUrl: payload.imageUrl,
     linkUrl: payload.linkUrl,
     textAr: payload.textAr ?? null,

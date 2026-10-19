@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
+import { AdBannerSlot } from '@/components/home/hero-banners-section';
 import { SiteFooter } from '@/components/home/site-footer';
 import { ListingCardsSkeleton } from '@/components/listings/listing-card-skeleton';
 import { ListingMediaCover } from '@/components/listings/listing-media-cover';
@@ -169,6 +170,8 @@ export function GlobalSearchPage() {
             <p className="text-gray-600">{text.hint}</p>
           )}
         </div>
+
+        <AdBannerSlot placement="SEARCH" variant="inline" />
 
         {!query ? null : isLoading ? (
           <div className="space-y-10">

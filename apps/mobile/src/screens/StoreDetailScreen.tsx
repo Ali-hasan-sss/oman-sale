@@ -14,6 +14,7 @@ import {
 import { AppText } from '../components/AppText';
 import { VerifiedBadge } from '../components/VerifiedBadge';
 import { EmptyState } from '../components/EmptyState';
+import { HeroBannersSection } from '../components/HeroBannersSection';
 import { ListingCard } from '../components/ListingCard';
 import { StoreDetailSkeleton } from '../components/skeleton';
 import { useScreenInsets } from '../hooks/use-screen-insets';
@@ -211,6 +212,8 @@ export function StoreDetailScreen({ slug, onListingPress }: StoreDetailScreenPro
           </View>
         ) : null}
       </View>
+
+      <HeroBannersSection placement="STORE" />
 
       <View style={styles.listingsSection}>
         <View style={[styles.listingsHeader, rowDirection(isRtl)]}>

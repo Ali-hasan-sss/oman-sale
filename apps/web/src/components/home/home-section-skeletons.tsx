@@ -27,7 +27,7 @@ export function HeroBannersSkeleton() {
         <div className="mx-auto mt-3 h-4 w-80 max-w-full animate-pulse rounded-full bg-slate-100" />
       </div>
       <div className="mx-auto max-w-[1010px] overflow-hidden rounded-2xl ring-1 ring-slate-200">
-        <div className="aspect-[990/250] w-full animate-pulse bg-slate-200" />
+        <div className="ad-banner-frame animate-pulse bg-slate-200" />
       </div>
       <div className="mx-auto mt-6 flex justify-center">
         <div className="h-11 w-44 animate-pulse rounded-full bg-slate-200" />

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
+import { AdBannerSlot } from '@/components/home/hero-banners-section';
 import { tourismDestinations, tourismFeatures, tourismPageContent } from '@/data/tourism';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
@@ -69,7 +70,9 @@ export function TourismLandmarksPage() {
         <p className="text-gray-600">{content.subtitle}</p>
       </div>
 
-      <div className="mb-12 rounded-xl bg-gradient-to-r from-teal-600 to-blue-600 p-8 text-white md:p-12">
+      <AdBannerSlot placement="TOURISM" variant="inline" />
+
+      <div className="mb-12 rounded-xl bg-gradient-to-r from-brand-700 to-brick-600 p-8 text-white md:p-12">
         <h2 className="mb-4 text-3xl font-bold">{content.heroTitle}</h2>
         <p className="max-w-2xl text-lg leading-8">{content.heroDescription}</p>
       </div>

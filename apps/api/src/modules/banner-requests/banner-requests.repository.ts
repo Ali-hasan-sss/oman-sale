@@ -1,20 +1,25 @@
-import type { BannerRequestStatus, PaymentProvider, Prisma } from '@prisma/client';
+import type { BannerPlacement, BannerRequestStatus, PaymentProvider, Prisma } from '@prisma/client';
 
 import { prisma } from '../../shared/prisma/client';
 
 export class BannerRequestsRepository {
-  getActivePricing() {
-    return prisma.bannerPricing.findFirst({
-      where: { isActive: true },
-      orderBy: { updatedAt: 'desc' }
+  getPricingByPlacement(placement: BannerPlacement) {
+    return prisma.bannerPricing.findUnique({ where: { placement } });
+  }
+
+  upsertPricing(
+    placement: BannerPlacement,
+    data: { pricePerDay: number; minDays: number; maxDays: number; isActive: boolean }
+  ) {
+    return prisma.bannerPricing.upsert({
+      where: { placement },
+      update: data,
+      create: { placement, ...data }
     });
   }
 
-  updatePricing(id: string, data: Prisma.BannerPricingUpdateInput) {
-    return prisma.bannerPricing.update({ where: { id }, data });
-  }
-
   createRequest(data: {
+    placement: BannerPlacement;
     userId: string;
     imageUrl: string;
     linkUrl: string;
@@ -53,9 +58,12 @@ export class BannerRequestsRepository {
     });
   }
 
-  listForAdmin(status?: BannerRequestStatus) {
+  listForAdmin(status?: BannerRequestStatus, placement?: BannerPlacement) {
     return prisma.bannerRequest.findMany({
-      where: status ? { status } : undefined,
+      where: {
+        ...(status ? { status } : {}),
+        ...(placement ? { placement } : {})
+      },
       include: {
         user: { select: { id: true, fullName: true, email: true } },
         payment: true,
@@ -108,14 +116,9 @@ export class BannerRequestsRepository {
     });
   }
 
-  getNextBannerSortOrder() {
-    return prisma.heroBanner
-      .aggregate({ _max: { sortOrder: true } })
-      .then((result) => (result._max.sortOrder ?? -1) + 1);
-  }
-
   approveRequest(input: {
     requestId: string;
+    placement: BannerPlacement;
     imageUrl: string;
     linkUrl: string;
     textAr?: string | null;
@@ -125,11 +128,12 @@ export class BannerRequestsRepository {
   }) {
     return prisma.$transaction(async (tx) => {
       const sortOrder = await tx.heroBanner
-        .aggregate({ _max: { sortOrder: true } })
+        .aggregate({ where: { placement: input.placement }, _max: { sortOrder: true } })
         .then((result) => (result._max.sortOrder ?? -1) + 1);
 
       const banner = await tx.heroBanner.create({
         data: {
+          placement: input.placement,
           sortOrder,
           imageUrl: input.imageUrl,
           linkUrl: input.linkUrl,

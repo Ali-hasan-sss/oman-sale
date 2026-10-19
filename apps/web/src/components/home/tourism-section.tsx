@@ -108,7 +108,7 @@ export function TourismSection() {
 
   return (
     <>
-      <section className="mb-14 overflow-hidden rounded-3xl bg-gradient-to-br from-brand-800 to-teal-950 p-8 text-white md:p-12">
+      <section className="mb-14 overflow-hidden rounded-3xl bg-gradient-to-br from-brand-800 to-brick-800 p-8 text-white md:p-12">
         <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-2">
           <div className="grid grid-cols-2 gap-4">
             {experiences.map((experience, index) => {

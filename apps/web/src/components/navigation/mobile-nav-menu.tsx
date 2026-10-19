@@ -69,7 +69,7 @@ export function MobileNavMenu({ variant = 'light' }: MobileNavMenuProps) {
               <Link
                 href={localizedPath('/add-listing')}
                 onClick={() => setIsOpen(false)}
-                className="mt-4 block rounded-xl bg-green-600 px-4 py-3 text-center font-bold text-white transition hover:bg-green-700"
+                className="btn-quick-sell mt-4 block rounded-xl px-4 py-3 text-center font-bold transition"
               >
                 {m.common.addListing}
               </Link>

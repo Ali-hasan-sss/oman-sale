@@ -14,6 +14,7 @@ import {
 } from '../categories/categories.validation';
 import { bannerRequestsController } from '../banner-requests/banner-requests.controller';
 import {
+  bannerPricingQuerySchema,
   listBannerRequestsQuerySchema,
   rejectBannerRequestSchema,
   updateBannerPricingSchema
@@ -28,6 +29,7 @@ import {
   createHeaderNavButtonSchema,
   createHeroBannerSchema,
   createHeroSlideSchema,
+  listAdminHeroBannersQuerySchema,
   listAdminHeroSlidesQuerySchema,
   updateHeaderNavButtonSchema,
   updateHeroBannerSchema,
@@ -233,7 +235,11 @@ adminRoutes.delete(
   validateRequest({ params: idParams }),
   asyncHandler(heroController.deleteHeaderButton)
 );
-adminRoutes.get('/hero-banners', asyncHandler(heroController.listBannersForAdmin));
+adminRoutes.get(
+  '/hero-banners',
+  validateRequest({ query: listAdminHeroBannersQuerySchema }),
+  asyncHandler(heroController.listBannersForAdmin)
+);
 adminRoutes.get(
   '/hero-banners/:id',
   validateRequest({ params: idParams }),
@@ -259,6 +265,7 @@ adminRoutes.delete(
 );
 adminRoutes.get(
   '/banner-pricing',
+  validateRequest({ query: bannerPricingQuerySchema }),
   asyncHandler(bannerRequestsController.getPricing)
 );
 adminRoutes.patch(

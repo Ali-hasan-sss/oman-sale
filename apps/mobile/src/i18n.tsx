@@ -32,6 +32,7 @@ const dictionary = {
       guest: 'زائر',
       guestHint: 'تصفح كزائر أو سجل الدخول لمتابعة إعلاناتك',
       viewAll: 'عرض الكل',
+      allListings: 'جميع الإعلانات',
       featured: 'مميز',
       pricing: {
         vatShort: 'ضريبة القيمة المضافة',
@@ -86,13 +87,39 @@ const dictionary = {
       headline: 'بيع واشتري في عُمان بسهولة',
       subtitle: 'منصة موحدة للمنتجات والخدمات والوظائف وكل أنواع الإعلانات.',
       cta: 'ابدأ التصفح',
-      bannersTitle: 'إعلانات مميزة',
-      bannersSubtitle: 'اكتشف إعلانات مختارة بعناية لتناسب اهتماماتك.',
+      bannersTitle: 'عروض مميزة',
+      bannersSubtitle: 'اكتشف عروضاً وإعلانات مختارة بعناية لتناسب اهتماماتك.',
+      advertiseInBanner: 'أعلن في هذا البنر',
       latest: 'أحدث الإعلانات',
       categories: 'الأقسام',
+      categoriesTitle: 'تصفح الفئات',
+      categoriesSubtitle: 'اكتشف آلاف الإعلانات في مختلف الفئات',
+      adCount: 'إعلان',
       stores: 'المتاجر',
       createStoreTitle: 'افتح متجرك على Oman Sale',
-      createStoreSubtitle: 'اختر فئتك الرئيسية، حدّد خطة الاشتراك، وابدأ البيع مباشرة بعد الدفع أو خلال الفترة التجريبية.'
+      createStoreSubtitle: 'اختر فئتك الرئيسية، حدّد خطة الاشتراك، وابدأ البيع مباشرة بعد الدفع أو خلال الفترة التجريبية.',
+      tourismTitle: 'اكتشف جمال سلطنة عمان',
+      tourismDescription: 'انطلق في رحلة استكشافية عبر أجمل المناظر الطبيعية والتجارب الثقافية الفريدة، من الجبال الشاهقة إلى الصحاري الذهبية والقلاع التاريخية.',
+      experiences: [
+        ['تطلعات بحرية', 'استكشف الشواطئ والمضايق البحرية'],
+        ['تخييم صحراوي', 'تجربة أصيلة في قلب الصحراء'],
+        ['مغامرة جبلية', 'تسلق الجبال واستكشف الوديان'],
+        ['تجارب تاريخية', 'اكتشف التراث والثقافة العمانية']
+      ] as [string, string][],
+      exploreOman: 'استكشف عمان',
+      destinationsTitle: 'مناطق سلطنة عمان',
+      destinationsSubtitle: 'اكتشف أجمل المناطق والوجهات السياحية في السلطنة',
+      destinations: ['نزوى', 'مسندم', 'صلالة', 'مسقط', 'جبل شمس', 'رمال الشرقية', 'صحار', 'صور'],
+      whyTitle: 'لماذا Oman Sale؟',
+      whySubtitle: 'نوفر لك أفضل تجربة بيع وشراء في سلطنة عمان',
+      features: [
+        ['دعم متواصل', 'فريق دعم متاح لمساعدتك في البيع والشراء وإدارة إعلاناتك.'],
+        ['تغطية شاملة', 'نغطي جميع مناطق سلطنة عمان من مسقط إلى صلالة.'],
+        ['سريع وسهل', 'انشر إعلانك في دقائق وتواصل مع المشترين فورًا.'],
+        ['آمن وموثوق', 'تجربة مصممة للبلاغات والمراجعة والتوثيق وحماية المستخدمين.']
+      ] as [string, string][],
+      footerDescription: 'منصة Oman Sale هي سوق إلكتروني حديث في سلطنة عمان للبيع والشراء ونشر الخدمات والوظائف.',
+      footerLocation: 'مسقط، سلطنة عمان'
     },
     auth: {
       welcome: 'مرحبًا بك',
@@ -367,6 +394,10 @@ const dictionary = {
       loading: 'جاري التحميل...'
     },
     articles: {
+      sectionLabel: 'الأخبار',
+      sectionTitle: 'أحدث المقالات',
+      sectionSubtitle: 'اقرأ آخر الأخبار والمقالات من مختلف مجالات الحياة',
+      viewAll: 'عرض الكل',
       pageTitle: 'الأخبار',
       pageSubtitle: 'جميع المقالات مرتبة من الأحدث إلى الأقدم',
       allCategories: 'جميع التصنيفات',
@@ -657,6 +688,7 @@ const dictionary = {
       guest: 'Guest',
       guestHint: 'Browse as a guest or log in to manage your listings',
       viewAll: 'View all',
+      allListings: 'All listings',
       featured: 'Featured',
       pricing: {
         vatShort: 'VAT',
@@ -711,13 +743,39 @@ const dictionary = {
       headline: 'Buy and sell in Oman with ease',
       subtitle: 'A unified platform for products, services, jobs, and every kind of listing.',
       cta: 'Start browsing',
-      bannersTitle: 'Featured listings',
-      bannersSubtitle: 'Discover highlighted listings selected for you.',
+      bannersTitle: 'Featured Offers',
+      bannersSubtitle: 'Discover highlighted deals and announcements selected for you.',
+      advertiseInBanner: 'Advertise in this banner',
       latest: 'Latest listings',
       categories: 'Categories',
+      categoriesTitle: 'Browse categories',
+      categoriesSubtitle: 'Discover thousands of listings across all categories',
+      adCount: 'listings',
       stores: 'Stores',
       createStoreTitle: 'Open your store on Oman Sale',
-      createStoreSubtitle: 'Choose your main category, pick a subscription plan, and start selling after payment or during the free trial.'
+      createStoreSubtitle: 'Choose your main category, pick a subscription plan, and start selling after payment or during the free trial.',
+      tourismTitle: 'Discover the beauty of Oman',
+      tourismDescription: 'Start a journey through unique landscapes and culture, from high mountains to golden deserts and historic forts.',
+      experiences: [
+        ['Sea views', 'Explore beaches and sea fjords'],
+        ['Desert camping', 'An authentic experience in the heart of the desert'],
+        ['Mountain adventure', 'Climb mountains and explore wadis'],
+        ['Historic experiences', 'Discover Omani heritage and culture']
+      ] as [string, string][],
+      exploreOman: 'Explore Oman',
+      destinationsTitle: 'Regions of Oman',
+      destinationsSubtitle: 'Discover the most beautiful destinations in the Sultanate',
+      destinations: ['Nizwa', 'Musandam', 'Salalah', 'Muscat', 'Jebel Shams', 'Sharqiya Sands', 'Sohar', 'Sur'],
+      whyTitle: 'Why Oman Sale?',
+      whySubtitle: 'We provide the best buying and selling experience in Oman',
+      features: [
+        ['Continuous support', 'A support team ready to help with buying, selling and managing listings.'],
+        ['Full coverage', 'We cover every region in Oman from Muscat to Salalah.'],
+        ['Fast and simple', 'Publish your ad in minutes and connect with buyers immediately.'],
+        ['Safe and trusted', 'Built for reports, reviews, verification and user protection.']
+      ] as [string, string][],
+      footerDescription: 'Oman Sale is a modern marketplace in Oman for buying, selling, services and jobs.',
+      footerLocation: 'Muscat, Sultanate of Oman'
     },
     auth: {
       welcome: 'Welcome',
@@ -992,6 +1050,10 @@ const dictionary = {
       loading: 'Loading...'
     },
     articles: {
+      sectionLabel: 'News',
+      sectionTitle: 'Latest articles',
+      sectionSubtitle: 'Read the latest news and articles across everyday topics',
+      viewAll: 'View all',
       pageTitle: 'News',
       pageSubtitle: 'All articles sorted from newest to oldest',
       allCategories: 'All categories',

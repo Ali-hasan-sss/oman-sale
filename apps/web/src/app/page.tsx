@@ -2,7 +2,7 @@ import { ArticlesSection } from '@/components/articles/articles-section';
 import { CategoriesSection } from '@/components/home/categories-section';
 import { CategoryBar } from '@/components/home/category-bar';
 import { CreateStoreBanner } from '@/components/home/create-store-banner';
-import { HeroBannersSection } from '@/components/home/hero-banners-section';
+import { AdBannerSlot, HeroBannersSection } from '@/components/home/hero-banners-section';
 import { HeroSection } from '@/components/home/hero-section';
 import { HomeScrollRestoration } from '@/components/home/home-scroll-restoration';
 import { LatestListingsSection } from '@/components/home/latest-listings-section';
@@ -20,8 +20,10 @@ export default function HomePage() {
         <CreateStoreBanner />
         <main className="site-container site-page-main min-w-0">
           <CategoriesSection />
+          <AdBannerSlot placement="HOME_BELOW_CATEGORIES" variant="embedded" />
           <LatestListingsSection />
           <ArticlesSection />
+          <AdBannerSlot placement="HOME_BELOW_ARTICLES" variant="embedded" />
           <TourismSection />
         </main>
         <WhyOmanSaleSection />

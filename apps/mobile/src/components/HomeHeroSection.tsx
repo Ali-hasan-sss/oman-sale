@@ -9,6 +9,7 @@ import {
   NativeSyntheticEvent,
   Pressable,
   StyleSheet,
+  useWindowDimensions,
   View,
   type LayoutChangeEvent
 } from 'react-native';
@@ -16,7 +17,6 @@ import {
 import { AppText } from './AppText';
 import { HomeHeroSkeleton } from './skeleton';
 import { useI18n } from '../i18n';
-import { alignSelfStart } from '../lib/layout-direction';
 import {
   getCachedHeroSlides,
   isHeroSlidesLoaded,
@@ -24,14 +24,13 @@ import {
 } from '../lib/screen-data-cache';
 import { fetchHeroSlides } from '../services/hero.service';
 import type { HeroSlide } from '../types';
-import { colors, radius, shadow } from '../theme';
+import { radius } from '../theme';
 
 type HomeHeroSectionProps = {
   onBrowseOffers: () => void;
 };
 
-const SLIDE_INTERVAL_MS = 3000;
-const HERO_HEIGHT = 220;
+const SLIDE_INTERVAL_MS = 5500;
 
 const resolveHeroAction = (link: string, onBrowseOffers: () => void) => {
   if (/^https?:\/\//i.test(link)) {
@@ -60,55 +59,52 @@ const loopIndexToReal = (loopIndex: number, slideCount: number) => {
 type HeroSlideCardProps = {
   slide: HeroSlide;
   width: number;
-  isRtl: boolean;
+  height: number;
   isCarousel?: boolean;
   onBrowseOffers: () => void;
 };
 
-function HeroSlideCard({ slide, width, isRtl, isCarousel, onBrowseOffers }: HeroSlideCardProps) {
+function HeroSlideCard({ slide, width, height, isCarousel, onBrowseOffers }: HeroSlideCardProps) {
   const content = (
     <>
-      <AppText style={[styles.heroTitle, isRtl ? styles.rtl : styles.ltr]} numberOfLines={2}>
+      <AppText style={styles.heroTitle} numberOfLines={3}>
         {slide.title}
       </AppText>
-      <AppText style={[styles.heroSubtitle, isRtl ? styles.rtl : styles.ltr]} numberOfLines={3}>
+      <AppText style={styles.heroSubtitle} numberOfLines={3}>
         {slide.subtitle}
       </AppText>
-      <Pressable
-        style={[styles.heroButton, alignSelfStart(isRtl)]}
-        onPress={() => resolveHeroAction(slide.buttonLink, onBrowseOffers)}
-      >
+      <Pressable style={styles.heroButton} onPress={() => resolveHeroAction(slide.buttonLink, onBrowseOffers)}>
         <AppText style={styles.heroButtonText}>{slide.buttonLabel}</AppText>
       </Pressable>
     </>
   );
 
+  const overlay = (
+    <LinearGradient
+      colors={['rgba(0,0,0,0.55)', 'rgba(0,0,0,0.35)', 'rgba(0,0,0,0.62)']}
+      style={[styles.heroOverlay, { height }, isCarousel && styles.heroOverlayCarousel]}
+    >
+      {content}
+    </LinearGradient>
+  );
+
   if (slide.imageUrl) {
     return (
-      <View style={[styles.slide, { width }]}>
-        <ImageBackground
-          source={{ uri: slide.imageUrl }}
-          style={styles.heroImage}
-          imageStyle={styles.heroImageFill}
-          resizeMode="cover"
-        >
-          <View style={[styles.heroOverlay, isCarousel && styles.heroOverlayCarousel]}>{content}</View>
+      <View style={[styles.slide, { width, height }]}>
+        <ImageBackground source={{ uri: slide.imageUrl }} style={{ width, height }} resizeMode="cover">
+          {overlay}
         </ImageBackground>
       </View>
     );
   }
 
-  return (
-    <View style={[styles.slide, { width }]}>
-      <LinearGradient colors={[colors.brand, colors.brandDark]} style={[styles.heroFill, isCarousel && styles.heroOverlayCarousel]}>
-        {content}
-      </LinearGradient>
-    </View>
-  );
+  return <View style={[styles.slide, { width, height }]}>{overlay}</View>;
 }
 
 export function HomeHeroSection({ onBrowseOffers }: HomeHeroSectionProps) {
-  const { locale, t, isRtl } = useI18n();
+  const { locale, t } = useI18n();
+  const { height: windowHeight } = useWindowDimensions();
+  const heroHeight = Math.max(460, Math.round(windowHeight * 0.72));
   const [slides, setSlides] = useState<HeroSlide[]>(() => getCachedHeroSlides(locale));
   const [isLoadingApi, setIsLoadingApi] = useState(() => !isHeroSlidesLoaded(locale));
   const [activeIndex, setActiveIndex] = useState(0);
@@ -284,26 +280,31 @@ export function HomeHeroSection({ onBrowseOffers }: HomeHeroSectionProps) {
 
   if (isLoadingApi && !isHeroSlidesLoaded(locale) && slides.length === 0) {
     return (
-      <View style={styles.wrapper} onLayout={handleLayout}>
-        <HomeHeroSkeleton embedded />
+      <View style={[styles.wrapper, { height: heroHeight }]} onLayout={handleLayout}>
+        <HomeHeroSkeleton height={heroHeight} embedded />
       </View>
     );
   }
 
   if (!hasLoop) {
     return (
-      <View style={styles.wrapper} onLayout={handleLayout}>
+      <View style={[styles.wrapper, { height: heroHeight }]} onLayout={handleLayout}>
         {slideWidth > 0 ? (
-          <HeroSlideCard slide={displaySlides[0]!} width={slideWidth} isRtl={isRtl} onBrowseOffers={onBrowseOffers} />
+          <HeroSlideCard
+            slide={displaySlides[0]!}
+            width={slideWidth}
+            height={heroHeight}
+            onBrowseOffers={onBrowseOffers}
+          />
         ) : (
-          <View style={styles.heightPlaceholder} />
+          <View style={[styles.heightPlaceholder, { height: heroHeight }]} />
         )}
       </View>
     );
   }
 
   return (
-    <View style={styles.wrapper} onLayout={handleLayout}>
+    <View style={[styles.wrapper, { height: heroHeight }]} onLayout={handleLayout}>
       {slideWidth > 0 ? (
         <FlatList
           ref={listRef}
@@ -321,11 +322,17 @@ export function HomeHeroSection({ onBrowseOffers }: HomeHeroSectionProps) {
           scrollEventThrottle={16}
           onMomentumScrollEnd={handleLoopScrollEnd}
           renderItem={({ item }) => (
-            <HeroSlideCard slide={item} width={slideWidth} isRtl={isRtl} isCarousel onBrowseOffers={onBrowseOffers} />
+            <HeroSlideCard
+              slide={item}
+              width={slideWidth}
+              height={heroHeight}
+              isCarousel
+              onBrowseOffers={onBrowseOffers}
+            />
           )}
         />
       ) : (
-        <View style={styles.heightPlaceholder} />
+        <View style={[styles.heightPlaceholder, { height: heroHeight }]} />
       )}
 
       <View style={styles.dots}>
@@ -344,71 +351,50 @@ export function HomeHeroSection({ onBrowseOffers }: HomeHeroSectionProps) {
 
 const styles = StyleSheet.create({
   wrapper: {
-    margin: 16,
-    borderRadius: radius.lg,
     overflow: 'hidden',
-    height: HERO_HEIGHT,
-    ...shadow
+    backgroundColor: '#0f172a'
   },
   heightPlaceholder: {
-    height: HERO_HEIGHT,
-    backgroundColor: colors.brandDark
+    backgroundColor: '#0f172a'
   },
   slide: {
-    height: HERO_HEIGHT,
     overflow: 'hidden',
-    backgroundColor: colors.brandDark
-  },
-  heroFill: {
-    flex: 1,
-    height: HERO_HEIGHT,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    justifyContent: 'center'
-  },
-  heroImage: {
-    width: '100%',
-    height: HERO_HEIGHT,
-    backgroundColor: colors.brandDark
-  },
-  heroImageFill: {
-    width: '100%',
-    height: '100%'
+    backgroundColor: '#0f172a'
   },
   heroOverlay: {
-    flex: 1,
-    height: HERO_HEIGHT,
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 14,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    alignItems: 'center',
     justifyContent: 'center'
   },
   heroOverlayCarousel: {
-    paddingBottom: 28
+    paddingBottom: 36
   },
   heroTitle: {
     color: '#fff',
-    fontSize: 20,
+    fontSize: 32,
     fontWeight: '900',
-    marginBottom: 6,
-    lineHeight: 26
+    marginBottom: 12,
+    lineHeight: 40,
+    textAlign: 'center'
   },
   heroSubtitle: {
     color: 'rgba(255,255,255,0.92)',
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: 12
+    fontSize: 16,
+    lineHeight: 24,
+    marginBottom: 22,
+    textAlign: 'center'
   },
   heroButton: {
     backgroundColor: '#fff',
-    borderRadius: radius.md,
-    paddingHorizontal: 14,
-    paddingVertical: 9
+    borderRadius: 12,
+    paddingHorizontal: 28,
+    paddingVertical: 12
   },
   heroButtonText: {
-    color: colors.brandDark,
+    color: '#0f172a',
     fontWeight: '900',
-    fontSize: 13
+    fontSize: 15
   },
   dots: {
     position: 'absolute',
@@ -430,11 +416,5 @@ const styles = StyleSheet.create({
   dotInactive: {
     width: 8,
     backgroundColor: 'rgba(255,255,255,0.5)'
-  },
-  rtl: {
-    textAlign: 'right'
-  },
-  ltr: {
-    textAlign: 'left'
   }
 });

@@ -8,6 +8,7 @@ import { ArticleComments } from '@/components/articles/article-comments';
 import { ArticleDetailSkeleton } from '@/components/articles/article-skeleton';
 import { ArticleReactions } from '@/components/articles/article-reactions';
 import { ArticleSaveButton } from '@/components/articles/article-save-button';
+import { AdBannerSlot } from '@/components/home/hero-banners-section';
 import { SiteFooter } from '@/components/home/site-footer';
 import { ListingImageGalleryModal } from '@/components/listings/listing-image-gallery-modal';
 import { UserSiteHeader } from '@/components/navigation/user-site-header';
@@ -132,6 +133,7 @@ export function ArticleDetailsPage({ slug }: ArticleDetailsPageProps) {
     <div className="site-page-shell bg-slate-50">
       <UserSiteHeader />
       <main className="site-container site-page-main min-w-0">
+        <AdBannerSlot placement="ARTICLE" variant="inline" />
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:items-start lg:gap-6">
           {/* عمود الصور */}
           <div className="lg:sticky lg:top-24">

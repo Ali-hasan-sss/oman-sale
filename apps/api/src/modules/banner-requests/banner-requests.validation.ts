@@ -2,8 +2,10 @@ import { BannerRequestStatus } from '@prisma/client';
 import { z } from 'zod';
 
 import { imageReferenceSchema } from '../../shared/utils/media-reference';
+import { bannerPlacementSchema } from '../banners/banner-placements';
 
 export const createBannerRequestSchema = z.object({
+  placement: bannerPlacementSchema.optional(),
   imageUrl: imageReferenceSchema,
   linkUrl: z.string().trim().min(1).max(500),
   textAr: z.string().trim().max(200).optional(),
@@ -12,14 +14,20 @@ export const createBannerRequestSchema = z.object({
 });
 
 export const updateBannerPricingSchema = z.object({
+  placement: bannerPlacementSchema.optional(),
   pricePerDay: z.coerce.number().positive(),
   minDays: z.coerce.number().int().min(1).max(365).optional(),
   maxDays: z.coerce.number().int().min(1).max(365).optional(),
   isActive: z.boolean().optional()
 });
 
+export const bannerPricingQuerySchema = z.object({
+  placement: bannerPlacementSchema.optional()
+});
+
 export const listBannerRequestsQuerySchema = z.object({
-  status: z.nativeEnum(BannerRequestStatus).optional()
+  status: z.nativeEnum(BannerRequestStatus).optional(),
+  placement: bannerPlacementSchema.optional()
 });
 
 export const rejectBannerRequestSchema = z.object({
@@ -31,7 +39,8 @@ export const confirmThawaniBannerPaymentSchema = z.object({
 });
 
 export const quoteBannerRequestSchema = z.object({
-  durationDays: z.coerce.number().int().min(1).max(365)
+  durationDays: z.coerce.number().int().min(1).max(365),
+  placement: bannerPlacementSchema.optional()
 });
 
 export type CreateBannerRequestInput = z.infer<typeof createBannerRequestSchema>;

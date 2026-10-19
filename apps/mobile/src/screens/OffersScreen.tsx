@@ -4,6 +4,7 @@ import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, View } from 'r
 import { AppText } from '../components/AppText';
 import { AppTextInput } from '../components/AppTextInput';
 import { EmptyState } from '../components/EmptyState';
+import { HeroBannersSection } from '../components/HeroBannersSection';
 import { ListingCard } from '../components/ListingCard';
 import { ListingListSkeleton } from '../components/skeleton';
 import { useScreenInsets } from '../hooks/use-screen-insets';
@@ -64,6 +65,9 @@ export function OffersScreen({ onListingPress, onStorePress }: OffersScreenProps
         placeholderTextColor={colors.muted}
         style={[styles.search, isRtl ? styles.searchRtl : styles.searchLtr]}
       />
+      <View style={styles.bannerSlot}>
+        <HeroBannersSection placement="OFFERS" flush />
+      </View>
     </View>
   );
 
@@ -141,6 +145,9 @@ const styles = StyleSheet.create({
   },
   searchLtr: {
     textAlign: 'left'
+  },
+  bannerSlot: {
+    marginBottom: 20
   },
   footerLoader: {
     marginVertical: 20

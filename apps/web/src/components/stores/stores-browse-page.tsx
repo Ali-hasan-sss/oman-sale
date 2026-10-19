@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
+import { AdBannerSlot } from '@/components/home/hero-banners-section';
 import { SiteFooter } from '@/components/home/site-footer';
 import { FilterChipsSkeleton, StoreCardsSkeleton } from '@/components/stores/store-card-skeleton';
 import { VerifiedBadge } from '@/components/trust-badge/verified-badge';
@@ -142,6 +143,8 @@ export function StoresBrowsePage() {
             {total.toLocaleString(locale === 'ar' ? 'ar-OM' : 'en-US')} {text.results}
           </p>
         </div>
+
+        <AdBannerSlot placement="STORES" variant="inline" />
 
         <div className="filter-chips-shell -mx-4 mb-6 px-4 lg:hidden">
           {isLoadingStoreTypes ? (

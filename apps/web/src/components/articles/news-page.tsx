@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 
 import { ArticleCard, type ArticleCardData } from '@/components/articles/article-card';
 import { ArticleCardsSkeleton } from '@/components/articles/article-skeleton';
+import { AdBannerSlot } from '@/components/home/hero-banners-section';
 import { SiteFooter } from '@/components/home/site-footer';
 import { SiteHeaderSearch, UserSiteHeader } from '@/components/navigation/user-site-header';
 import { FilterChipsSkeleton } from '@/components/stores/store-card-skeleton';
@@ -128,6 +129,8 @@ export function NewsPage() {
             </p>
           ) : null}
         </div>
+
+        <AdBannerSlot placement="ARTICLES" variant="inline" />
 
         <div className="filter-chips-shell -mx-3 mb-6 px-3 sm:mx-0 sm:px-0">
           {loadingCategories ? (

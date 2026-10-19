@@ -35,18 +35,18 @@ export function setCachedHeroSlides(locale: string, slides: HeroSlide[]) {
   heroSlidesCache = slides;
 }
 
-let heroBannersCache: HeroBanner[] = [];
-let heroBannersLocale: string | null = null;
+const heroBannersCache = new Map<string, HeroBanner[]>();
 
-export function getCachedHeroBanners(locale: string) {
-  return heroBannersLocale === locale ? heroBannersCache : [];
+const heroBannersCacheKey = (locale: string, placement: string) => `${locale}:${placement}`;
+
+export function getCachedHeroBanners(locale: string, placement = 'HOME_BELOW_HERO') {
+  return heroBannersCache.get(heroBannersCacheKey(locale, placement)) ?? [];
 }
 
-export function isHeroBannersLoaded(locale: string) {
-  return heroBannersLocale === locale;
+export function isHeroBannersLoaded(locale: string, placement = 'HOME_BELOW_HERO') {
+  return heroBannersCache.has(heroBannersCacheKey(locale, placement));
 }
 
-export function setCachedHeroBanners(locale: string, banners: HeroBanner[]) {
-  heroBannersLocale = locale;
-  heroBannersCache = banners;
+export function setCachedHeroBanners(locale: string, banners: HeroBanner[], placement = 'HOME_BELOW_HERO') {
+  heroBannersCache.set(heroBannersCacheKey(locale, placement), banners);
 }

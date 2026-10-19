@@ -279,6 +279,12 @@ export function MainShell() {
     onBrowseOffers: () => navigate('offers'),
     onListingPress: openListingDetail,
     onCategoryPress: openCategoryOffers,
+    onCreateStore: () => navigate('addStore'),
+    onBrowseNews: () => navigate('news'),
+    onArticlePress: openArticleDetail,
+    onOpenTerms: () => pushScreen('terms'),
+    onOpenPrivacy: () => pushScreen('privacy'),
+    onOpenRefund: () => pushScreen('refund'),
     onBrowseStores: () => pushScreen('storesBrowse'),
     onStorePress: openStoreDetail
   };

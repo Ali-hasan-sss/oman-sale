@@ -1,0 +1,48 @@
+# EAS reads ONLY this file at the git repository root.
+# Nested .gitignore / apps/mobile/.easignore are ignored when this exists.
+
+# Dependencies and caches
+node_modules
+.turbo
+coverage
+.next
+dist
+*.log
+
+# Local env (EAS uses eas.json env + secrets)
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# Server / docker data
+postgres-data
+redis-data
+uploads
+
+# Native trees generated locally — EAS prebuild recreates them
+**/android
+**/ios
+**/.expo
+apps/mobile/build-output
+apps/mobile/.expo-export-test
+
+# Other workspace build output
+apps/web/.next
+apps/web/out
+apps/api/dist
+
+# Binaries and local signing secrets
+*.apk
+*.aab
+*.ipa
+*.keystore
+*.jks
+*.p12
+*.p8
+apps/mobile/credentials.json
+apps/mobile/credentials/
+
+# Firebase configs are gitignored but required on EAS workers
+!apps/mobile/google-services.json
+!apps/mobile/GoogleService-Info.plist

@@ -1,9 +1,9 @@
 import { API_ENDPOINTS, http, type ApiEnvelope } from '../lib/api';
 import type { HeroBanner, HeroSlide, Locale } from '../types';
 
-export async function fetchHeroBanners(locale: Locale) {
+export async function fetchHeroBanners(locale: Locale, placement = 'HOME_BELOW_HERO') {
   const response = await http.get<ApiEnvelope<HeroBanner[]>>(API_ENDPOINTS.hero.banners, {
-    params: { locale }
+    params: { locale, placement }
   });
   return response.data.data;
 }

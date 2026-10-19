@@ -3,7 +3,7 @@ import { Router } from 'express';
 import { asyncHandler } from '../../shared/utils/async-handler';
 import { validateRequest } from '../../shared/validators/validate-request';
 import { heroController } from './hero.controller';
-import { listHeaderNavButtonsQuerySchema, listHeroSlidesQuerySchema } from './hero.validation';
+import { listHeaderNavButtonsQuerySchema, listHeroBannersQuerySchema, listHeroSlidesQuerySchema } from './hero.validation';
 
 export const heroRoutes = Router();
 
@@ -15,7 +15,7 @@ heroRoutes.get(
 
 heroRoutes.get(
   '/banners',
-  validateRequest({ query: listHeroSlidesQuerySchema }),
+  validateRequest({ query: listHeroBannersQuerySchema }),
   asyncHandler(heroController.listBannersPublic)
 );
 

@@ -23,8 +23,8 @@ export function UserSiteHeaderNav({ variant = 'default' }: UserSiteHeaderNavProp
 
   const primary =
     variant === 'hero'
-      ? 'whitespace-nowrap rounded-lg bg-brand-600 px-2 py-1.5 text-xs font-bold text-white shadow-lg transition hover:bg-brand-700 sm:px-2.5 sm:py-2 lg:px-4 lg:text-sm'
-      : 'whitespace-nowrap rounded-lg bg-green-600 px-2 py-1.5 text-xs font-bold text-white transition hover:bg-green-700 sm:px-2.5 sm:py-2 lg:px-4 lg:text-sm';
+      ? 'btn-quick-sell whitespace-nowrap rounded-lg px-2 py-1.5 text-xs font-bold shadow-lg transition sm:px-2.5 sm:py-2 lg:px-4 lg:text-sm'
+      : 'btn-quick-sell whitespace-nowrap rounded-lg px-2 py-1.5 text-xs font-bold transition sm:px-2.5 sm:py-2 lg:px-4 lg:text-sm';
 
   return (
     <nav className="hidden min-w-0 md:flex md:flex-1 md:items-center md:justify-end md:gap-1.5 lg:gap-2 xl:gap-3">

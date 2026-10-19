@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { AdBannerSlot } from '@/components/home/hero-banners-section';
 import { SiteFooter } from '@/components/home/site-footer';
 import { SiteHeaderSearch, UserSiteHeader } from '@/components/navigation/user-site-header';
 import { AvatarWithBanBadge } from '@/components/ui/avatar-with-ban-badge';
@@ -397,6 +398,7 @@ export function ListingDetailsPage({ id }: { id: string }) {
       </UserSiteHeader>
 
       <main className="site-container site-page-main min-w-0">
+        <AdBannerSlot placement="LISTING" variant="inline" />
         {isLoading ? (
           <ListingDetailSkeleton />
         ) : error || !listing ? (

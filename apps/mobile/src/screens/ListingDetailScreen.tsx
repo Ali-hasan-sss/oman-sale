@@ -15,6 +15,7 @@ import { AppTextInput } from '../components/AppTextInput';
 import { AppText } from '../components/AppText';
 import { AvatarWithBanBadge } from '../components/AvatarWithBanBadge';
 import { VerifiedBadge } from '../components/VerifiedBadge';
+import { HeroBannersSection } from '../components/HeroBannersSection';
 import { ListingCard } from '../components/ListingCard';
 import { ListingCoverImage } from '../components/ListingCoverImage';
 import { ListingImageModal } from '../components/ListingImageModal';
@@ -307,6 +308,8 @@ export function ListingDetailScreen({
             ))}
           </ScrollView>
         ) : null}
+
+        <HeroBannersSection placement="LISTING" />
 
         <View style={styles.card}>
           <View style={[styles.badges, rowDirection(isRtl)]}>

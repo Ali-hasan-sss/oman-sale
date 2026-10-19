@@ -87,7 +87,7 @@ type AdminStatistics = {
   };
 };
 
-const CHART_COLORS = ['#059669', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#f97316', '#06b6d4', '#64748b'];
+const CHART_COLORS = ['var(--oman-green-600-hex)', '#3b82f6', 'var(--oman-brick-500-hex)', '#ef4444', '#8b5cf6', '#f97316', '#06b6d4', '#64748b'];
 
 export function AdminDashboard() {
   const { locale, dir, localizedPath, m } = useI18n();
@@ -277,8 +277,8 @@ export function AdminDashboard() {
                 <AreaChart data={trendData} margin={{ top: 8, right: isRtl ? 0 : 8, left: isRtl ? 8 : 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#059669" stopOpacity={0.35} />
-                      <stop offset="95%" stopColor="#059669" stopOpacity={0.02} />
+                      <stop offset="5%" stopColor="var(--oman-green-600-hex)" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="var(--oman-green-600-hex)" stopOpacity={0.02} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
@@ -295,7 +295,7 @@ export function AdminDashboard() {
                   <Area
                     type="monotone"
                     dataKey="revenue"
-                    stroke="#059669"
+                    stroke="var(--oman-green-600-hex)"
                     strokeWidth={3}
                     fill="url(#revenueGradient)"
                     dot={false}
@@ -529,7 +529,7 @@ function BreakdownBarChart({
   isRtl,
   tooltipStyle,
   emptyMessage,
-  color = '#059669'
+  color = 'var(--oman-green-600-hex)'
 }: {
   title: string;
   subtitle: string;

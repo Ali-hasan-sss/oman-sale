@@ -1,3 +1,6 @@
+import { BannerPlacement } from '@prisma/client';
+
+import { DEFAULT_BANNER_PLACEMENT } from '../banners/banner-placements';
 import { ApiError } from '../../shared/utils/api-error';
 import { resolveMediaUrl } from '../../shared/utils/media-reference';
 import { buildHeroSlideUpdateData, mapSlideForAdmin } from './hero-slide.mapper';
@@ -6,6 +9,8 @@ import type {
   CreateHeroBannerInput,
   CreateHeroSlideInput,
   ListAdminHeroSlidesQuery,
+  ListHeroBannersQuery,
+  ListAdminHeroBannersQuery,
   ListHeroSlidesQuery,
   UpdateHeroBannerInput,
   UpdateHeaderNavButtonInput,
@@ -89,14 +94,15 @@ export class HeroService {
     return heroRepository.delete(id);
   }
 
-  async listBannersPublic(query: ListHeroSlidesQuery) {
+  async listBannersPublic(query: ListHeroBannersQuery) {
     const locale = query.locale === 'en' ? 'en' : 'ar';
-    const banners = await heroRepository.listActiveBanners();
+    const placement = query.placement ?? DEFAULT_BANNER_PLACEMENT;
+    const banners = await heroRepository.listActiveBanners(placement);
     return banners.map((banner) => mapBannerForLocale(banner, locale));
   }
 
-  async listBannersForAdmin() {
-    return heroRepository.listAllBanners();
+  async listBannersForAdmin(query: ListAdminHeroBannersQuery = {}) {
+    return heroRepository.listAllBanners(query.placement ?? DEFAULT_BANNER_PLACEMENT);
   }
 
   async getBannerById(id: string) {
@@ -106,8 +112,10 @@ export class HeroService {
   }
 
   async createBanner(input: CreateHeroBannerInput) {
-    const sortOrder = input.sortOrder ?? (await heroRepository.getNextBannerSortOrder());
+    const placement = input.placement ?? BannerPlacement.HOME_BELOW_HERO;
+    const sortOrder = input.sortOrder ?? (await heroRepository.getNextBannerSortOrder(placement));
     return heroRepository.createBanner({
+      placement,
       sortOrder,
       imageUrl: input.imageUrl,
       textAr: input.textAr?.trim() || null,

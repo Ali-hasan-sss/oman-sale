@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+import { AdBannerSlot } from '@/components/home/hero-banners-section';
 import { SiteFooter } from '@/components/home/site-footer';
 import { SiteHeaderSearch, UserSiteHeader } from '@/components/navigation/user-site-header';
 import { api } from '@/lib/api';
@@ -816,6 +817,8 @@ export function AllListingsPage({ categorySlug }: { categorySlug?: string } = {}
             {shownTotal} {pageMessages.available}
           </p>
         </div>
+
+        <AdBannerSlot placement={categorySlug ? 'CATEGORIES' : 'OFFERS'} variant="inline" />
 
         {!isCategoryPage ? (
           <>

@@ -10,14 +10,17 @@ import { UserSiteHeader } from '@/components/navigation/user-site-header';
 import { api } from '@/lib/api';
 import { resolveApiErrorMessage } from '@/lib/api-errors';
 import { hasBannerAdPrefill, readBannerAdPrefill } from '@/lib/banner-ad-prefill';
+import { bannerPlacementCopy, readBannerPlacement } from '@/lib/banner-placements';
 import { storePendingThawaniSession } from '@/lib/thawani-session';
 import { useI18n } from '@/lib/i18n';
 import { getUserAccessToken } from '@/lib/user-auth';
 
 type BannerPricing = {
+  placement?: string;
   pricePerDay: number;
   minDays: number;
   maxDays: number;
+  isActive?: boolean;
 };
 
 const labels = {
@@ -85,6 +88,8 @@ export function BannerAdRequestPage() {
   const searchParams = useSearchParams();
   const { locale, dir, localizedPath, m } = useI18n();
   const text = labels[locale];
+  const placement = useMemo(() => readBannerPlacement(searchParams.get('placement')), [searchParams]);
+  const placementCopy = bannerPlacementCopy[placement][locale];
   const isPrefilled = useMemo(() => hasBannerAdPrefill(searchParams), [searchParams]);
   const [pricing, setPricing] = useState<BannerPricing | null>(null);
   const [imageUrl, setImageUrl] = useState('');
@@ -107,15 +112,20 @@ export function BannerAdRequestPage() {
       return;
     }
 
+    setError('');
+    setLoading(true);
     api
-      .get<{ data: BannerPricing }>('/banner-requests/pricing')
+      .get<{ data: BannerPricing }>('/banner-requests/pricing', { params: { placement } })
       .then((response) => {
         setPricing(response.data.data);
         setDurationDays(response.data.data.minDays);
+        if (response.data.data.isActive === false) {
+          setError(locale === 'ar' ? 'الإعلان في هذا البنر غير متاح حالياً.' : 'Advertising in this banner is currently unavailable.');
+        }
       })
       .catch(() => setError(text.loadError))
       .finally(() => setLoading(false));
-  }, [localizedPath, router, text.loadError]);
+  }, [localizedPath, locale, placement, router, text.loadError]);
 
   useEffect(() => {
     const prefill = readBannerAdPrefill(searchParams);
@@ -128,6 +138,10 @@ export function BannerAdRequestPage() {
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError('');
+    if (pricing?.isActive === false) {
+      setError(locale === 'ar' ? 'الإعلان في هذا البنر غير متاح حالياً.' : 'Advertising in this banner is currently unavailable.');
+      return;
+    }
     if (!imageUrl) {
       setError(text.imageUploadError);
       return;
@@ -142,6 +156,7 @@ export function BannerAdRequestPage() {
           checkout: { paid?: boolean; paymentUrl?: string; sessionId?: string };
         };
       }>('/banner-requests', {
+        placement,
         imageUrl,
         linkUrl,
         textAr: textAr || undefined,
@@ -177,8 +192,8 @@ export function BannerAdRequestPage() {
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-100 text-brand-700">
             <Megaphone size={28} />
           </div>
-          <h1 className="text-3xl font-black text-slate-900">{text.title}</h1>
-          <p className="mt-2 text-slate-600">{text.subtitle}</p>
+          <h1 className="text-3xl font-black text-slate-900">{placementCopy.requestTitle}</h1>
+          <p className="mt-2 text-slate-600">{placementCopy.requestSubtitle}</p>
         </div>
 
         {loading ? (

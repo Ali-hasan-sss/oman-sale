@@ -33,14 +33,7 @@ export function AssistantChatWidget() {
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState('');
-  const [teaserDismissed, setTeaserDismissed] = useState(() => {
-    if (typeof window === 'undefined') return true;
-    try {
-      return window.localStorage.getItem(ASSISTANT_TEASER_STORAGE_KEY) === '1';
-    } catch {
-      return false;
-    }
-  });
+  const [teaserDismissed, setTeaserDismissed] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -50,6 +43,14 @@ export function AssistantChatWidget() {
   useEffect(() => {
     hydrateFromStorage();
   }, [hydrateFromStorage]);
+
+  useEffect(() => {
+    try {
+      setTeaserDismissed(window.localStorage.getItem(ASSISTANT_TEASER_STORAGE_KEY) === '1');
+    } catch {
+      setTeaserDismissed(false);
+    }
+  }, []);
 
   const dismissTeaser = () => {
     setTeaserDismissed(true);

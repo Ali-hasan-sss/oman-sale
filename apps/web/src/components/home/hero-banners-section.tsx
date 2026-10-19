@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { HeroBannersSkeleton } from '@/components/home/home-section-skeletons';
 import { api } from '@/lib/api';
+import { bannerPlacementCopy, type BannerPlacement } from '@/lib/banner-placements';
 import { useI18n } from '@/lib/i18n';
 import { resolveMediaUrl } from '@/lib/media-url';
 
@@ -44,7 +45,12 @@ const isExternalLink = (link: string) => {
   return /^https?:\/\//i.test(trimmed) || /^www\./i.test(trimmed);
 };
 
-export function HeroBannersSection() {
+type AdBannerSlotProps = {
+  placement?: BannerPlacement;
+  variant?: 'featured' | 'embedded' | 'inline';
+};
+
+export function AdBannerSlot({ placement = 'HOME_BELOW_HERO', variant = 'featured' }: AdBannerSlotProps) {
   const { locale, localizedPath } = useI18n();
   const [banners, setBanners] = useState<HeroBanner[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -53,11 +59,11 @@ export function HeroBannersSection() {
   const isAdjustingRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const title = locale === 'en' ? 'Featured Offers' : 'عروض مميزة';
-  const subtitle =
-    locale === 'en'
-      ? 'Discover highlighted deals and announcements selected for you.'
-      : 'اكتشف عروضاً وإعلانات مختارة بعناية لتناسب اهتماماتك.';
+  const copy = bannerPlacementCopy[placement][locale];
+  const title = copy.title;
+  const subtitle = copy.subtitle;
+  const showHeading = variant !== 'inline';
+  const advertiseHref = localizedPath(`/banner-ad?placement=${placement}`);
   const advertiseLabel = locale === 'en' ? 'Advertise in this banner' : 'أعلن في هذا البنر';
   const advertiseHint =
     locale === 'en'
@@ -91,7 +97,7 @@ export function HeroBannersSection() {
       if (!cancelled) setIsLoading(true);
       try {
         const response = await api.get<{ data: HeroBanner[] }>('/hero/banners', {
-          params: { locale }
+          params: { locale, placement }
         });
         if (!cancelled) {
           setBanners(response.data.data);
@@ -109,7 +115,7 @@ export function HeroBannersSection() {
     return () => {
       cancelled = true;
     };
-  }, [locale]);
+  }, [locale, placement]);
 
   useEffect(() => {
     if (!hasLoop) {
@@ -163,37 +169,49 @@ export function HeroBannersSection() {
     startAutoPlay();
   };
 
+  const sectionClass =
+    variant === 'featured' ? 'bg-slate-50 px-4 pt-12 md:pt-16' : variant === 'embedded' ? 'py-8 md:py-10' : 'mb-8';
+  const frameClass = 'mx-auto w-full max-w-[1010px]';
+
   if (isLoading) {
-    return <HeroBannersSkeleton />;
+    if (variant === 'featured') return <HeroBannersSkeleton />;
+    return (
+      <section className={sectionClass}>
+        <div className={`${frameClass} overflow-hidden rounded-2xl ring-1 ring-slate-200`}>
+          <div className="ad-banner-frame animate-pulse bg-slate-200" />
+        </div>
+      </section>
+    );
   }
 
   if (banners.length === 0) {
     return (
-      <section className="bg-slate-50 px-4 pt-12 md:pt-16">
-        <div className="mx-auto max-w-[1010px] text-center">
-          <h2 className="text-2xl font-black text-slate-900 md:text-3xl">{title}</h2>
-          <p className="mt-2 text-sm text-slate-500 md:text-base">{subtitle}</p>
-          <Link
-            href={localizedPath('/banner-ad')}
-            className="mt-6 inline-flex items-center gap-2 rounded-full bg-brand-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-brand-700"
-          >
-            <Megaphone size={18} />
-            <span>{advertiseLabel}</span>
+      <section className={sectionClass}>
+        <div className={`${frameClass} text-center`}>
+          {showHeading ? (
+            <>
+              <h2 className="text-2xl font-black text-slate-900 md:text-3xl">{title}</h2>
+              <p className="mt-2 text-sm text-slate-500 md:text-base">{subtitle}</p>
+            </>
+          ) : null}
+          <Link href={advertiseHref} className={`${showHeading ? 'mt-5' : ''} ad-banner-frame ad-banner-empty overflow-hidden rounded-2xl shadow-sm ring-1 ring-slate-200`}>
+            <span className="px-4 text-center text-base font-black sm:text-2xl">{advertiseLabel}</span>
           </Link>
-          <p className="mt-3 text-xs text-slate-500">{advertiseHint}</p>
         </div>
       </section>
     );
   }
 
   return (
-    <section className="bg-slate-50 px-4 pt-12 md:pt-16">
-      <div className="mx-auto mb-5 max-w-[1010px] text-center">
-        <h2 className="text-2xl font-black text-slate-900 md:text-3xl">{title}</h2>
-        <p className="mt-2 text-sm text-slate-500 md:text-base">{subtitle}</p>
-      </div>
+    <section className={sectionClass}>
+      {showHeading ? (
+        <div className={`${frameClass} mb-5 text-center`}>
+          <h2 className="text-2xl font-black text-slate-900 md:text-3xl">{title}</h2>
+          <p className="mt-2 text-sm text-slate-500 md:text-base">{subtitle}</p>
+        </div>
+      ) : null}
 
-      <div className="relative mx-auto max-w-[1010px]">
+      <div className={`relative ${frameClass}`}>
         <div dir="ltr" className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
           <div
             className={`flex ${animate ? 'transition-transform duration-500 ease-out' : ''}`}
@@ -218,7 +236,7 @@ export function HeroBannersSection() {
                   <img
                     src={resolveMediaUrl(banner.imageUrl)}
                     alt={banner.text ?? 'Advertisement'}
-                    className="aspect-[990/250] w-full cursor-pointer object-cover"
+                    className="ad-banner-frame cursor-pointer object-cover"
                     loading={index === loopIndex ? 'eager' : 'lazy'}
                   />
                   {banner.text ? (
@@ -249,10 +267,10 @@ export function HeroBannersSection() {
         ) : null}
       </div>
 
-      <div className="mx-auto mt-6 max-w-[1010px] text-center">
+      <div className={`${frameClass} mt-6 text-center`}>
         <Link
-          href={localizedPath('/banner-ad')}
-          className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white px-6 py-3 text-sm font-bold text-brand-700 shadow-sm transition hover:bg-brand-50"
+          href={advertiseHref}
+          className="inline-flex items-center gap-2 rounded-full border border-brick-400 bg-transparent px-6 py-3 text-sm font-bold text-brick-500 transition hover:bg-brick-50"
         >
           <Megaphone size={18} />
           <span>{advertiseLabel}</span>
@@ -261,4 +279,8 @@ export function HeroBannersSection() {
       </div>
     </section>
   );
+}
+
+export function HeroBannersSection() {
+  return <AdBannerSlot placement="HOME_BELOW_HERO" variant="featured" />;
 }

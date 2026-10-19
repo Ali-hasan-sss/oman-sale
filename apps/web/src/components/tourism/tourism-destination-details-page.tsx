@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
+import { AdBannerSlot } from '@/components/home/hero-banners-section';
 import { ListingMediaGalleryModal } from '@/components/listings/listing-media-gallery-modal';
 import { tourismDestinationDetails, tourismDestinations } from '@/data/tourism';
 import { api } from '@/lib/api';
@@ -121,6 +122,8 @@ export function TourismDestinationDetailsPage({ destinationId }: { destinationId
         <ArrowRight className="h-4 w-4" />
         <span className="text-gray-900">{title}</span>
       </div>
+
+      <AdBannerSlot placement="DESTINATION" variant="inline" />
 
       <section className="relative mb-8 h-96 overflow-hidden rounded-2xl">
         <button

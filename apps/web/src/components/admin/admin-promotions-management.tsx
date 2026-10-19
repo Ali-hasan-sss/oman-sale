@@ -56,7 +56,7 @@ const initialForm: PromotionFormState = {
   dailyImpressions: '1',
   appearsFirst: false,
   badgeLabel: '',
-  color: '#0f766e',
+  color: '#168c4e',
   isActive: true
 };
 
@@ -140,7 +140,7 @@ export function AdminPromotionsManagement() {
       dailyImpressions: String(plan.dailyImpressions),
       appearsFirst: plan.appearsFirst,
       badgeLabel: plan.badgeLabel ?? '',
-      color: plan.color ?? '#0f766e',
+      color: plan.color ?? '#168c4e',
       isActive: plan.isActive
     });
     setFormErrors({});

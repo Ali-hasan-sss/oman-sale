@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 
 import { getRequiredParam } from '../../shared/utils/request';
 import { heroService } from './hero.service';
-import type { ListAdminHeroSlidesQuery, ListHeroSlidesQuery } from './hero.validation';
+import type { ListAdminHeroBannersQuery, ListAdminHeroSlidesQuery, ListHeroBannersQuery, ListHeroSlidesQuery } from './hero.validation';
 
 export class HeroController {
   async listPublic(req: Request, res: Response) {
@@ -30,11 +30,11 @@ export class HeroController {
   }
 
   async listBannersPublic(req: Request, res: Response) {
-    res.json({ data: await heroService.listBannersPublic(req.query as unknown as ListHeroSlidesQuery) });
+    res.json({ data: await heroService.listBannersPublic(req.query as unknown as ListHeroBannersQuery) });
   }
 
-  async listBannersForAdmin(_req: Request, res: Response) {
-    res.json({ data: await heroService.listBannersForAdmin() });
+  async listBannersForAdmin(req: Request, res: Response) {
+    res.json({ data: await heroService.listBannersForAdmin(req.query as unknown as ListAdminHeroBannersQuery) });
   }
 
   async getBannerById(req: Request, res: Response) {

@@ -13,7 +13,7 @@ type HeaderNavButtonsPreviewProps = {
 export function HeaderNavButtonsPreview({ buttons }: HeaderNavButtonsPreviewProps) {
   const { dir, locale, m } = useI18n();
   const primary =
-    'whitespace-nowrap rounded-lg bg-green-600 px-2 py-1.5 text-xs font-bold text-white sm:px-2.5 sm:py-2 lg:px-4 lg:text-sm';
+    'btn-quick-sell whitespace-nowrap rounded-lg px-2 py-1.5 text-xs font-bold sm:px-2.5 sm:py-2 lg:px-4 lg:text-sm';
   const fixed =
     'whitespace-nowrap rounded-lg border border-dashed border-slate-300 bg-slate-50 px-2 py-1.5 text-xs font-medium text-slate-500 sm:px-2.5 sm:py-2 lg:px-4 lg:text-sm';
   const customLink =

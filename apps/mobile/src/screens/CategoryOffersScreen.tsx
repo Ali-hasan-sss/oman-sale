@@ -16,6 +16,7 @@ import {
   type CategoryFiltersDraft
 } from '../components/CategoryFiltersPanel';
 import { EmptyState } from '../components/EmptyState';
+import { HeroBannersSection } from '../components/HeroBannersSection';
 import { ListingCard } from '../components/ListingCard';
 import { ListingListSkeleton } from '../components/skeleton';
 import { useScreenInsets } from '../hooks/use-screen-insets';
@@ -370,6 +371,10 @@ export function CategoryOffersScreen({ categoryId, onListingPress, onStorePress 
         {total} {t.categoryOffers.available}
       </AppText>
 
+      <View style={styles.bannerSlot}>
+        <HeroBannersSection placement="CATEGORIES" flush />
+      </View>
+
       <CategoryFiltersPanel
         expanded={filtersExpanded}
         onToggleExpanded={() => setFiltersExpanded((current) => !current)}
@@ -472,6 +477,9 @@ const styles = StyleSheet.create({
     marginTop: 6,
     marginBottom: 14,
     fontSize: 14
+  },
+  bannerSlot: {
+    marginBottom: 20
   },
   sortRow: {
     marginBottom: 14,

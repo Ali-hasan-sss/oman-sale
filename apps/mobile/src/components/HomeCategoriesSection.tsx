@@ -1,55 +1,43 @@
 import { useEffect, useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { AppText } from './AppText';
 import { CategoryChipsSkeleton } from './skeleton';
-import { SectionTitle } from './SectionTitle';
 import { useI18n } from '../i18n';
-import { rowDirection } from '../lib/layout-direction';
 import { CategoryIcon } from '../lib/category-icons';
 import type { CategoryOption } from '../services/listings.service';
 import { useListingsStore } from '../stores';
 import { colors, radius } from '../theme';
 
+const pastel = [
+  { bg: '#fefce8', fg: '#ca8a04' },
+  { bg: '#fdf2f8', fg: '#db2777' },
+  { bg: '#eff6ff', fg: '#2563eb' },
+  { bg: '#f0fdf4', fg: '#16a34a' },
+  { bg: '#eef2ff', fg: '#4f46e5' },
+  { bg: '#ecfdf5', fg: '#059669' },
+  { bg: '#f0fdfa', fg: '#0d9488' },
+  { bg: '#fef2f2', fg: '#dc2626' },
+  { bg: '#fff7ed', fg: '#ea580c' },
+  { bg: '#faf5ff', fg: '#9333ea' }
+];
+
 const getCategoryLabel = (category: CategoryOption, locale: 'ar' | 'en') =>
   (locale === 'ar' ? category.nameAr : category.nameEn) ?? category.name;
 
-type CategoryChipProps = {
-  label: string;
-  icon?: string | null;
-  iconImageUrl?: string | null;
-  adsCount: number;
-  adsLabel: string;
-};
-
-function CategoryChip({ label, icon, iconImageUrl, adsCount, adsLabel }: CategoryChipProps) {
-  return (
-    <View style={styles.chip}>
-      <View style={styles.iconWrap}>
-        <CategoryIcon icon={icon} iconImageUrl={iconImageUrl} size={30} color={colors.brandDark} />
-      </View>
-      <AppText style={styles.chipText} numberOfLines={1}>
-        {label}
-      </AppText>
-      <AppText style={styles.chipMeta}>
-        {adsCount} {adsLabel}
-      </AppText>
-    </View>
-  );
-}
-
 type HomeCategoriesSectionProps = {
   onCategoryPress?: (categoryId: string) => void;
+  onBrowseOffers?: () => void;
 };
 
-export function HomeCategoriesSection({ onCategoryPress }: HomeCategoriesSectionProps) {
-  const { locale, t, isRtl } = useI18n();
+export function HomeCategoriesSection({ onCategoryPress, onBrowseOffers }: HomeCategoriesSectionProps) {
+  const { locale, t } = useI18n();
+  const { width } = useWindowDimensions();
+  const cardWidth = (width - 32 - 12) / 2;
   const categories = useListingsStore((state) => state.categories);
   const isLoading = useListingsStore((state) => state.isLoadingCategories);
   const hasLoadedCategories = useListingsStore((state) => state.hasLoadedCategories);
   const loadCategories = useListingsStore((state) => state.loadCategories);
-
-  const adsLabel = locale === 'ar' ? 'إعلان' : 'ads';
 
   useEffect(() => {
     loadCategories(locale, { refresh: useListingsStore.getState().hasLoadedCategories }).catch(() => undefined);
@@ -64,41 +52,43 @@ export function HomeCategoriesSection({ onCategoryPress }: HomeCategoriesSection
   );
 
   const showSkeleton = isLoading && !hasLoadedCategories && rootCategories.length === 0;
-
-  if (!showSkeleton && rootCategories.length === 0) {
-    return null;
-  }
+  if (!showSkeleton && rootCategories.length === 0) return null;
 
   return (
     <View style={styles.section}>
-      <SectionTitle title={t.home.categories} />
+      <AppText style={styles.title}>{t.home.categoriesTitle}</AppText>
+      <AppText style={styles.subtitle}>{t.home.categoriesSubtitle}</AppText>
 
       {showSkeleton ? (
-        <CategoryChipsSkeleton count={5} />
+        <CategoryChipsSkeleton count={4} />
       ) : (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={[styles.scrollContent, rowDirection(isRtl)]}
-        >
-          {rootCategories.map((category) => (
-            <Pressable
-              key={category.id}
-              style={({ pressed }) => [pressed && styles.chipPressed]}
-              accessibilityRole="button"
-              onPress={() => onCategoryPress?.(category.id)}
-            >
-              <CategoryChip
-                label={getCategoryLabel(category, locale)}
-                icon={category.icon}
-                iconImageUrl={category.iconImageUrl}
-                adsCount={category._count?.ads ?? 0}
-                adsLabel={adsLabel}
-              />
-            </Pressable>
-          ))}
-        </ScrollView>
+        <View style={styles.grid}>
+          {rootCategories.map((category, index) => {
+            const tone = pastel[index % pastel.length]!;
+            return (
+              <Pressable
+                key={category.id}
+                style={[styles.card, { backgroundColor: tone.bg, width: cardWidth }]}
+                onPress={() => onCategoryPress?.(category.id)}
+              >
+                <CategoryIcon icon={category.icon} iconImageUrl={category.iconImageUrl} size={36} color={tone.fg} />
+                <AppText style={styles.cardTitle} numberOfLines={2}>
+                  {getCategoryLabel(category, locale)}
+                </AppText>
+                <AppText style={styles.cardMeta}>
+                  {category._count?.ads ?? 0} {t.home.adCount}
+                </AppText>
+              </Pressable>
+            );
+          })}
+        </View>
       )}
+
+      {onBrowseOffers ? (
+        <Pressable style={styles.cta} onPress={onBrowseOffers}>
+          <AppText style={styles.ctaText}>{t.common.allListings}</AppText>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -106,52 +96,59 @@ export function HomeCategoriesSection({ onCategoryPress }: HomeCategoriesSection
 const styles = StyleSheet.create({
   section: {
     paddingHorizontal: 16,
-    marginBottom: 10
-  },
-  scrollContent: {
-    alignItems: 'stretch',
-    gap: 10,
-    paddingEnd: 4
-  },
-  chip: {
-    width: 140,
-    minHeight: 118,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    backgroundColor: colors.brandSoft,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(15, 159, 103, 0.12)',
-    paddingHorizontal: 10,
-    paddingVertical: 12
-  },
-  chipPressed: {
-    opacity: 0.88,
-    transform: [{ scale: 0.98 }]
-  },
-  iconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingTop: 8,
     marginBottom: 8
   },
-  chipText: {
-    width: '100%',
-    color: colors.brandDark,
-    fontWeight: '800',
-    fontSize: 13,
+  title: {
     textAlign: 'center',
-    lineHeight: 18
+    fontSize: 28,
+    fontWeight: '900',
+    color: colors.ink
   },
-  chipMeta: {
+  subtitle: {
     marginTop: 6,
-    minHeight: 16,
-    color: colors.muted,
-    fontSize: 11,
-    fontWeight: '600',
-    textAlign: 'center'
+    marginBottom: 18,
+    textAlign: 'center',
+    color: '#475569',
+    fontSize: 15
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12
+  },
+  card: {
+    minHeight: 148,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.lg,
+    paddingHorizontal: 12,
+    paddingVertical: 18
+  },
+  cardTitle: {
+    marginTop: 12,
+    textAlign: 'center',
+    fontWeight: '800',
+    color: colors.ink,
+    fontSize: 15
+  },
+  cardMeta: {
+    marginTop: 4,
+    textAlign: 'center',
+    color: '#64748b',
+    fontSize: 13
+  },
+  cta: {
+    alignSelf: 'center',
+    marginTop: 18,
+    backgroundColor: '#168c4e',
+    borderRadius: 999,
+    paddingHorizontal: 28,
+    paddingVertical: 12
+  },
+  ctaText: {
+    color: '#fff',
+    fontWeight: '900',
+    fontSize: 15
   }
 });

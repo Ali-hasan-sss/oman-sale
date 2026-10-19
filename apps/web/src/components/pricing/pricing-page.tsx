@@ -4,6 +4,7 @@ import { Check, Sparkles, Store, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
+import { AdBannerSlot } from '@/components/home/hero-banners-section';
 import { SiteFooter } from '@/components/home/site-footer';
 import { SiteHeaderSearch, UserSiteHeader } from '@/components/navigation/user-site-header';
 import { PlanPriceWithVat } from '@/components/pricing/plan-price-with-vat';
@@ -141,7 +142,7 @@ export function PricingPage() {
       </UserSiteHeader>
 
       <main className="site-container site-page-main min-w-0">
-        <section className="mb-12 overflow-hidden rounded-3xl bg-gradient-to-br from-green-700 via-teal-700 to-slate-900 p-8 text-white shadow-lg md:p-12">
+        <section className="mb-12 overflow-hidden rounded-3xl bg-gradient-to-br from-brand-700 via-brick-600 to-ink-950 p-8 text-white shadow-lg md:p-12">
           <div className="max-w-3xl">
             <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1 text-sm font-bold">
               <Sparkles size={16} />
@@ -151,6 +152,8 @@ export function PricingPage() {
             <p className="mt-4 text-base leading-8 text-white/85 md:text-lg">{t.heroSubtitle}</p>
           </div>
         </section>
+
+        <AdBannerSlot placement="PRICING" variant="inline" />
 
         {/* Promotion plans */}
         <section className="mb-16">

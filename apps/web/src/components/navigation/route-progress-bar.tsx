@@ -74,7 +74,7 @@ export function RouteProgressBar() {
   return (
     <div className="fixed inset-x-0 top-0 z-[9999] h-1 overflow-hidden bg-transparent">
       <div
-        className="h-full rounded-e-full bg-gradient-to-r from-brand-500 via-emerald-500 to-desert-500 shadow-[0_0_12px_rgba(16,185,129,0.55)] transition-all duration-300 ease-out"
+        className="route-progress-bar h-full rounded-e-full transition-all duration-300 ease-out"
         style={{ width: `${progress}%` }}
       />
     </div>

@@ -20,9 +20,11 @@
       },
       "usesAppleSignIn": true,
       "entitlements": {
-        "com.apple.developer.applesignin": ["Default"]
+        "com.apple.developer.applesignin": [
+          "Default"
+        ]
       },
-      "buildNumber": "9"
+      "buildNumber": "11"
     },
     "android": {
       "package": "com.omansale.mobile",

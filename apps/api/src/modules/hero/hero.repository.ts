@@ -1,4 +1,4 @@
-import type { HeroSlidePlatform, Prisma } from '@prisma/client';
+import type { BannerPlacement, HeroSlidePlatform, Prisma } from '@prisma/client';
 
 import { prisma } from '../../shared/prisma/client';
 import { heroSlideAdminSelect } from './hero-slide.mapper';
@@ -46,20 +46,24 @@ export class HeroRepository {
       .then((result) => (result._max.sortOrder ?? -1) + 1);
   }
 
-  listActiveBanners() {
+  listActiveBanners(placement: BannerPlacement) {
     const now = new Date();
     return prisma.heroBanner.findMany({
       where: {
+        placement,
         isActive: true,
-        OR: [{ startsAt: null }, { startsAt: { lte: now } }],
-        AND: [{ OR: [{ endsAt: null }, { endsAt: { gte: now } }] }]
+        AND: [
+          { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
+          { OR: [{ endsAt: null }, { endsAt: { gte: now } }] }
+        ]
       },
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }]
     });
   }
 
-  listAllBanners() {
+  listAllBanners(placement: BannerPlacement) {
     return prisma.heroBanner.findMany({
+      where: { placement },
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }]
     });
   }
@@ -80,9 +84,9 @@ export class HeroRepository {
     return prisma.heroBanner.delete({ where: { id } });
   }
 
-  getNextBannerSortOrder() {
+  getNextBannerSortOrder(placement: BannerPlacement) {
     return prisma.heroBanner
-      .aggregate({ _max: { sortOrder: true } })
+      .aggregate({ where: { placement }, _max: { sortOrder: true } })
       .then((result) => (result._max.sortOrder ?? -1) + 1);
   }
 

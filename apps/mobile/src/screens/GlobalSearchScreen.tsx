@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 
 import { AppText } from '../components/AppText';
+import { HeroBannersSection } from '../components/HeroBannersSection';
 import { AppTextInput } from '../components/AppTextInput';
 import { ListingCard } from '../components/ListingCard';
 import { ListingListSkeleton } from '../components/skeleton';
@@ -266,6 +267,8 @@ export function GlobalSearchScreen({
           </View>
         ) : null}
       </View>
+
+      <HeroBannersSection placement="SEARCH" flush />
 
       {!query ? null : (
         <AppText style={[styles.queryLabel, textAlign]}>

@@ -5,11 +5,13 @@ import { FormEvent, useCallback, useEffect, useState } from 'react';
 
 import { adminApi } from '@/lib/admin-auth';
 import { notifyAdminPendingCountsChanged } from '@/lib/admin-pending-counts';
+import { BANNER_PLACEMENTS, bannerPlacementCopy, type BannerPlacement } from '@/lib/banner-placements';
 import { resolveMediaUrl } from '@/lib/media-url';
 import { useI18n } from '@/lib/i18n';
 
 type BannerPricing = {
   id: string;
+  placement?: BannerPlacement;
   pricePerDay: number;
   minDays: number;
   maxDays: number;
@@ -23,6 +25,7 @@ type BannerRequest = {
   linkUrl: string;
   textAr?: string | null;
   textEn?: string | null;
+  placement?: BannerPlacement;
   durationDays: number;
   totalPrice: number;
   status: string;
@@ -59,9 +62,17 @@ function formatOmrAmount(value: number) {
   }).format(value);
 }
 
-export function AdminBannerRequestsManagement() {
+export function AdminBannerRequestsManagement({
+  placement: lockedPlacement,
+  embedded = false
+}: {
+  placement?: BannerPlacement;
+  embedded?: boolean;
+} = {}) {
   const { locale } = useI18n();
   const isAr = locale === 'ar';
+  const [placementFilter, setPlacementFilter] = useState<BannerPlacement | 'ALL'>(lockedPlacement ?? 'ALL');
+  const activePlacement = lockedPlacement ?? placementFilter;
   const [, setPricing] = useState<BannerPricing | null>(null);
   const [requests, setRequests] = useState<BannerRequest[]>([]);
   const [filter, setFilter] = useState('PENDING_APPROVAL');
@@ -80,23 +91,30 @@ export function AdminBannerRequestsManagement() {
     setLoading(true);
     setError('');
     try {
-      const [pricingResponse, requestsResponse] = await Promise.all([
-        adminApi().get<{ data: BannerPricing }>('/admin/banner-pricing'),
-        adminApi().get<{ data: BannerRequest[] }>('/admin/banner-requests', {
-          params: filter ? { status: filter } : undefined
-        })
-      ]);
-      setPricing(pricingResponse.data.data);
-      setPricePerDay(String(pricingResponse.data.data.pricePerDay));
-      setMinDays(String(pricingResponse.data.data.minDays));
-      setMaxDays(String(pricingResponse.data.data.maxDays));
+      const requestsResponse = await adminApi().get<{ data: BannerRequest[] }>('/admin/banner-requests', {
+        params: {
+          ...(filter ? { status: filter } : {}),
+          ...(activePlacement === 'ALL' ? {} : { placement: activePlacement })
+        }
+      });
+      if (activePlacement !== 'ALL') {
+        const pricingResponse = await adminApi().get<{ data: BannerPricing }>('/admin/banner-pricing', {
+          params: { placement: activePlacement }
+        });
+        setPricing(pricingResponse.data.data);
+        setPricePerDay(String(pricingResponse.data.data.pricePerDay));
+        setMinDays(String(pricingResponse.data.data.minDays));
+        setMaxDays(String(pricingResponse.data.data.maxDays));
+      } else {
+        setPricing(null);
+      }
       setRequests(requestsResponse.data.data);
     } catch {
       setError(isAr ? 'تعذر تحميل بيانات إعلانات البنر.' : 'Could not load banner ad data.');
     } finally {
       setLoading(false);
     }
-  }, [filter, isAr]);
+  }, [activePlacement, filter, isAr]);
 
   useEffect(() => {
     void loadData();
@@ -108,7 +126,9 @@ export function AdminBannerRequestsManagement() {
     setMessage('');
     setError('');
     try {
+      if (activePlacement === 'ALL') return;
       const response = await adminApi().patch<{ data: BannerPricing }>('/admin/banner-pricing', {
+        placement: activePlacement,
         pricePerDay: Number(pricePerDay),
         minDays: Number(minDays),
         maxDays: Number(maxDays),
@@ -168,14 +188,53 @@ export function AdminBannerRequestsManagement() {
         </div>
         <div>
           <h2 className="text-2xl font-black text-slate-900">
-            {isAr ? 'طلبات إعلانات البنر' : 'Banner ad requests'}
+            {embedded
+              ? isAr
+                ? 'طلبات هذا البنر'
+                : 'Requests for this banner'
+              : isAr
+                ? 'طلبات إعلانات البنر'
+                : 'Banner ad requests'}
           </h2>
           <p className="text-sm text-slate-500">
-            {isAr ? 'إدارة التسعير ومراجعة طلبات المستخدمين' : 'Manage pricing and review user requests'}
+            {isAr
+              ? 'حدّد سعر كل بنر على حدة وراجع طلباته بشكل منفصل'
+              : 'Set a price for each banner and review its requests separately'}
           </p>
         </div>
       </div>
 
+      {lockedPlacement ? null : (
+        <div className="mb-6 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setPlacementFilter('ALL')}
+            className={`rounded-full px-4 py-2 text-sm font-bold transition ${
+              activePlacement === 'ALL' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            {isAr ? 'كل البنرات' : 'All banners'}
+          </button>
+          {BANNER_PLACEMENTS.map((item) => (
+            <button
+              key={item}
+              type="button"
+              onClick={() => setPlacementFilter(item)}
+              className={`rounded-full px-4 py-2 text-sm font-bold transition ${
+                activePlacement === item ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              {bannerPlacementCopy[item][locale].admin}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {activePlacement === 'ALL' ? (
+        <p className="mb-6 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+          {isAr ? 'اختر بنراً لتحديد سعر الإعلان فيه.' : 'Choose a banner to set its advertising price.'}
+        </p>
+      ) : (
       <form onSubmit={savePricing} className="mb-8 grid gap-4 rounded-2xl bg-slate-50 p-4 md:grid-cols-4">
         <div>
           <label className="mb-1 block text-sm font-bold text-slate-700">
@@ -197,6 +256,7 @@ export function AdminBannerRequestsManagement() {
           </button>
         </div>
       </form>
+      )}
 
       <div className="mb-4 flex flex-wrap gap-2">
         {['PENDING_APPROVAL', 'ACTIVE', 'REJECTED', 'EXPIRED', 'PENDING_PAYMENT', ''].map((status) => (
@@ -231,6 +291,10 @@ export function AdminBannerRequestsManagement() {
               <div className="grid gap-4 lg:grid-cols-[240px_1fr_auto]">
                 <img src={resolveMediaUrl(request.imageUrl)} alt="" className="aspect-[990/250] w-full rounded-xl object-cover ring-1 ring-slate-200" />
                 <div className="space-y-2 text-sm">
+                  <p>
+                    <span className="font-bold">{isAr ? 'البنر:' : 'Banner:'}</span>{' '}
+                    {request.placement ? bannerPlacementCopy[request.placement][locale].admin : '—'}
+                  </p>
                   <p>
                     <span className="font-bold">{isAr ? 'المستخدم:' : 'User:'}</span> {request.user.fullName} ({request.user.email})
                   </p>
