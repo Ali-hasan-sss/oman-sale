@@ -20,7 +20,7 @@ import {
   isHeroBannersLoaded,
   setCachedHeroBanners
 } from '../lib/screen-data-cache';
-import { openWebsitePage } from '../lib/open-external-web';
+import { requestBannerAd } from '../lib/banner-ad-nav';
 import { fetchBannerPublicCopy, fetchHeroBanners } from '../services/hero.service';
 import type { HeroBanner } from '../types';
 import { colors, radius, shadow } from '../theme';
@@ -275,7 +275,7 @@ export function HeroBannersSection({ placement = 'HOME_BELOW_HERO', flush = fals
   };
 
   const openAdvertisePage = () => {
-    openWebsitePage(locale, `/banner-ad?placement=${placement}`).catch(() => undefined);
+    requestBannerAd({ placement });
   };
 
   if (!isLoading && banners.length === 0) {

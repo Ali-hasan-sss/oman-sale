@@ -1,5 +1,6 @@
 import { Linking } from 'react-native';
 
+import { requestBannerAd } from './banner-ad-nav';
 import { getWebsiteOrigin, openExternalWebPage } from './open-external-web';
 import type { ScreenName } from '../types';
 
@@ -52,7 +53,14 @@ export function handleAssistantAction(
     return;
   }
 
-  if (path.startsWith('/banner-ad') || path.startsWith('/tourism') || path.startsWith('/destination')) {
+  if (path.startsWith('/banner-ad')) {
+    const placement = new URLSearchParams(path.split('?')[1] ?? '').get('placement') || undefined;
+    requestBannerAd({ placement });
+    handlers.onClose();
+    return;
+  }
+
+  if (path.startsWith('/tourism') || path.startsWith('/destination')) {
     openWebPath(href);
     handlers.onClose();
     return;

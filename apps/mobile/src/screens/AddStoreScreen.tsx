@@ -6,6 +6,7 @@ import { AppText } from '../components/AppText';
 import { AppTextInput } from '../components/AppTextInput';
 import { ErrorNotice } from '../components/ErrorNotice';
 import { PrimaryButton } from '../components/PrimaryButton';
+import { StoreBrandingPicker } from '../components/vertex/StoreBrandingPicker';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
 import { rowDirection } from '../lib/layout-direction';
@@ -60,6 +61,8 @@ export function AddStoreScreen({ onCreated, onAlreadyHasStore }: AddStoreScreenP
   const [nameEn, setNameEn] = useState('');
   const [bioAr, setBioAr] = useState('');
   const [bioEn, setBioEn] = useState('');
+  const [logoUrl, setLogoUrl] = useState('');
+  const [coverUrl, setCoverUrl] = useState('');
   const [phone, setPhone] = useState(user?.phone ?? '');
   const [nationalId, setNationalId] = useState('');
   const [commercialRegistrationNumber, setCommercialRegistrationNumber] = useState('');
@@ -150,6 +153,8 @@ export function AddStoreScreen({ onCreated, onAlreadyHasStore }: AddStoreScreenP
           nameEn: nameEn.trim(),
           bioAr: bioAr.trim(),
           bioEn: bioEn.trim(),
+          ...(logoUrl ? { logoUrl } : {}),
+          ...(coverUrl ? { coverUrl } : {}),
           phone: phone.trim(),
           nationalId: nationalId.trim(),
           businessType,
@@ -347,6 +352,8 @@ export function AddStoreScreen({ onCreated, onAlreadyHasStore }: AddStoreScreenP
 
       <View style={styles.section}>
         <AppText style={[styles.sectionTitle, textAlign]}>{text.storeDetails}</AppText>
+
+        <StoreBrandingPicker logoUrl={logoUrl} coverUrl={coverUrl} onLogoChange={setLogoUrl} onCoverChange={setCoverUrl} />
 
         <FieldLabel isRtl={isRtl}>{text.nameAr}</FieldLabel>
         <AppTextInput value={nameAr} onChangeText={setNameAr} style={[styles.input, inputAlign]} />

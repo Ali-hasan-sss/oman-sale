@@ -22,7 +22,8 @@ import { formatListingDate, formatPrice } from '../data';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
 import { rowDirection } from '../lib/layout-direction';
-import { buildBannerAdWebsitePath, openWebPaymentPage, openWebsitePage } from '../lib/open-external-web';
+import { requestBannerAd } from '../lib/banner-ad-nav';
+import { openWebPaymentPage } from '../lib/open-external-web';
 import { getWilayahsForGovernorate, omanGovernorates } from '../lib/oman-locations';
 import { formatPlanVatBreakdown } from '../lib/plan-pricing';
 import {
@@ -173,14 +174,12 @@ export function MyOffersScreen({ onListingPress, onStorePress }: MyOffersScreenP
                     icon="images-outline"
                     label={t.common.requestBannerAd}
                     onPress={() =>
-                      void openWebsitePage(
-                        locale,
-                        buildBannerAdWebsitePath({
-                          listingId: listing.id,
-                          title: listing.title,
-                          imageUrl: listing.images?.[0]?.imageUrl
-                        })
-                      )
+                      requestBannerAd({
+                        linkUrl: `/listing/${listing.id}`,
+                        imageUrl: listing.images?.[0]?.imageUrl,
+                        textAr: listing.title,
+                        textEn: listing.title
+                      })
                     }
                   />
                   <ActionChip

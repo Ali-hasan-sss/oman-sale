@@ -53,6 +53,7 @@ export async function uploadAdMedia(input: {
   mimeType: string;
   size?: number | null;
   kind: 'image' | 'video';
+  folder?: 'ads' | 'banners';
 }) {
   const allowed = input.kind === 'video' ? allowedAdVideoMimeTypes : allowedAdImageMimeTypes;
   if (!allowed.has(input.mimeType)) {
@@ -70,7 +71,9 @@ export async function uploadAdMedia(input: {
     type: input.mimeType
   } as unknown as Blob);
 
-  const response = await http.post<ApiEnvelope<MediaUploadResult>>('/media/upload?folder=ads', formData, {
+  const response = await http.post<ApiEnvelope<MediaUploadResult>>(
+    `/media/upload?folder=${input.folder ?? 'ads'}`,
+    formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 120000
   });

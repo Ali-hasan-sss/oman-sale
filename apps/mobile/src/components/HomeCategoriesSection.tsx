@@ -1,10 +1,13 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useMemo } from 'react';
 import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { AppText } from './AppText';
 import { CategoryChipsSkeleton } from './skeleton';
+import { SectionHeader } from './vertex/SectionHeader';
 import { useI18n } from '../i18n';
 import { CategoryIcon } from '../lib/category-icons';
+import { insetEnd, rowDirection } from '../lib/layout-direction';
 import type { CategoryOption } from '../services/listings.service';
 import { useListingsStore } from '../stores';
 import { colors, radius } from '../theme';
@@ -31,7 +34,7 @@ type HomeCategoriesSectionProps = {
 };
 
 export function HomeCategoriesSection({ onCategoryPress, onBrowseOffers }: HomeCategoriesSectionProps) {
-  const { locale, t } = useI18n();
+  const { locale, isRtl, t } = useI18n();
   const { width } = useWindowDimensions();
   const cardWidth = (width - 32 - 12) / 2;
   const categories = useListingsStore((state) => state.categories);
@@ -56,39 +59,45 @@ export function HomeCategoriesSection({ onCategoryPress, onBrowseOffers }: HomeC
 
   return (
     <View style={styles.section}>
-      <AppText style={styles.title}>{t.home.categoriesTitle}</AppText>
-      <AppText style={styles.subtitle}>{t.home.categoriesSubtitle}</AppText>
+      <SectionHeader
+        title={t.home.categoriesTitle}
+        subtitle={t.home.categoriesSubtitle}
+        actionLabel={onBrowseOffers ? (locale === 'ar' ? 'كل الفئات' : 'All categories') : undefined}
+        onAction={onBrowseOffers}
+      />
 
       {showSkeleton ? (
         <CategoryChipsSkeleton count={4} />
       ) : (
-        <View style={styles.grid}>
+        <View style={[styles.grid, rowDirection(isRtl)]}>
           {rootCategories.map((category, index) => {
             const tone = pastel[index % pastel.length]!;
             return (
               <Pressable
                 key={category.id}
-                style={[styles.card, { backgroundColor: tone.bg, width: cardWidth }]}
+                style={({ pressed }) => [styles.card, { width: cardWidth }, pressed && styles.cardPressed]}
                 onPress={() => onCategoryPress?.(category.id)}
               >
-                <CategoryIcon icon={category.icon} iconImageUrl={category.iconImageUrl} size={36} color={tone.fg} />
+                <LinearGradient
+                  colors={['#ffffff', '#ffffff', '#f0fdf4']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={StyleSheet.absoluteFill}
+                />
                 <AppText style={styles.cardTitle} numberOfLines={2}>
                   {getCategoryLabel(category, locale)}
                 </AppText>
                 <AppText style={styles.cardMeta}>
                   {category._count?.ads ?? 0} {t.home.adCount}
                 </AppText>
+                <View style={[styles.icon, insetEnd(isRtl, 14)]}>
+                  <CategoryIcon icon={category.icon} iconImageUrl={category.iconImageUrl} size={56} color={tone.fg} />
+                </View>
               </Pressable>
             );
           })}
         </View>
       )}
-
-      {onBrowseOffers ? (
-        <Pressable style={styles.cta} onPress={onBrowseOffers}>
-          <AppText style={styles.ctaText}>{t.common.allListings}</AppText>
-        </Pressable>
-      ) : null}
     </View>
   );
 }
@@ -96,59 +105,48 @@ export function HomeCategoriesSection({ onCategoryPress, onBrowseOffers }: HomeC
 const styles = StyleSheet.create({
   section: {
     paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingTop: 18,
     marginBottom: 8
   },
-  title: {
-    textAlign: 'center',
-    fontSize: 28,
-    fontWeight: '900',
-    color: colors.ink
-  },
-  subtitle: {
-    marginTop: 6,
-    marginBottom: 18,
-    textAlign: 'center',
-    color: '#475569',
-    fontSize: 15
-  },
   grid: {
-    flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12
   },
   card: {
-    minHeight: 148,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.lg,
-    paddingHorizontal: 12,
-    paddingVertical: 18
+    height: 150,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    overflow: 'hidden',
+    padding: 14,
+    backgroundColor: '#fff',
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1
+  },
+  cardPressed: {
+    opacity: 0.92,
+    transform: [{ scale: 0.98 }]
   },
   cardTitle: {
-    marginTop: 12,
-    textAlign: 'center',
-    fontWeight: '800',
+    fontWeight: '900',
     color: colors.ink,
-    fontSize: 15
+    fontSize: 15,
+    lineHeight: 22
   },
   cardMeta: {
-    marginTop: 4,
-    textAlign: 'center',
+    marginTop: 2,
     color: '#64748b',
-    fontSize: 13
+    fontSize: 12
   },
-  cta: {
-    alignSelf: 'center',
-    marginTop: 18,
-    backgroundColor: '#168c4e',
-    borderRadius: 999,
-    paddingHorizontal: 28,
-    paddingVertical: 12
-  },
-  ctaText: {
-    color: '#fff',
-    fontWeight: '900',
-    fontSize: 15
+  icon: {
+    position: 'absolute',
+    bottom: 12,
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 8 }
   }
 });

@@ -57,12 +57,20 @@
       "android": {
         "buildType": "app-bundle"
       }
+    },
+    "production-aab": {
+      "extends": "production",
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle"
+      }
     }
   },
   "submit": {
     "production": {
       "ios": {
         "appleId": "eyass.shaaban@outlook.de",
+        "ascAppId": "6806960693",
         "appleTeamId": "J92V8WAHAX"
       }
     }

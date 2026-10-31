@@ -13,6 +13,7 @@ import { AppText } from '../components/AppText';
 import { AppTextInput } from '../components/AppTextInput';
 import { EmptyState } from '../components/EmptyState';
 import { HeroBannersSection } from '../components/HeroBannersSection';
+import { ArticleCard } from '../components/vertex/ArticleCard';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
 import { rowDirection } from '../lib/layout-direction';
@@ -157,32 +158,7 @@ export function NewsScreen({ onOpenArticle }: NewsScreenProps) {
       ListEmptyComponent={
         !isLoading ? <EmptyState message={search || categorySlug ? text.emptySearch : text.empty} /> : null
       }
-      renderItem={({ item }) => (
-        <Pressable style={styles.card} onPress={() => onOpenArticle(item.slug)}>
-          {item.coverImageUrl ? (
-            <Image source={{ uri: item.coverImageUrl }} style={styles.cover} resizeMode="cover" />
-          ) : (
-            <View style={[styles.cover, styles.coverPlaceholder]} />
-          )}
-          <View style={styles.cardBody}>
-            {item.category ? (
-              <AppText style={styles.category}>
-                {locale === 'en' ? item.category.nameEn : item.category.nameAr}
-              </AppText>
-            ) : null}
-            <AppText style={[styles.cardTitle, textAlign]} numberOfLines={2}>
-              {localizedTitle(item)}
-            </AppText>
-            <AppText style={[styles.excerpt, textAlign]} numberOfLines={3}>
-              {localizedExcerpt(item)}
-            </AppText>
-            <AppText style={styles.meta}>
-              {item.views} {text.views}
-              {item.publishedAt ? ` • ${new Date(item.publishedAt).toLocaleDateString()}` : ''}
-            </AppText>
-          </View>
-        </Pressable>
-      )}
+      renderItem={({ item }) => <ArticleCard article={item} onPress={() => onOpenArticle(item.slug)} />}
       ListFooterComponent={
         isLoadingMore ? <ActivityIndicator style={styles.loader} color={colors.brand} /> : null
       }

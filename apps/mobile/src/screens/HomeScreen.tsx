@@ -29,6 +29,7 @@ type HomeScreenProps = {
   onOpenPrivacy: () => void;
   onOpenRefund: () => void;
   onStorePress: (slug: string) => void;
+  onAddListing?: () => void;
 };
 
 export function HomeScreen({
@@ -41,7 +42,8 @@ export function HomeScreen({
   onOpenTerms,
   onOpenPrivacy,
   onOpenRefund,
-  onStorePress
+  onStorePress,
+  onAddListing
 }: HomeScreenProps) {
   const { locale, t } = useI18n();
   const { scrollBottomPadding } = useScreenInsets();
@@ -75,7 +77,7 @@ export function HomeScreen({
         />
       }
     >
-      <HomeHeroSection onBrowseOffers={onBrowseOffers} />
+      <HomeHeroSection onBrowseOffers={onBrowseOffers} onAddListing={onAddListing} />
       <HomeCategoryBar onCategoryPress={onCategoryPress} />
       <HeroBannersSection />
       <HomeCreateStoreBanner onCreateStore={onCreateStore} />

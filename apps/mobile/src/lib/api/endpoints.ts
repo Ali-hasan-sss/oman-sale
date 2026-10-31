@@ -76,7 +76,10 @@ export const API_ENDPOINTS = {
     banners: '/hero/banners'
   },
   bannerRequests: {
-    pricing: '/banner-requests/pricing'
+    pricing: '/banner-requests/pricing',
+    create: '/banner-requests',
+    confirmPayment: '/banner-requests/payments/thawani/confirm',
+    cancelPayment: '/banner-requests/payments/thawani/cancel'
   },
   promotions: {
     plans: '/promotions/plans',

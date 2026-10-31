@@ -3,6 +3,10 @@ import { Image, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { AppText } from './AppText';
+import { LandmarkCard } from './vertex/LandmarkCard';
+import { OmanFlag } from './vertex/OmanFlag';
+import { SectionHeader } from './vertex/SectionHeader';
+import { rowDirection } from '../lib/layout-direction';
 import { API_ENDPOINTS, http, type ApiEnvelope } from '../lib/api';
 import { useI18n } from '../i18n';
 import { colors, radius } from '../theme';
@@ -20,6 +24,8 @@ type Destination = {
   bestTimeEn: string;
   addressAr: string;
   addressEn: string;
+  aboutAr?: string;
+  aboutEn?: string;
 };
 
 const fallbackImages = [
@@ -67,7 +73,7 @@ export function HomeTourismSection() {
     addressEn: ''
   }))).slice(0, 4);
 
-  const grid = destinations.length > 0 ? destinations : featured;
+  const grid: Destination[] = destinations.length > 0 ? destinations : featured;
 
   return (
     <View style={styles.wrap}>
@@ -94,22 +100,31 @@ export function HomeTourismSection() {
         <AppText style={[styles.heroText, { textAlign: copyAlign }]}>{t.home.tourismDescription}</AppText>
       </LinearGradient>
 
-      <AppText style={styles.kicker}>{t.home.exploreOman}</AppText>
-      <AppText style={styles.sectionTitle}>{t.home.destinationsTitle}</AppText>
-      <AppText style={styles.sectionSubtitle}>{t.home.destinationsSubtitle}</AppText>
-      <View style={styles.experienceGrid}>
-        {grid.map((destination) => {
-          const title = locale === 'en' ? destination.titleEn : destination.titleAr;
-          return (
-            <View key={`grid-${destination.id}`} style={[styles.destination, { width: outerTile }]}>
-              <Image source={{ uri: destination.imageUrl }} style={StyleSheet.absoluteFill} />
-              <View style={styles.experienceShade} />
-              <AppText style={styles.destinationTitle} numberOfLines={2}>
-                {title}
-              </AppText>
-            </View>
-          );
-        })}
+      <SectionHeader
+        leading={<OmanFlag />}
+        title={
+          locale === 'en'
+            ? `${grid.length} landmarks worth visiting in Oman`
+            : `${grid.length} ${grid.length >= 3 && grid.length <= 10 ? 'معالم' : 'معلماً'} تستحق الزيارة في عُمان`
+        }
+        subtitle={t.home.destinationsSubtitle}
+      />
+      <View style={[styles.experienceGrid, rowDirection(isRtl)]}>
+        {grid.map((destination, index) => (
+          <LandmarkCard
+            key={`grid-${destination.id}`}
+            index={index}
+            width={outerTile}
+            image={destination.imageUrl}
+            title={locale === 'en' ? destination.titleEn : destination.titleAr}
+            place={(locale === 'en' ? destination.addressEn : destination.addressAr) || undefined}
+            description={
+              (locale === 'en' ? destination.aboutEn : destination.aboutAr) ||
+              (locale === 'en' ? destination.bestTimeEn : destination.bestTimeAr) ||
+              undefined
+            }
+          />
+        ))}
       </View>
     </View>
   );

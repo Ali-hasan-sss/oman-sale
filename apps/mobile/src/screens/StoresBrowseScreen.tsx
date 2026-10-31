@@ -12,11 +12,18 @@ import {
   View
 } from 'react-native';
 
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Circle, Defs, Pattern, Rect } from 'react-native-svg';
+
 import { AppText } from '../components/AppText';
 import { AppTextInput } from '../components/AppTextInput';
 import { EmptyState } from '../components/EmptyState';
 import { HeroBannersSection } from '../components/HeroBannersSection';
 import { FilterChipsSkeleton, StoreBrowseGridSkeleton } from '../components/skeleton';
+import { VerifiedBadge } from '../components/VerifiedBadge';
+import { CategoryIcon } from '../lib/category-icons';
+import { alignSelfStart, rowDirection } from '../lib/layout-direction';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
 import { getCityLabel, omanCities } from '../lib/oman-cities';
@@ -34,13 +41,15 @@ type ChipItem = {
   key: string;
   value: string;
   label: string;
+  icon?: string | null;
 };
 
 type StoresBrowseScreenProps = {
   onStorePress: (slug: string) => void;
+  onAddStore?: () => void;
 };
 
-export function StoresBrowseScreen({ onStorePress }: StoresBrowseScreenProps) {
+export function StoresBrowseScreen({ onStorePress, onAddStore }: StoresBrowseScreenProps) {
   const { locale, t, isRtl } = useI18n();
   const { scrollBottomPadding } = useScreenInsets();
   const text = t.storesBrowse;
@@ -109,11 +118,12 @@ export function StoresBrowseScreen({ onStorePress }: StoresBrowseScreenProps) {
 
   const storeTypeChips = useMemo(
     (): ChipItem[] => [
-      { key: 'all', value: '', label: text.allStoreTypes },
+      { key: 'all', value: '', label: locale === 'en' ? 'All stores' : 'كل المتاجر', icon: '🛍️' },
       ...storeTypes.map((storeType) => ({
         key: storeType.id,
         value: storeType.id,
-        label: locale === 'en' ? storeType.nameEn : storeType.nameAr
+        label: locale === 'en' ? storeType.nameEn : storeType.nameAr,
+        icon: storeType.icon
       }))
     ],
     [locale, storeTypes, text.allStoreTypes]
@@ -169,50 +179,84 @@ export function StoresBrowseScreen({ onStorePress }: StoresBrowseScreenProps) {
       onScroll={handleScroll}
       scrollEventThrottle={200}
     >
-      <AppText style={[styles.title, textAlign]}>{text.title}</AppText>
-      <AppText style={[styles.subtitle, textAlign]}>{text.subtitle}</AppText>
-      <AppText style={[styles.meta, textAlign]}>
-        {total.toLocaleString(locale === 'ar' ? 'ar-OM' : 'en-US')} {text.results}
-      </AppText>
-      <HeroBannersSection placement="STORES" flush />
+      {/* hero band: white with soft green/red light, Islamic star pattern and a tricolor foot */}
+      <View style={styles.hero}>
+        <LinearGradient
+          colors={['rgba(75,187,120,0.16)', 'rgba(75,187,120,0)']}
+          start={{ x: isRtl ? 0 : 1, y: 0.5 }}
+          end={{ x: isRtl ? 0.7 : 0.3, y: 0.5 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
+          <Defs>
+            <Pattern id="starPattern" width="56" height="56" patternUnits="userSpaceOnUse">
+              <Rect x="18" y="18" width="20" height="20" fill="none" stroke="#168c4e" strokeOpacity={0.1} strokeWidth={1.1} />
+              <Rect x="18" y="18" width="20" height="20" fill="none" stroke="#168c4e" strokeOpacity={0.1} strokeWidth={1.1} transform="rotate(45 28 28)" />
+              <Circle cx="28" cy="28" r="5" fill="none" stroke="#168c4e" strokeOpacity={0.1} strokeWidth={1.1} />
+            </Pattern>
+          </Defs>
+          <Rect width="100%" height="100%" fill="url(#starPattern)" />
+        </Svg>
+        <AppText style={[styles.heroEmoji, isRtl ? { left: 10 } : { right: 10 }]}>🏬</AppText>
 
-      <View style={styles.searchRow}>
+        <AppText style={[styles.title, textAlign]}>{text.title}</AppText>
+        <AppText style={[styles.subtitle, textAlign]}>
+          {locale === 'en'
+            ? 'Verified showrooms, offices and shops listing across Oman.'
+            : 'معارض ومكاتب ومتاجر موثّقة تعرض إعلاناتها في سلطنة عُمان.'}
+        </AppText>
+
+        {isLoadingStoreTypes ? (
+          <FilterChipsSkeleton count={6} isRtl={isRtl} />
+        ) : (
+          <ChipRow chips={storeTypeChips} isRtl={isRtl} selectedValue={storeTypeId} onSelect={setStoreTypeId} />
+        )}
+
+        {onAddStore ? (
+          <Pressable onPress={onAddStore} style={({ pressed }) => [styles.addStore, alignSelfStart(isRtl), pressed && { opacity: 0.9 }]}>
+            <Ionicons name="add" size={20} color="#fff" />
+            <AppText style={styles.addStoreText}>{locale === 'en' ? 'Add your store' : 'أضف متجرك'}</AppText>
+          </Pressable>
+        ) : null}
+
+        <View style={styles.tricolor}>
+          <View style={[styles.tricolorPart, { backgroundColor: '#f32b2b' }]} />
+          <View style={[styles.tricolorPart, { backgroundColor: '#ffffff' }]} />
+          <View style={[styles.tricolorPart, { backgroundColor: '#2da864' }]} />
+        </View>
+      </View>
+
+      <AppText style={[styles.meta, textAlign]}>
+        <AppText style={styles.metaCount}>{total.toLocaleString('en-US')}</AppText>{' '}
+        {locale === 'en' ? 'stores in Oman' : 'متجر في عُمان'}
+      </AppText>
+
+      <View style={[styles.searchRow, rowDirection(isRtl)]}>
+        <Ionicons name="search" size={18} color="#94a3b8" />
         <AppTextInput
           value={searchInput}
           onChangeText={setSearchInput}
-          placeholder={text.searchPlaceholder}
-          placeholderTextColor={colors.muted}
+          placeholder={locale === 'en' ? 'Search for a store...' : 'ابحث عن متجر...'}
+          placeholderTextColor="#94a3b8"
           returnKeyType="search"
           onSubmitEditing={submitSearch}
+          onBlur={submitSearch}
           style={[styles.searchInput, inputAlign]}
         />
-        <Pressable style={styles.searchButton} onPress={submitSearch}>
-          <AppText style={styles.searchButtonText}>{text.search}</AppText>
-        </Pressable>
       </View>
 
-      {isLoadingStoreTypes ? (
-        <FilterChipsSkeleton count={6} isRtl={isRtl} />
-      ) : (
-        <ChipRow chips={storeTypeChips} isRtl={isRtl} selectedValue={storeTypeId} onSelect={setStoreTypeId} />
-      )}
-
       <ChipRow chips={cityChips} isRtl={isRtl} selectedValue={city} onSelect={setCity} />
+
+      <HeroBannersSection placement="STORES" flush />
 
       {showSkeleton || showStoreGridSkeleton ? (
         <StoreBrowseGridSkeleton count={4} />
       ) : stores.length === 0 ? (
         <EmptyState message={text.empty} />
       ) : (
-        <View style={styles.grid}>
+        <View style={[styles.grid, rowDirection(isRtl)]}>
           {stores.map((store) => (
-            <StoreBrowseCard
-              key={store.id}
-              store={store}
-              locale={locale}
-              listingsLabel={text.listings}
-              onPress={() => onStorePress(store.slug)}
-            />
+            <StoreBrowseCard key={store.id} store={store} locale={locale} isRtl={isRtl} onPress={() => onStorePress(store.slug)} />
           ))}
         </View>
       )}
@@ -264,6 +308,7 @@ function ChipRow({
         {orderedChips.map((chip) => (
           <FilterChip
             key={chip.key}
+            icon={chip.icon}
             label={chip.label}
             active={selectedValue === chip.value}
             onPress={() => onSelect(selectedValue === chip.value ? '' : chip.value)}
@@ -277,57 +322,92 @@ function ChipRow({
 function StoreBrowseCard({
   store,
   locale,
-  listingsLabel,
+  isRtl,
   onPress
 }: {
   store: PublicStore;
   locale: 'ar' | 'en';
-  listingsLabel: string;
+  isRtl: boolean;
   onPress: () => void;
 }) {
+  const [coverBroken, setCoverBroken] = useState(false);
   const name = locale === 'en' ? store.nameEn : store.nameAr;
   const typeName = locale === 'en' ? store.storeType?.nameEn : store.storeType?.nameAr;
   const cityLabel = getCityLabel(store.city ?? '', locale);
+  // "معرض الأصيل" -> "أ": skip a generic first word and the article "ال".
+  const words = (name || '').trim().split(/\s+/);
+  const keyWord = ((words.length > 1 ? words[1] : words[0]) ?? '').replace(/^ال(?=\S{2,})/, '');
+  const initial = keyWord.charAt(0).replace('ا', 'أ');
 
   return (
     <Pressable style={({ pressed }) => [styles.card, pressed && styles.cardPressed]} onPress={onPress}>
       <View style={styles.cardCoverWrap}>
-        {store.coverUrl ? (
-          <Image source={{ uri: store.coverUrl }} style={styles.cardCover} />
+        <LinearGradient colors={['#2da864', '#11703e', '#0a4024']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+        {store.coverUrl && !coverBroken ? (
+          <Image source={{ uri: store.coverUrl }} style={styles.cardCover} onError={() => setCoverBroken(true)} />
         ) : (
           <View style={styles.cardCoverFallback}>
-            <Image source={fallbackLogo} style={styles.cardCoverLogo} resizeMode="contain" />
+            {store.storeType?.icon ? (
+              <CategoryIcon icon={store.storeType.icon} size={40} color="#ffffff" />
+            ) : (
+              <AppText style={styles.coverEmoji}>🏬</AppText>
+            )}
           </View>
         )}
-        <View style={styles.cardLogoWrap}>
+        <View style={[styles.cardLogoWrap, isRtl ? { right: 10 } : { left: 10 }]}>
           {store.logoUrl ? (
             <Image source={{ uri: store.logoUrl }} style={styles.cardLogo} />
           ) : (
-            <Image source={fallbackLogo} style={styles.cardLogoFallback} resizeMode="contain" />
+            <AppText style={styles.cardInitial}>{initial}</AppText>
           )}
         </View>
       </View>
-      <AppText style={styles.cardTitle} numberOfLines={2}>
-        {name}
-      </AppText>
-      {typeName ? (
-        <View style={styles.typeBadge}>
-          <AppText style={styles.typeBadgeText} numberOfLines={1}>
+      <View style={styles.cardBody}>
+        <View style={[styles.nameRow, rowDirection(isRtl)]}>
+          <AppText style={styles.cardTitle} numberOfLines={2}>
+            {name}
+          </AppText>
+          {store.trustBadgeApproved ? <VerifiedBadge /> : null}
+        </View>
+        {typeName ? (
+          <AppText style={styles.typeText} numberOfLines={1}>
             {typeName}
           </AppText>
+        ) : null}
+        {cityLabel ? (
+          <View style={[styles.placeRow, rowDirection(isRtl)]}>
+            <Ionicons name="location-outline" size={12} color="#64748b" />
+            <AppText style={styles.placeText} numberOfLines={1}>
+              {cityLabel}
+            </AppText>
+          </View>
+        ) : null}
+        <View style={[styles.cardFooter, rowDirection(isRtl)]}>
+          <AppText style={styles.cardFooterText} numberOfLines={1}>
+            {locale === 'en' ? 'View listings' : 'عرض الإعلانات'}
+            {store.listingsCount ? ` (${store.listingsCount})` : ''}
+          </AppText>
+          <Ionicons name={isRtl ? 'chevron-back' : 'chevron-forward'} size={14} color="#11703e" />
         </View>
-      ) : null}
-      <AppText style={styles.cardMeta}>
-        {store.listingsCount ?? 0} {listingsLabel}
-        {cityLabel ? ` · ${cityLabel}` : ''}
-      </AppText>
+      </View>
     </Pressable>
   );
 }
 
-function FilterChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+function FilterChip({
+  label,
+  icon,
+  active,
+  onPress
+}: {
+  label: string;
+  icon?: string | null;
+  active: boolean;
+  onPress: () => void;
+}) {
   return (
     <Pressable onPress={onPress} style={[styles.chip, active && styles.chipActive]}>
+      {icon ? <CategoryIcon icon={icon} size={16} color={active ? '#ffffff' : '#11703e'} /> : null}
       <AppText style={[styles.chipText, active && styles.chipTextActive]} numberOfLines={1}>
         {label}
       </AppText>
@@ -338,52 +418,93 @@ function FilterChip({ label, active, onPress }: { label: string; active: boolean
 const styles = StyleSheet.create({
   page: {
     flex: 1,
-    width: '100%'
+    width: '100%',
+    backgroundColor: '#f8fafc'
   },
   content: {
     padding: CONTENT_PADDING,
+    paddingTop: 0,
     gap: 12
   },
+  hero: {
+    marginHorizontal: -CONTENT_PADDING,
+    paddingHorizontal: CONTENT_PADDING,
+    paddingTop: 22,
+    paddingBottom: 22,
+    backgroundColor: '#ffffff',
+    overflow: 'hidden',
+    gap: 12
+  },
+  heroEmoji: {
+    position: 'absolute',
+    top: 14,
+    fontSize: 54,
+    lineHeight: 66,
+    opacity: 0.95
+  },
+  tricolor: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 3,
+    flexDirection: 'row'
+  },
+  tricolorPart: {
+    flex: 1
+  },
   title: {
-    fontSize: 26,
+    fontSize: 30,
+    lineHeight: 42,
     fontWeight: '900',
-    color: colors.ink,
-    marginBottom: 6
+    color: colors.ink
   },
   subtitle: {
-    color: colors.muted,
+    color: '#475569',
     lineHeight: 22,
-    marginBottom: 4
+    fontSize: 14.5
+  },
+  addStore: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#168c4e',
+    borderRadius: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    shadowColor: '#168c4e',
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4
+  },
+  addStoreText: {
+    color: '#fff',
+    fontWeight: '900',
+    fontSize: 15
   },
   meta: {
-    color: colors.muted,
-    fontSize: 13,
-    fontWeight: '700',
-    marginBottom: 14
+    color: '#475569',
+    fontSize: 15,
+    marginTop: 4
+  },
+  metaCount: {
+    fontWeight: '900',
+    color: colors.ink
   },
   searchRow: {
-    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
-    marginBottom: 12
+    height: 48,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: '#fff',
+    paddingHorizontal: 16
   },
   searchInput: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radius.md,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    backgroundColor: colors.surface
-  },
-  searchButton: {
-    backgroundColor: colors.brand,
-    borderRadius: radius.md,
-    paddingHorizontal: 16,
-    justifyContent: 'center'
-  },
-  searchButtonText: {
-    color: '#fff',
-    fontWeight: '800',
+    paddingVertical: 10,
     fontSize: 14
   },
   chipsScrollWrap: {
@@ -398,23 +519,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingBottom: 14
+    paddingBottom: 4
   },
   chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     borderWidth: 1,
     borderColor: colors.line,
     borderRadius: radius.pill,
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 9,
     backgroundColor: colors.surface,
-    maxWidth: 160
+    maxWidth: 200
   },
   chipActive: {
-    backgroundColor: colors.brand,
-    borderColor: colors.brand
+    backgroundColor: '#168c4e',
+    borderColor: '#168c4e'
   },
   chipText: {
-    fontWeight: '700',
+    fontWeight: '800',
     color: colors.ink,
     fontSize: 13
   },
@@ -422,7 +546,6 @@ const styles = StyleSheet.create({
     color: '#fff'
   },
   grid: {
-    flexDirection: 'row',
     flexWrap: 'wrap',
     gap: CARD_GAP,
     width: '100%'
@@ -430,8 +553,7 @@ const styles = StyleSheet.create({
   card: {
     width: STORE_CARD_WIDTH,
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    overflow: 'hidden',
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.line,
     ...shadow
@@ -440,72 +562,97 @@ const styles = StyleSheet.create({
     opacity: 0.92
   },
   cardCoverWrap: {
-    height: 96,
-    backgroundColor: colors.brandSoft
+    height: 92,
+    borderTopLeftRadius: 21,
+    borderTopRightRadius: 21,
+    overflow: 'visible'
   },
   cardCover: {
+    ...StyleSheet.absoluteFillObject,
     width: '100%',
-    height: '100%'
+    height: '100%',
+    borderTopLeftRadius: 21,
+    borderTopRightRadius: 21
   },
   cardCoverFallback: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center'
   },
-  cardCoverLogo: {
-    width: 56,
-    height: 56,
-    opacity: 0.5
+  coverEmoji: {
+    fontSize: 38,
+    lineHeight: 48
   },
   cardLogoWrap: {
     position: 'absolute',
-    bottom: -18,
-    start: 12,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2,
+    bottom: -22,
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    borderWidth: 3,
     borderColor: colors.surface,
     overflow: 'hidden',
-    backgroundColor: colors.surface
+    backgroundColor: '#11703e',
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   cardLogo: {
     width: '100%',
     height: '100%'
   },
-  cardLogoFallback: {
-    width: '100%',
-    height: '100%',
-    padding: 6
+  cardInitial: {
+    color: '#fff',
+    fontSize: 20,
+    lineHeight: 28,
+    fontWeight: '900',
+    textAlign: 'center'
+  },
+  cardBody: {
+    paddingHorizontal: 12,
+    paddingTop: 28,
+    paddingBottom: 10,
+    flex: 1
+  },
+  nameRow: {
+    alignItems: 'center',
+    gap: 4
   },
   cardTitle: {
-    marginTop: 24,
-    paddingHorizontal: 12,
+    flexShrink: 1,
     fontWeight: '900',
     color: colors.ink,
-    fontSize: 14,
-    lineHeight: 18
+    fontSize: 14.5,
+    lineHeight: 21
   },
-  typeBadge: {
-    alignSelf: 'flex-start',
-    marginTop: 6,
-    marginHorizontal: 12,
-    borderRadius: radius.pill,
-    backgroundColor: '#ecfdf5',
-    paddingHorizontal: 8,
-    paddingVertical: 4
+  typeText: {
+    marginTop: 2,
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#f32b2b'
   },
-  typeBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#047857'
+  placeRow: {
+    marginTop: 3,
+    alignItems: 'center',
+    gap: 3
   },
-  cardMeta: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: colors.muted,
-    fontSize: 11,
-    fontWeight: '600'
+  placeText: {
+    flexShrink: 1,
+    fontSize: 11.5,
+    color: '#64748b'
+  },
+  cardFooter: {
+    marginTop: 'auto',
+    paddingTop: 9,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  },
+  cardFooterText: {
+    flexShrink: 1,
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#11703e'
   },
   footerLoader: {
     marginVertical: 16

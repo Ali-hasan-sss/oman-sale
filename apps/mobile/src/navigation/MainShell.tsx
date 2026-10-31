@@ -26,7 +26,9 @@ import { AssistantChatWidget } from '../components/assistant/AssistantChatWidget
 import { connectChatRealtime, connectNotificationsRealtime, disconnectChatRealtime, useAuthStore, useChatStore, useNotificationsStore } from '../stores';
 import { registerMobilePushToken } from '../lib/push-registration';
 import { useI18n } from '../i18n';
+import { registerBannerAdOpener, type BannerAdTarget } from '../lib/banner-ad-nav';
 import { AddOfferScreen } from '../screens/AddOfferScreen';
+import { BannerAdRequestScreen } from '../screens/BannerAdRequestScreen';
 import { AddStoreScreen } from '../screens/AddStoreScreen';
 import { MyStoreScreen } from '../screens/MyStoreScreen';
 import { AuthScreen } from '../screens/AuthScreen';
@@ -53,7 +55,7 @@ import { CHAT_THREAD_BAR_BODY_HEIGHT } from '../constants/chat-layout';
 import { colors } from '../theme';
 
 const tabScreens: ScreenName[] = ['home', 'offers', 'myOffers', 'chat'];
-const protectedScreens: ScreenName[] = ['myOffers', 'chat', 'addOffer', 'addStore', 'myStore', 'notifications'];
+const protectedScreens: ScreenName[] = ['myOffers', 'chat', 'addOffer', 'addStore', 'myStore', 'notifications', 'bannerAd'];
 const edgeSwipeWidth = 40;
 const openSwipeThreshold = 56;
 const chatEdgeSwipeBottomInset = 100;
@@ -80,6 +82,7 @@ export function MainShell() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedStoreSlug, setSelectedStoreSlug] = useState<string | null>(null);
   const [selectedArticleSlug, setSelectedArticleSlug] = useState<string | null>(null);
+  const [bannerAdTarget, setBannerAdTarget] = useState<BannerAdTarget>({});
   const [navTransition, setNavTransition] = useState<ScreenTransitionKind>('tab');
   const drawerOpenRef = useRef(drawerOpen);
   const isRtlRef = useRef(isRtl);
@@ -275,6 +278,14 @@ export function MainShell() {
   const keyboardLift = useKeyboardLiftHeight();
   const tabBarKeyboardOffset = hideTabBar ? 0 : keyboardLift;
 
+  useEffect(() => {
+    registerBannerAdOpener((target) => {
+      setBannerAdTarget(target);
+      navigate('bannerAd');
+    });
+    return () => registerBannerAdOpener(null);
+  });
+
   const homeScreenProps = {
     onBrowseOffers: () => navigate('offers'),
     onListingPress: openListingDetail,
@@ -286,7 +297,8 @@ export function MainShell() {
     onOpenPrivacy: () => pushScreen('privacy'),
     onOpenRefund: () => pushScreen('refund'),
     onBrowseStores: () => pushScreen('storesBrowse'),
-    onStorePress: openStoreDetail
+    onStorePress: openStoreDetail,
+    onAddListing: () => navigate('addOffer')
   };
 
   const content = useMemo(() => {
@@ -305,12 +317,12 @@ export function MainShell() {
           <HomeScreen {...homeScreenProps} />
         );
       case 'storesBrowse':
-        return <StoresBrowseScreen onStorePress={openStoreDetail} />;
+        return <StoresBrowseScreen onStorePress={openStoreDetail} onAddStore={() => navigate('addStore')} />;
       case 'storeDetail':
         return selectedStoreSlug ? (
           <StoreDetailScreen slug={selectedStoreSlug} onListingPress={openListingDetail} />
         ) : (
-          <StoresBrowseScreen onStorePress={openStoreDetail} />
+          <StoresBrowseScreen onStorePress={openStoreDetail} onAddStore={() => navigate('addStore')} />
         );
       case 'offers':
         return <OffersScreen onListingPress={openListingDetail} onStorePress={openStoreDetail} />;
@@ -393,6 +405,17 @@ export function MainShell() {
         return <LegalScreen kind="privacy" />;
       case 'refund':
         return <LegalScreen kind="refund" />;
+      case 'bannerAd':
+        return (
+          <BannerAdRequestScreen
+            placement={bannerAdTarget.placement}
+            linkUrl={bannerAdTarget.linkUrl}
+            imageUrl={bannerAdTarget.imageUrl}
+            textAr={bannerAdTarget.textAr}
+            textEn={bannerAdTarget.textEn}
+            onDone={goBack}
+          />
+        );
       case 'notifications':
         return <NotificationsScreen />;
       case 'news':
@@ -442,7 +465,7 @@ export function MainShell() {
       default:
         return <HomeScreen {...homeScreenProps} />;
     }
-  }, [screen, user, selectedListingId, selectedConversationId, selectedCategoryId, selectedStoreSlug]);
+  }, [screen, user, selectedListingId, selectedConversationId, selectedCategoryId, selectedStoreSlug, selectedArticleSlug, bannerAdTarget]);
 
   const handleLogoutConfirm = () => {
     setLogoutConfirmOpen(false);

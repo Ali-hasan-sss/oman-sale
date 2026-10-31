@@ -25,7 +25,8 @@ export type ScreenName =
   | 'articleDetail'
   | 'terms'
   | 'privacy'
-  | 'refund';
+  | 'refund'
+  | 'bannerAd';
 
 export type User = {
   id: string;
@@ -149,6 +150,8 @@ export type HeroSlide = {
   sortOrder: number;
   platform?: 'WEB' | 'MOBILE' | 'ALL';
   imageUrl: string;
+  /** portrait image for the rotating hero card (falls back to imageUrl) */
+  cardImageUrl?: string | null;
   title: string;
   subtitle: string;
   buttonLabel: string;

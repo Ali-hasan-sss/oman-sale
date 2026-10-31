@@ -21,7 +21,8 @@ import { MyStoreScreenSkeleton } from '../components/skeleton';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
 import { rowDirection } from '../lib/layout-direction';
-import { buildBannerAdWebsitePath, openWebPaymentPage, openWebsitePage } from '../lib/open-external-web';
+import { requestBannerAd } from '../lib/banner-ad-nav';
+import { openWebPaymentPage } from '../lib/open-external-web';
 import { formatPlanVatBreakdown } from '../lib/plan-pricing';
 import { canActivateStorePlanWithoutPayment } from '../lib/store-plan-activation';
 import {
@@ -471,7 +472,7 @@ export function MyStoreScreen({ onCreateStore, onOpenListing, onAddListing }: My
         ) : null}
         <Pressable
           style={[styles.secondaryButton, { marginTop: 12 }]}
-          onPress={() => void openWebsitePage(locale, buildBannerAdWebsitePath())}
+          onPress={() => requestBannerAd()}
         >
           <AppText style={styles.upgradeButtonText}>{t.common.requestBannerAd}</AppText>
         </Pressable>
