@@ -116,7 +116,7 @@ export function NotificationBell({
 
   const buttonClass =
     variant === 'hero'
-      ? 'relative flex h-11 w-11 items-center justify-center rounded-full border border-white/70 bg-white/90 text-brand-700 shadow-lg transition hover:bg-white'
+      ? 'vx-navbtn relative flex h-11 w-11 items-center justify-center !rounded-full'
       : variant === 'admin'
         ? 'relative flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50'
         : 'relative flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 transition hover:bg-gray-50';

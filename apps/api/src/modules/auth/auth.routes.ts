@@ -2,6 +2,11 @@ import { Router } from 'express';
 import { UserRole } from '@prisma/client';
 
 import { authorize, requireAuth } from '../../shared/middleware/auth';
+import {
+  forgotPasswordAttemptLimiter,
+  loginAttemptLimiter,
+  resetPasswordAttemptLimiter
+} from '../../shared/middleware/rate-limit';
 import { validateRequest } from '../../shared/validators/validate-request';
 import { asyncHandler } from '../../shared/utils/async-handler';
 import { authController } from './auth.controller';
@@ -62,7 +67,12 @@ authRoutes.post(
   asyncHandler(authController.register)
 );
 
-authRoutes.post('/login', validateRequest({ body: loginSchema }), asyncHandler(authController.login));
+authRoutes.post(
+  '/login',
+  loginAttemptLimiter,
+  validateRequest({ body: loginSchema }),
+  asyncHandler(authController.login)
+);
 authRoutes.post('/google', validateRequest({ body: googleAuthSchema }), asyncHandler(authController.googleAuth));
 authRoutes.post('/apple', validateRequest({ body: appleAuthSchema }), asyncHandler(authController.appleAuth));
 authRoutes.post(
@@ -86,6 +96,7 @@ authRoutes.post(
 authRoutes.post('/complete-profile/skip', requireAuth, asyncHandler(authController.skipCompleteProfile));
 authRoutes.post(
   '/admin/login',
+  loginAttemptLimiter,
   validateRequest({ body: loginSchema }),
   asyncHandler(authController.adminLogin)
 );
@@ -96,8 +107,18 @@ authRoutes.post(
 );
 authRoutes.post('/verify-email', validateRequest({ body: emailCodeSchema }), asyncHandler(authController.verifyEmail));
 authRoutes.post('/resend-verification', validateRequest({ body: resendVerificationSchema }), asyncHandler(authController.resendVerification));
-authRoutes.post('/forgot-password', validateRequest({ body: forgotPasswordSchema }), asyncHandler(authController.forgotPassword));
-authRoutes.post('/reset-password', validateRequest({ body: resetPasswordSchema }), asyncHandler(authController.resetPassword));
+authRoutes.post(
+  '/forgot-password',
+  forgotPasswordAttemptLimiter,
+  validateRequest({ body: forgotPasswordSchema }),
+  asyncHandler(authController.forgotPassword)
+);
+authRoutes.post(
+  '/reset-password',
+  resetPasswordAttemptLimiter,
+  validateRequest({ body: resetPasswordSchema }),
+  asyncHandler(authController.resetPassword)
+);
 authRoutes.post(
   '/admin/change-password',
   requireAuth,

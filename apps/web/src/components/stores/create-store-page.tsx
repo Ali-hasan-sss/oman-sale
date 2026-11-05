@@ -14,6 +14,7 @@ import { PhoneVerificationSentNotice } from '@/components/auth/phone-verificatio
 import { VerificationCodeInput } from '@/components/auth/verification-code-input';
 import { PlanPriceWithVat } from '@/components/pricing/plan-price-with-vat';
 import { PhoneInput } from '@/components/ui/phone-input';
+import { StoreBrandingPicker } from '@/components/stores/store-branding-picker';
 import { api } from '@/lib/api';
 import { resolveApiErrorMessage } from '@/lib/api-errors';
 import { storePendingThawaniSession } from '@/lib/thawani-session';
@@ -215,6 +216,8 @@ export function CreateStorePage() {
   const [nameEn, setNameEn] = useState('');
   const [bioAr, setBioAr] = useState('');
   const [bioEn, setBioEn] = useState('');
+  const [logoUrl, setLogoUrl] = useState('');
+  const [coverUrl, setCoverUrl] = useState('');
   const [phone, setPhone] = useState('');
   const [userPhone, setUserPhone] = useState('');
   const [phoneCode, setPhoneCode] = useState('');
@@ -397,6 +400,8 @@ export function CreateStorePage() {
           nameEn: nameEn.trim(),
           bioAr: bioAr.trim(),
           bioEn: bioEn.trim(),
+          ...(logoUrl ? { logoUrl } : {}),
+          ...(coverUrl ? { coverUrl } : {}),
           phone: trimmedPhone,
           nationalId: nationalId.trim(),
           businessType,
@@ -605,6 +610,15 @@ export function CreateStorePage() {
 
             <section className="space-y-6 rounded-2xl bg-white p-8 shadow-sm">
               <h2 className="text-lg font-black">{text.storeDetails}</h2>
+
+              <StoreBrandingPicker
+                locale={locale}
+                logoUrl={logoUrl}
+                coverUrl={coverUrl}
+                storeName={locale === 'en' ? nameEn || nameAr : nameAr || nameEn}
+                onLogoChange={setLogoUrl}
+                onCoverChange={setCoverUrl}
+              />
 
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="block">

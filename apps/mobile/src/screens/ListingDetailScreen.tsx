@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useEffect, useMemo, useState, type ComponentProps } from 'react';
+import { ResizeMode, Video } from 'expo-av';
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
 import {
   ActivityIndicator,
+  FlatList,
   Image,
   Linking,
   Modal,
@@ -9,7 +11,10 @@ import {
   ScrollView,
   Share,
   StyleSheet,
-  View
+  useWindowDimensions,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent
 } from 'react-native';
 import { AppTextInput } from '../components/AppTextInput';
 import { AppText } from '../components/AppText';
@@ -21,6 +26,7 @@ import { ListingCoverImage } from '../components/ListingCoverImage';
 import { ListingImageModal } from '../components/ListingImageModal';
 import { ListingDetailSkeleton } from '../components/skeleton';
 import { formatListingDate, formatPrice, getCategoryName } from '../data';
+import { isVideoMedia, resolveDeviceMediaUrl } from '../lib/media-url';
 import { getListingLocationLabel } from '../lib/oman-locations';
 import { insetEnd, rowDirection } from '../lib/layout-direction';
 import { useScreenInsets } from '../hooks/use-screen-insets';
@@ -57,6 +63,8 @@ export function ListingDetailScreen({
   onOpenStore
 }: ListingDetailScreenProps) {
   const { locale, t, isRtl } = useI18n();
+  const { width: pageWidth } = useWindowDimensions();
+  const mediaPagerRef = useRef<FlatList<{ uri: string; isVideo: boolean }>>(null);
   const { scrollBottomPadding } = useScreenInsets();
   const accessToken = useAuthStore((state) => state.accessToken);
   const user = useAuthStore((state) => state.user);
@@ -64,6 +72,7 @@ export function ListingDetailScreen({
   const [listing, setListing] = useState<Listing | null>(() => getCachedListing(listingId) ?? null);
   const [similar, setSimilar] = useState<Listing[]>([]);
   const [activeImage, setActiveImage] = useState(0);
+  const [videoPlaying, setVideoPlaying] = useState(false);
   const [showPhone, setShowPhone] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -87,6 +96,7 @@ export function ListingDetailScreen({
     setError('');
     setShowPhone(false);
     setActiveImage(0);
+    setVideoPlaying(false);
     try {
       const [detail, related] = await Promise.all([
         fetchListingById(listingId),
@@ -120,9 +130,13 @@ export function ListingDetailScreen({
       .catch(() => setIsFavorited(false));
   }, [accessToken, listingId]);
 
-  const imageUrls = useMemo(() => {
-    const urls = listing?.images?.map((img) => img.imageUrl).filter(Boolean) as string[] | undefined;
-    return urls && urls.length > 0 ? urls : [];
+  const gallery = useMemo(() => {
+    return (listing?.images ?? [])
+      .map((img) => ({
+        uri: resolveDeviceMediaUrl(img.imageUrl),
+        isVideo: isVideoMedia(img)
+      }))
+      .filter((item) => item.uri);
   }, [listing]);
 
   const phone =
@@ -247,25 +261,69 @@ export function ListingDetailScreen({
     );
   }
 
-  const selectedImage = imageUrls[activeImage] ?? imageUrls[0];
   const location = getListingLocationLabel(listing.city, listing.wilayah, listing.area, locale) || '-';
+
+  const showMedia = (index: number) => {
+    setVideoPlaying(false);
+    setActiveImage(index);
+    mediaPagerRef.current?.scrollToIndex({ index, animated: true });
+  };
+
+  const onMediaSwipeEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const index = Math.round(event.nativeEvent.contentOffset.x / pageWidth);
+    if (index >= 0 && index < gallery.length && index !== activeImage) {
+      setVideoPlaying(false);
+      setActiveImage(index);
+    }
+  };
 
   return (
     <View style={styles.root}>
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: scrollBottomPadding }]}
+        directionalLockEnabled
         showsVerticalScrollIndicator={false}
       >
-        <Pressable
-          style={styles.hero}
-          onPress={() => {
-            if (imageUrls.length > 0) setGalleryOpen(true);
-          }}
-        >
-          {selectedImage ? (
-            <Image source={{ uri: selectedImage }} style={styles.heroImage} />
-          ) : (
+        <View style={styles.hero}>
+          {gallery.length === 0 ? (
             <ListingCoverImage uri={null} variant="hero" style={styles.heroPlaceholder} />
+          ) : (
+            <FlatList
+              ref={mediaPagerRef}
+              data={gallery}
+              horizontal
+              pagingEnabled
+              nestedScrollEnabled
+              directionalLockEnabled
+              showsHorizontalScrollIndicator={false}
+              style={styles.heroPager}
+              keyExtractor={(item, index) => `${item.uri}-${index}`}
+              getItemLayout={(_, index) => ({ length: pageWidth, offset: pageWidth * index, index })}
+              extraData={`${activeImage}-${videoPlaying}`}
+              onMomentumScrollEnd={onMediaSwipeEnd}
+              onScrollToIndexFailed={() => undefined}
+              renderItem={({ item, index }) =>
+                item.isVideo ? (
+                  <View style={[styles.heroVideo, { width: pageWidth }]}>
+                    <Video
+                      pointerEvents="none"
+                      source={{ uri: item.uri }}
+                      style={StyleSheet.absoluteFill}
+                      resizeMode={ResizeMode.CONTAIN}
+                      shouldPlay={videoPlaying && index === activeImage}
+                      isLooping={false}
+                    />
+                    <Pressable style={styles.videoPlay} onPress={() => setVideoPlaying((playing) => !playing)}>
+                      <Ionicons name={videoPlaying && index === activeImage ? 'pause' : 'play'} size={28} color="#fff" />
+                    </Pressable>
+                  </View>
+                ) : (
+                  <Pressable style={{ width: pageWidth, height: '100%' }} onPress={() => setGalleryOpen(true)}>
+                    <Image source={{ uri: item.uri }} style={styles.heroImage} />
+                  </Pressable>
+                )
+              }
+            />
           )}
           <View style={[styles.heroActions, rowDirection(isRtl), insetEnd(isRtl, 12)]}>
             <Pressable style={styles.heroActionBtn} onPress={() => void shareListing()}>
@@ -283,27 +341,35 @@ export function ListingDetailScreen({
               )}
             </Pressable>
           </View>
-          {imageUrls.length > 1 ? (
+          {gallery.length > 1 ? (
             <View style={[styles.imageCountBadge, rowDirection(isRtl), insetEnd(isRtl, 14)]}>
               <Ionicons name="images-outline" size={14} color="#fff" />
-              <AppText style={styles.imageCountText}>{imageUrls.length}</AppText>
+              <AppText style={styles.imageCountText}>
+                {activeImage + 1}/{gallery.length}
+              </AppText>
             </View>
           ) : null}
-        </Pressable>
+        </View>
 
-        {imageUrls.length > 1 ? (
+        {gallery.length > 1 ? (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={[styles.thumbs, rowDirection(isRtl)]}
           >
-            {imageUrls.map((uri, index) => (
+            {gallery.map((item, index) => (
               <Pressable
-                key={`${uri}-${index}`}
-                onPress={() => setActiveImage(index)}
+                key={`${item.uri}-${index}`}
+                onPress={() => showMedia(index)}
                 style={[styles.thumb, activeImage === index && styles.thumbActive]}
               >
-                <Image source={{ uri }} style={styles.thumbImage} />
+                {item.isVideo ? (
+                  <View style={styles.videoThumb}>
+                    <Ionicons name="videocam" size={22} color="#fff" />
+                  </View>
+                ) : (
+                  <Image source={{ uri: item.uri }} style={styles.thumbImage} />
+                )}
               </Pressable>
             ))}
           </ScrollView>
@@ -496,7 +562,7 @@ export function ListingDetailScreen({
 
       <ListingImageModal
         visible={galleryOpen}
-        images={imageUrls}
+        images={gallery}
         initialIndex={activeImage}
         title={listing.title}
         imageLabel={text.imageOf}
@@ -596,9 +662,14 @@ const styles = StyleSheet.create({
     height: 280,
     backgroundColor: colors.brandSoft
   },
+  heroPager: {
+    height: 280
+  },
   heroActions: {
     position: 'absolute',
     top: 12,
+    zIndex: 2,
+    elevation: 4,
     gap: 8
   },
   heroActionBtn: {
@@ -610,10 +681,38 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.92)',
     ...shadow
   },
+  heroMedia: {
+    width: '100%',
+    height: '100%'
+  },
   heroImage: {
     width: '100%',
     height: '100%',
     backgroundColor: colors.brandSoft
+  },
+  heroVideo: {
+    height: '100%',
+    backgroundColor: '#111827'
+  },
+  videoPlay: {
+    position: 'absolute',
+    left: '50%',
+    top: '50%',
+    marginLeft: -24,
+    marginTop: -24,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.55)'
+  },
+  videoThumb: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#111827'
   },
   heroPlaceholder: {
     flex: 1,
@@ -622,6 +721,7 @@ const styles = StyleSheet.create({
   },
   imageCountBadge: {
     position: 'absolute',
+    zIndex: 2,
     bottom: 14,
     alignItems: 'center',
     gap: 4,

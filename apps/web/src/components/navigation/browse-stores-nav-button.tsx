@@ -101,17 +101,17 @@ export function BrowseStoresNavButton({ variant = 'default', label, compact = fa
 
   const wrapClass =
     variant === 'hero'
-      ? `inline-flex max-w-full items-stretch overflow-hidden rounded-lg border border-white/70 bg-white/90 shadow-lg ${compact ? 'min-w-0' : ''}`
+      ? `vx-navbtn inline-flex max-w-full items-stretch overflow-hidden ${compact ? 'min-w-0' : ''}`
       : `inline-flex max-w-full items-stretch overflow-hidden rounded-lg border border-gray-300 bg-white ${compact ? 'min-w-0' : ''}`;
 
   const linkClass =
     variant === 'hero'
-      ? `${sizeClass} truncate font-medium transition hover:bg-white`
+      ? `${sizeClass} truncate font-medium transition hover:bg-white/5`
       : `${sizeClass} truncate font-medium transition hover:bg-gray-50`;
 
   const toggleClass =
     variant === 'hero'
-      ? `shrink-0 border-s border-white/70 px-1.5 py-1.5 transition hover:bg-white sm:px-2 sm:py-2`
+      ? `shrink-0 border-s border-white/10 px-1.5 py-1.5 transition hover:bg-white/5 sm:px-2 sm:py-2`
       : `shrink-0 border-s border-gray-300 px-1.5 py-1.5 transition hover:bg-gray-50 sm:px-2 sm:py-2`;
 
   const menu =

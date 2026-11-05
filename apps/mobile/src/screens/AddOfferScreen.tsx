@@ -7,7 +7,9 @@ import {
   ScrollView,
   StyleSheet,
   View,
-  type ScrollView as ScrollViewType
+  type ScrollView as ScrollViewType,
+  type StyleProp,
+  type ViewStyle
 } from 'react-native';
 
 import { AppText } from '../components/AppText';
@@ -31,22 +33,24 @@ import {
   selectFilterOption,
   updateSubcategoryPath
 } from '../lib/category-subcategory-filters';
-import { getValidationFieldErrors, resolveApiErrorMessage } from '../lib/api-errors';
+import { getApiCodeFieldErrors, getValidationFieldErrors, resolveApiErrorMessage } from '../lib/api-errors';
 import {
   parseListingPrice,
   sanitizePriceInput,
   validateListingForm
 } from '../lib/listing-form-validation';
 import { getWilayahsForGovernorate, omanGovernorates } from '../lib/oman-locations';
-import { horizontalListNeedsAlignStart, rowDirection } from '../lib/layout-direction';
+import { rowDirection } from '../lib/layout-direction';
 import type { CategoryFilter, CategoryOption } from '../services/listings.service';
 import { checkoutPaidListingRequest, fetchCategoryFilters } from '../services/listings.service';
 import { openWebPaymentPage } from '../lib/open-external-web';
 import { formatPlanVatBreakdown } from '../lib/plan-pricing';
 import {
+  fetchPromotionCredits,
   fetchPromotionPlans,
+  formatFreeCredit,
   getPlanPrice,
-  sortPromotionPlansByPrice,
+  type PromotionCredit,
   type PromotionPlan
 } from '../services/promotions.service';
 import { fetchMyStores, type OwnerStore } from '../services/stores.service';
@@ -65,15 +69,65 @@ type AddOfferScreenProps = {
 const getCategoryLabel = (category: CategoryOption, locale: 'ar' | 'en') =>
   (locale === 'ar' ? category.nameAr : category.nameEn) ?? category.name;
 
-const alignChipScroll = (ref: React.RefObject<ScrollViewType | null>, isRtl: boolean) => {
-  requestAnimationFrame(() => {
-    if (horizontalListNeedsAlignStart(isRtl)) {
-      ref.current?.scrollToEnd({ animated: false });
-    } else {
-      ref.current?.scrollTo({ x: 0, animated: false });
-    }
-  });
-};
+function summarizeFieldErrors(errors: Record<string, string>, fallback: string) {
+  const unique = [...new Set(Object.values(errors).filter(Boolean))];
+  return unique.length > 0 ? unique.join('\n') : fallback;
+}
+
+const FIELD_ORDER = [
+  'title',
+  'categoryId',
+  'subcategoryPath',
+  'filters',
+  'modelYear',
+  'city',
+  'wilayah',
+  'price',
+  'description'
+] as const;
+
+function firstInvalidField(errors: Record<string, string>) {
+  return FIELD_ORDER.find((field) => errors[field]) ?? Object.keys(errors)[0];
+}
+
+function orderForRtl<T>(items: readonly T[], isRtl: boolean) {
+  return isRtl ? [...items].reverse() : [...items];
+}
+
+function HorizontalChipScroll({
+  isRtl,
+  contentContainerStyle,
+  children
+}: {
+  isRtl: boolean;
+  contentContainerStyle?: StyleProp<ViewStyle>;
+  children: ReactNode;
+}) {
+  const scrollRef = useRef<ScrollViewType>(null);
+
+  const alignToStart = useCallback(() => {
+    if (!isRtl) return;
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollToEnd({ animated: false });
+    });
+  }, [isRtl]);
+
+  return (
+    <ScrollView
+      ref={scrollRef}
+      horizontal
+      nestedScrollEnabled
+      keyboardShouldPersistTaps="handled"
+      showsHorizontalScrollIndicator={false}
+      style={styles.ltrScroll}
+      onLayout={alignToStart}
+      onContentSizeChange={alignToStart}
+      contentContainerStyle={contentContainerStyle}
+    >
+      {children}
+    </ScrollView>
+  );
+}
 
 export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
   const accessToken = useAuthStore((state) => state.accessToken);
@@ -86,9 +140,9 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
   const loadCategories = useListingsStore((state) => state.loadCategories);
   const createListing = useListingsStore((state) => state.createListing);
 
-  const categoryScrollRef = useRef<ScrollViewType>(null);
-  const cityScrollRef = useRef<ScrollViewType>(null);
   const scrollViewRef = useRef<ScrollViewType>(null);
+  const contentRef = useRef<View>(null);
+  const fieldNodes = useRef<Partial<Record<string, View | null>>>({});
   const errorBannerRef = useRef<View>(null);
   const plansFetchStartedRef = useRef(false);
 
@@ -107,6 +161,7 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
   const [isCategoryFiltersLoading, setIsCategoryFiltersLoading] = useState(false);
 
   const [plans, setPlans] = useState<PromotionPlan[]>([]);
+  const [credits, setCredits] = useState<PromotionCredit[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [duration, setDuration] = useState(7);
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
@@ -136,23 +191,48 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
     [t.errors]
   );
 
-  const scrollToErrors = useCallback(() => {
+  const scrollToField = useCallback((field?: string) => {
     Keyboard.dismiss();
 
     const runScroll = () => {
-      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+      const targetName = field === 'subcategoryPath' ? 'categoryId' : field;
+      const node =
+        (targetName && fieldNodes.current[targetName]) ||
+        (targetName === 'filters' ? fieldNodes.current.categoryId : null) ||
+        null;
+      const content = contentRef.current;
+      if (!node || !content) {
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+        return;
+      }
+
+      content.measureInWindow((_contentX, contentY) => {
+        node.measureInWindow((_fieldX, fieldY) => {
+          scrollViewRef.current?.scrollTo({
+            y: Math.max(fieldY - contentY - 12, 0),
+            animated: true
+          });
+        });
+      });
     };
 
-    requestAnimationFrame(() => {
-      requestAnimationFrame(runScroll);
-    });
-    setTimeout(runScroll, 180);
-    setTimeout(runScroll, 360);
+    requestAnimationFrame(runScroll);
+    setTimeout(runScroll, 80);
+    setTimeout(runScroll, 320);
   }, []);
 
-  useEffect(() => {
-    if (submitError) scrollToErrors();
-  }, [submitError, scrollToErrors]);
+  const showFieldErrors = useCallback(
+    (errors: Record<string, string>, banner?: string) => {
+      setFieldErrors(errors);
+      setSubmitError(
+        Object.keys(errors).length > 0
+          ? summarizeFieldErrors(errors, t.errors.VALIDATION_FAILED)
+          : banner || t.errors.VALIDATION_FAILED
+      );
+      scrollToField(firstInvalidField(errors));
+    },
+    [scrollToField, t.errors.VALIDATION_FAILED]
+  );
 
   const clearFieldError = (field: string) => {
     setFieldErrors((current) => {
@@ -182,15 +262,12 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
   const selectedCategory = categories.find((item) => item.id === categoryId);
   const isPassengerCarsCategory = isCategoryUnderSlug(categories, categoryId, PASSENGER_CARS_SLUG);
   const filtersComplete =
-    categoryFilters.length === 0 ||
+    !subcategoryComplete ||
+    isCategoryFiltersLoading ||
     categoryFilters.every((filter) => filter.options.some((option) => selectedFilterOptionIds.includes(option.id)));
   const modelYearOptions = useMemo(
     () => Array.from({ length: MODEL_YEAR_MAX - MODEL_YEAR_MIN + 1 }, (_, index) => String(MODEL_YEAR_MAX - index)),
     []
-  );
-  const displayPlans = useMemo(
-    () => sortPromotionPlansByPrice(plans, duration),
-    [plans, duration]
   );
   const selectedPlan = plans.find((plan) => plan.id === selectedPlanId);
   const canPublishFromStore = Boolean(
@@ -209,7 +286,10 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
             store.isActive && (store.accessStatus === 'ACTIVE' || store.accessStatus === 'TRIAL')
         );
         setOwnerStore(activeStore ?? stores[0] ?? null);
-        if (activeStore) setPublishSource('store');
+        if (activeStore) {
+          setPublishSource('store');
+          setSelectedPlanId('');
+        }
       })
       .catch(() => setOwnerStore(null));
   }, [accessToken]);
@@ -219,22 +299,29 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
   }, [locale, loadCategories]);
 
   useEffect(() => {
-    alignChipScroll(categoryScrollRef, isRtl);
-    alignChipScroll(cityScrollRef, isRtl);
-  }, [isRtl, locale, categoryTree.length]);
-
-  useEffect(() => {
     if (!subcategoryComplete || !categoryId) {
       setCategoryFilters([]);
       setSelectedFilterOptionIds([]);
       return;
     }
 
+    let cancelled = false;
+    setCategoryFilters([]);
+    setSelectedFilterOptionIds([]);
     setIsCategoryFiltersLoading(true);
-    fetchCategoryFilters(categoryId, locale)
-      .then((filters) => setCategoryFilters(Array.isArray(filters) ? filters : []))
-      .catch(() => setCategoryFilters([]))
-      .finally(() => setIsCategoryFiltersLoading(false));
+    fetchCategoryFilters(categoryId, locale, true)
+      .then((filters) => {
+        if (!cancelled) setCategoryFilters(Array.isArray(filters) ? filters : []);
+      })
+      .catch(() => {
+        if (!cancelled) setCategoryFilters([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsCategoryFiltersLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [categoryId, locale, subcategoryComplete]);
 
   useEffect(() => {
@@ -250,9 +337,10 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
     setIsLoadingPlans(true);
     setPlansError(false);
 
-    fetchPromotionPlans()
-      .then((items) => {
+    Promise.all([fetchPromotionPlans(), fetchPromotionCredits().catch(() => [] as PromotionCredit[])])
+      .then(([items, creditItems]) => {
         setPlans(items);
+        setCredits(creditItems);
       })
       .catch(() => {
         setPlans([]);
@@ -260,6 +348,11 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
       })
       .finally(() => setIsLoadingPlans(false));
   }, [locale]);
+
+  useEffect(() => {
+    if (isStorePublish) return;
+    setSelectedPlanId((current) => current || plans[0]?.id || '');
+  }, [isStorePublish, plans]);
 
   const submit = async () => {
     const nextFieldErrors = validateListingForm(
@@ -269,13 +362,17 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
         rootCategoryId,
         subcategoryComplete,
         filtersComplete,
-        requiresModelYear: isPassengerCarsCategory
+        requiresModelYear: subcategoryComplete && isPassengerCarsCategory
       }
     );
 
+    if (subcategoryComplete && isCategoryFiltersLoading) {
+      showFieldErrors({ filters: t.addOffer.loadingFilters });
+      return;
+    }
+
     if (Object.keys(nextFieldErrors).length > 0) {
-      setFieldErrors(nextFieldErrors);
-      setSubmitError(t.errors.VALIDATION_FAILED);
+      showFieldErrors(nextFieldErrors);
       return;
     }
 
@@ -289,6 +386,7 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
       description: description.trim(),
       type: selectedCategory.type,
       price: parseListingPrice(price),
+      currency: 'OMR',
       city,
       wilayah,
       categoryId,
@@ -312,11 +410,17 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
           return;
         }
       } catch (checkoutError) {
-        const apiFieldErrors = getValidationFieldErrors(checkoutError, t.errors);
+        const apiFieldErrors = {
+          ...getApiCodeFieldErrors(checkoutError, t.errors),
+          ...getValidationFieldErrors(checkoutError, t.errors)
+        };
         if (Object.keys(apiFieldErrors).length > 0) {
-          setFieldErrors(apiFieldErrors);
+          showFieldErrors(apiFieldErrors);
+        } else {
+          setFieldErrors({});
+          setSubmitError(resolveApiErrorMessage(checkoutError, t.errors, t.addOffer.createError));
+          scrollToField();
         }
-        setSubmitError(resolveApiErrorMessage(checkoutError, t.errors, t.addOffer.createError));
         return;
       }
 
@@ -327,11 +431,17 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
     const result = await createListing(adPayload);
 
     if (!result.ok) {
-      const apiFieldErrors = getValidationFieldErrors(result.apiError, t.errors);
+      const apiFieldErrors = {
+        ...getApiCodeFieldErrors(result.apiError, t.errors),
+        ...getValidationFieldErrors(result.apiError, t.errors)
+      };
       if (Object.keys(apiFieldErrors).length > 0) {
-        setFieldErrors(apiFieldErrors);
+        showFieldErrors(apiFieldErrors);
+      } else {
+        setFieldErrors({});
+        setSubmitError(resolveApiErrorMessage(result.apiError, t.errors, t.addOffer.createError));
+        scrollToField();
       }
-      setSubmitError(resolveApiErrorMessage(result.apiError, t.errors, t.addOffer.createError));
       return;
     }
 
@@ -352,13 +462,11 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
   };
 
   const showSkeleton = isLoading && !hasLoadedCategories;
-  const canSubmit =
-    Boolean(selectedCategory) &&
-    title.trim().length > 0 &&
-    description.trim().length > 0 &&
-    price.trim().length > 0 &&
-    city.length > 0 &&
-    !isSubmitting;
+  const selectedCredit = isStorePublish
+    ? undefined
+    : credits.find((credit) => credit.planId === selectedPlan?.id && credit.remaining > 0);
+  const selectedPromotionPrice = selectedCredit ? 0 : selectedPlan ? getPlanPrice(selectedPlan, duration) : 0;
+  const requiresPaidPromotion = !isStorePublish && Boolean(selectedPlan) && selectedPromotionPrice > 0;
 
   const fieldErrorStyle = (fieldError?: string) => (fieldError ? styles.inputError : undefined);
 
@@ -380,6 +488,7 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
       ref={scrollViewRef}
       contentContainerStyle={[styles.content, { paddingBottom: scrollBottomPadding }]}
     >
+      <View ref={contentRef} collapsable={false}>
       <View ref={errorBannerRef} collapsable={false}>
         {submitError ? <ErrorNotice message={submitError} onDismiss={() => setSubmitError('')} /> : null}
       </View>
@@ -391,7 +500,14 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
         <FormFieldsSkeleton rows={6} />
       ) : (
         <>
-          <Field error={fieldErrors.title} label={t.addOffer.titleField} isRtl={isRtl}>
+          <Field
+            error={fieldErrors.title}
+            label={t.addOffer.titleField}
+            isRtl={isRtl}
+            anchorRef={(node) => {
+              fieldNodes.current.title = node;
+            }}
+          >
             <AppTextInput
               value={title}
               onChangeText={(value) => {
@@ -404,19 +520,20 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
             />
           </Field>
 
-          <Field error={fieldErrors.categoryId || fieldErrors.subcategoryPath} label={t.addOffer.category} isRtl={isRtl}>
-            <ScrollView
-              ref={categoryScrollRef}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={[styles.chipRow, rowDirection(isRtl)]}
-            >
-              {categoryTree.map((category) => {
+          <Field
+            label={t.addOffer.category}
+            isRtl={isRtl}
+            anchorRef={(node) => {
+              fieldNodes.current.categoryId = node;
+            }}
+          >
+            <HorizontalChipScroll isRtl={isRtl} contentContainerStyle={styles.chipRow}>
+              {orderForRtl(categoryTree, isRtl).map((category) => {
                 const active = category.id === rootCategoryId;
                 return (
                   <Pressable
                     key={category.id}
-                    style={[styles.chip, active && styles.chipActive]}
+                    style={[styles.chip, active && styles.chipActive, fieldErrors.categoryId ? styles.chipError : undefined]}
                     onPress={() => {
                       setRootCategoryId(category.id);
                       setSubcategoryPath([]);
@@ -434,7 +551,10 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
                   </Pressable>
                 );
               })}
-            </ScrollView>
+            </HorizontalChipScroll>
+            {fieldErrors.categoryId ? (
+              <AppText style={[styles.fieldError, isRtl ? styles.rtl : styles.ltr]}>{fieldErrors.categoryId}</AppText>
+            ) : null}
 
             {subcategoryLevels.map((level) => (
               <View key={`${level.parentId}-${level.levelIndex}`} style={styles.subcategoryBlock}>
@@ -445,7 +565,11 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
                     return (
                       <Pressable
                         key={category.id}
-                        style={[styles.chip, active && styles.chipActive]}
+                        style={[
+                          styles.chip,
+                          active && styles.chipActive,
+                          fieldErrors.subcategoryPath ? styles.chipError : undefined
+                        ]}
                         onPress={() => {
                           setSubcategoryPath((current) => updateSubcategoryPath(current, level.levelIndex, category.id));
                           setSelectedFilterOptionIds([]);
@@ -463,23 +587,36 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
                 </View>
               </View>
             ))}
+            {fieldErrors.subcategoryPath ? (
+              <AppText style={[styles.fieldError, isRtl ? styles.rtl : styles.ltr]}>{fieldErrors.subcategoryPath}</AppText>
+            ) : null}
 
             {subcategoryComplete && (categoryFilters.length > 0 || isCategoryFiltersLoading) ? (
-              <View style={styles.subcategoryBlock}>
+              <View
+                style={styles.subcategoryBlock}
+                collapsable={false}
+                ref={(node) => {
+                  fieldNodes.current.filters = node;
+                }}
+              >
                 <AppText style={[styles.subcategoryTitle, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.categoryFilters}</AppText>
                 {isCategoryFiltersLoading ? (
                   <AppText style={[styles.promotionHint, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.loadingFilters}</AppText>
                 ) : (
                   categoryFilters.map((filter) => (
                     <View key={filter.id} style={styles.filterGroup}>
-                      <AppText style={[styles.filterTitle, isRtl ? styles.rtl : styles.ltr]}>{filter.title}</AppText>
+                      <AppText style={[styles.filterTitle, isRtl ? styles.rtl : styles.ltr]}>{`${filter.title} *`}</AppText>
                       <View style={[styles.wrapChips, rowDirection(isRtl)]}>
                         {filter.options.map((option) => {
                           const active = selectedFilterOptionIds.includes(option.id);
                           return (
                             <Pressable
                               key={option.id}
-                              style={[styles.chip, active && styles.chipActive]}
+                              style={[
+                                styles.chip,
+                                active && styles.chipActive,
+                                fieldErrors.filters && !active ? styles.chipError : undefined
+                              ]}
                               onPress={() => {
                                 setSelectedFilterOptionIds((current) =>
                                   selectFilterOption(
@@ -506,15 +643,21 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
             ) : null}
 
             {subcategoryComplete && isPassengerCarsCategory ? (
-              <View style={styles.subcategoryBlock}>
+              <View
+                style={styles.subcategoryBlock}
+                collapsable={false}
+                ref={(node) => {
+                  fieldNodes.current.modelYear = node;
+                }}
+              >
                 <AppText style={[styles.subcategoryTitle, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.modelYear}</AppText>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.chipRow, rowDirection(isRtl)]}>
-                  {modelYearOptions.slice(0, 30).map((year) => {
+                <HorizontalChipScroll isRtl={isRtl} contentContainerStyle={styles.chipRow}>
+                  {orderForRtl(modelYearOptions, isRtl).map((year) => {
                     const active = modelYear === year;
                     return (
                       <Pressable
                         key={year}
-                        style={[styles.chip, active && styles.chipActive]}
+                        style={[styles.chip, active && styles.chipActive, fieldErrors.modelYear ? styles.chipError : undefined]}
                         onPress={() => {
                           setModelYear(year);
                           clearFieldError('modelYear');
@@ -524,7 +667,7 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
                       </Pressable>
                     );
                   })}
-                </ScrollView>
+                </HorizontalChipScroll>
                 {fieldErrors.modelYear ? (
                   <AppText style={[styles.fieldError, isRtl ? styles.rtl : styles.ltr]}>{fieldErrors.modelYear}</AppText>
                 ) : null}
@@ -532,14 +675,16 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
             ) : null}
           </Field>
 
-          <Field error={fieldErrors.city} label={t.addOffer.city} isRtl={isRtl}>
-            <ScrollView
-              ref={cityScrollRef}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={[styles.chipRow, rowDirection(isRtl)]}
-            >
-              {omanGovernorates.map((governorate) => {
+          <Field
+            error={fieldErrors.city}
+            label={t.addOffer.city}
+            isRtl={isRtl}
+            anchorRef={(node) => {
+              fieldNodes.current.city = node;
+            }}
+          >
+            <HorizontalChipScroll isRtl={isRtl} contentContainerStyle={styles.chipRow}>
+              {orderForRtl(omanGovernorates, isRtl).map((governorate) => {
                 const active = governorate.value === city;
                 const label = locale === 'en' ? governorate.en : governorate.ar;
                 return (
@@ -559,17 +704,20 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
                   </Pressable>
                 );
               })}
-            </ScrollView>
+            </HorizontalChipScroll>
           </Field>
 
-          {city ? (
-            <Field error={fieldErrors.wilayah} label={t.addOffer.wilayah} isRtl={isRtl}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={[styles.chipRow, rowDirection(isRtl)]}
-              >
-                {getWilayahsForGovernorate(city).map((wilayahOption) => {
+          <Field
+            error={fieldErrors.wilayah}
+            label={t.addOffer.wilayah}
+            isRtl={isRtl}
+            anchorRef={(node) => {
+              fieldNodes.current.wilayah = node;
+            }}
+          >
+            {city ? (
+              <HorizontalChipScroll isRtl={isRtl} contentContainerStyle={styles.chipRow}>
+                {orderForRtl(getWilayahsForGovernorate(city), isRtl).map((wilayahOption) => {
                   const active = wilayahOption.value === wilayah;
                   const label = locale === 'en' ? wilayahOption.en : wilayahOption.ar;
                   return (
@@ -587,11 +735,20 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
                     </Pressable>
                   );
                 })}
-              </ScrollView>
-            </Field>
-          ) : null}
+              </HorizontalChipScroll>
+            ) : (
+              <AppText style={[styles.promotionHint, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.selectWilayah}</AppText>
+            )}
+          </Field>
 
-          <Field error={fieldErrors.price} label={t.addOffer.price} isRtl={isRtl}>
+          <Field
+            error={fieldErrors.price}
+            label={t.addOffer.price}
+            isRtl={isRtl}
+            anchorRef={(node) => {
+              fieldNodes.current.price = node;
+            }}
+          >
             <AppTextInput
               value={price}
               onChangeText={(value) => {
@@ -605,7 +762,14 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
             />
           </Field>
 
-          <Field error={fieldErrors.description} label={t.addOffer.description} isRtl={isRtl}>
+          <Field
+            error={fieldErrors.description}
+            label={t.addOffer.description}
+            isRtl={isRtl}
+            anchorRef={(node) => {
+              fieldNodes.current.description = node;
+            }}
+          >
             <AppTextInput
               value={description}
               onChangeText={(value) => {
@@ -638,7 +802,8 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
               videoHint: t.addOffer.videoHint,
               uploading: t.addOffer.uploading,
               removeImage: t.addOffer.removeImage,
-              uploadError: t.addOffer.uploadError
+              uploadError: t.addOffer.uploadError,
+              videoTooLarge: t.addOffer.videoTooLarge
             }}
             isRtl={isRtl}
             disabled={isSubmitting}
@@ -665,7 +830,7 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
                   style={[styles.publishSourceCard, publishSource === 'personal' && styles.publishSourceCardActive]}
                   onPress={() => {
                     setPublishSource('personal');
-                    setSelectedPlanId('');
+                    setSelectedPlanId((current) => current || plans[0]?.id || '');
                   }}
                 >
                   <AppText style={[styles.publishSourceTitle, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.publishFromPersonal}</AppText>
@@ -696,29 +861,13 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
                 </AppText>
               ) : (
                 <>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={[styles.planRow, rowDirection(isRtl)]}
-                  >
-                    <Pressable
-                      style={[styles.planCard, !selectedPlanId && styles.planCardActive]}
-                      onPress={() => setSelectedPlanId('')}
-                    >
-                      {!selectedPlanId ? (
-                        <View style={styles.planCheck}>
-                          <Ionicons name="checkmark" size={14} color="#fff" />
-                        </View>
-                      ) : null}
-                      <AppText style={[styles.planName, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.normalAd}</AppText>
-                      <AppText style={[styles.planDescription, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.free}</AppText>
-                      <AppText style={[styles.planPrice, !selectedPlanId && styles.planPriceActive]}>{t.addOffer.free}</AppText>
-                    </Pressable>
-                    {displayPlans.map((plan) => {
+                  <HorizontalChipScroll isRtl={isRtl} contentContainerStyle={styles.planRow}>
+                    {orderForRtl(plans, isRtl).map((plan) => {
                       const active = plan.id === selectedPlanId;
                       const name = locale === 'en' ? plan.nameEn : plan.nameAr;
                       const planDescription = locale === 'en' ? plan.descriptionEn : plan.descriptionAr;
-                      const planPricing = formatPlanVatBreakdown(getPlanPrice(plan, duration), locale, {
+                      const credit = credits.find((item) => item.planId === plan.id && item.remaining > 0);
+                      const planPricing = formatPlanVatBreakdown(credit ? 0 : getPlanPrice(plan, duration), locale, {
                         free: t.common.pricing.free,
                         vatShort: t.common.pricing.vatShort
                       });
@@ -751,6 +900,11 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
                           <AppText style={[styles.planDescription, isRtl ? styles.rtl : styles.ltr]} numberOfLines={2}>
                             {planDescription}
                           </AppText>
+                          {credit ? (
+                            <AppText style={[styles.planVat, isRtl ? styles.rtl : styles.ltr]}>
+                              {formatFreeCredit(t.addOffer.freePlanCredit, credit.remaining, credit.durationDays)}
+                            </AppText>
+                          ) : null}
                           <AppText style={[styles.planPrice, active && styles.planPriceActive]}>{planPricing.main}</AppText>
                           {planPricing.sub ? (
                             <AppText style={[styles.planVat, active && styles.planVatActive]}>{planPricing.sub}</AppText>
@@ -758,21 +912,21 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
                         </Pressable>
                       );
                     })}
-                  </ScrollView>
+                  </HorizontalChipScroll>
 
-                  {selectedPlan ? (
+                  {selectedPlan && selectedCredit ? (
+                    <AppText style={[styles.promotionSubtitle, isRtl ? styles.rtl : styles.ltr]}>
+                      {formatFreeCredit(t.addOffer.freePlanCredit, selectedCredit.remaining, selectedCredit.durationDays)}
+                    </AppText>
+                  ) : null}
+
+                  {selectedPlan && !selectedCredit ? (
                     <View style={styles.durationBlock}>
                       <AppText style={[styles.durationLabel, isRtl ? styles.rtl : styles.ltr]}>{t.addOffer.duration}</AppText>
                       <View style={[styles.durationRow, rowDirection(isRtl)]}>
                         {DURATION_OPTIONS.map((option) => {
                           const active = duration === option.days;
                           const label = t.addOffer[option.labelKey];
-                          const optionPricing = selectedPlan
-                            ? formatPlanVatBreakdown(getPlanPrice(selectedPlan, option.days), locale, {
-                                free: t.common.pricing.free,
-                                vatShort: t.common.pricing.vatShort
-                              })
-                            : null;
 
                           return (
                             <Pressable
@@ -788,18 +942,6 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
                               <AppText style={[styles.durationChipLabel, active && styles.durationChipLabelActive]}>
                                 {label}
                               </AppText>
-                              {optionPricing ? (
-                                <>
-                                  <AppText style={[styles.durationChipPrice, active && styles.durationChipPriceActive]}>
-                                    {optionPricing.main}
-                                  </AppText>
-                                  {optionPricing.sub ? (
-                                    <AppText style={[styles.durationChipVat, active && styles.durationChipPriceActive]}>
-                                      {optionPricing.sub}
-                                    </AppText>
-                                  ) : null}
-                                </>
-                              ) : null}
                             </Pressable>
                           );
                         })}
@@ -811,17 +953,22 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
             </View>
           )}
 
-          <Pressable style={[styles.submit, !canSubmit && styles.submitDisabled]} onPress={() => void submit()} disabled={!canSubmit}>
+          <Pressable
+            style={[styles.submit, isSubmitting && styles.submitDisabled]}
+            onPress={() => void submit()}
+            disabled={isSubmitting}
+          >
             {isSubmitting ? (
               <ActivityIndicator color="#fff" />
             ) : (
               <AppText style={styles.submitText}>
-                {selectedPlan && !isStorePublish ? t.addOffer.proceedToPayment : t.addOffer.publish}
+                {requiresPaidPromotion ? t.addOffer.proceedToPayment : t.addOffer.publish}
               </AppText>
             )}
           </Pressable>
         </>
       )}
+      </View>
     </KeyboardAwareScrollView>
   );
 }
@@ -830,15 +977,17 @@ function Field({
   error,
   label,
   children,
-  isRtl
+  isRtl,
+  anchorRef
 }: {
   error?: string;
   label: string;
   children: ReactNode;
   isRtl?: boolean;
+  anchorRef?: (node: View | null) => void;
 }) {
   return (
-    <View style={styles.field}>
+    <View ref={anchorRef} collapsable={false} style={styles.field}>
       <AppText style={[styles.label, isRtl ? styles.rtl : styles.ltr]}>{label}</AppText>
       {children}
       {error ? <AppText style={[styles.fieldError, isRtl ? styles.rtl : styles.ltr]}>{error}</AppText> : null}
@@ -900,7 +1049,11 @@ const styles = StyleSheet.create({
   chipError: {
     borderColor: colors.danger
   },
+  ltrScroll: {
+    direction: 'ltr'
+  },
   chipRow: {
+    flexDirection: 'row',
     gap: 8,
     paddingHorizontal: 2
   },

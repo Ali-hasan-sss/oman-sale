@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { ResizeMode, Video } from 'expo-av';
 import { useEffect, useRef, useState } from 'react';
 import {
   Dimensions,
@@ -16,9 +17,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from './AppText';
 import { colors } from '../theme';
 
+export type ListingGalleryItem = {
+  uri: string;
+  isVideo?: boolean;
+};
+
 type ListingImageModalProps = {
   visible: boolean;
-  images: string[];
+  images: ListingGalleryItem[];
   initialIndex?: number;
   title?: string;
   imageLabel: string;
@@ -36,7 +42,7 @@ export function ListingImageModal({
   onClose
 }: ListingImageModalProps) {
   const insets = useSafeAreaInsets();
-  const listRef = useRef<FlatList<string>>(null);
+  const listRef = useRef<FlatList<ListingGalleryItem>>(null);
   const [activeIndex, setActiveIndex] = useState(initialIndex);
 
   useEffect(() => {
@@ -90,16 +96,27 @@ export function ListingImageModal({
         <FlatList
           ref={listRef}
           data={images}
-          keyExtractor={(uri, index) => `${uri}-${index}`}
+          keyExtractor={(item, index) => `${item.uri}-${index}`}
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}
           initialScrollIndex={images.length > 0 ? Math.min(initialIndex, images.length - 1) : 0}
           getItemLayout={(_, index) => ({ length: screenWidth, offset: screenWidth * index, index })}
+          extraData={activeIndex}
           onMomentumScrollEnd={onMomentumScrollEnd}
-          renderItem={({ item }) => (
+          renderItem={({ item, index }) => (
             <View style={styles.slide}>
-              <Image source={{ uri: item }} style={styles.image} resizeMode="contain" />
+              {item.isVideo ? (
+                <Video
+                  source={{ uri: item.uri }}
+                  style={styles.image}
+                  resizeMode={ResizeMode.CONTAIN}
+                  useNativeControls
+                  shouldPlay={index === activeIndex}
+                />
+              ) : (
+                <Image source={{ uri: item.uri }} style={styles.image} resizeMode="contain" />
+              )}
             </View>
           )}
           onScrollToIndexFailed={() => undefined}

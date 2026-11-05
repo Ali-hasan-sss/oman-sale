@@ -3,6 +3,7 @@ import { Cairo } from 'next/font/google';
 import type { PropsWithChildren } from 'react';
 
 import './globals.css';
+import './vertex.css';
 import { Providers } from './providers';
 
 const cairo = Cairo({

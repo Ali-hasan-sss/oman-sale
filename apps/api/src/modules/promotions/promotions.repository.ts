@@ -52,7 +52,7 @@ export class PromotionsRepository {
   findAdForPromotion(id: string) {
     return prisma.ad.findFirst({
       where: { id, deletedAt: null },
-      select: { id: true, userId: true, title: true }
+      select: { id: true, userId: true, title: true, storeId: true }
     });
   }
 
@@ -231,6 +231,40 @@ export class PromotionsRepository {
           data: { deletedAt: new Date(), status: 'ARCHIVED' }
         });
       }
+
+      return promotion;
+    });
+  }
+
+  activateFreePromotion(input: { adId: string; planId: string; days: number }) {
+    const startsAt = new Date();
+    const endsAt = new Date(startsAt.getTime() + input.days * 24 * 60 * 60 * 1000);
+
+    return prisma.$transaction(async (tx) => {
+      const promotion = await tx.adPromotion.upsert({
+        where: { adId: input.adId },
+        update: {
+          planId: input.planId,
+          startsAt,
+          endsAt,
+          totalPrice: 0,
+          isActive: true,
+          deletedAt: null
+        },
+        create: {
+          adId: input.adId,
+          planId: input.planId,
+          startsAt,
+          endsAt,
+          totalPrice: 0
+        },
+        include: { plan: true }
+      });
+
+      await tx.ad.update({
+        where: { id: input.adId },
+        data: { isActive: true, isSold: false }
+      });
 
       return promotion;
     });

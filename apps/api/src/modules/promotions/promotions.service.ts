@@ -5,11 +5,20 @@ import { startListingPromotionCheckout } from '../checkout/paid-checkout.service
 import type { ListingPromotionIntentPayload } from '../checkout/checkout-intent-materialization.service';
 import { checkoutAdPromotion } from './promotion-checkout.service';
 import { promotionsRepository } from './promotions.repository';
+import {
+  listNewUserPromotionCredits,
+  refundNewUserPromotionCredit,
+  takeNewUserPromotionCredit
+} from './user-promotion-credits.service';
 import type { CreatePromotionPlanDto, PromoteAdDto, UpdatePromotionPlanDto } from './promotions.validation';
 
 export class PromotionsService {
   listPlans(includeInactive = false) {
     return promotionsRepository.listPlans(includeInactive);
+  }
+
+  listCredits(userId: string) {
+    return listNewUserPromotionCredits(userId);
   }
 
   createPlan(dto: CreatePromotionPlanDto) {
@@ -42,6 +51,24 @@ export class PromotionsService {
       const promotion = await promotionsRepository.promoteAd(dto);
       eventBus.emit(AppEvents.PROMOTION_ACTIVATED, promotion);
       return { promotion, checkout: { paid: true } };
+    }
+
+    if (!ad.storeId) {
+      const credit = await takeNewUserPromotionCredit(userId, dto.planId);
+      if (credit) {
+        try {
+          const promotion = await promotionsRepository.activateFreePromotion({
+            adId: dto.adId,
+            planId: dto.planId,
+            days: credit.days
+          });
+          eventBus.emit(AppEvents.PROMOTION_ACTIVATED, promotion);
+          return { promotion, checkout: { paid: true, usedFreeCredit: true } };
+        } catch (error) {
+          await refundNewUserPromotionCredit(userId, dto.planId);
+          throw error;
+        }
+      }
     }
 
     const payload: ListingPromotionIntentPayload = {

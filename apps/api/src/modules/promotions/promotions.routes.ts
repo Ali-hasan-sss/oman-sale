@@ -17,6 +17,7 @@ export const promotionsRoutes = Router();
 const idParams = z.object({ id: z.string().uuid() });
 
 promotionsRoutes.get('/plans', asyncHandler(promotionsController.listPlans));
+promotionsRoutes.get('/credits', requireAuth, asyncHandler(promotionsController.listCredits));
 promotionsRoutes.post(
   '/plans',
   requireAuth,

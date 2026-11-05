@@ -67,7 +67,7 @@ export type Listing = {
   isSold?: boolean;
   isActive?: boolean;
   trustBadgeApproved?: boolean;
-  images?: Array<{ imageUrl: string }>;
+  images?: Array<{ imageUrl: string; mediaType?: 'IMAGE' | 'VIDEO' | string | null }>;
   category?: {
     name?: string;
     nameAr?: string;

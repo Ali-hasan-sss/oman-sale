@@ -4,6 +4,7 @@ import { ApiError } from '../../shared/utils/api-error';
 import { hashPassword } from '../../shared/utils/password';
 import { resolveAdMedia, resolveUserMedia, resolveUserTrustDocs } from '../../shared/utils/resolve-entity-media';
 import { notificationsService } from '../notifications/notifications.service';
+import { grantNewUserPromotionCredits } from '../promotions/user-promotion-credits.service';
 import { adminRepository } from './admin.repository';
 import type {
   CreateAdminUserDto,
@@ -51,6 +52,7 @@ export class AdminService {
       isVerified: dto.isVerified ?? true,
       isActive: dto.isActive ?? true
     });
+    await grantNewUserPromotionCredits(user.id);
 
     return resolveUserMedia(user);
   }

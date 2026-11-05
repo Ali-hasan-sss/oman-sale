@@ -38,13 +38,20 @@ export function ArticlesSection() {
 
   return (
     <section className="mb-14">
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="mb-2 text-sm font-bold text-brand-600">{m.articles.sectionLabel}</p>
-          <h2 className="text-3xl font-black text-slate-900">{m.articles.sectionTitle}</h2>
-          <p className="mt-2 text-slate-600">{m.articles.sectionSubtitle}</p>
+          <h2 className="text-3xl font-black text-ink-900">{m.articles.sectionTitle}</h2>
+          <span className="mt-3 flex h-1 w-20 overflow-hidden rounded-full" aria-hidden>
+            <span className="flex-1 bg-brick-500" />
+            <span className="flex-1 bg-slate-200" />
+            <span className="flex-1 bg-brand-500" />
+          </span>
+          <p className="mt-3 text-sm text-slate-600">{m.articles.sectionSubtitle}</p>
         </div>
-        <Link href={localizedPath('/news')} className="rounded-xl border border-brand-200 px-5 py-2.5 text-sm font-bold text-brand-700 hover:bg-brand-50">
+        <Link
+          href={localizedPath('/news')}
+          className="mt-2 shrink-0 text-sm font-black text-brand-700 underline decoration-2 underline-offset-4 transition hover:text-brick-500"
+        >
           {m.articles.viewAll}
         </Link>
       </div>
@@ -59,14 +66,6 @@ export function ArticlesSection() {
         </div>
       )}
 
-      <div className="mt-8 text-center">
-        <Link
-          href={localizedPath('/news')}
-          className="inline-flex rounded-xl bg-brand-600 px-8 py-3 text-sm font-bold text-white transition hover:bg-brand-700"
-        >
-          {m.articles.viewAll}
-        </Link>
-      </div>
     </section>
   );
 }

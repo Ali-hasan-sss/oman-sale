@@ -18,11 +18,11 @@ export function MobileNavMenu({ variant = 'light' }: MobileNavMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const buttonClass =
     variant === 'hero'
-      ? 'flex h-11 w-11 items-center justify-center rounded-xl border border-white/70 bg-white/90 shadow-lg transition hover:bg-white'
+      ? 'vx-navbtn flex h-11 w-11 items-center justify-center'
       : 'flex h-11 w-11 items-center justify-center rounded-xl border border-gray-300 bg-white transition hover:bg-gray-50';
   const loginClass =
     variant === 'hero'
-      ? 'rounded-lg border border-white/70 bg-white/90 px-3 py-2 text-sm shadow-lg transition hover:bg-white'
+      ? 'vx-navbtn px-3 py-2 text-sm'
       : 'rounded-lg border border-gray-300 px-3 py-2 text-sm transition hover:bg-gray-50';
 
   return (

@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image, StyleSheet, View, type ImageStyle, type StyleProp, type ViewStyle } from 'react-native';
 
+import { resolveDeviceMediaUrl } from '../lib/media-url';
 import { colors } from '../theme';
 
 export type ListingCoverVariant = 'card' | 'cardHorizontal' | 'thumb' | 'hero';
@@ -19,9 +20,10 @@ type ListingCoverImageProps = {
 };
 
 export function ListingCoverImage({ uri, variant = 'card', style }: ListingCoverImageProps) {
-  if (uri) {
+  const resolved = resolveDeviceMediaUrl(uri);
+  if (resolved) {
     return (
-      <Image source={{ uri }} style={[styles.media, style as StyleProp<ImageStyle>]} resizeMode="cover" />
+      <Image source={{ uri: resolved }} style={[styles.media, style as StyleProp<ImageStyle>]} resizeMode="cover" />
     );
   }
 

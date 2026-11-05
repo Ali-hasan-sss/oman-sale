@@ -2,7 +2,6 @@
 
 import {
   Baby,
-  ArrowUpLeft,
   Bike,
   BookOpen,
   Briefcase,
@@ -63,23 +62,23 @@ const fallbackCategories = [
 ];
 
 const colorClasses: Record<string, string> = {
-  yellow: 'bg-yellow-50 text-yellow-600',
-  pink: 'bg-pink-50 text-pink-600',
-  blue: 'bg-blue-50 text-blue-600',
-  green: 'bg-green-50 text-green-600',
-  indigo: 'bg-indigo-50 text-indigo-600',
-  emerald: 'bg-emerald-50 text-emerald-600',
-  teal: 'bg-teal-50 text-teal-600',
-  red: 'bg-red-50 text-red-600',
-  slate: 'bg-slate-50 text-slate-600',
-  orange: 'bg-orange-50 text-orange-600',
-  purple: 'bg-purple-50 text-purple-600',
-  cyan: 'bg-cyan-50 text-cyan-600',
-  rose: 'bg-rose-50 text-rose-600',
-  amber: 'bg-amber-50 text-amber-600',
-  violet: 'bg-violet-50 text-violet-600',
-  fuchsia: 'bg-fuchsia-50 text-fuchsia-600',
-  lime: 'bg-lime-50 text-lime-600'
+  yellow: 'text-yellow-500',
+  pink: 'text-pink-500',
+  blue: 'text-blue-500',
+  green: 'text-green-500',
+  indigo: 'text-indigo-500',
+  emerald: 'text-emerald-500',
+  teal: 'text-teal-500',
+  red: 'text-red-500',
+  slate: 'text-slate-500',
+  orange: 'text-orange-500',
+  purple: 'text-purple-500',
+  cyan: 'text-cyan-500',
+  rose: 'text-rose-500',
+  amber: 'text-amber-500',
+  violet: 'text-violet-500',
+  fuchsia: 'text-fuchsia-500',
+  lime: 'text-lime-500'
 };
 
 const iconMap = {
@@ -451,18 +450,17 @@ function CategoryGridCard({
 
   return (
     <div className={`relative h-full ${isMenuOpen ? 'z-40' : ''}`}>
-      <div
-        className={`${colorClasses[category.color]} flex h-full flex-col overflow-hidden rounded-2xl shadow-sm transition-shadow hover:shadow-lg`}
-      >
-        <Link
-          href={localizedPath(category.href)}
-          className="group flex flex-1 flex-col items-center p-6 text-center transition-transform hover:-translate-y-0.5"
-        >
-          <CategoryIcon icon={category.iconKey} iconImageUrl={category.iconImageUrl} size={40} />
-          <h3 className="mt-4 font-bold text-ink-900">{category.name}</h3>
-          <p className="mt-1 text-sm text-slate-500">
+      <div className="group relative h-full min-h-[150px] overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-white to-green-50 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-[0_18px_34px_-20px_rgba(15,23,42,0.4)] sm:min-h-[172px]">
+        <Link href={localizedPath(category.href)} className="relative flex h-full min-h-[inherit] flex-col p-4 text-start sm:p-5">
+          <h3 className="line-clamp-2 pe-8 text-[15px] font-black leading-snug text-ink-900 sm:text-base">{category.name}</h3>
+          <p className="mt-1 text-xs text-slate-500">
             {category.count} {adCountLabel}
           </p>
+          <span
+            className={`${colorClasses[category.color]} pointer-events-none mt-auto self-end pt-3 transition-transform duration-300 [filter:drop-shadow(0_12px_10px_rgba(15,23,42,0.2))] group-hover:-translate-y-1 group-hover:scale-105`}
+          >
+            <CategoryIcon icon={category.iconKey} iconImageUrl={category.iconImageUrl} size={64} strokeWidth={1.4} />
+          </span>
         </Link>
 
         {hasChildren ? (
@@ -474,10 +472,10 @@ function CategoryGridCard({
               aria-expanded={isMenuOpen}
               aria-haspopup="menu"
               aria-label={expandLabel}
-              className="flex w-full items-center justify-center border-t border-black/5 py-2 text-current transition hover:bg-black/5"
+              className="absolute end-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-white/70 text-slate-600 shadow-sm ring-1 ring-black/5 transition hover:bg-white"
             >
               <ChevronDown
-                size={20}
+                size={16}
                 className={`transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`}
               />
             </button>
@@ -517,9 +515,18 @@ export function CategoriesSection() {
 
   return (
     <section className="mb-14">
-      <div className="mb-8 text-center">
-        <h2 className="mb-2 text-3xl font-black">{m.home.categoriesTitle}</h2>
-        <p className="text-slate-600">{m.home.categoriesSubtitle}</p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-black text-ink-900 sm:text-4xl">{m.home.categoriesTitle}</h2>
+          <span className="mt-3 flex h-1 w-20 overflow-hidden rounded-full" aria-hidden><span className="flex-1 bg-brick-500" /><span className="flex-1 bg-slate-200" /><span className="flex-1 bg-brand-500" /></span>
+          <p className="mt-3 text-sm text-slate-600">{m.home.categoriesSubtitle}</p>
+        </div>
+        <Link
+          href={localizedPath('/all-listings')}
+          className="mt-3 shrink-0 text-sm font-black text-brand-700 underline decoration-2 underline-offset-4 transition hover:text-brick-500"
+        >
+          {locale === 'ar' ? 'كل الفئات' : 'All categories'}
+        </Link>
       </div>
 
       {isLoading ? (
@@ -529,7 +536,7 @@ export function CategoriesSection() {
           {emptyText}
         </div>
       ) : (
-        <div className="relative mb-8 grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-6">
+        <div className="relative grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-6">
           {categoryTree.map((parent: CategoryTreeNode<ApiCategory>, parentIndex) => {
             const parentDisplay = mapCategoryToDisplay(parent, parentIndex);
 
@@ -553,15 +560,6 @@ export function CategoriesSection() {
         </div>
       )}
 
-      <div className="text-center">
-        <Link
-          href={localizedPath('/all-listings')}
-          className="inline-flex items-center gap-2 rounded-full bg-brand-600 px-8 py-3 font-bold text-white transition hover:bg-brand-700"
-        >
-          <span>{m.common.allListings}</span>
-          <ArrowUpLeft size={18} />
-        </Link>
-      </div>
     </section>
   );
 }

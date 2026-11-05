@@ -1,10 +1,10 @@
 'use client';
 
-import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
 import { AdBannerSlot } from '@/components/home/hero-banners-section';
+import { LandmarkGrid, LandmarksHeader } from '@/components/tourism/landmark-cards';
 import { tourismDestinations, tourismFeatures, tourismPageContent } from '@/data/tourism';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
@@ -16,6 +16,10 @@ type ApiTourismDestination = {
   imageUrl: string;
   titleAr: string;
   titleEn: string;
+  aboutAr?: string;
+  aboutEn?: string;
+  addressAr?: string;
+  addressEn?: string;
 };
 
 export function TourismLandmarksPage() {
@@ -47,12 +51,16 @@ export function TourismLandmarksPage() {
         ? destinations.map((destination) => ({
             id: destination.slug,
             image: resolveMediaUrl(destination.imageUrl),
-            title: locale === 'en' ? destination.titleEn : destination.titleAr
+            title: locale === 'en' ? destination.titleEn : destination.titleAr,
+            place: (locale === 'en' ? destination.addressEn : destination.addressAr) ?? '',
+            description: (locale === 'en' ? destination.aboutEn : destination.aboutAr) ?? ''
           }))
         : tourismDestinations.map((destination) => ({
             id: destination.id,
             image: destination.image,
-            title: destination.title[locale]
+            title: destination.title[locale],
+            place: locale === 'en' ? 'Sultanate of Oman' : 'سلطنة عُمان',
+            description: ''
           }));
 
     if (!query) return base;
@@ -77,27 +85,12 @@ export function TourismLandmarksPage() {
         <p className="max-w-2xl text-lg leading-8">{content.heroDescription}</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {displayDestinations.map((destination) => {
-          return (
-            <Link
-              key={destination.id}
-              href={localizedPath(`/destination/${destination.id}`)}
-              className="group relative block h-40 cursor-pointer overflow-hidden rounded-2xl"
-            >
-              <img
-                src={destination.image}
-                alt={destination.title}
-                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-black/20" />
-              <div className="absolute inset-0 flex items-center justify-center px-4 text-center">
-                <h3 className="text-xl font-bold text-white">{destination.title}</h3>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
+      <LandmarksHeader count={displayDestinations.length} locale={locale} />
+      <LandmarkGrid
+        locale={locale}
+        items={displayDestinations}
+        hrefFor={(item) => localizedPath(`/destination/${item.id}`)}
+      />
 
       <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-3">
         {tourismFeatures.map((feature) => (

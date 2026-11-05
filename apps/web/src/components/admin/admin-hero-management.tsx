@@ -35,6 +35,7 @@ type HeroSlideRecord = {
   sortOrder: number;
   platform: HeroSlidePlatform;
   imageUrl: string;
+  cardImageUrl: string;
   titleAr: string;
   titleEn: string;
   subtitleAr: string;
@@ -51,6 +52,7 @@ const emptyForm = (): HeroSlideForm => ({
   sortOrder: 0,
   platform: 'ALL',
   imageUrl: '',
+  cardImageUrl: '',
   titleAr: '',
   titleEn: '',
   subtitleAr: '',
@@ -62,7 +64,23 @@ const emptyForm = (): HeroSlideForm => ({
 });
 
 export function AdminHeroManagement() {
-  const { m } = useI18n();
+  const { locale, m } = useI18n();
+  const cardCopy =
+    locale === 'en'
+      ? {
+          title: 'Rotating card image (home page & app)',
+          hint: 'Portrait image shown on this slide\'s card in the 3D ring. Leave empty to use the slide image.',
+          upload: 'Upload card image',
+          uploadHint: 'Best size: 600 × 1400 px (portrait)',
+          short: '+ Card image'
+        }
+      : {
+          title: 'صورة الكارد الدوّار (الموقع والتطبيق)',
+          hint: 'صورة طولية تظهر على كارد هذه الشريحة في العجلة الدوّارة. اتركها فارغة لاستخدام صورة الشريحة.',
+          upload: 'رفع صورة الكارد',
+          uploadHint: 'المقاس الأفضل: 600 × 1400 بكسل (طولية)',
+          short: '+ صورة الكارد'
+        };
   const [slides, setSlides] = useState<HeroSlideRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +99,7 @@ export function AdminHeroManagement() {
       setSlides(
         response.data.data.map((slide) => ({
           ...slide,
+          cardImageUrl: slide.cardImageUrl ?? '',
           platform: normalizePlatform(slide.platform)
         }))
       );
@@ -113,6 +132,7 @@ export function AdminHeroManagement() {
       sortOrder: slide.sortOrder,
       platform: normalizePlatform(slide.platform),
       imageUrl: slide.imageUrl,
+      cardImageUrl: slide.cardImageUrl ?? '',
       titleAr: slide.titleAr,
       titleEn: slide.titleEn,
       subtitleAr: slide.subtitleAr,
@@ -259,6 +279,35 @@ export function AdminHeroManagement() {
                 <img src={resolveMediaUrl(form.imageUrl)} alt="" className="h-40 w-full object-cover" />
               </div>
             ) : null}
+            <div className="md:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm font-black text-slate-900">{cardCopy.title}</p>
+                <p className="mb-3 mt-1 text-xs text-slate-500">{cardCopy.hint}</p>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+                  <div className="min-w-0 flex-1">
+                    <ImageUploader
+                      folder="hero"
+                      useAdminAuth
+                      value={form.cardImageUrl}
+                      onChange={(value) => updateField('cardImageUrl', value)}
+                      labels={{
+                        title: cardCopy.upload,
+                        hint: cardCopy.uploadHint,
+                        remove: m.admin.removeImage,
+                        uploading: m.admin.heroImageUploading,
+                        compressing: m.admin.heroImageCompressing,
+                        uploadError: m.admin.heroImageUploadError
+                      }}
+                    />
+                  </div>
+                  <div className="relative mx-auto h-48 w-[84px] shrink-0 overflow-hidden rounded-xl bg-slate-900 shadow-lg ring-1 ring-black/10">
+                    {form.cardImageUrl || form.imageUrl ? (
+                      <img src={resolveMediaUrl(form.cardImageUrl || form.imageUrl)} alt="" className="h-full w-full object-cover" />
+                    ) : null}
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/85 via-black/20 to-transparent" />
+                    <p className="absolute inset-x-2 top-3 line-clamp-2 text-[9px] font-black leading-snug text-white">{form.titleAr}</p>
+                  </div>
+                </div>
+              </div>
             {form.platform === 'MOBILE' || form.platform === 'ALL' ? (
               <AdminHeroMobilePreview
                 imageUrl={form.imageUrl}
@@ -296,6 +345,18 @@ export function AdminHeroManagement() {
           {slides.map((slide) => (
             <article key={slide.id} className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:flex-row">
               <div className="h-28 w-full shrink-0 overflow-hidden rounded-xl bg-slate-100 md:h-24 md:w-40">{slide.imageUrl ? <img src={resolveMediaUrl(slide.imageUrl)} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-slate-400"><ImageIcon size={28} /></div>}</div>
+              <button
+                  type="button"
+                  onClick={() => openEdit(slide)}
+                  title={cardCopy.title}
+                  className="relative h-28 w-14 shrink-0 overflow-hidden rounded-lg border border-dashed border-slate-300 bg-slate-50 text-[10px] font-bold text-slate-500 transition hover:border-brand-500 md:h-24 md:w-12"
+                >
+                  {slide.cardImageUrl ? (
+                    <img src={resolveMediaUrl(slide.cardImageUrl)} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                  ) : (
+                    <span className="flex h-full items-center justify-center px-1 text-center leading-tight">{cardCopy.short}</span>
+                  )}
+                </button>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-start justify-between gap-2"><div><p className="font-black text-slate-900">{slide.titleAr}</p><p className="text-sm text-slate-500">{slide.titleEn}</p></div><div className="flex flex-wrap gap-2"><span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${platformBadgeClass(normalizePlatform(slide.platform))}`}>{platformLabel(normalizePlatform(slide.platform), m)}</span><span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${slide.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>{slide.isActive ? m.admin.active : m.admin.inactive}</span></div></div>
                 <p className="mt-2 line-clamp-2 text-sm text-slate-600">{slide.subtitleAr}</p>

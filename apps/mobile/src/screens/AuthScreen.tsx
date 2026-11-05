@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
@@ -16,6 +17,8 @@ import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
 import { isAppleSignInSupported } from '../lib/apple-auth';
 import { isFirebaseConfigured } from '../lib/firebase';
+import { resolveApiErrorMessage } from '../lib/api-errors';
+import { insetEnd } from '../lib/layout-direction';
 import { isValidPhoneE164 } from '../lib/phone/phone-utils';
 import {
   clearRegistrationDraft,
@@ -24,7 +27,6 @@ import {
   type RegistrationDraftStep
 } from '../lib/registration-draft-storage';
 import {
-  getApiErrorMessage,
   registerCompleteRequest,
   registerResendEmailRequest,
   registerResendPhoneRequest,
@@ -39,6 +41,53 @@ import { colors, radius } from '../theme';
 type AuthMode = 'login' | 'register';
 type LoginStep = 'form' | 'verify' | 'forgot-request' | 'forgot-reset';
 type RegisterStep = 'info' | 'email-code' | 'phone' | 'phone-code' | 'password';
+
+function PasswordField({
+  value,
+  onChangeText,
+  placeholder,
+  isRtl,
+  inputStyle,
+  autoComplete,
+  textContentType,
+  showLabel,
+  hideLabel
+}: {
+  value: string;
+  onChangeText: (value: string) => void;
+  placeholder: string;
+  isRtl: boolean;
+  inputStyle: object;
+  autoComplete?: 'password' | 'new-password';
+  textContentType?: 'password' | 'newPassword';
+  showLabel: string;
+  hideLabel: string;
+}) {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <View style={styles.passwordWrap}>
+      <AppTextInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        secureTextEntry={!visible}
+        autoComplete={autoComplete}
+        textContentType={textContentType}
+        autoCapitalize="none"
+        style={[styles.input, styles.passwordInput, isRtl ? styles.passwordInputRtl : styles.passwordInputLtr, inputStyle]}
+      />
+      <Pressable
+        style={[styles.passwordToggle, insetEnd(isRtl, 12)]}
+        onPress={() => setVisible((current) => !current)}
+        accessibilityLabel={visible ? hideLabel : showLabel}
+        hitSlop={8}
+      >
+        <Ionicons name={visible ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.muted} />
+      </Pressable>
+    </View>
+  );
+}
 
 const resolveAuthErrorMessage = (
   errorCode: string | undefined,
@@ -224,7 +273,7 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
       setVerificationCode('');
       setRegisterStep('email-code');
     } catch (startError) {
-      setError(getApiErrorMessage(startError, t.auth.registerError));
+      setError(resolveApiErrorMessage(startError, t.errors, t.auth.registerError));
     } finally {
       setIsSubmitting(false);
     }
@@ -263,7 +312,7 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
       setPhoneCode('');
       setRegisterStep('phone-code');
     } catch (sendError) {
-      setError(getApiErrorMessage(sendError, t.auth.registerError));
+      setError(resolveApiErrorMessage(sendError, t.errors, t.auth.registerError));
     } finally {
       setIsSubmitting(false);
     }
@@ -301,7 +350,7 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
       await clearRegistrationDraft();
       finishAuth(true);
     } catch (completeError) {
-      setError(getApiErrorMessage(completeError, t.auth.registerError));
+      setError(resolveApiErrorMessage(completeError, t.errors, t.auth.registerError));
     } finally {
       setIsSubmitting(false);
     }
@@ -512,25 +561,27 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
         >
           <AppText style={[styles.title, textAlign]}>{t.auth.registerStepPassword}</AppText>
           <AppText style={[styles.subtitle, textAlign]}>{t.auth.password}</AppText>
-          <AppTextInput
+          <PasswordField
             value={password}
             onChangeText={setPassword}
             placeholder={t.auth.password}
-            secureTextEntry
+            isRtl={isRtl}
+            inputStyle={inputAlign}
             autoComplete="new-password"
             textContentType="newPassword"
-            autoCapitalize="none"
-            style={[styles.input, inputAlign]}
+            showLabel={t.auth.showPassword}
+            hideLabel={t.auth.hidePassword}
           />
-          <AppTextInput
+          <PasswordField
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             placeholder={t.auth.confirmPassword}
-            secureTextEntry
+            isRtl={isRtl}
+            inputStyle={inputAlign}
             autoComplete="new-password"
             textContentType="newPassword"
-            autoCapitalize="none"
-            style={[styles.input, inputAlign]}
+            showLabel={t.auth.showPassword}
+            hideLabel={t.auth.hidePassword}
           />
           {error ? <AppText style={[styles.error, textAlign]}>{error}</AppText> : null}
           <PrimaryButton label={t.auth.submitRegister} onPress={completeRegistration} loading={isSubmitting} style={styles.submitSpacing} />
@@ -692,15 +743,16 @@ export function AuthScreen({ mode, onSwitchMode, onSuccess }: AuthScreenProps) {
         keyboardType="email-address"
         style={[styles.input, inputAlign]}
       />
-      <AppTextInput
+      <PasswordField
         value={password}
         onChangeText={setPassword}
         placeholder={t.auth.password}
-        secureTextEntry
+        isRtl={isRtl}
+        inputStyle={inputAlign}
         autoComplete="password"
         textContentType="password"
-        autoCapitalize="none"
-        style={[styles.input, inputAlign]}
+        showLabel={t.auth.showPassword}
+        hideLabel={t.auth.hidePassword}
       />
 
       <Pressable onPress={() => setLoginStep('forgot-request')} style={styles.forgotRow}>
@@ -745,6 +797,25 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     fontSize: 15,
     color: colors.ink
+  },
+  passwordWrap: {
+    marginBottom: 12,
+    justifyContent: 'center'
+  },
+  passwordInput: {
+    marginBottom: 0
+  },
+  passwordInputRtl: {
+    paddingLeft: 44
+  },
+  passwordInputLtr: {
+    paddingRight: 44
+  },
+  passwordToggle: {
+    position: 'absolute',
+    top: 14,
+    height: 24,
+    justifyContent: 'center'
   },
   inputRtl: {
     textAlign: 'right'

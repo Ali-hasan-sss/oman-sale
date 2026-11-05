@@ -15,6 +15,7 @@ import { AppTextInput } from '../components/AppTextInput';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorNotice } from '../components/ErrorNotice';
+import { ListingAdMediaPicker } from '../components/ListingAdMediaPicker';
 import { ListingCard } from '../components/ListingCard';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { ListingListSkeleton } from '../components/skeleton';
@@ -33,9 +34,12 @@ import {
   updateListingRequest
 } from '../services/listings.service';
 import {
+  fetchPromotionCredits,
   fetchPromotionPlans,
+  formatFreeCredit,
   getPlanPrice,
   promoteAdRequest,
+  type PromotionCredit,
   type PromotionPlan
 } from '../services/promotions.service';
 import { useAuthStore, useListingsStore } from '../stores';
@@ -264,6 +268,20 @@ function ActionChip({
   );
 }
 
+function isListingVideo(item: { imageUrl: string; mediaType?: string | null }) {
+  if (item.mediaType === 'VIDEO') return true;
+  return /\.(mp4|webm|mov)(\?|#|$)/i.test(item.imageUrl);
+}
+
+function splitListingMedia(listing: Listing) {
+  const images = listing.images ?? [];
+  const video = images.find((item) => isListingVideo(item));
+  return {
+    photos: images.filter((item) => !isListingVideo(item)).map((item) => item.imageUrl),
+    video: video?.imageUrl ?? null
+  };
+}
+
 function EditListingModal({
   listing,
   onClose,
@@ -282,6 +300,9 @@ function EditListingModal({
   const [price, setPrice] = useState(listing.price != null ? String(listing.price) : '');
   const [city, setCity] = useState(listing.city ?? '');
   const [wilayah, setWilayah] = useState(listing.wilayah ?? '');
+  const initialMedia = useMemo(() => splitListingMedia(listing), [listing]);
+  const [imageUrls, setImageUrls] = useState(initialMedia.photos);
+  const [videoUrl, setVideoUrl] = useState<string | null>(initialMedia.video);
   const [isSaving, setIsSaving] = useState(false);
   const wilayahOptions = useMemo(() => (city ? getWilayahsForGovernorate(city) : []), [city]);
   const textAlign = isRtl ? styles.rtl : styles.ltr;
@@ -294,7 +315,9 @@ function EditListingModal({
         description,
         price: price ? Number(price) : undefined,
         city: city || undefined,
-        wilayah: wilayah || undefined
+        wilayah: wilayah || undefined,
+        imageUrls,
+        videoUrl
       });
       await onSaved();
     } catch {
@@ -350,6 +373,26 @@ function EditListingModal({
               </ScrollView>
             </>
           ) : null}
+          <ListingAdMediaPicker
+            imageUrls={imageUrls}
+            videoUrl={videoUrl}
+            onImageUrlsChange={setImageUrls}
+            onVideoUrlChange={setVideoUrl}
+            disabled={isSaving}
+            isRtl={isRtl}
+            labels={{
+              images: t.addOffer.images,
+              uploadTitle: t.addOffer.uploadTitle,
+              uploadHint: t.addOffer.uploadHint,
+              video: t.addOffer.video,
+              videoTitle: t.addOffer.videoTitle,
+              videoHint: t.addOffer.videoHint,
+              uploading: t.addOffer.uploading,
+              removeImage: t.addOffer.removeImage,
+              uploadError: t.addOffer.uploadError,
+              videoTooLarge: t.addOffer.videoTooLarge
+            }}
+          />
           <View style={styles.modalActions}>
             <Pressable style={styles.cancelButton} onPress={onClose}>
               <AppText style={styles.cancelText}>{t.common.cancel}</AppText>
@@ -382,7 +425,18 @@ function PromoteListingModal({
   const [planId, setPlanId] = useState(plans[0]?.id ?? '');
   const [days, setDays] = useState(7);
   const [isSaving, setIsSaving] = useState(false);
+  const [credits, setCredits] = useState<PromotionCredit[]>([]);
   const selectedPlan = plans.find((plan) => plan.id === planId);
+  const selectedCredit = listing.store?.id
+    ? undefined
+    : credits.find((credit) => credit.planId === planId && credit.remaining > 0);
+
+  useEffect(() => {
+    if (listing.store?.id) return;
+    fetchPromotionCredits()
+      .then(setCredits)
+      .catch(() => setCredits([]));
+  }, [listing.store?.id]);
   const textAlign = isRtl ? styles.rtl : styles.ltr;
   const durationOptions = [
     { days: 7, label: t.addOffer.oneWeek },
@@ -416,7 +470,10 @@ function PromoteListingModal({
           <AppText style={[styles.fieldLabel, textAlign]}>{formatPrice(listing.price, listing.currency, locale)}</AppText>
           {plans.map((plan) => {
             const active = plan.id === planId;
-            const pricing = formatPlanVatBreakdown(getPlanPrice(plan, days), locale, {
+            const credit = listing.store?.id
+              ? undefined
+              : credits.find((item) => item.planId === plan.id && item.remaining > 0);
+            const pricing = formatPlanVatBreakdown(credit ? 0 : getPlanPrice(plan, days), locale, {
               free: t.common.pricing.free,
               vatShort: t.common.pricing.vatShort
             });
@@ -424,9 +481,19 @@ function PromoteListingModal({
               <Pressable key={plan.id} style={[styles.planCard, active && styles.planCardActive]} onPress={() => setPlanId(plan.id)}>
                 <AppText style={styles.planName}>{locale === 'en' ? plan.nameEn : plan.nameAr}</AppText>
                 <AppText style={styles.planPrice}>{pricing.main}</AppText>
+                {credit ? (
+                  <AppText style={styles.planPrice}>
+                    {formatFreeCredit(t.addOffer.freePlanCredit, credit.remaining, credit.durationDays)}
+                  </AppText>
+                ) : null}
               </Pressable>
             );
           })}
+          {selectedCredit ? (
+            <AppText style={[styles.fieldLabel, textAlign]}>
+              {formatFreeCredit(t.addOffer.freePlanCredit, selectedCredit.remaining, selectedCredit.durationDays)}
+            </AppText>
+          ) : (
           <View style={[styles.chipRow, rowDirection(isRtl)]}>
             {durationOptions.map((option) => (
               <Pressable
@@ -438,6 +505,7 @@ function PromoteListingModal({
               </Pressable>
             ))}
           </View>
+          )}
           <View style={styles.modalActions}>
             <Pressable style={styles.cancelButton} onPress={onClose}>
               <AppText style={styles.cancelText}>{t.common.cancel}</AppText>

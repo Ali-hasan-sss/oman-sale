@@ -3,6 +3,12 @@ import { z } from 'zod';
 import { imageReferenceSchema } from '../../shared/utils/media-reference';
 import { bannerPlacementSchema } from '../banners/banner-placements';
 
+/** Optional portrait image for the rotating 3D cards on the web home page; '' clears it. */
+const optionalCardImageSchema = z.preprocess(
+  (value) => (value === '' ? null : value),
+  imageReferenceSchema.nullable().optional()
+);
+
 export const listHeroSlidesQuerySchema = z.object({
   locale: z.enum(['ar', 'en']).optional(),
   platform: z.enum(['web', 'mobile']).optional()
@@ -16,6 +22,7 @@ export const createHeroSlideSchema = z.object({
   sortOrder: z.coerce.number().int().min(0).optional(),
   platform: z.enum(['WEB', 'MOBILE', 'ALL']).default('WEB'),
   imageUrl: imageReferenceSchema,
+  cardImageUrl: optionalCardImageSchema,
   titleAr: z.string().min(1).max(200),
   titleEn: z.string().min(1).max(200),
   subtitleAr: z.string().min(1).max(400),
@@ -30,6 +37,7 @@ export const updateHeroSlideSchema = z.object({
   sortOrder: z.coerce.number().int().min(0).optional(),
   platform: z.enum(['WEB', 'MOBILE', 'ALL']).optional(),
   imageUrl: imageReferenceSchema.optional(),
+  cardImageUrl: optionalCardImageSchema,
   titleAr: z.string().min(1).max(200).optional(),
   titleEn: z.string().min(1).max(200).optional(),
   subtitleAr: z.string().min(1).max(400).optional(),

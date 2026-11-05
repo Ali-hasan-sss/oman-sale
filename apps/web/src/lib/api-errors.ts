@@ -95,6 +95,8 @@ export function resolveApiErrorMessage(error: unknown, messages: ErrorMessages, 
     const code = error.response?.data?.code;
     const stringCode = typeof code === 'string' ? code : undefined;
 
+    if (error.response?.status === 429 && messages.RATE_LIMITED) return messages.RATE_LIMITED;
+
     if (stringCode && messages[stringCode]) return messages[stringCode];
 
     const fieldErrors = getValidationFieldErrors(error, messages);
@@ -111,6 +113,7 @@ export function resolveApiErrorMessage(error: unknown, messages: ErrorMessages, 
 
 export function getApiErrorCode(error: unknown): string | undefined {
   if (isAxiosError<ApiErrorPayload>(error)) {
+    if (error.response?.status === 429) return 'RATE_LIMITED';
     const code = error.response?.data?.code;
     return typeof code === 'string' ? code : undefined;
   }

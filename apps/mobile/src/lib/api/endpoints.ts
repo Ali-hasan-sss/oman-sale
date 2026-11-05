@@ -83,6 +83,7 @@ export const API_ENDPOINTS = {
   },
   promotions: {
     plans: '/promotions/plans',
+    credits: '/promotions/credits',
     adPromotions: '/promotions/ad-promotions'
   },
   stores: {

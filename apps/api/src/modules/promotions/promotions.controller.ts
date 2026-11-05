@@ -9,6 +9,10 @@ export class PromotionsController {
     res.json({ data: await promotionsService.listPlans(req.query.includeInactive === 'true') });
   }
 
+  async listCredits(req: Request, res: Response) {
+    res.json({ data: await promotionsService.listCredits(req.user!.id) });
+  }
+
   async createPlan(req: Request, res: Response) {
     res.status(201).json({ data: await promotionsService.createPlan(req.body) });
   }

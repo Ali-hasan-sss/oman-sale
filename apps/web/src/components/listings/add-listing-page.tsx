@@ -51,6 +51,12 @@ type CategoryFilter = {
   options: Array<{ id: string; label: string }>;
 };
 
+type PromotionCredit = {
+  planId: string;
+  remaining: number;
+  durationDays: number;
+};
+
 type PromotionPlan = {
   id: string;
   name?: string;
@@ -119,6 +125,7 @@ const labels = {
     normalDescription: 'مجاني',
     promotionPlansEmpty: 'لا توجد خطط ترويج متاحة حالياً.',
     free: 'مجاني',
+    freePlanCredit: 'مجاني لك: متبقي {count} لمدة {days} يوم',
     duration: 'مدة الترويج',
     oneWeek: 'أسبوع واحد',
     twoWeeks: 'أسبوعين',
@@ -176,6 +183,7 @@ const labels = {
     normalDescription: 'Free',
     promotionPlansEmpty: 'No promotion plans are available right now.',
     free: 'Free',
+    freePlanCredit: 'Free for you: {count} left, {days} days',
     duration: 'Promotion duration',
     oneWeek: 'One week',
     twoWeeks: 'Two weeks',
@@ -213,6 +221,7 @@ export function AddListingPage() {
   const hydrateFromStorage = useAuthStore((state) => state.hydrateFromStorage);
   const [categories, setCategories] = useState<Category[]>([]);
   const [plans, setPlans] = useState<PromotionPlan[]>([]);
+  const [credits, setCredits] = useState<PromotionCredit[]>([]);
   const [title, setTitle] = useState('');
   const [rootCategoryId, setRootCategoryId] = useState('');
   const [subcategoryPath, setSubcategoryPath] = useState<string[]>([]);
@@ -336,7 +345,10 @@ export function AddListingPage() {
       (ownerStore.accessStatus === 'ACTIVE' || ownerStore.accessStatus === 'TRIAL')
   );
   const isStorePublish = canPublishFromStore && publishSource === 'store';
-  const selectedPromotionPrice = selectedPlan ? getPlanPrice(selectedPlan, duration) : 0;
+  const selectedCredit = isStorePublish
+    ? undefined
+    : credits.find((credit) => credit.planId === selectedPlan?.id && credit.remaining > 0);
+  const selectedPromotionPrice = selectedCredit ? 0 : selectedPlan ? getPlanPrice(selectedPlan, duration) : 0;
   const requiresPaidPromotion = !isStorePublish && Boolean(selectedPlan) && selectedPromotionPrice > 0;
   const authHeaders = useMemo(() => {
     const token = getUserAccessToken();
@@ -383,9 +395,12 @@ export function AddListingPage() {
     Promise.all([
       api.get<{ data: Category[] }>(`/categories?locale=${locale}`),
       api.get<{ data: PromotionPlan[] }>('/promotions/plans'),
-      api.get<{ data: OwnerStore[] }>('/stores/me', { headers: authHeaders })
+      api.get<{ data: OwnerStore[] }>('/stores/me', { headers: authHeaders }),
+      api
+        .get<{ data: PromotionCredit[] }>('/promotions/credits', { headers: authHeaders })
+        .catch(() => ({ data: { data: [] as PromotionCredit[] } }))
     ])
-      .then(([categoriesResponse, plansResponse, storesResponse]) => {
+      .then(([categoriesResponse, plansResponse, storesResponse, creditsResponse]) => {
         const promotionPlans = plansResponse.data.data;
         const activeStore = storesResponse.data.data.find(
           (store) =>
@@ -393,6 +408,7 @@ export function AddListingPage() {
         );
         setCategories(categoriesResponse.data.data);
         setPlans(promotionPlans);
+        setCredits(creditsResponse.data.data ?? []);
         setOwnerStore(activeStore ?? storesResponse.data.data[0] ?? null);
         if (activeStore) {
           setPublishSource('store');
@@ -785,7 +801,9 @@ export function AddListingPage() {
             <h3 className="mb-2 text-xl font-bold">{text.adType}</h3>
             <p className="mb-4 text-gray-600">{text.adTypeSubtitle}</p>
             <div className="mb-6 grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {plans.map((plan) => (
+              {plans.map((plan) => {
+                const credit = credits.find((item) => item.planId === plan.id && item.remaining > 0);
+                return (
                 <PlanCard
                   key={plan.id}
                   active={selectedPlanId === plan.id}
@@ -793,13 +811,15 @@ export function AddListingPage() {
                   name={locale === 'en' ? plan.nameEn : plan.nameAr}
                   badgeLabel={plan.badgeLabel}
                   color={plan.color}
-                  basePrice={getPlanPrice(plan, duration)}
+                  basePrice={credit ? 0 : getPlanPrice(plan, duration)}
                   freeLabel={text.free}
+                  note={credit ? formatFreeCredit(text.freePlanCredit, credit.remaining, credit.durationDays) : undefined}
                   vatShort={text.vatShort}
                   locale={locale}
                   onClick={() => setSelectedPlanId(plan.id)}
                 />
-              ))}
+                );
+              })}
             </div>
 
             {plans.length === 0 ? (
@@ -808,7 +828,13 @@ export function AddListingPage() {
               </p>
             ) : null}
 
-            {selectedPlan ? (
+            {selectedPlan && selectedCredit ? (
+              <p className="mb-6 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-bold text-green-800">
+                {formatFreeCredit(text.freePlanCredit, selectedCredit.remaining, selectedCredit.durationDays)}
+              </p>
+            ) : null}
+
+            {selectedPlan && !selectedCredit ? (
               <div className="mb-6">
                 <label className="mb-3 block font-bold">{text.duration}</label>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -926,6 +952,10 @@ function PublishSourceCard({
   );
 }
 
+function formatFreeCredit(template: string, count: number, days: number) {
+  return template.replace('{count}', String(count)).replace('{days}', String(days));
+}
+
 function PlanCard({
   active,
   badgeLabel,
@@ -935,6 +965,7 @@ function PlanCard({
   freeLabel,
   locale,
   name,
+  note,
   onClick,
   vatShort
 }: {
@@ -946,6 +977,7 @@ function PlanCard({
   freeLabel: string;
   locale: 'ar' | 'en';
   name: string;
+  note?: string;
   onClick: () => void;
   vatShort: string;
 }) {
@@ -971,6 +1003,7 @@ function PlanCard({
         ) : null}
       </div>
       <p className="mb-2 line-clamp-2 min-h-10 text-sm text-gray-600">{description}</p>
+      {note ? <p className="mb-2 text-sm font-bold text-green-700">{note}</p> : null}
       <div className={`min-w-0 ${active ? 'text-green-600' : 'text-gray-900'}`}>
         <PlanPriceWithVat
           basePrice={basePrice}

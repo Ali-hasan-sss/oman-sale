@@ -5,7 +5,6 @@ import { EmptyState } from '../components/EmptyState';
 import { HeroBannersSection } from '../components/HeroBannersSection';
 import { HomeArticlesSection } from '../components/HomeArticlesSection';
 import { HomeCategoriesSection } from '../components/HomeCategoriesSection';
-import { HomeCategoryBar } from '../components/HomeCategoryBar';
 import { HomeCreateStoreBanner } from '../components/HomeCreateStoreBanner';
 import { HomeHeroSection } from '../components/HomeHeroSection';
 import { HomeTourismSection } from '../components/HomeTourismSection';
@@ -78,7 +77,6 @@ export function HomeScreen({
       }
     >
       <HomeHeroSection onBrowseOffers={onBrowseOffers} onAddListing={onAddListing} />
-      <HomeCategoryBar onCategoryPress={onCategoryPress} />
       <HeroBannersSection />
       <HomeCreateStoreBanner onCreateStore={onCreateStore} />
       <HomeCategoriesSection onCategoryPress={onCategoryPress} onBrowseOffers={onBrowseOffers} />

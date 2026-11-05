@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
+import { ResizeMode, Video } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from './AppText';
-import { uploadAdMedia } from '../services/media.service';
+import { resolveDeviceMediaUrl } from '../lib/media-url';
+import { isAdVideoTooLarge, uploadAdMedia } from '../services/media.service';
 import { insetEnd, rowDirection } from '../lib/layout-direction';
 import { colors, radius } from '../theme';
 
@@ -25,10 +27,55 @@ type ListingAdMediaPickerProps = {
     uploading: string;
     removeImage: string;
     uploadError: string;
+    videoTooLarge: string;
   };
   isRtl: boolean;
   disabled?: boolean;
 };
+
+function MediaThumb({ reference, localUri }: { reference: string; localUri?: string }) {
+  const remoteUri = resolveDeviceMediaUrl(reference);
+  const initialUri = localUri || remoteUri;
+  const [uri, setUri] = useState(initialUri);
+
+  useEffect(() => {
+    if (localUri) setUri(localUri);
+  }, [localUri]);
+
+  return (
+    <Image
+      source={{ uri }}
+      style={styles.thumbImage}
+      resizeMode="cover"
+      onError={() => {
+        if (remoteUri && uri !== remoteUri) setUri(remoteUri);
+      }}
+    />
+  );
+}
+
+function VideoPreview({ reference, localUri }: { reference: string; localUri?: string }) {
+  const remoteUri = resolveDeviceMediaUrl(reference);
+  const uri = localUri || remoteUri;
+  const [sourceUri, setSourceUri] = useState(uri);
+
+  useEffect(() => {
+    if (localUri) setSourceUri(localUri);
+  }, [localUri]);
+
+  return (
+    <Video
+      source={{ uri: sourceUri }}
+      style={styles.videoPlayer}
+      useNativeControls
+      resizeMode={ResizeMode.COVER}
+      shouldPlay={false}
+      onError={() => {
+        if (remoteUri && sourceUri !== remoteUri) setSourceUri(remoteUri);
+      }}
+    />
+  );
+}
 
 function guessMimeType(uri: string, kind: 'image' | 'video') {
   const lower = uri.toLowerCase();
@@ -56,6 +103,7 @@ export function ListingAdMediaPicker({
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [error, setError] = useState('');
   const [previews, setPreviews] = useState<Record<string, string>>({});
+  const [pendingVideoUri, setPendingVideoUri] = useState<string | null>(null);
   const textAlign = isRtl ? styles.rtl : styles.ltr;
 
   const pickImages = async () => {
@@ -86,7 +134,7 @@ export function ListingAdMediaPicker({
           kind: 'image'
         });
         uploaded.push(media.key);
-        setPreviews((current) => ({ ...current, [media.key]: media.url || asset.uri }));
+        setPreviews((current) => ({ ...current, [media.key]: asset.uri }));
       }
       onImageUrlsChange([...imageUrls, ...uploaded]);
     } catch {
@@ -109,6 +157,12 @@ export function ListingAdMediaPicker({
 
     const asset = result.assets[0];
     setError('');
+    if (isAdVideoTooLarge(asset.fileSize)) {
+      setError(labels.videoTooLarge);
+      return;
+    }
+
+    setPendingVideoUri(asset.uri);
     setUploadingVideo(true);
     try {
       const media = await uploadAdMedia({
@@ -118,27 +172,39 @@ export function ListingAdMediaPicker({
         size: asset.fileSize,
         kind: 'video'
       });
+      setPreviews((current) => ({ ...current, [media.key]: asset.uri }));
       onVideoUrlChange(media.key);
-    } catch {
-      setError(labels.uploadError);
+    } catch (caught) {
+      setPendingVideoUri(null);
+      const tooLarge = caught instanceof Error && caught.message === 'AD_FILE_TOO_LARGE';
+      setError(tooLarge ? labels.videoTooLarge : labels.uploadError);
     } finally {
       setUploadingVideo(false);
     }
+  };
+
+  const clearVideo = () => {
+    setPendingVideoUri(null);
+    onVideoUrlChange(null);
   };
 
   return (
     <View style={styles.wrap}>
       <AppText style={[styles.sectionTitle, textAlign]}>{labels.images}</AppText>
       <View style={[styles.imageGrid, rowDirection(isRtl)]}>
-        {imageUrls.map((url) => (
-          <View key={url} style={styles.thumb}>
-            <Image source={{ uri: previews[url] || url }} style={styles.thumbImage} />
+        {imageUrls.map((url, index) => (
+          <View key={`${url}-${index}`} style={styles.thumb}>
+            <View style={styles.thumbMedia} pointerEvents="none">
+              <MediaThumb reference={url} localUri={previews[url]} />
+            </View>
             <Pressable
-              style={[styles.remove, insetEnd(isRtl, 6)]}
-              onPress={() => onImageUrlsChange(imageUrls.filter((item) => item !== url))}
+              style={[styles.remove, insetEnd(isRtl, 4)]}
+              hitSlop={10}
+              onPress={() => onImageUrlsChange(imageUrls.filter((_, current) => current !== index))}
               disabled={disabled}
+              accessibilityLabel={labels.removeImage}
             >
-              <Ionicons name="close" size={14} color="#fff" />
+              <Ionicons name="close" size={16} color="#fff" />
             </Pressable>
           </View>
         ))}
@@ -158,11 +224,33 @@ export function ListingAdMediaPicker({
       <AppText style={[styles.hint, textAlign]}>{labels.uploadHint}</AppText>
 
       <AppText style={[styles.sectionTitle, styles.videoTitle, textAlign]}>{labels.video}</AppText>
-      {videoUrl ? (
-        <View style={[styles.videoRow, rowDirection(isRtl)]}>
-          <Ionicons name="videocam" size={20} color={colors.brand} />
-          <AppText style={styles.videoReady}>{labels.videoTitle}</AppText>
-          <Pressable onPress={() => onVideoUrlChange(null)} disabled={disabled}>
+      {videoUrl || pendingVideoUri ? (
+        <View style={styles.videoBlock}>
+          <View style={styles.videoPreview}>
+            {videoUrl ? (
+              <VideoPreview reference={videoUrl} localUri={previews[videoUrl] || pendingVideoUri || undefined} />
+            ) : pendingVideoUri ? (
+              <Video
+                source={{ uri: pendingVideoUri }}
+                style={styles.videoPlayer}
+                useNativeControls
+                resizeMode={ResizeMode.COVER}
+                shouldPlay={false}
+              />
+            ) : null}
+            {uploadingVideo ? (
+              <View style={styles.videoUploading} pointerEvents="none">
+                <ActivityIndicator color="#fff" />
+              </View>
+            ) : null}
+          </View>
+          <Pressable
+            style={[styles.removeVideo, rowDirection(isRtl)]}
+            onPress={clearVideo}
+            disabled={disabled || uploadingVideo}
+            accessibilityLabel={labels.removeImage}
+          >
+            <Ionicons name="trash-outline" size={16} color={colors.danger} />
             <AppText style={styles.removeText}>{labels.removeImage}</AppText>
           </Pressable>
         </View>
@@ -190,15 +278,18 @@ const styles = StyleSheet.create({
   videoTitle: { marginTop: 12 },
   hint: { color: colors.muted, fontSize: 12, marginTop: 6 },
   imageGrid: { flexWrap: 'wrap', gap: 8 },
-  thumb: { width: 88, height: 88, borderRadius: radius.md, overflow: 'hidden', backgroundColor: '#eef2f7' },
-  thumbImage: { width: '100%', height: '100%' },
+  thumb: { width: 88, height: 88, borderRadius: radius.md, backgroundColor: '#eef2f7' },
+  thumbMedia: { ...StyleSheet.absoluteFillObject, borderRadius: radius.md, overflow: 'hidden' },
+  thumbImage: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
   remove: {
     position: 'absolute',
-    top: 6,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: 'rgba(0,0,0,0.65)',
+    top: 4,
+    zIndex: 2,
+    elevation: 6,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.72)',
     alignItems: 'center',
     justifyContent: 'center'
   },
@@ -226,15 +317,27 @@ const styles = StyleSheet.create({
     gap: 4
   },
   addText: { color: colors.muted, fontSize: 11, fontWeight: '700', textAlign: 'center', marginTop: 4 },
-  videoRow: {
-    alignItems: 'center',
-    gap: 8,
-    padding: 12,
+  videoBlock: { gap: 8 },
+  videoPreview: {
+    height: 180,
     borderRadius: radius.md,
-    backgroundColor: colors.brandSoft
+    overflow: 'hidden',
+    backgroundColor: '#111827'
   },
-  videoReady: { flex: 1, fontWeight: '700', color: colors.ink },
+  removeVideo: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8
+  },
   removeText: { color: colors.danger, fontWeight: '800' },
+  videoPlayer: { width: '100%', height: '100%' },
+  videoUploading: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.35)'
+  },
   error: { color: colors.danger, fontWeight: '700', marginTop: 8 },
   rtl: { textAlign: 'right' },
   ltr: { textAlign: 'left' }

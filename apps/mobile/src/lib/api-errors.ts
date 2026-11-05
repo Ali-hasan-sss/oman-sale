@@ -15,6 +15,7 @@ export type ApiErrorCode = (typeof ApiErrorCodes)[keyof typeof ApiErrorCodes];
 type ZodIssue = {
   path: (string | number)[];
   code: string;
+  message?: string;
   minimum?: number;
 };
 
@@ -52,8 +53,13 @@ function mapZodIssueToMessageKey(issue: ZodIssue): string {
   }
   if (field === 'categoryId') return 'fieldCategoryRequired';
   if (field === 'city') return 'fieldCityRequired';
-  if (field === 'wilayah') return 'fieldWilayahRequired';
-  if (field === 'price') return 'fieldPriceInvalid';
+  if (field === 'wilayah') {
+    return issue.message?.toLowerCase().includes('belong') ? 'fieldWilayahMismatch' : 'fieldWilayahRequired';
+  }
+  if (field === 'price') return issue.code === 'invalid_type' ? 'fieldPriceInvalid' : 'fieldPriceRequired';
+  if (field === 'modelYear') return 'fieldModelYearRequired';
+  if (field === 'imageUrls' || field === 'videoUrl') return 'fieldMediaInvalid';
+  if (field === 'filterOptionIds') return 'fieldFilterRequired';
 
   return 'VALIDATION_FAILED';
 }
@@ -77,10 +83,14 @@ export function resolveApiErrorMessage(error: unknown, messages: ErrorMessages, 
     const code = error.response?.data?.code;
     const stringCode = typeof code === 'string' ? code : undefined;
 
-    if (stringCode && messages[stringCode]) return messages[stringCode];
-
     const fieldErrors = getValidationFieldErrors(error, messages);
     const firstFieldError = Object.values(fieldErrors).find(Boolean);
+    if (stringCode === 'VALIDATION_FAILED' && firstFieldError) return firstFieldError;
+
+    if (error.response?.status === 429 && messages.RATE_LIMITED) return messages.RATE_LIMITED;
+
+    if (stringCode && messages[stringCode]) return messages[stringCode];
+
     if (firstFieldError) return firstFieldError;
 
     if (error.response?.data?.message && error.response.data.message !== 'Account is not allowed') {
@@ -91,8 +101,37 @@ export function resolveApiErrorMessage(error: unknown, messages: ErrorMessages, 
   return fallback;
 }
 
+const apiCodeField: Record<string, string> = {
+  CATEGORY_FILTER_REQUIRED: 'filters',
+  CATEGORY_FILTER_INVALID: 'filters',
+  CATEGORY_SUBCATEGORY_REQUIRED: 'subcategoryPath',
+  CATEGORY_NOT_FOUND: 'categoryId',
+  MODEL_YEAR_REQUIRED: 'modelYear',
+  MODEL_YEAR_INVALID: 'modelYear'
+};
+
+const apiCodeMessageKey: Record<string, string> = {
+  CATEGORY_FILTER_REQUIRED: 'fieldFilterRequired',
+  CATEGORY_FILTER_INVALID: 'fieldFilterRequired',
+  CATEGORY_SUBCATEGORY_REQUIRED: 'fieldSubcategoryRequired',
+  CATEGORY_NOT_FOUND: 'fieldCategoryRequired',
+  MODEL_YEAR_REQUIRED: 'fieldModelYearRequired',
+  MODEL_YEAR_INVALID: 'fieldModelYearRequired'
+};
+
+export function getApiCodeFieldErrors(error: unknown, messages: ErrorMessages): Record<string, string> {
+  const code = getApiErrorCode(error);
+  if (!code) return {};
+  const field = apiCodeField[code];
+  const messageKey = apiCodeMessageKey[code];
+  if (!field || !messageKey) return {};
+  const message = messages[messageKey] || messages[code] || messages.VALIDATION_FAILED || messages.generic || '';
+  return message ? { [field]: message } : {};
+}
+
 export function getApiErrorCode(error: unknown): string | undefined {
   if (isAxiosError<ApiErrorPayload>(error)) {
+    if (error.response?.status === 429) return 'RATE_LIMITED';
     const code = error.response?.data?.code;
     return typeof code === 'string' ? code : undefined;
   }

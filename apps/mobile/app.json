@@ -3,7 +3,7 @@
     "name": "Oman Sale",
     "slug": "oman-sale-mobile",
     "scheme": "omansale",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "orientation": "portrait",
     "icon": "./assets/app-icon-safe.png",
     "userInterfaceStyle": "light",
@@ -24,7 +24,7 @@
           "Default"
         ]
       },
-      "buildNumber": "14"
+      "buildNumber": "15"
     },
     "android": {
       "package": "com.omansale.mobile",

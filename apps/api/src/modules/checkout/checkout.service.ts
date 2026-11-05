@@ -7,6 +7,10 @@ import type { CreateAdDto } from '../ads/ads.validation';
 import { assertValidAdCategorySelection } from '../ads/ads-category-validation';
 import { adsService } from '../ads/ads.service';
 import { promotionsRepository } from '../promotions/promotions.repository';
+import {
+  refundNewUserPromotionCredit,
+  takeNewUserPromotionCredit
+} from '../promotions/user-promotion-credits.service';
 import { storesService } from '../stores/stores.service';
 import type { ListingPromotionIntentPayload } from './checkout-intent-materialization.service';
 import { startListingPromotionCheckout } from './paid-checkout.service';
@@ -55,6 +59,26 @@ export class CheckoutService {
       });
       eventBus.emit(AppEvents.PROMOTION_ACTIVATED, promotion);
       return { ad: createdAd, promotion, checkout: { paid: true } };
+    }
+
+    if (!dto.ad.storeId) {
+      const credit = await takeNewUserPromotionCredit(userId, dto.planId);
+      if (credit) {
+        try {
+          const createdAd = await adsService.create(userId, dto.ad);
+          if (!createdAd?.id) throw new ApiError(500, 'Failed to create listing');
+          const promotion = await promotionsRepository.activateFreePromotion({
+            adId: createdAd.id,
+            planId: dto.planId,
+            days: credit.days
+          });
+          eventBus.emit(AppEvents.PROMOTION_ACTIVATED, promotion);
+          return { ad: createdAd, promotion, checkout: { paid: true, usedFreeCredit: true } };
+        } catch (error) {
+          await refundNewUserPromotionCredit(userId, dto.planId);
+          throw error;
+        }
+      }
     }
 
     const checkout = await startListingPromotionCheckout({

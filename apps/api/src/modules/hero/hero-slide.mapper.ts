@@ -6,6 +6,7 @@ export const heroSlideAdminSelect = PrismaNs.validator<Prisma.HeroSlideSelect>()
   sortOrder: true,
   platform: true,
   imageUrl: true,
+  cardImageUrl: true,
   titleAr: true,
   titleEn: true,
   subtitleAr: true,
@@ -25,6 +26,7 @@ export type HeroSlideAdminRecord = {
   sortOrder: number;
   platform: HeroSlidePlatform;
   imageUrl: string;
+  cardImageUrl: string | null;
   titleAr: string;
   titleEn: string;
   subtitleAr: string;
@@ -42,6 +44,7 @@ export const mapSlideForAdmin = (slide: HeroSlideAdminSelect): HeroSlideAdminRec
   sortOrder: slide.sortOrder,
   platform: slide.platform ?? 'WEB',
   imageUrl: slide.imageUrl,
+  cardImageUrl: slide.cardImageUrl ?? null,
   titleAr: slide.titleAr,
   titleEn: slide.titleEn,
   subtitleAr: slide.subtitleAr,
@@ -58,6 +61,7 @@ export const buildHeroSlideUpdateData = (input: {
   sortOrder?: number;
   platform?: HeroSlidePlatform;
   imageUrl?: string;
+  cardImageUrl?: string | null;
   titleAr?: string;
   titleEn?: string;
   subtitleAr?: string;
@@ -71,6 +75,7 @@ export const buildHeroSlideUpdateData = (input: {
   if (input.sortOrder !== undefined) data.sortOrder = input.sortOrder;
   if (input.platform !== undefined) data.platform = input.platform;
   if (input.imageUrl !== undefined) data.imageUrl = input.imageUrl;
+  if (input.cardImageUrl !== undefined) data.cardImageUrl = input.cardImageUrl || null;
   if (input.titleAr !== undefined) data.titleAr = input.titleAr;
   if (input.titleEn !== undefined) data.titleEn = input.titleEn;
   if (input.subtitleAr !== undefined) data.subtitleAr = input.subtitleAr;

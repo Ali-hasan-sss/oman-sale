@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { MapPin, Star } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import { TourismSectionSkeleton } from '@/components/home/home-section-skeletons';
+import { LandmarkGrid, LandmarksHeader } from '@/components/tourism/landmark-cards';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { resolveMediaUrl } from '@/lib/media-url';
@@ -37,6 +37,8 @@ const destinations = [
 
 type ApiTourismDestination = {
   id: string;
+  aboutAr?: string;
+  aboutEn?: string;
   slug: string;
   imageUrl: string;
   titleAr: string;
@@ -86,7 +88,8 @@ export function TourismSection() {
             rating: destination.rating,
             ratingLabel: locale === 'en' ? destination.ratingLabelEn : destination.ratingLabelAr,
             bestTime: locale === 'en' ? destination.bestTimeEn : destination.bestTimeAr,
-            address: locale === 'en' ? destination.addressEn : destination.addressAr
+            address: locale === 'en' ? destination.addressEn : destination.addressAr,
+            about: (locale === 'en' ? destination.aboutEn : destination.aboutAr) ?? ''
           }))
         : destinations.map((image, index) => ({
             id: String(index + 1),
@@ -95,7 +98,8 @@ export function TourismSection() {
             rating: '4.9',
             ratingLabel: locale === 'en' ? 'Excellent rating' : 'تقييم ممتاز',
             bestTime: locale === 'en' ? 'Year-round' : 'طوال العام',
-            address: locale === 'en' ? 'Sultanate of Oman' : 'سلطنة عمان'
+            address: locale === 'en' ? 'Sultanate of Oman' : 'سلطنة عمان',
+            about: ''
           })),
     [apiDestinations, locale, m.home.destinations]
   );
@@ -151,38 +155,23 @@ export function TourismSection() {
       </section>
 
       <section className="mb-14">
-        <div className="mb-8 text-center">
-          <p className="mb-2 text-sm font-bold text-brand-600">{m.home.exploreOman}</p>
-          <h2 className="text-3xl font-black">{m.home.destinationsTitle}</h2>
-          <p className="mt-2 text-slate-600">{m.home.destinationsSubtitle}</p>
-        </div>
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          {displayDestinations.map((destination) => {
-            return (
-            <Link
-              key={destination.id}
-              href={localizedPath(`/destination/${destination.id}`)}
-              className="group relative block h-52 overflow-hidden rounded-2xl"
-            >
-              <img src={destination.image} alt={destination.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10" />
-              <div className="absolute inset-0 flex flex-col justify-end p-4">
-                <div className="mb-2 inline-flex w-fit items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-xs font-bold text-amber-600">
-                  <Star size={13} fill="currentColor" />
-                  <span>{destination.rating}</span>
-                  <span className="text-slate-500">{destination.ratingLabel}</span>
-                </div>
-                <h3 className="text-xl font-black text-white">{destination.title}</h3>
-                <p className="mt-1 line-clamp-1 text-xs text-white/85">{destination.bestTime}</p>
-                <p className="mt-2 flex items-center gap-1 text-xs text-white/80">
-                  <MapPin size={13} />
-                  <span className="line-clamp-1">{destination.address}</span>
-                </p>
-              </div>
-            </Link>
-            );
-          })}
-        </div>
+        <LandmarksHeader
+          count={displayDestinations.length}
+          locale={locale}
+          subtitle={m.home.destinationsSubtitle}
+          tripsHref={localizedPath('/tourism')}
+        />
+        <LandmarkGrid
+          locale={locale}
+          hrefFor={(item) => localizedPath(`/destination/${item.id}`)}
+          items={displayDestinations.map((destination) => ({
+            id: destination.id,
+            image: destination.image,
+            title: destination.title,
+            place: destination.address,
+            description: destination.about || destination.bestTime
+          }))}
+        />
       </section>
     </>
   );

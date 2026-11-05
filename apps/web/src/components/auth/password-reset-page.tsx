@@ -1,5 +1,6 @@
 'use client';
 
+import { isAxiosError } from 'axios';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
@@ -11,7 +12,7 @@ import { getAuthMessages, useI18n } from '@/lib/i18n';
 
 export function PasswordResetPage() {
   const router = useRouter();
-  const { dir, locale, localizedPath } = useI18n();
+  const { dir, locale, localizedPath, m } = useI18n();
   const messages = getAuthMessages(locale);
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
@@ -21,6 +22,9 @@ export function PasswordResetPage() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const rateLimitMessage = (requestError: unknown) =>
+    isAxiosError(requestError) && requestError.response?.status === 429 ? m.errors.RATE_LIMITED : undefined;
+
   const requestCode = async (event: FormEvent) => {
     event.preventDefault();
     setSubmitting(true);
@@ -28,8 +32,8 @@ export function PasswordResetPage() {
     try {
       await api.post('/auth/forgot-password', { email, locale });
       setSent(true);
-    } catch {
-      setError(messages.resetPasswordError);
+    } catch (requestError) {
+      setError(rateLimitMessage(requestError) ?? messages.resetPasswordError);
     } finally {
       setSubmitting(false);
     }
@@ -43,8 +47,8 @@ export function PasswordResetPage() {
       await api.post('/auth/reset-password', { email, code, password });
       setSuccess(messages.resetPasswordSuccess);
       setTimeout(() => router.push(localizedPath('/login')), 900);
-    } catch {
-      setError(messages.resetPasswordError);
+    } catch (resetError) {
+      setError(rateLimitMessage(resetError) ?? messages.resetPasswordError);
     } finally {
       setSubmitting(false);
     }

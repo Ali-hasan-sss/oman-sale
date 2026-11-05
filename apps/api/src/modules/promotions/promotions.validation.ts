@@ -13,7 +13,9 @@ export const createPromotionPlanSchema = z.object({
   appearsFirst: z.boolean().default(false),
   badgeLabel: z.string().optional(),
   color: z.string().optional(),
-  isActive: z.boolean().optional()
+  isActive: z.boolean().optional(),
+  freeAdsForNewUsers: z.coerce.number().int().min(0).max(1000).optional(),
+  freeAdDurationDays: z.coerce.number().int().min(1).max(365).optional()
 });
 
 export const updatePromotionPlanSchema = createPromotionPlanSchema.partial();

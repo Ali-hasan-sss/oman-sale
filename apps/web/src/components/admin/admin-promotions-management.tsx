@@ -24,6 +24,8 @@ type PromotionPlan = {
   badgeLabel?: string | null;
   color?: string | null;
   isActive: boolean;
+  freeAdsForNewUsers?: number;
+  freeAdDurationDays?: number;
 };
 
 type PromotionFormState = {
@@ -40,6 +42,8 @@ type PromotionFormState = {
   badgeLabel: string;
   color: string;
   isActive: boolean;
+  freeAdsForNewUsers: string;
+  freeAdDurationDays: string;
 };
 
 type PromotionFormErrors = Partial<Record<keyof PromotionFormState, string>>;
@@ -57,7 +61,9 @@ const initialForm: PromotionFormState = {
   appearsFirst: false,
   badgeLabel: '',
   color: '#168c4e',
-  isActive: true
+  isActive: true,
+  freeAdsForNewUsers: '0',
+  freeAdDurationDays: '7'
 };
 
 export function AdminPromotionsManagement() {
@@ -107,6 +113,8 @@ export function AdminPromotionsManagement() {
     if (!isPriceValid(form.monthPrice)) nextErrors.monthPrice = m.admin.requiredField;
     if (!Number.isInteger(Number(form.priorityScore)) || Number(form.priorityScore) < 0) nextErrors.priorityScore = m.admin.requiredField;
     if (!Number.isInteger(Number(form.dailyImpressions)) || Number(form.dailyImpressions) < 1) nextErrors.dailyImpressions = m.admin.requiredField;
+    if (!Number.isInteger(Number(form.freeAdsForNewUsers)) || Number(form.freeAdsForNewUsers) < 0) nextErrors.freeAdsForNewUsers = m.admin.requiredField;
+    if (!Number.isInteger(Number(form.freeAdDurationDays)) || Number(form.freeAdDurationDays) < 1) nextErrors.freeAdDurationDays = m.admin.requiredField;
 
     setFormErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
@@ -141,7 +149,9 @@ export function AdminPromotionsManagement() {
       appearsFirst: plan.appearsFirst,
       badgeLabel: plan.badgeLabel ?? '',
       color: plan.color ?? '#168c4e',
-      isActive: plan.isActive
+      isActive: plan.isActive,
+      freeAdsForNewUsers: String(plan.freeAdsForNewUsers ?? 0),
+      freeAdDurationDays: String(plan.freeAdDurationDays ?? 7)
     });
     setFormErrors({});
     setFormModalOpen(true);
@@ -166,7 +176,9 @@ export function AdminPromotionsManagement() {
       appearsFirst: form.appearsFirst,
       badgeLabel: form.badgeLabel || undefined,
       color: form.color || undefined,
-      isActive: form.isActive
+      isActive: form.isActive,
+      freeAdsForNewUsers: Number(form.freeAdsForNewUsers),
+      freeAdDurationDays: Number(form.freeAdDurationDays)
     };
 
     try {
@@ -230,6 +242,7 @@ export function AdminPromotionsManagement() {
                 <th className="px-4 py-3 text-start">{m.admin.weekPrice}</th>
                 <th className="px-4 py-3 text-start">{m.admin.twoWeeksPrice}</th>
                 <th className="px-4 py-3 text-start">{m.admin.monthPrice}</th>
+                <th className="px-4 py-3 text-start">{m.admin.freeAdsForNewUsers}</th>
                 <th className="px-4 py-3 text-start">{m.admin.status}</th>
                 <th className="px-4 py-3 text-start">{m.admin.actions}</th>
               </tr>
@@ -239,11 +252,11 @@ export function AdminPromotionsManagement() {
                 <AdminTableSkeleton
                   asBodyOnly
                   rows={6}
-                  columnTypes={['avatar-text', 'text', 'text', 'text', 'badge', 'actions']}
+                  columnTypes={['avatar-text', 'text', 'text', 'text', 'text', 'badge', 'actions']}
                 />
               ) : plans.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center font-bold text-slate-500">
+                  <td colSpan={7} className="px-4 py-8 text-center font-bold text-slate-500">
                     {m.admin.promotionsEmpty}
                   </td>
                 </tr>
@@ -265,6 +278,7 @@ export function AdminPromotionsManagement() {
                       <td className="px-4 py-3">{formatPrice(plan.weekPrice)}</td>
                       <td className="px-4 py-3">{formatPrice(plan.twoWeeksPrice)}</td>
                       <td className="px-4 py-3">{formatPrice(plan.monthPrice)}</td>
+                      <td className="px-4 py-3">{plan.freeAdsForNewUsers ?? 0}</td>
                       <td className="px-4 py-3">
                         <span
                           className={`rounded-full px-3 py-1 text-xs font-bold ${
@@ -431,6 +445,26 @@ export function AdminPromotionsManagement() {
                   step="0.001"
                   value={form.monthPrice}
                   onChange={(event) => setForm((current) => ({ ...current, monthPrice: event.target.value }))}
+                  className={inputClass}
+                />
+              </Field>
+              <Field label={m.admin.freeAdsForNewUsers} labelHint={m.admin.freeAdsForNewUsersHint} error={formErrors.freeAdsForNewUsers}>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={form.freeAdsForNewUsers}
+                  onChange={(event) => setForm((current) => ({ ...current, freeAdsForNewUsers: event.target.value }))}
+                  className={inputClass}
+                />
+              </Field>
+              <Field label={m.admin.freeAdDurationDays} labelHint={m.admin.freeAdDurationDaysHint} error={formErrors.freeAdDurationDays}>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={form.freeAdDurationDays}
+                  onChange={(event) => setForm((current) => ({ ...current, freeAdDurationDays: event.target.value }))}
                   className={inputClass}
                 />
               </Field>

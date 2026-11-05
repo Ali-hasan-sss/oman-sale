@@ -57,7 +57,7 @@ export function HeaderCustomNavButtons({
 
   const defaultOutline =
     variant === 'hero'
-      ? 'whitespace-nowrap rounded-lg border border-white/70 bg-white/90 px-2 py-1.5 text-xs font-medium shadow-lg transition hover:bg-white sm:px-2.5 sm:py-2 lg:px-4 lg:text-sm'
+      ? 'vx-navbtn px-2 py-1.5 text-xs font-medium sm:px-2.5 sm:py-2 lg:px-4 lg:text-sm'
       : 'whitespace-nowrap rounded-lg border border-gray-300 px-2 py-1.5 text-xs font-medium transition hover:bg-gray-50 sm:px-2.5 sm:py-2 lg:px-4 lg:text-sm';
 
   return (

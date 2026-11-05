@@ -33,17 +33,18 @@ export function UserSiteHeader({ variant = 'default', sticky = true, children }:
   return (
     <header id="site-header" className={headerClass}>
       <div className="site-container py-3 sm:py-4">
-        <div className={`flex items-center justify-between gap-2 sm:gap-3 md:gap-4 ${children ? 'mb-3 sm:mb-4' : ''}`}>
-          <Link href={localizedPath('/')} className="flex shrink-0 items-center">
+        <div
+          className={`flex items-center justify-between gap-2 sm:gap-3 md:gap-4 ${children ? 'mb-3 sm:mb-4' : ''} ${
+            variant === 'hero' ? 'vx-nav' : ''
+          }`}
+        >
+          <Link href={localizedPath('/')} className="flex shrink-0 items-center gap-2 sm:gap-2.5" aria-label="Oman Sale - عُمان سيل">
             {variant === 'hero' ? (
-              <img
-                src="/logo.png"
-                alt="Oman Sale"
-                className="h-14 w-auto drop-shadow-lg sm:h-16"
-              />
+              <img src="/logo.png" alt="" className="h-11 w-auto sm:h-12" />
             ) : (
-              <img src="/logo.png" alt="Oman Sale" className="h-14 w-auto sm:h-16" />
+              <img src="/logo.png" alt="" className="h-14 w-auto sm:h-16" />
             )}
+            <SiteWordmark />
           </Link>
           <MobileNavMenu variant={variant === 'hero' ? 'hero' : 'light'} />
           <UserSiteHeaderNav variant={variant} />
@@ -51,6 +52,20 @@ export function UserSiteHeader({ variant = 'default', sticky = true, children }:
         {children}
       </div>
     </header>
+  );
+}
+
+/** Bilingual name beside the logo, coloured like the logo (red / green). */
+function SiteWordmark() {
+  return (
+    <span className="flex flex-col leading-none" dir="ltr">
+      <span className="text-[17px] font-black leading-tight sm:text-xl" dir="rtl">
+        <span className="text-brick-500">عُمان</span> <span className="text-green-600">سيل</span>
+      </span>
+      <span className="mt-0.5 text-[11px] font-extrabold tracking-[0.12em] sm:text-xs">
+        <span className="text-green-600">OMAN</span> <span className="text-brick-500">SALE</span>
+      </span>
+    </span>
   );
 }
 

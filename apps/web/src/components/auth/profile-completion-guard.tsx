@@ -12,7 +12,8 @@ const PROFILE_COMPLETION_ALLOWED_PATHS = [
   '/login',
   '/register',
   '/forgot-password',
-  '/reset-password'
+  '/reset-password',
+  '/mobile-google-auth'
 ];
 
 function normalizePath(pathname: string) {

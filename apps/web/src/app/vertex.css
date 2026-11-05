@@ -1,0 +1,1366 @@
+/*
+ * Vertex theme (MotionSites "Vertex") for the Oman Sale home page.
+ * Everything here is scoped under `.vx`, which only the home page shell carries,
+ * so every other page keeps the original light Oman Sale identity.
+ */
+
+/* ------------------------------------------------------------------ */
+/* 1. Tokens + scoped palette remap                                    */
+/* ------------------------------------------------------------------ */
+.vx {
+  --vx-bg: #020204;
+  --vx-surface: #0a0f18;
+  --vx-surface-2: #0e1520;
+  --vx-surface-3: #131c28;
+  --vx-line: rgba(255, 255, 255, 0.09);
+  --vx-line-strong: rgba(255, 255, 255, 0.16);
+  --vx-text: #f4f7fb;
+  --vx-muted: #a9aeb5;
+  --vx-dim: #7d8590;
+  --vx-cyan: #3fd3ef;
+  --vx-cyan-soft: #8fe6f7;
+
+  /* Brand (green) scale -> cyan scale tuned for a dark canvas.
+     Low steps are dark tints (used as chip/tile backgrounds),
+     high steps are light tints (used as text on those tiles). */
+  --oman-green-50: 8 30 40;
+  --oman-green-100: 10 44 58;
+  --oman-green-200: 18 72 92;
+  --oman-green-300: 70 200 228;
+  --oman-green-400: 96 216 240;
+  --oman-green-500: 63 211 239;
+  --oman-green-600: 63 211 239;
+  --oman-green-700: 143 230 247;
+  --oman-green-800: 6 46 62;
+  --oman-green-900: 4 32 44;
+  --oman-green-950: 2 20 28;
+  --oman-ink-900: 244 247 251;
+
+  background: var(--vx-bg) !important;
+  color: var(--vx-text);
+  color-scheme: dark;
+}
+
+.vx ::selection {
+  background: rgb(63 211 239 / 0.35);
+  color: #fff;
+}
+
+/* ------------------------------------------------------------------ */
+/* 2. Utility overrides for the light Tailwind classes used on home    */
+/* ------------------------------------------------------------------ */
+.vx .bg-white,
+.vx .bg-gray-50,
+.vx .bg-slate-50 {
+  background-color: var(--vx-surface);
+}
+.vx .bg-slate-100,
+.vx .bg-gray-100 {
+  background-color: var(--vx-surface-3);
+}
+.vx .bg-slate-200,
+.vx .bg-slate-300,
+.vx .bg-gray-200 {
+  background-color: #1a2330;
+}
+.vx .bg-white\/95,
+.vx .bg-white\/90,
+.vx .bg-white\/80 {
+  background-color: rgba(10, 15, 24, 0.82);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.vx .hover\:bg-white:hover,
+.vx .hover\:bg-gray-50:hover,
+.vx .hover\:bg-gray-100:hover,
+.vx .hover\:bg-slate-50:hover,
+.vx .hover\:bg-slate-100:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+.vx .hover\:bg-brand-50:hover,
+.vx .hover\:bg-brand-100:hover {
+  background-color: rgb(63 211 239 / 0.1);
+}
+
+.vx .text-slate-900,
+.vx .text-slate-800,
+.vx .text-gray-900,
+.vx .text-gray-800 {
+  color: var(--vx-text);
+}
+.vx .text-slate-700,
+.vx .text-gray-700,
+.vx .text-slate-600,
+.vx .text-gray-600 {
+  color: var(--vx-muted);
+}
+.vx .text-slate-500,
+.vx .text-gray-500,
+.vx .text-slate-400,
+.vx .text-gray-400 {
+  color: var(--vx-dim);
+}
+
+.vx .border-slate-100,
+.vx .border-slate-200,
+.vx .border-gray-200,
+.vx .border-gray-300,
+.vx .border-brand-200,
+.vx .border-y,
+.vx .border-e,
+.vx .border-t,
+.vx .border-b {
+  border-color: var(--vx-line);
+}
+.vx .ring-slate-200 {
+  --tw-ring-color: var(--vx-line);
+}
+.vx .shadow-sm,
+.vx .shadow-lg,
+.vx .shadow-xl {
+  --tw-shadow: 0 18px 40px -22px rgba(0, 0, 0, 0.9);
+  --tw-shadow-colored: 0 18px 40px -22px rgba(0, 0, 0, 0.9);
+}
+.vx .hover\:shadow-lg:hover,
+.vx .hover\:shadow-md:hover {
+  --tw-shadow: 0 24px 50px -24px rgba(20, 180, 225, 0.35);
+  --tw-shadow-colored: 0 24px 50px -24px rgba(20, 180, 225, 0.35);
+}
+
+/* Cards: glass surface with a hairline + faint top light */
+.vx .rounded-2xl.bg-white,
+.vx .rounded-3xl.bg-white,
+.vx article.bg-white {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.012)), var(--vx-surface);
+  box-shadow:
+    inset 0 0 0 1px var(--vx-line),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 18px 40px -24px rgba(0, 0, 0, 0.9);
+}
+
+/* Inputs */
+.vx input[type='search'],
+.vx input[type='text'] {
+  color: var(--vx-text);
+}
+.vx input::placeholder {
+  color: #8b929c;
+}
+
+/* Solid brand buttons -> the Vertex glow button */
+.vx a.bg-brand-600,
+.vx button.bg-brand-600,
+.vx a.bg-green-600,
+.vx a.bg-desert-500,
+.vx-hero .btn-quick-sell {
+  color: #fff !important;
+}
+.vx a.bg-brand-600,
+.vx button.bg-brand-600,
+.vx a.bg-green-600,
+.vx a.bg-desert-500,
+.vx-hero a.btn-quick-sell,
+.vx-hero span.btn-quick-sell,
+.vx-hero button.btn-quick-sell,
+.vx-btn {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: linear-gradient(
+    to top,
+    #9ad9ec 1px,
+    #89dff0 2px,
+    #79e0f1 3px,
+    #61daef 4px,
+    #3ec8e4 5px,
+    #14a8c6 6px,
+    #0596b3 7px,
+    #038aa8 8px,
+    #047796 9px,
+    #006180 10px,
+    #025066 12px,
+    #0a4f5e 13px,
+    #04465a 14px,
+    #073746 16px,
+    #0a2a37 18px,
+    #0d212e 20px,
+    #0f1824 24px,
+    #0a121e 30px,
+    #0a111d 34px,
+    #0a111d 100%
+  ) !important;
+  box-shadow:
+    inset 0 3px 3px -2px rgba(180, 228, 255, 0.1),
+    inset 1px 0 0 rgba(255, 255, 255, 0.09),
+    inset -1px 0 0 rgba(255, 255, 255, 0.09),
+    0 1px 0 rgba(152, 218, 234, 0.38),
+    1px 0 0 rgba(152, 218, 234, 0.17),
+    -1px 0 0 rgba(152, 218, 234, 0.17),
+    0 0 8px rgba(60, 190, 235, 0.1),
+    0 2px 5px -3px rgba(90, 220, 255, 0.45);
+  text-shadow: 0 1px 2px rgba(0, 20, 30, 0.5);
+  transition:
+    transform 0.25s,
+    box-shadow 0.25s,
+    filter 0.25s;
+}
+.vx a.bg-brand-600::after,
+.vx button.bg-brand-600::after,
+.vx a.bg-green-600::after,
+.vx a.bg-desert-500::after,
+.vx-hero a.btn-quick-sell::after,
+.vx-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(200, 245, 255, 0.7), rgba(200, 245, 255, 0) 13px),
+    linear-gradient(270deg, rgba(200, 245, 255, 0.7), rgba(200, 245, 255, 0) 13px);
+  -webkit-mask: linear-gradient(
+    to top,
+    #000 0,
+    #000 6px,
+    rgba(0, 0, 0, 0.4) 12px,
+    rgba(0, 0, 0, 0.15) 18px,
+    rgba(0, 0, 0, 0.09) 24px,
+    rgba(0, 0, 0, 0.02) 30px,
+    rgba(0, 0, 0, 0.02) 100%
+  );
+  mask: linear-gradient(
+    to top,
+    #000 0,
+    #000 6px,
+    rgba(0, 0, 0, 0.4) 12px,
+    rgba(0, 0, 0, 0.15) 18px,
+    rgba(0, 0, 0, 0.09) 24px,
+    rgba(0, 0, 0, 0.02) 30px,
+    rgba(0, 0, 0, 0.02) 100%
+  );
+}
+/* the thin top streak (nav-size buttons only) */
+.vx-btn--streak::before,
+.vx-hero a.btn-quick-sell::before {
+  content: '';
+  position: absolute;
+  left: 22%;
+  right: 38%;
+  top: 0.8px;
+  height: 1.9px;
+  z-index: 1;
+  filter: blur(0.55px);
+  background: linear-gradient(
+    90deg,
+    rgba(120, 225, 255, 0) 0%,
+    rgba(120, 225, 255, 0.58) 34%,
+    rgba(160, 240, 255, 0.74) 50%,
+    rgba(120, 225, 255, 0.58) 66%,
+    rgba(120, 225, 255, 0) 100%
+  );
+}
+.vx a.bg-brand-600:hover,
+.vx button.bg-brand-600:hover,
+.vx a.bg-green-600:hover,
+.vx a.bg-desert-500:hover,
+.vx-hero a.btn-quick-sell:hover,
+.vx-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.12);
+  box-shadow:
+    inset 0 1px 0 rgba(200, 245, 255, 0.6),
+    inset 1px 0 0 rgba(170, 225, 255, 0.35),
+    inset -1px 0 0 rgba(170, 225, 255, 0.35),
+    0 6px 22px rgba(20, 180, 225, 0.55);
+}
+
+/* Small brand-coloured badges (featured, etc.) */
+.vx span.bg-brand-500 {
+  background: rgb(63 211 239 / 0.16);
+  color: var(--vx-cyan-soft);
+  box-shadow: inset 0 0 0 1px rgb(63 211 239 / 0.35);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+/* Ghost / outline links */
+.vx-ghost {
+  border: 1px solid var(--vx-line-strong);
+  background: rgba(255, 255, 255, 0.025);
+  color: rgba(255, 255, 255, 0.92);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+}
+.vx-ghost:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+/* Section headings get the soft blue halo used on the hero title */
+.vx main h2.font-black,
+.vx section > div > h2.font-black {
+  color: #fff;
+  text-shadow: 0 0 30px rgba(130, 180, 255, 0.18);
+}
+.vx main {
+  position: relative;
+}
+
+/* Category tiles */
+.vx .vx-tile {
+  background:
+    radial-gradient(120% 70% at 50% 0%, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 60%),
+    var(--vx-surface);
+  box-shadow:
+    inset 0 0 0 1px var(--vx-line),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition:
+    box-shadow 0.25s,
+    transform 0.25s;
+}
+.vx .vx-tile:hover {
+  box-shadow:
+    inset 0 0 0 1px rgb(63 211 239 / 0.35),
+    inset 0 -18px 30px -24px rgb(63 211 239 / 0.6),
+    0 20px 40px -26px rgba(20, 180, 225, 0.5);
+}
+.vx .vx-tile .border-black\/5 {
+  border-color: var(--vx-line);
+}
+.vx .vx-tile .hover\:bg-black\/5:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Banner placeholder gradient -> cyan aurora */
+.vx .ad-banner-empty {
+  background:
+    radial-gradient(60% 120% at 50% 120%, rgba(63, 211, 239, 0.35), rgba(63, 211, 239, 0) 70%),
+    linear-gradient(180deg, #0b1220, #070b13);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px var(--vx-line);
+}
+
+/* Footer */
+.vx footer.bg-ink-950 {
+  background:
+    linear-gradient(180deg, rgba(25, 127, 255, 0.04), rgba(25, 127, 255, 0) 40%),
+    #010103;
+  border-top: 1px solid var(--vx-line);
+}
+.vx footer .border-slate-800 {
+  border-color: var(--vx-line);
+}
+.vx footer .bg-slate-900 {
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px var(--vx-line);
+}
+.vx.site-page-shell > footer::before {
+  height: 1px;
+  background: linear-gradient(90deg, rgba(63, 211, 239, 0), rgba(63, 211, 239, 0.7), rgba(63, 211, 239, 0));
+}
+
+/* Tourism block on dark */
+.vx .from-brand-800 {
+  --tw-gradient-from: #06202c var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(6 32 44 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+.vx .to-brick-800 {
+  --tw-gradient-to: #0a0f1d var(--tw-gradient-to-position);
+}
+.vx section.from-brand-800 {
+  box-shadow: inset 0 0 0 1px var(--vx-line);
+}
+
+/* Create-store banner */
+.vx .from-emerald-600 {
+  --tw-gradient-from: #06222e var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(6 34 46 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+.vx .to-green-700 {
+  --tw-gradient-to: #0a0f1a var(--tw-gradient-to-position);
+}
+.vx .from-emerald-600.rounded-3xl {
+  box-shadow:
+    inset 0 0 0 1px var(--vx-line),
+    inset 0 -40px 60px -50px rgba(63, 211, 239, 0.7);
+}
+.vx .text-emerald-50 {
+  color: var(--vx-muted);
+}
+.vx .from-emerald-600 a.bg-white {
+  background: #fff;
+  color: #0a111d;
+}
+
+/* Scrollbars */
+.vx .thin-scrollbar {
+  scrollbar-color: #2a3442 transparent;
+}
+.vx .thin-scrollbar::-webkit-scrollbar-thumb {
+  background: #2a3442;
+}
+
+/* ------------------------------------------------------------------ */
+/* 3. HERO                                                             */
+/* ------------------------------------------------------------------ */
+.vx-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(25, 127, 255, 0) 38%,
+      rgba(25, 127, 255, 0.042) 54%,
+      rgba(25, 127, 255, 0.052) 68%,
+      rgba(25, 127, 255, 0.03) 100%
+    ),
+    #020204;
+  color: #fff;
+}
+.vx-stars {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  border-radius: 50%;
+  background: transparent;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Nav pill */
+.vx-hero #site-header {
+  z-index: 40;
+}
+/* The glass lives on ::before: a backdrop-filter on the pill itself would become the
+   containing block of the fixed mobile drawer and trap it inside the pill. */
+.vx-nav {
+  position: relative;
+  isolation: isolate;
+  border-radius: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.105);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  padding: 6px 10px 6px 10px;
+}
+.vx-nav::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.008);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+}
+.vx-nav img {
+  filter: drop-shadow(0 0 10px rgba(60, 224, 255, 0.25));
+}
+
+/* Hero nav buttons (hero variant) */
+.vx-navbtn {
+  white-space: nowrap;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+  color: rgba(255, 255, 255, 0.92);
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    color 0.2s;
+}
+.vx-navbtn:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+/* Copy stack */
+.vx-copy {
+  position: relative;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: clamp(18px, 4vh, 44px) 20px 0;
+}
+
+/* Badge (Pixel contract A, made RTL-aware) */
+.vx-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 39px;
+  padding-inline: 45px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.115);
+  background: linear-gradient(
+    to top,
+    rgba(190, 225, 255, 0.175) 0px,
+    rgba(190, 225, 255, 0.128) 2px,
+    rgba(190, 225, 255, 0.075) 4px,
+    rgba(190, 225, 255, 0.026) 6px,
+    rgba(255, 255, 255, 0.012) 9px,
+    rgba(255, 255, 255, 0.012) 100%
+  );
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.94);
+  white-space: nowrap;
+  max-width: 100%;
+}
+.vx-badge i {
+  position: absolute;
+  inset-inline-start: 4px;
+  top: 4px;
+  width: 29px;
+  height: 29px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(
+    to top,
+    #46afc8 0px,
+    #35abc7 2px,
+    #0b859d 4px,
+    #026c84 6px,
+    #004e66 8px,
+    #053f58 10px,
+    #012c3d 12px,
+    #031a2a 14px,
+    #061125 16px,
+    #090f25 19px,
+    #090c1c 23px,
+    #060d16 29px
+  );
+  box-shadow:
+    inset 1px 0 0 rgba(150, 220, 250, 0.4),
+    inset -1px 0 0 rgba(150, 220, 250, 0.52),
+    0 0 6px rgba(60, 190, 230, 0.2),
+    0 3px 8px -5px rgba(90, 220, 255, 0.6);
+}
+.vx-badge i svg {
+  width: 14px;
+  height: 16px;
+  position: relative;
+  top: -1px;
+}
+
+.vx-h1 {
+  margin-top: clamp(16px, 2.6vh, 26px);
+  font-weight: 900;
+  font-size: clamp(32px, 5.4vw, 66px);
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  color: #fff;
+  text-shadow: 0 0 34px rgba(130, 180, 255, 0.22);
+  max-width: 15em;
+  text-wrap: balance;
+}
+.vx-sub {
+  margin-top: clamp(10px, 1.8vh, 16px);
+  max-width: 36rem;
+  font-size: clamp(14px, 1.35vw, 17px);
+  line-height: 1.7;
+  color: #a9aeb5;
+  text-wrap: balance;
+}
+.vx-sub b {
+  color: #fff;
+  font-weight: 600;
+}
+
+.vx-search {
+  margin-top: clamp(16px, 2.6vh, 24px);
+  width: 100%;
+  max-width: 40rem;
+  position: relative;
+  z-index: 35;
+}
+.vx-search input[type='search'] {
+  border-radius: 16px !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: rgba(10, 15, 24, 0.72) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 20px 40px -24px rgba(0, 0, 0, 0.9) !important;
+  color: #fff;
+}
+.vx-search form > svg,
+.vx-search form > button {
+  z-index: 2;
+  color: #8b929c;
+}
+.vx input[type='search']::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+.vx-search input[type='search']:focus {
+  --tw-ring-color: rgb(63 211 239 / 0.55);
+  border-color: rgb(63 211 239 / 0.45) !important;
+}
+
+.vx-cta-row {
+  margin-top: clamp(16px, 2.6vh, 24px);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.vx-btn {
+  display: inline-grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 600;
+}
+.vx-btn > span {
+  position: relative;
+  z-index: 2;
+  display: block;
+  line-height: 1;
+}
+.vx-btn--lg {
+  height: 54px;
+  min-width: 150px;
+  padding: 0 28px;
+  border-radius: 13px;
+  font-size: 16px;
+}
+.vx-ghost--lg {
+  display: inline-flex;
+  align-items: center;
+  height: 54px;
+  padding: 0 24px;
+  border-radius: 13px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.vx-dots {
+  margin-top: 18px;
+  display: flex;
+  gap: 6px;
+}
+.vx-dots button {
+  height: 4px;
+  width: 14px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.22);
+  transition:
+    width 0.35s,
+    background 0.35s;
+}
+.vx-dots button[aria-current='true'] {
+  width: 30px;
+  background: linear-gradient(90deg, #3ec8e4, #9ad9ec);
+}
+
+/* ------------------------------------------------------------------ */
+/* 4. 3D ring + browser mock                                           */
+/* ------------------------------------------------------------------ */
+.vx-showcase {
+  --k: 1;
+  position: relative;
+  z-index: 10;
+  --vx-visible: 460px;
+  --vx-mock-top: 226px;
+  margin-top: clamp(4px, 1.2vh, 14px);
+  height: calc(var(--vx-visible) * var(--k));
+  overflow: hidden;
+  pointer-events: none;
+}
+.vx-canvas {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 1172px;
+  height: 657px;
+  transform: translate(-50%, calc(-400px * var(--k))) scale(var(--k));
+  transform-origin: 50% 0;
+}
+/* Camera sits AT the ring centre: radius = perspective = 891, horizon y 918. */
+.vx-ring {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1172px;
+  height: 657px;
+  perspective: 891px;
+  perspective-origin: 586px 918px;
+  transform-style: preserve-3d;
+}
+.vx-card {
+  position: absolute;
+  left: 586px;
+  top: 616px;
+  width: 130px;
+  height: 300px;
+  margin: -150px 0 0 -65px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(155deg, #2b3b50, #131c28 60%, #1d1526);
+  box-shadow:
+    0 24px 46px rgba(0, 0, 0, 0.6),
+    0 3px 8px rgba(0, 0, 0, 0.5);
+  backface-visibility: hidden;
+  will-change: transform;
+  visibility: hidden;
+}
+.vx-card img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.vx-card.broken img {
+  display: none;
+}
+.vx-card .shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(4, 8, 16, 0.9) 0%, rgba(4, 8, 16, 0.55) 30%, rgba(4, 8, 16, 0) 52%);
+}
+.vx-card .chip {
+  position: absolute;
+  top: 10px;
+  inset-inline-start: 9px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  font-size: 8px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  max-width: calc(100% - 18px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vx-card .meta {
+  position: absolute;
+  inset-inline: 10px;
+  top: 34px;
+  text-align: start;
+}
+.vx-card .meta b {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 11.5px;
+  font-weight: 800;
+  line-height: 1.35;
+  color: #fff;
+}
+.vx-card .meta s {
+  display: block;
+  margin-top: 4px;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 900;
+  color: #3fe3ff;
+  text-shadow: 0 0 14px rgba(63, 227, 255, 0.45);
+}
+.vx-card .meta u {
+  display: block;
+  margin-top: 3px;
+  text-decoration: none;
+  font-size: 8.5px;
+  color: rgba(255, 255, 255, 0.7);
+}
+.vx-card .edge {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.15),
+    inset 0 16px 30px rgba(255, 255, 255, 0.05);
+}
+
+/* Browser mock: paints IN FRONT of the ring, bleeding off the bottom */
+.vx-browser {
+  --mk: 1;
+  position: absolute;
+  left: 50%;
+  top: calc(var(--vx-mock-top) * var(--k));
+  width: calc(842px * var(--k));
+  height: 600px;
+  transform: translateX(-50%);
+  border-radius: calc(28px * var(--k)) calc(28px * var(--k)) 0 0;
+  overflow: hidden;
+  z-index: 20;
+  box-shadow: 0 -14px 44px rgba(0, 0, 0, 0.55);
+  pointer-events: auto;
+}
+.vx-browser::before {
+  content: '';
+  position: absolute;
+  inset: 42px 0 0;
+  background: rgba(20, 20, 26, 0.82);
+}
+.vx-browser-inner {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 842px;
+  height: 1000px;
+  transform: scale(var(--mk));
+  transform-origin: 0 0;
+}
+.vx-bar {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 42px;
+  background: linear-gradient(180deg, rgba(20, 24, 48, 0.48), rgba(15, 19, 38, 0.58));
+  -webkit-backdrop-filter: blur(6px) saturate(112%);
+  backdrop-filter: blur(6px) saturate(112%);
+}
+.vx-bar .dots {
+  position: absolute;
+  left: 27px;
+  top: 16px;
+  display: flex;
+  gap: 3px;
+}
+.vx-bar .dots i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.vx-bar .omni {
+  position: absolute;
+  left: 50%;
+  top: 7px;
+  width: 336px;
+  max-width: 56%;
+  height: 26px;
+  transform: translateX(-50%);
+  border-radius: 6px;
+  background: rgba(9, 13, 26, 0.93);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.045);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, 0.72);
+}
+.vx-bar .tools {
+  position: absolute;
+  right: 27px;
+  top: 14px;
+  display: flex;
+  gap: 6px;
+  opacity: 0.85;
+}
+.vx-page {
+  position: absolute;
+  left: 7px;
+  right: 6px;
+  top: 42px;
+  bottom: 0;
+  background: #fff;
+  color: #111;
+  overflow: hidden;
+  border-radius: 10px 10px 0 0;
+}
+.vx-ann {
+  height: 20px;
+  display: grid;
+  place-items: center;
+  background: #0b0f16;
+  color: #cfd6de;
+  font-size: 9px;
+  letter-spacing: 0.02em;
+}
+.vx-pghead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 26px;
+  border-bottom: 1px solid #eef0f3;
+}
+.vx-pghead img {
+  height: 26px;
+  width: auto;
+}
+.vx-pghead nav {
+  display: flex;
+  gap: 14px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #3b4250;
+}
+.vx-pghero {
+  position: relative;
+  margin: 12px 26px 0;
+  height: 150px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: linear-gradient(120deg, #1d3b4d, #0d1a26);
+}
+.vx-pghero img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.vx-pghero .scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(270deg, rgba(8, 14, 22, 0.75) 0%, rgba(8, 14, 22, 0.35) 46%, rgba(8, 14, 22, 0) 75%);
+}
+.vx-pghero .copy {
+  position: absolute;
+  inset-inline-start: 22px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #fff;
+  text-align: start;
+}
+.vx-pghero .copy u {
+  display: block;
+  text-decoration: none;
+  font-size: 9px;
+  opacity: 0.85;
+}
+.vx-pghero .copy em {
+  display: block;
+  margin-top: 4px;
+  font-style: normal;
+  font-weight: 900;
+  font-size: 20px;
+  line-height: 1.25;
+  max-width: 300px;
+}
+.vx-pghero .copy i {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 5px 13px;
+  border-radius: 20px;
+  background: #fff;
+  color: #0b0f16;
+  font-style: normal;
+  font-size: 9px;
+  font-weight: 800;
+}
+.vx-pgsec {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 14px 26px 8px;
+}
+.vx-pgsec b {
+  font-size: 13px;
+  font-weight: 900;
+  color: #0b0f16;
+}
+.vx-pgsec u {
+  text-decoration: none;
+  font-size: 9px;
+  color: #6b7280;
+}
+.vx-pggrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin: 0 26px;
+}
+.vx-pgcard .ph {
+  position: relative;
+  padding-bottom: 72%;
+  border-radius: 8px;
+  overflow: hidden;
+  background: linear-gradient(150deg, #e9edf2, #d3dae3);
+}
+.vx-pgcard .ph img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.vx-pgcard b {
+  display: block;
+  margin-top: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #0b0f16;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vx-pgcard i {
+  display: block;
+  font-style: normal;
+  font-size: 8.5px;
+  color: #8a8f98;
+}
+.vx-pgcard s {
+  display: block;
+  margin-top: 2px;
+  text-decoration: none;
+  font-size: 10.5px;
+  font-weight: 900;
+  color: #0a7f99;
+}
+
+/* Phone: mock goes nearly full-bleed with a 2-up layout (inner design width 520) */
+@media (max-width: 700px) {
+  .vx-showcase {
+    --vx-visible: 580px;
+    --vx-mock-top: 330px;
+  }
+  .vx-nav {
+    border-radius: 22px;
+  }
+  .vx-browser {
+    width: calc(100% - 20px);
+    border-radius: 20px 20px 0 0;
+  }
+  .vx-browser-inner {
+    width: 520px;
+  }
+  .vx-bar .tools {
+    display: none;
+  }
+  .vx-pghead nav {
+    display: none;
+  }
+  .vx-pggrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .vx-badge {
+    font-size: 12.5px;
+    height: 36px;
+    padding-inline: 42px 15px;
+    border-radius: 18px;
+  }
+  .vx-badge i {
+    width: 28px;
+    height: 28px;
+    top: 3px;
+    border-radius: 14px;
+  }
+  .vx-btn--lg,
+  .vx-ghost--lg {
+    height: 50px;
+    font-size: 15px;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* 5. Entrance choreography (runs once)                                */
+/* Uses individual translate/scale/clip-path properties so it composes */
+/* with the transforms owned by the layout + ring loop.                */
+/* ------------------------------------------------------------------ */
+@keyframes vx-up {
+  from {
+    opacity: 0;
+    translate: 0 var(--vx-from, 12px);
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@keyframes vx-wipe {
+  from {
+    opacity: 0;
+    translate: 0 15px;
+    clip-path: inset(100% 0 -30% 0);
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+    clip-path: inset(-30% 0 -30% 0);
+  }
+}
+.vx-in {
+  animation: vx-up 0.62s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: var(--d, 0ms);
+}
+.vx-wipe {
+  animation: vx-wipe 0.9s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: var(--d, 0ms);
+}
+@media (prefers-reduced-motion: reduce) {
+  .vx-in,
+  .vx-wipe {
+    animation: none;
+  }
+}
+
+.vx .border-white\/80,
+.vx .border-white\/60 {
+  border-color: var(--vx-line-strong);
+}
+
+/* Ring cards built from hero slides: subtitle under the title */
+.vx-card .meta u {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.45;
+  margin-top: 5px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Oman map behind the ring                                            */
+/* ------------------------------------------------------------------ */
+.vx-showcase {
+  overflow: visible;
+}
+.vx-canvas {
+  z-index: 1;
+}
+.vx-oman-wrap {
+  position: absolute;
+  left: 50%;
+  top: 120px; /* JS pins it to the badge */
+  height: 720px; /* JS stretches it down to the browser mock */
+  aspect-ratio: 600 / 700;
+  max-width: 96vw;
+  transform: translateX(-50%);
+  z-index: 2; /* above the stage, behind the copy (30) and the ring (10+) */
+  pointer-events: none;
+}
+.vx-oman-wrap .vx-oman {
+  object-fit: contain;
+}
+.vx-oman {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  direction: ltr;
+}
+.vx-oman-label {
+  font-size: 13px;
+  font-weight: 700;
+  fill: rgba(191, 246, 255, 0.85);
+  paint-order: stroke;
+  stroke: rgba(2, 2, 4, 0.85);
+  stroke-width: 3px;
+}
+.vx-oman-ping {
+  fill: none;
+  stroke: rgba(63, 211, 239, 0.8);
+  stroke-width: 1.5;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: vx-ping 2.8s ease-out infinite;
+}
+@keyframes vx-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  80%,
+  100% {
+    transform: scale(4.2);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vx-oman-ping {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+/* ================================================================== */
+/* LIGHT VARIANT of the Vertex hero (.vx-hero.vx-light)               */
+/* Same composition (badge, glow CTA, 3D ring, Oman map, browser mock) */
+/* on a bright sky-white stage.                                        */
+/* ================================================================== */
+.vx-light {
+  background:
+    radial-gradient(70% 55% at 50% 0%, rgba(63, 211, 239, 0.12), rgba(63, 211, 239, 0) 70%),
+    linear-gradient(180deg, #ffffff 0%, #f5f9fc 45%, #e9f3f8 100%);
+  color: #0b1220;
+}
+/* starfield -> faint ink specks */
+.vx-light .vx-stars {
+  filter: invert(1);
+  opacity: 0.35;
+}
+
+/* nav pill */
+.vx-light .vx-nav {
+  border-color: rgba(15, 23, 42, 0.08);
+  box-shadow:
+    0 10px 30px -18px rgba(15, 40, 70, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+.vx-light .vx-nav::before {
+  background: rgba(255, 255, 255, 0.72);
+}
+.vx-light .vx-nav img {
+  filter: none;
+}
+.vx-light .vx-navbtn {
+  border-color: rgba(15, 23, 42, 0.1);
+  background: rgba(255, 255, 255, 0.75);
+  color: #1e293b;
+}
+.vx-light .vx-navbtn:hover {
+  background: #fff;
+  border-color: rgba(15, 23, 42, 0.18);
+  color: #0b1220;
+}
+
+/* badge */
+.vx-light .vx-badge {
+  border-color: rgba(15, 23, 42, 0.09);
+  background: linear-gradient(
+    to top,
+    rgba(63, 211, 239, 0.28) 0px,
+    rgba(63, 211, 239, 0.16) 2px,
+    rgba(63, 211, 239, 0.07) 5px,
+    rgba(255, 255, 255, 0.85) 10px,
+    rgba(255, 255, 255, 0.85) 100%
+  );
+  color: #1e293b;
+  box-shadow: 0 8px 22px -16px rgba(15, 40, 70, 0.35);
+}
+
+/* type */
+.vx-light .vx-h1 {
+  color: #0b1220;
+  text-shadow: 0 0 34px rgba(63, 160, 255, 0.16);
+}
+.vx-light .vx-sub {
+  color: #5b6472;
+}
+.vx-light .vx-sub b {
+  color: #0b1220;
+}
+
+/* search */
+.vx-light .vx-search input[type='search'] {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  color: #0b1220;
+  box-shadow:
+    0 18px 40px -26px rgba(15, 40, 70, 0.35),
+    inset 0 1px 0 #fff !important;
+}
+.vx-light .vx-search input::placeholder {
+  color: #94a3b8;
+}
+.vx-light .vx-search form > svg,
+.vx-light .vx-search form > button {
+  color: #94a3b8;
+}
+
+/* secondary button + slide dots */
+.vx-light .vx-ghost {
+  border-color: rgba(15, 23, 42, 0.14);
+  background: rgba(255, 255, 255, 0.8);
+  color: #0b1220;
+}
+.vx-light .vx-ghost:hover {
+  background: #fff;
+  border-color: rgba(15, 23, 42, 0.25);
+}
+.vx-light .vx-dots button {
+  background: rgba(15, 23, 42, 0.15);
+}
+
+/* map */
+.vx-light .vx-oman path[stroke] {
+  stroke: #0aa2c2;
+  stroke-opacity: 0.85;
+}
+.vx-light .vx-oman pattern circle {
+  fill: #0891b2;
+  fill-opacity: 0.28;
+}
+.vx-light .vx-oman g > circle:not(.vx-oman-ping) {
+  fill: #0891b2;
+}
+.vx-light .vx-oman-ping {
+  stroke: rgba(8, 145, 178, 0.75);
+}
+.vx-light .vx-oman-label {
+  fill: #0b3b4a;
+  stroke: rgba(255, 255, 255, 0.9);
+}
+
+/* cards keep their photos; softer shadow on white */
+.vx-light .vx-card {
+  box-shadow:
+    0 24px 46px rgba(15, 40, 70, 0.28),
+    0 3px 8px rgba(15, 40, 70, 0.18);
+}
+
+/* browser mock in light chrome */
+.vx-light .vx-browser {
+  box-shadow:
+    0 -14px 44px rgba(15, 40, 70, 0.18),
+    0 0 0 1px rgba(15, 23, 42, 0.06);
+}
+.vx-light .vx-browser::before {
+  background: rgba(241, 245, 249, 0.92);
+}
+.vx-light .vx-bar {
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.9), rgba(241, 245, 249, 0.95));
+}
+.vx-light .vx-bar .omni {
+  background: #fff;
+  color: #475569;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+}
+.vx-light .vx-bar .omni svg,
+.vx-light .vx-bar .tools svg {
+  stroke: #475569;
+}
+.vx-light .vx-bar .tools svg path[fill] {
+  fill: #475569;
+}
+.vx-light .vx-page {
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.06);
+}
+
+/* The map now runs behind the copy: give the text a soft white halo so it stays crisp. */
+.vx-light .vx-sub {
+  text-shadow:
+    0 0 6px #fff,
+    0 0 14px #fff,
+    0 0 22px #fff;
+}
+.vx-light .vx-h1 {
+  text-shadow:
+    0 0 10px rgba(255, 255, 255, 0.95),
+    0 0 26px rgba(255, 255, 255, 0.9),
+    0 0 34px rgba(63, 160, 255, 0.16);
+}
+.vx-light .vx-oman-wrap {
+  opacity: 0.85;
+}
+/* northern cities sit right under the headline/subtitle: keep their dots, drop the labels */
+.vx-city-Khasab text,
+.vx-city-Sohar text,
+.vx-city-Ibri text {
+  display: none;
+}

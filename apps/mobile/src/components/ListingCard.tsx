@@ -4,6 +4,7 @@ import { AppText } from './AppText';
 import { ListingCoverImage } from './ListingCoverImage';
 import { VerifiedBadge } from './VerifiedBadge';
 import { formatPrice, getCategoryName } from '../data';
+import { isVideoMedia, resolveDeviceMediaUrl } from '../lib/media-url';
 import { getListingLocationLabel } from '../lib/oman-locations';
 import { alignSelfStart, insetEnd, insetStart, rowDirection } from '../lib/layout-direction';
 import type { Listing, Locale } from '../types';
@@ -29,7 +30,7 @@ export function ListingCard({
   onStorePress
 }: ListingCardProps) {
   const isHorizontal = layout === 'horizontal';
-  const image = listing.images?.[0]?.imageUrl;
+  const image = listing.images?.find((item) => !isVideoMedia(item))?.imageUrl;
   const category = getCategoryName(listing, locale);
   const isFeatured = Boolean(listing.promotion);
   const storeName = listing.store ? (locale === 'en' ? listing.store.nameEn : listing.store.nameAr) : null;
@@ -73,7 +74,7 @@ export function ListingCard({
           >
             <View style={styles.storeAvatar}>
               {storeLogo ? (
-                <Image source={{ uri: storeLogo }} style={styles.storeAvatarImage} />
+                <Image source={{ uri: resolveDeviceMediaUrl(storeLogo) }} style={styles.storeAvatarImage} />
               ) : (
                 <AppText style={styles.storeAvatarFallback}>{storeName.slice(0, 1)}</AppText>
               )}

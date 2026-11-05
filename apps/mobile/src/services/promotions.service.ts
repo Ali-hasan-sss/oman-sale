@@ -13,6 +13,21 @@ export type PromotionPlan = {
   color?: string | null;
 };
 
+export type PromotionCredit = {
+  planId: string;
+  remaining: number;
+  durationDays: number;
+};
+
+export function formatFreeCredit(template: string, count: number, days: number) {
+  return template.replace('{count}', String(count)).replace('{days}', String(days));
+}
+
+export async function fetchPromotionCredits() {
+  const response = await http.get<ApiEnvelope<PromotionCredit[]>>(API_ENDPOINTS.promotions.credits);
+  return Array.isArray(response.data.data) ? response.data.data : [];
+}
+
 export async function fetchPromotionPlans() {
   const response = await http.get<ApiEnvelope<PromotionPlan[]>>(API_ENDPOINTS.promotions.plans);
   return Array.isArray(response.data.data) ? response.data.data : [];

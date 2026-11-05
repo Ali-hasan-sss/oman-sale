@@ -250,6 +250,7 @@ model User {
   articleSaves     ArticleSave[]
   raffleEntries    RaffleEntry[]
   rafflePointTransactions RafflePointTransaction[]
+  promotionCredits UserPromotionCredit[]
 
   @@index([role])
   @@index([isActive, isBlocked])
@@ -552,11 +553,16 @@ model PromotionPlan {
   badgeLabel       String?
   color            String?
   isActive         Boolean       @default(true)
+  /** Free promotions granted once, when a user account is created. */
+  freeAdsForNewUsers Int        @default(0)
+  /** Length of each free promotion granted to a new user. */
+  freeAdDurationDays Int        @default(7)
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
   deletedAt        DateTime?
 
   promotions       AdPromotion[]
+  userCredits      UserPromotionCredit[]
   storePlans         StoreSubscriptionPlan[]
   rafflePlanPoints   RafflePlanPoints[]
   rafflePointTransactions RafflePointTransaction[]
@@ -564,6 +570,21 @@ model PromotionPlan {
   @@index([isActive])
   @@index([priorityScore])
   @@index([deletedAt])
+}
+
+model UserPromotionCredit {
+  id        String   @id @default(uuid())
+  remaining Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId    String
+  plan      PromotionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, planId])
+  @@index([userId])
 }
 
 model AdPromotion {
@@ -823,6 +844,7 @@ model HeroSlide {
   sortOrder     Int               @default(0)
   platform      HeroSlidePlatform @default(WEB)
   imageUrl      String
+  cardImageUrl  String?
   titleAr       String
   titleEn       String
   subtitleAr    String

@@ -48,6 +48,7 @@ type MyListing = {
     nameAr?: string;
     nameEn?: string;
   } | null;
+  store?: { id: string } | null;
   promotion?: {
     id: string;
     endsAt: string;
@@ -114,6 +115,7 @@ const labels = {
     promoteNow: 'ترقية الآن',
     vatShort: 'ضريبة القيمة المضافة',
     free: 'مجاني',
+    freePlanCredit: 'مجاني لك: متبقي {count} لمدة {days} يوم',
     confirmDeleteTitle: 'تأكيد حذف الإعلان',
     confirmDeleteDescription: 'سيتم حذف الإعلان من حسابك ولن يظهر للمستخدمين بعد ذلك. هل تريد المتابعة؟',
     confirmDeleteAction: 'حذف الإعلان',
@@ -164,6 +166,7 @@ const labels = {
     promoteNow: 'Promote now',
     vatShort: 'VAT',
     free: 'Free',
+    freePlanCredit: 'Free for you: {count} left, {days} days',
     confirmDeleteTitle: 'Confirm listing deletion',
     confirmDeleteDescription: 'This listing will be removed from your account and will no longer be visible to users. Do you want to continue?',
     confirmDeleteAction: 'Delete listing',
@@ -617,8 +620,21 @@ function PromoteListingModal({
   const [planId, setPlanId] = useState(plans[0]?.id ?? '');
   const [days, setDays] = useState(7);
   const [isSaving, setIsSaving] = useState(false);
+  const [credits, setCredits] = useState<Array<{ planId: string; remaining: number; durationDays: number }>>([]);
   const selectedPlan = plans.find((plan) => plan.id === planId);
-  const selectedPrice = selectedPlan ? getPlanPrice(selectedPlan, days) : 0;
+  const selectedCredit = listing.store?.id
+    ? undefined
+    : credits.find((credit) => credit.planId === planId && credit.remaining > 0);
+  const selectedPrice = selectedCredit || !selectedPlan ? 0 : getPlanPrice(selectedPlan, days);
+
+  useEffect(() => {
+    api
+      .get<{ data: Array<{ planId: string; remaining: number; durationDays: number }> }>('/promotions/credits', {
+        headers: authHeaders
+      })
+      .then((response) => setCredits(response.data.data ?? []))
+      .catch(() => setCredits([]));
+  }, [authHeaders]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -661,7 +677,10 @@ function PromoteListingModal({
           <div className="grid gap-3">
             {plans.map((plan) => {
               const active = plan.id === planId;
-              const planBasePrice = getPlanPrice(plan, days);
+              const credit = listing.store?.id
+                ? undefined
+                : credits.find((item) => item.planId === plan.id && item.remaining > 0);
+              const planBasePrice = credit ? 0 : getPlanPrice(plan, days);
               return (
                 <button
                   key={plan.id}
@@ -682,12 +701,22 @@ function PromoteListingModal({
                       vatShort={text.vatShort}
                       mainClassName="text-lg font-black text-green-600"
                     />
+                    {credit ? (
+                      <p className="mt-1 text-sm font-bold text-green-700">
+                        {text.freePlanCredit.replace('{count}', String(credit.remaining)).replace('{days}', String(credit.durationDays))}
+                      </p>
+                    ) : null}
                   </div>
                 </button>
               );
             })}
           </div>
         </div>
+        {selectedCredit ? (
+          <p className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-bold text-green-800">
+            {text.freePlanCredit.replace('{count}', String(selectedCredit.remaining)).replace('{days}', String(selectedCredit.durationDays))}
+          </p>
+        ) : (
         <Field label={text.duration}>
           <select value={days} onChange={(event) => setDays(Number(event.target.value))} className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:ring-2 focus:ring-green-500">
             <option value={7}>{text.oneWeek}</option>
@@ -695,6 +724,7 @@ function PromoteListingModal({
             <option value={30}>{text.oneMonth}</option>
           </select>
         </Field>
+        )}
         <div className="rounded-2xl bg-slate-50 p-4 text-center">
           <p className="text-sm text-gray-500">{listing.title}</p>
           <div className="mt-1">

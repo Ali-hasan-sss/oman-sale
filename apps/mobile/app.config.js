@@ -84,7 +84,21 @@ module.exports = () => {
       },
       plugins: [
         'expo-asset',
+        [
+          'expo-splash-screen',
+          {
+            android: {
+              image: './assets/splash-logo.png',
+              backgroundColor: '#000000',
+              resizeMode: 'contain',
+              // Android 12+ masks the splash icon to the center of a 288dp canvas.
+              // 180 keeps the ring and wordmark inside that circle.
+              imageWidth: 180
+            }
+          }
+        ],
         'expo-font',
+        'expo-web-browser',
         'expo-av',
         iosUrlScheme
           ? ['@react-native-google-signin/google-signin', { iosUrlScheme }]

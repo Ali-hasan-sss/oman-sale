@@ -79,9 +79,9 @@ export async function fetchFilteredListings({
   return normalizePage(response.data.data, page, limit);
 }
 
-export async function fetchCategoryFilters(categoryId: string, locale: string) {
+export async function fetchCategoryFilters(categoryId: string, locale: string, includeAncestors = false) {
   const response = await http.get<ApiEnvelope<CategoryFilter[]>>(API_ENDPOINTS.categories.filters(categoryId), {
-    params: { locale }
+    params: { locale, ...(includeAncestors ? { includeAncestors: true } : {}) }
   });
   return Array.isArray(response.data.data) ? response.data.data : [];
 }
@@ -135,6 +135,7 @@ export type CreateListingPayload = {
   description: string;
   type: string;
   price: number;
+  currency?: string;
   city: string;
   wilayah: string;
   categoryId: string;
@@ -167,7 +168,15 @@ export async function checkoutPaidListingRequest(
 
 export async function updateListingRequest(
   listingId: string,
-  payload: { title: string; description: string; price?: number; city?: string; wilayah?: string }
+  payload: {
+    title: string;
+    description: string;
+    price?: number;
+    city?: string;
+    wilayah?: string;
+    imageUrls?: string[];
+    videoUrl?: string | null;
+  }
 ) {
   const response = await http.patch<ApiEnvelope<Listing>>(API_ENDPOINTS.ads.byId(listingId), payload);
   return response.data.data;

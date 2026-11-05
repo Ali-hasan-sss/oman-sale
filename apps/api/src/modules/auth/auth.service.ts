@@ -15,6 +15,7 @@ import { hashPassword, verifyPassword } from '../../shared/utils/password';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../../shared/utils/tokens';
 import { resolveUserMedia } from '../../shared/utils/resolve-entity-media';
 import { forceDisconnectUserSockets } from '../../config/socket';
+import { grantNewUserPromotionCredits } from '../promotions/user-promotion-credits.service';
 import { authRepository } from './auth.repository';
 import type { AuthTokens, AuthUserResponse } from './auth.types';
 import {
@@ -195,6 +196,7 @@ export class AuthService {
       password
     });
     const verifiedUser = await authRepository.verifyUserEmail(user.id);
+    await grantNewUserPromotionCredits(verifiedUser.id);
     await clearPendingRegistration(email);
 
     return {
@@ -246,6 +248,7 @@ export class AuthService {
         avatar: googleUser.avatar,
         password
       });
+      await grantNewUserPromotionCredits(user.id);
     }
 
     if (!user.profileCompleted) {
@@ -288,6 +291,7 @@ export class AuthService {
         appleId: appleUser.appleId,
         password
       });
+      await grantNewUserPromotionCredits(user.id);
     }
 
     if (!user.profileCompleted) {

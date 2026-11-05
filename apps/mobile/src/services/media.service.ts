@@ -46,6 +46,22 @@ export async function uploadVerificationDocument(input: {
 const allowedAdImageMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 const allowedAdVideoMimeTypes = new Set(['video/mp4', 'video/webm', 'video/quicktime']);
 const maxAdFileSizeBytes = 12 * 1024 * 1024;
+export const maxAdVideoBytes = 10 * 1024 * 1024;
+
+export function isAdVideoTooLarge(size?: number | null) {
+  return typeof size === 'number' && size > maxAdVideoBytes;
+}
+
+async function resolveLocalFileSize(uri: string, size?: number | null) {
+  if (typeof size === 'number' && size > 0) return size;
+  try {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    return blob.size > 0 ? blob.size : null;
+  } catch {
+    return null;
+  }
+}
 
 export async function uploadAdMedia(input: {
   uri: string;
@@ -60,7 +76,12 @@ export async function uploadAdMedia(input: {
     throw new Error('UNSUPPORTED_AD_FILE');
   }
 
-  if (input.size && input.size > maxAdFileSizeBytes) {
+  if (input.kind === 'video') {
+    const videoSize = await resolveLocalFileSize(input.uri, input.size);
+    if (isAdVideoTooLarge(videoSize)) {
+      throw new Error('AD_FILE_TOO_LARGE');
+    }
+  } else if (input.size && input.size > maxAdFileSizeBytes) {
     throw new Error('AD_FILE_TOO_LARGE');
   }
 
@@ -71,12 +92,27 @@ export async function uploadAdMedia(input: {
     type: input.mimeType
   } as unknown as Blob);
 
-  const response = await http.post<ApiEnvelope<MediaUploadResult>>(
-    `/media/upload?folder=${input.folder ?? 'ads'}`,
-    formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-    timeout: 120000
-  });
+  try {
+    const response = await http.post<ApiEnvelope<MediaUploadResult>>(
+      `/media/upload?folder=${input.folder ?? 'ads'}`,
+      formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120000
+    });
 
-  return response.data.data;
+    return response.data.data;
+  } catch (error) {
+    if (input.kind === 'video' && isVideoTooLargeResponse(error)) {
+      throw new Error('AD_FILE_TOO_LARGE');
+    }
+    throw error;
+  }
+}
+
+function isVideoTooLargeResponse(error: unknown) {
+  if (typeof error !== 'object' || !error || !('response' in error)) return false;
+  const response = (error as { response?: { status?: number; data?: { message?: string } } }).response;
+  if (!response) return false;
+  if (response.status === 413) return true;
+  return /too large/i.test(response.data?.message ?? '');
 }
