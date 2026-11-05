@@ -23,6 +23,8 @@ export type ScreenName =
   | 'notifications'
   | 'news'
   | 'articleDetail'
+  | 'landmarks'
+  | 'landmarkDetail'
   | 'terms'
   | 'privacy'
   | 'refund'

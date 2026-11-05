@@ -12,6 +12,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenInsetsProvider } from '../context/screen-insets-context';
+import { TAB_BAR_FLOAT_GAP, TAB_BAR_SIDE_INSET } from '../hooks/use-screen-insets';
 
 import { AppHeader } from '../components/AppHeader';
 import { useKeyboardLiftHeight } from '../components/KeyboardInsets';
@@ -47,6 +48,8 @@ import { ListingDetailScreen } from '../screens/ListingDetailScreen';
 import { NotificationsScreen } from '../screens/NotificationsScreen';
 import { NewsScreen } from '../screens/NewsScreen';
 import { ArticleDetailScreen } from '../screens/ArticleDetailScreen';
+import { LandmarkDetailScreen } from '../screens/LandmarkDetailScreen';
+import { LandmarksScreen } from '../screens/LandmarksScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { StoreDetailScreen } from '../screens/StoreDetailScreen';
 import { StoresBrowseScreen } from '../screens/StoresBrowseScreen';
@@ -82,6 +85,7 @@ export function MainShell() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedStoreSlug, setSelectedStoreSlug] = useState<string | null>(null);
   const [selectedArticleSlug, setSelectedArticleSlug] = useState<string | null>(null);
+  const [selectedLandmarkId, setSelectedLandmarkId] = useState<string | null>(null);
   const [bannerAdTarget, setBannerAdTarget] = useState<BannerAdTarget>({});
   const [navTransition, setNavTransition] = useState<ScreenTransitionKind>('tab');
   const drawerOpenRef = useRef(drawerOpen);
@@ -156,6 +160,16 @@ export function MainShell() {
     }
   };
 
+  const openLandmarkDetail = (idOrSlug: string) => {
+    if (screen === 'landmarkDetail' && selectedLandmarkId !== idOrSlug) {
+      setNavTransition('push');
+    }
+    setSelectedLandmarkId(idOrSlug);
+    if (screen !== 'landmarkDetail') {
+      pushScreen('landmarkDetail');
+    }
+  };
+
   const openStoreDetail = (slug: string) => {
     if (screen === 'storeDetail' && selectedStoreSlug !== slug) {
       setNavTransition('push');
@@ -177,6 +191,7 @@ export function MainShell() {
     if (target !== 'chatConversation') setSelectedConversationId(null);
     if (target !== 'categoryOffers') setSelectedCategoryId(null);
     if (target !== 'storeDetail') setSelectedStoreSlug(null);
+    if (target !== 'landmarkDetail') setSelectedLandmarkId(null);
     if (tabScreens.includes(target)) setLastTab(target as TabKey);
     return true;
   };
@@ -298,6 +313,7 @@ export function MainShell() {
     onOpenRefund: () => pushScreen('refund'),
     onBrowseStores: () => pushScreen('storesBrowse'),
     onStorePress: openStoreDetail,
+    onDestinationPress: openLandmarkDetail,
     onAddListing: () => navigate('addOffer')
   };
 
@@ -420,6 +436,14 @@ export function MainShell() {
         return <NotificationsScreen />;
       case 'news':
         return <NewsScreen onOpenArticle={openArticleDetail} />;
+      case 'landmarks':
+        return <LandmarksScreen onOpenLandmark={openLandmarkDetail} />;
+      case 'landmarkDetail':
+        return selectedLandmarkId ? (
+          <LandmarkDetailScreen idOrSlug={selectedLandmarkId} />
+        ) : (
+          <HomeScreen {...homeScreenProps} />
+        );
       case 'articleDetail':
         return selectedArticleSlug ? (
           <ArticleDetailScreen
@@ -441,6 +465,7 @@ export function MainShell() {
             onStorePress={openStoreDetail}
             onCategoryPress={openCategoryOffers}
             onArticlePress={openArticleDetail}
+            onLandmarkPress={openLandmarkDetail}
             onBrowseOffers={() => pushScreen('offers')}
             onBrowseStores={() => pushScreen('storesBrowse')}
             onBrowseNews={() => pushScreen('news')}
@@ -465,7 +490,7 @@ export function MainShell() {
       default:
         return <HomeScreen {...homeScreenProps} />;
     }
-  }, [screen, user, selectedListingId, selectedConversationId, selectedCategoryId, selectedStoreSlug, selectedArticleSlug, bannerAdTarget]);
+  }, [screen, user, selectedListingId, selectedConversationId, selectedCategoryId, selectedStoreSlug, selectedArticleSlug, selectedLandmarkId, bannerAdTarget]);
 
   const handleLogoutConfirm = () => {
     setLogoutConfirmOpen(false);
@@ -512,7 +537,7 @@ export function MainShell() {
             <View style={styles.chatStage}>
               <View style={styles.body}>
                 <ScreenTransition
-                  screenKey={`${screen}-${selectedListingId ?? ''}-${selectedConversationId ?? ''}-${selectedCategoryId ?? ''}-${selectedStoreSlug ?? ''}-${selectedArticleSlug ?? ''}`}
+                  screenKey={`${screen}-${selectedListingId ?? ''}-${selectedConversationId ?? ''}-${selectedCategoryId ?? ''}-${selectedStoreSlug ?? ''}-${selectedArticleSlug ?? ''}-${selectedLandmarkId ?? ''}`}
                   transition={navTransition}
                   isRtl={isRtl}
                 >
@@ -524,7 +549,7 @@ export function MainShell() {
           ) : (
             <View style={styles.body}>
               <ScreenTransition
-                screenKey={`${screen}-${selectedListingId ?? ''}-${selectedConversationId ?? ''}-${selectedCategoryId ?? ''}-${selectedStoreSlug ?? ''}-${selectedArticleSlug ?? ''}`}
+                screenKey={`${screen}-${selectedListingId ?? ''}-${selectedConversationId ?? ''}-${selectedCategoryId ?? ''}-${selectedStoreSlug ?? ''}-${selectedArticleSlug ?? ''}-${selectedLandmarkId ?? ''}`}
                 transition={navTransition}
                 isRtl={isRtl}
               >
@@ -582,6 +607,11 @@ export function MainShell() {
         <View
           style={[
             styles.tabBarDock,
+            {
+              left: TAB_BAR_SIDE_INSET,
+              right: TAB_BAR_SIDE_INSET,
+              bottom: Math.max(safeInsets.bottom, 8) + TAB_BAR_FLOAT_GAP
+            },
             tabBarKeyboardOffset > 0 && { transform: [{ translateY: tabBarKeyboardOffset }] }
           ]}
         >
@@ -604,6 +634,7 @@ export function MainShell() {
             next === 'settings' ||
             next === 'favorites' ||
             next === 'storesBrowse' ||
+            next === 'landmarks' ||
             next === 'terms' ||
             next === 'privacy' ||
             next === 'refund'
@@ -620,6 +651,7 @@ export function MainShell() {
         onListingPress={openListingDetail}
         onStorePress={openStoreDetail}
         onArticlePress={openArticleDetail}
+        onLandmarkPress={openLandmarkDetail}
         onNavigate={navigate}
         onLogin={() => pushScreen('login')}
         onRegister={() => pushScreen('register')}
@@ -652,11 +684,7 @@ const styles = StyleSheet.create({
   },
   tabBarDock: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 40,
-    elevation: 40
+    zIndex: 40
   },
   edgeSwipeZone: {
     position: 'absolute',

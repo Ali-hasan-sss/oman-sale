@@ -1,9 +1,4 @@
-import * as Linking from 'expo-linking';
-import * as WebBrowser from 'expo-web-browser';
-
-import { getGoogleWebClientId, getPublicWebOrigin, isExpoGo, isFirebaseConfigured } from './firebase';
-
-WebBrowser.maybeCompleteAuthSession();
+import { getGoogleWebClientId, isExpoGo, isFirebaseConfigured } from './firebase';
 
 let configured = false;
 
@@ -52,47 +47,6 @@ function isCancelError(error: unknown, googleSignin?: GoogleSigninModule | null)
   return error.code === googleSignin.statusCodes.SIGN_IN_CANCELLED;
 }
 
-async function signInWithNativeModule() {
-  const googleSignin = loadGoogleSignin();
-  if (!googleSignin) throw new Error('GOOGLE_NATIVE_UNAVAILABLE');
-
-  ensureGoogleSignInConfigured(googleSignin);
-  await googleSignin.GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-
-  try {
-    await googleSignin.GoogleSignin.signOut();
-  } catch {
-    // Ignore if no cached Google session exists.
-  }
-
-  try {
-    const response = await googleSignin.GoogleSignin.signIn();
-    if (!googleSignin.isSuccessResponse(response)) throw new Error('GOOGLE_SIGN_IN_CANCELLED');
-
-    const idToken = response.data?.idToken || (await googleSignin.GoogleSignin.getTokens()).idToken;
-    if (!idToken) throw new Error('GOOGLE_ID_TOKEN_MISSING');
-    return idToken;
-  } catch (error) {
-    if (isCancelError(error, googleSignin)) throw new Error('GOOGLE_SIGN_IN_CANCELLED');
-    throw error;
-  }
-}
-
-async function signInWithGoogleBrowser() {
-  const redirectUrl = Linking.createURL('google-auth');
-  const startUrl = `${getPublicWebOrigin()}/ar/mobile-google-auth?redirect=${encodeURIComponent(redirectUrl)}`;
-  const result = await WebBrowser.openAuthSessionAsync(startUrl, redirectUrl);
-
-  if (result.type !== 'success') throw new Error('GOOGLE_SIGN_IN_CANCELLED');
-
-  const idToken = new URL(result.url).searchParams.get('idToken')?.trim();
-  if (idToken) return idToken;
-
-  const error = new URL(result.url).searchParams.get('error');
-  if (error === 'not_configured') throw new Error('FIREBASE_NOT_CONFIGURED');
-  throw new Error('GOOGLE_SIGN_IN_FAILED');
-}
-
 export async function signOutGoogleNative() {
   const googleSignin = loadGoogleSignin();
   if (!googleSignin) return;
@@ -113,11 +67,21 @@ export async function signOutGoogleNative() {
 export async function signInWithGoogleNative(): Promise<string> {
   if (!isFirebaseConfigured() || !getGoogleWebClientId()) throw new Error('FIREBASE_NOT_CONFIGURED');
 
+  const googleSignin = loadGoogleSignin();
+  if (!googleSignin) throw new Error('GOOGLE_NATIVE_UNAVAILABLE');
+
+  ensureGoogleSignInConfigured(googleSignin);
+  await googleSignin.GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+
   try {
-    return await signInWithNativeModule();
+    const response = await googleSignin.GoogleSignin.signIn();
+    if (!googleSignin.isSuccessResponse(response)) throw new Error('GOOGLE_SIGN_IN_CANCELLED');
+
+    const idToken = response.data?.idToken || (await googleSignin.GoogleSignin.getTokens()).idToken;
+    if (!idToken) throw new Error('GOOGLE_ID_TOKEN_MISSING');
+    return idToken;
   } catch (error) {
-    if (error instanceof Error && error.message === 'GOOGLE_SIGN_IN_CANCELLED') throw error;
-    if (error instanceof Error && error.message === 'FIREBASE_NOT_CONFIGURED') throw error;
-    return signInWithGoogleBrowser();
+    if (isCancelError(error, googleSignin)) throw new Error('GOOGLE_SIGN_IN_CANCELLED');
+    throw error;
   }
 }

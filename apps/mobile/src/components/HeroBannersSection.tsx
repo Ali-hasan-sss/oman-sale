@@ -87,6 +87,7 @@ export type AdBannerPlacement =
   | 'OFFERS'
   | 'ARTICLES'
   | 'ARTICLE'
+  | 'DESTINATION'
   | 'STORES'
   | 'STORE'
   | 'SEARCH'

@@ -1,21 +1,34 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Image, Linking, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from './AppText';
 import { useI18n } from '../i18n';
+import { rowDirection } from '../lib/layout-direction';
 import { colors, shadow } from '../theme';
+
+const CONTACT_EMAIL = 'info@omansale.om';
+const LICENSE_NUMBER = 'L3787876';
+const footerLogo = require('../../assets/nav-logo.png');
 
 const icons = ['call-outline', 'location-outline', 'flash-outline', 'shield-checkmark-outline'] as const;
 
 type HomeWhySectionProps = {
+  bottomInset?: number;
   onBrowseNews: () => void;
   onOpenTerms: () => void;
   onOpenPrivacy: () => void;
   onOpenRefund: () => void;
 };
 
-export function HomeWhySection({ onBrowseNews, onOpenTerms, onOpenPrivacy, onOpenRefund }: HomeWhySectionProps) {
-  const { t } = useI18n();
+export function HomeWhySection({
+  bottomInset = 0,
+  onBrowseNews,
+  onOpenTerms,
+  onOpenPrivacy,
+  onOpenRefund
+}: HomeWhySectionProps) {
+  const { t, isRtl } = useI18n();
+  const contactAlign = isRtl ? styles.contactRtl : styles.contactLtr;
 
   return (
     <View>
@@ -33,11 +46,26 @@ export function HomeWhySection({ onBrowseNews, onOpenTerms, onOpenPrivacy, onOpe
         ))}
       </View>
 
-      <View style={styles.footer}>
-        <AppText style={styles.footerTitle}>Oman Sale</AppText>
+      <View style={[styles.footer, { paddingBottom: 28 + bottomInset }]}>
+        <Image source={footerLogo} style={[styles.logo, isRtl ? styles.logoRtl : styles.logoLtr]} resizeMode="contain" />
         <AppText style={styles.footerText}>{t.home.footerDescription}</AppText>
-        <AppText style={styles.footerText}>{t.home.footerLocation}</AppText>
-        <View style={styles.links}>
+        <View style={[styles.contacts, contactAlign]}>
+          <Pressable style={[styles.contactRow, rowDirection(isRtl)]} onPress={() => void Linking.openURL(`mailto:${CONTACT_EMAIL}`)}>
+            <Ionicons name="mail-outline" size={18} color="#22c55e" />
+            <AppText style={[styles.contactValue, styles.email]}>{CONTACT_EMAIL}</AppText>
+          </Pressable>
+          <View style={[styles.contactRow, rowDirection(isRtl)]}>
+            <Ionicons name="location-outline" size={18} color="#22c55e" />
+            <AppText style={styles.contactValue}>{t.home.footerLocation}</AppText>
+          </View>
+          <View style={[styles.contactRow, rowDirection(isRtl)]}>
+            <Ionicons name="document-text-outline" size={18} color="#22c55e" />
+            <AppText style={styles.contactValue}>
+              {t.home.footerLicense}: {LICENSE_NUMBER}
+            </AppText>
+          </View>
+        </View>
+        <View style={[styles.links, rowDirection(isRtl)]}>
           <Pressable onPress={onBrowseNews}>
             <AppText style={styles.link}>{t.common.news}</AppText>
           </Pressable>
@@ -105,25 +133,56 @@ const styles = StyleSheet.create({
   },
   footer: {
     marginTop: 12,
-    backgroundColor: '#020617',
-    paddingHorizontal: 20,
-    paddingTop: 28,
-    paddingBottom: 24
+    backgroundColor: '#070d1a',
+    paddingHorizontal: 22,
+    paddingTop: 28
   },
-  footerTitle: {
-    color: '#fff',
-    fontSize: 22,
-    fontWeight: '900',
-    marginBottom: 8
+  logo: {
+    width: 148,
+    height: 92,
+    marginBottom: 18
+  },
+  logoRtl: {
+    alignSelf: 'flex-end'
+  },
+  logoLtr: {
+    alignSelf: 'flex-start'
   },
   footerText: {
-    color: '#94a3b8',
-    lineHeight: 22,
+    color: '#cbd5e1',
+    lineHeight: 26,
+    fontSize: 15,
+    textAlign: 'center',
+    marginBottom: 22
+  },
+  contacts: {
+    width: '100%',
+    gap: 14,
     marginBottom: 8
   },
-  links: {
-    marginTop: 8,
+  contactRtl: {
+    alignItems: 'flex-end'
+  },
+  contactLtr: {
+    alignItems: 'flex-start'
+  },
+  contactRow: {
+    alignItems: 'center',
     gap: 10
+  },
+  contactValue: {
+    color: '#f8fafc',
+    fontSize: 15,
+    fontWeight: '700'
+  },
+  email: {
+    writingDirection: 'ltr'
+  },
+  links: {
+    marginTop: 18,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 14
   },
   link: {
     color: '#e2e8f0',

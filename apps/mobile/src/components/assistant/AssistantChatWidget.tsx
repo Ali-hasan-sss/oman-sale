@@ -35,6 +35,7 @@ type AssistantChatWidgetProps = {
   onListingPress: (id: string) => void;
   onStorePress: (slug: string) => void;
   onArticlePress: (slug: string) => void;
+  onLandmarkPress: (idOrSlug: string) => void;
   onNavigate: (screen: ScreenName) => void;
   onLogin: () => void;
   onRegister: () => void;
@@ -57,6 +58,7 @@ export function AssistantChatWidget({
   onListingPress,
   onStorePress,
   onArticlePress,
+  onLandmarkPress,
   onNavigate,
   onLogin,
   onRegister
@@ -126,6 +128,7 @@ export function AssistantChatWidget({
       onListingPress,
       onStorePress,
       onArticlePress,
+      onLandmarkPress,
       onNavigate,
       onLogin,
       onRegister,
@@ -147,7 +150,7 @@ export function AssistantChatWidget({
             style={[
               styles.fab,
               {
-                bottom: insets.bottom + 78,
+                bottom: insets.bottom + 96,
                 left: windowWidth - FAB_SIZE - FAB_MARGIN
               }
             ]}

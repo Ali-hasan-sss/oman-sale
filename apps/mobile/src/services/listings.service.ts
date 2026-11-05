@@ -158,7 +158,9 @@ export async function checkoutPaidListingRequest(
   payload: { ad: CreateListingPayload; planId: string; days: number },
   locale: string
 ) {
-  const response = await http.post<ApiEnvelope<{ checkout?: { paymentUrl?: string } }>>(
+  const response = await http.post<
+    ApiEnvelope<{ checkout?: { paymentUrl?: string; paid?: boolean; usedFreeCredit?: boolean } }>
+  >(
     API_ENDPOINTS.checkout.paidListings,
     payload,
     { params: { locale } }

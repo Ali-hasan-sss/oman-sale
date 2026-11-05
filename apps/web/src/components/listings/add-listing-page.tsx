@@ -55,6 +55,8 @@ type PromotionCredit = {
   planId: string;
   remaining: number;
   durationDays: number;
+  nameAr?: string;
+  nameEn?: string;
 };
 
 type PromotionPlan = {
@@ -126,6 +128,7 @@ const labels = {
     promotionPlansEmpty: 'لا توجد خطط ترويج متاحة حالياً.',
     free: 'مجاني',
     freePlanCredit: 'مجاني لك: متبقي {count} لمدة {days} يوم',
+    freeCreditNotCharged: 'هذه الخطة مجانية لك، ولن يتم فتح الدفع. أعد المحاولة.',
     duration: 'مدة الترويج',
     oneWeek: 'أسبوع واحد',
     twoWeeks: 'أسبوعين',
@@ -184,6 +187,7 @@ const labels = {
     promotionPlansEmpty: 'No promotion plans are available right now.',
     free: 'Free',
     freePlanCredit: 'Free for you: {count} left, {days} days',
+    freeCreditNotCharged: 'This plan is free for you, so payment will not open. Please try again.',
     duration: 'Promotion duration',
     oneWeek: 'One week',
     twoWeeks: 'Two weeks',
@@ -407,14 +411,18 @@ export function AddListingPage() {
             store.isActive && (store.accessStatus === 'ACTIVE' || store.accessStatus === 'TRIAL')
         );
         setCategories(categoriesResponse.data.data);
+        const loadedCredits = creditsResponse.data.data ?? [];
         setPlans(promotionPlans);
-        setCredits(creditsResponse.data.data ?? []);
+        setCredits(loadedCredits);
         setOwnerStore(activeStore ?? storesResponse.data.data[0] ?? null);
         if (activeStore) {
           setPublishSource('store');
           setSelectedPlanId('');
         } else {
-          setSelectedPlanId((current) => current || promotionPlans[0]?.id || '');
+          const freePlan = promotionPlans.find((plan) =>
+            loadedCredits.some((credit) => credit.planId === plan.id && credit.remaining > 0)
+          );
+          setSelectedPlanId((current) => current || freePlan?.id || promotionPlans[0]?.id || '');
         }
       })
       .catch(() => setError(text.loadError))
@@ -467,21 +475,38 @@ export function AddListingPage() {
       };
 
       if (selectedPlan && !isStorePublish) {
+        let creditForPlan = credits.find((credit) => credit.planId === selectedPlan.id && credit.remaining > 0);
+        try {
+          const freshCredits = await api.get<{ data: PromotionCredit[] }>('/promotions/credits', { headers: authHeaders });
+          const loadedCredits = freshCredits.data.data ?? [];
+          setCredits(loadedCredits);
+          creditForPlan = loadedCredits.find((credit) => credit.planId === selectedPlan.id && credit.remaining > 0);
+        } catch {
+          // Keep the credits already shown on the form.
+        }
+
         const promotionResponse = await api.post<{
-          data: { checkout?: { paymentUrl?: string; sessionId?: string; paid?: boolean } };
+          data: { checkout?: { paymentUrl?: string; sessionId?: string; paid?: boolean; usedFreeCredit?: boolean } };
         }>(
           '/checkout/paid-listings',
           {
             ad: adPayload,
             planId: selectedPlan.id,
-            days: duration
+            days: creditForPlan?.durationDays ?? duration
           },
           { headers: authHeaders, params: { locale } }
         );
 
         const paymentUrl = promotionResponse.data.data.checkout?.paymentUrl;
         const sessionId = promotionResponse.data.data.checkout?.sessionId;
-        if (paymentUrl) {
+        const usedFreeCredit = Boolean(
+          promotionResponse.data.data.checkout?.usedFreeCredit || promotionResponse.data.data.checkout?.paid
+        );
+        if (creditForPlan && paymentUrl && !usedFreeCredit) {
+          setError(text.freeCreditNotCharged);
+          return;
+        }
+        if (!creditForPlan && paymentUrl) {
           if (sessionId) storePendingThawaniSession(sessionId);
           window.location.href = paymentUrl;
           return;

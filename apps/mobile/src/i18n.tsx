@@ -53,6 +53,7 @@ const dictionary = {
       pullToRefresh: 'اسحب للتحديث',
       retry: 'إعادة المحاولة',
       browseStores: 'استعرض المتاجر',
+      landmarks: 'المعالم',
       terms: 'شروط الاستخدام',
       privacy: 'سياسة الخصوصية',
       refund: 'سياسة الاسترداد',
@@ -129,8 +130,10 @@ const dictionary = {
         ['سريع وسهل', 'انشر إعلانك في دقائق وتواصل مع المشترين فورًا.'],
         ['آمن وموثوق', 'تجربة مصممة للبلاغات والمراجعة والتوثيق وحماية المستخدمين.']
       ] as [string, string][],
-      footerDescription: 'منصة Oman Sale هي سوق إلكتروني حديث في سلطنة عمان للبيع والشراء ونشر الخدمات والوظائف.',
-      footerLocation: 'مسقط، سلطنة عمان'
+      footerDescription:
+        'تطبيق عمان سيل هي سوق إلكتروني حديث في سلطنة عمان للبيع والشراء ونشر الخدمات والوظائف وكل أنواع الإعلانات المستقبلية.',
+      footerLocation: 'مسقط، سلطنة عمان',
+      footerLicense: 'License'
     },
     auth: {
       welcome: 'مرحبًا بك',
@@ -300,6 +303,7 @@ const dictionary = {
       adType: 'نوع الإعلان',
       adTypeSubtitle: 'اختر نوع الإعلان المناسب لك',
       freePlanCredit: 'مجاني لك: متبقي {count} لمدة {days} يوم',
+      freeCreditNotCharged: 'هذه الخطة مجانية لك، ولن يتم فتح الدفع. أعد المحاولة.',
       normalAd: 'إعلان عادي',
       promotionPlansEmpty: 'لا توجد خطط ترويج متاحة حالياً.',
       promotionLoading: 'جاري تحميل خطط الترويج...',
@@ -572,6 +576,9 @@ const dictionary = {
       emailChangeError: 'تعذر إرسال رمز التحقق. تأكد من البريد وحاول مرة أخرى.',
       emailVerifyError: 'تعذر تأكيد البريد. تحقق من الرمز وحاول مرة أخرى.',
       loading: 'جاري تحميل الملف الشخصي...',
+      freeAdsTitle: 'إعلاناتك المجانية',
+      freeAdsHint: 'يمكنك نشر هذه الإعلانات دون دفع.',
+      freeAdsItem: 'متبقي {count} من «{plan}» لمدة {days} يوم',
       storeTitle: 'متجري',
       storeSubtitle: 'إدارة شعار المتجر والغلاف ومراقبة الاشتراك.',
       manageStore: 'إدارة المتجر',
@@ -620,7 +627,25 @@ const dictionary = {
       suggestionListing: 'عرض',
       suggestionCategory: 'فئة',
       suggestionArticle: 'مقالة',
-      suggestionStore: 'متجر'
+      suggestionStore: 'متجر',
+      suggestionTourism: 'معلم',
+      landmarks: 'المعالم'
+    },
+    landmark: {
+      listTitle: 'جميع معالم عُمان',
+      listSubtitle: 'اكتشف المعالم التي تستحق الزيارة في سلطنة عُمان.',
+      empty: 'لا توجد معالم حالياً.',
+      loadError: 'تعذر تحميل المعالم.',
+      notFound: 'تعذر العثور على هذا المعلم.',
+      about: 'عن المعلم',
+      highlights: 'أبرز المعالم',
+      activities: 'الأنشطة والفعاليات',
+      bestTime: 'أفضل وقت للزيارة',
+      contact: 'معلومات الاتصال',
+      gallery: 'معرض الصور',
+      galleryHint: 'اضغط على صورة للعرض بملء الشاشة',
+      photos: 'صورة',
+      photo: 'صورة'
     },
     storesBrowse: {
       title: 'استعرض المتاجر',
@@ -725,6 +750,7 @@ const dictionary = {
       pullToRefresh: 'Pull to refresh',
       retry: 'Retry',
       browseStores: 'Browse stores',
+      landmarks: 'Landmarks',
       terms: 'Terms of use',
       privacy: 'Privacy policy',
       refund: 'Refund policy',
@@ -801,8 +827,10 @@ const dictionary = {
         ['Fast and simple', 'Publish your ad in minutes and connect with buyers immediately.'],
         ['Safe and trusted', 'Built for reports, reviews, verification and user protection.']
       ] as [string, string][],
-      footerDescription: 'Oman Sale is a modern marketplace in Oman for buying, selling, services and jobs.',
-      footerLocation: 'Muscat, Sultanate of Oman'
+      footerDescription:
+        'The Oman Sale app is a modern online marketplace in the Sultanate of Oman for buying, selling, services, jobs, and every future listing type.',
+      footerLocation: 'Muscat, Sultanate of Oman',
+      footerLicense: 'License'
     },
     auth: {
       welcome: 'Welcome',
@@ -972,6 +1000,7 @@ const dictionary = {
       adType: 'Ad type',
       adTypeSubtitle: 'Choose the right ad type for you',
       freePlanCredit: 'Free for you: {count} left, {days} days',
+      freeCreditNotCharged: 'This plan is free for you, so payment will not open. Please try again.',
       normalAd: 'Normal ad',
       promotionPlansEmpty: 'No promotion plans are available right now.',
       promotionLoading: 'Loading promotion plans...',
@@ -1244,6 +1273,9 @@ const dictionary = {
       emailChangeError: 'Could not send the verification code. Check the email and try again.',
       emailVerifyError: 'Could not verify the email. Check the code and try again.',
       loading: 'Loading profile...',
+      freeAdsTitle: 'Your free ads',
+      freeAdsHint: 'You can publish these ads without paying.',
+      freeAdsItem: '{count} «{plan}» left for {days} days',
       storeTitle: 'My store',
       storeSubtitle: 'Manage store branding, subscription and store listings.',
       manageStore: 'Manage store',
@@ -1292,7 +1324,25 @@ const dictionary = {
       suggestionListing: 'Listing',
       suggestionCategory: 'Category',
       suggestionArticle: 'Article',
-      suggestionStore: 'Store'
+      suggestionStore: 'Store',
+      suggestionTourism: 'Landmark',
+      landmarks: 'Landmarks'
+    },
+    landmark: {
+      listTitle: 'All landmarks in Oman',
+      listSubtitle: 'Discover places worth visiting across the Sultanate of Oman.',
+      empty: 'No landmarks yet.',
+      loadError: 'Could not load landmarks.',
+      notFound: 'This landmark could not be found.',
+      about: 'About this landmark',
+      highlights: 'Top highlights',
+      activities: 'Activities',
+      bestTime: 'Best time to visit',
+      contact: 'Contact information',
+      gallery: 'Photo gallery',
+      galleryHint: 'Tap a photo to view it fullscreen',
+      photos: 'photos',
+      photo: 'Photo'
     },
     storesBrowse: {
       title: 'Browse stores',

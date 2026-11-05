@@ -17,6 +17,8 @@ export type PromotionCredit = {
   planId: string;
   remaining: number;
   durationDays: number;
+  nameAr: string;
+  nameEn: string;
 };
 
 export function formatFreeCredit(template: string, count: number, days: number) {

@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  I18nManager,
   Keyboard,
   Pressable,
   ScrollView,
@@ -351,8 +352,14 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
 
   useEffect(() => {
     if (isStorePublish) return;
-    setSelectedPlanId((current) => current || plans[0]?.id || '');
-  }, [isStorePublish, plans]);
+    setSelectedPlanId((current) => {
+      if (current) return current;
+      const freePlan = plans.find((plan) =>
+        credits.some((credit) => credit.planId === plan.id && credit.remaining > 0)
+      );
+      return freePlan?.id || plans[0]?.id || '';
+    });
+  }, [isStorePublish, plans, credits]);
 
   const submit = async () => {
     const nextFieldErrors = validateListingForm(
@@ -398,13 +405,29 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
     };
 
     if (selectedPlan && !isStorePublish) {
+      let creditForPlan = credits.find((credit) => credit.planId === selectedPlan.id && credit.remaining > 0);
+      try {
+        const freshCredits = await fetchPromotionCredits();
+        setCredits(freshCredits);
+        creditForPlan = freshCredits.find((credit) => credit.planId === selectedPlan.id && credit.remaining > 0);
+      } catch {
+        // Keep the credits already shown on the form.
+      }
+
       try {
         const checkout = await checkoutPaidListingRequest(
-          { ad: adPayload, planId: selectedPlan.id, days: duration },
+          { ad: adPayload, planId: selectedPlan.id, days: creditForPlan?.durationDays ?? duration },
           locale
         );
-        if (checkout.checkout?.paymentUrl) {
-          await openWebPaymentPage(checkout.checkout.paymentUrl);
+        const paymentUrl = checkout.checkout?.paymentUrl;
+        const usedFreeCredit = Boolean(checkout.checkout?.usedFreeCredit || checkout.checkout?.paid);
+        if (creditForPlan && paymentUrl && !usedFreeCredit) {
+          setSubmitError(t.addOffer.freeCreditNotCharged);
+          scrollToField();
+          return;
+        }
+        if (!creditForPlan && paymentUrl) {
+          await openWebPaymentPage(paymentUrl);
           setPaymentOnWeb(true);
           setPublishSuccess(true);
           return;
@@ -878,36 +901,52 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
                           style={[
                             styles.planCard,
                             active && styles.planCardActive,
+                            plan.badgeLabel ? styles.planCardWithBadge : null,
                             plan.color ? { borderColor: plan.color } : null
                           ]}
                           onPress={() => setSelectedPlanId(plan.id)}
                         >
                           {active ? (
-                            <View style={styles.planCheck}>
+                            <View style={[styles.planCheck, isRtl ? styles.cornerStart : styles.cornerEnd]}>
                               <Ionicons name="checkmark" size={14} color="#fff" />
                             </View>
                           ) : null}
-                          <View style={[styles.planHeader, rowDirection(isRtl)]}>
-                            <AppText style={[styles.planName, isRtl ? styles.rtl : styles.ltr]} numberOfLines={1}>
-                              {name}
-                            </AppText>
-                            {plan.badgeLabel ? (
-                              <View style={[styles.planBadge, { backgroundColor: plan.color ?? colors.brand }]}>
-                                <AppText style={styles.planBadgeText}>{plan.badgeLabel}</AppText>
-                              </View>
-                            ) : null}
+                          {plan.badgeLabel ? (
+                            <View
+                              style={[
+                                styles.planBadge,
+                                isRtl ? styles.cornerEnd : styles.cornerStart,
+                                { backgroundColor: plan.color ?? colors.brand }
+                              ]}
+                            >
+                              <AppText style={styles.planBadgeText} numberOfLines={1}>
+                                {plan.badgeLabel}
+                              </AppText>
+                            </View>
+                          ) : null}
+                          <View
+                            style={[
+                              styles.planHeader,
+                              !plan.badgeLabel && active ? (isRtl ? styles.titleClearStart : styles.titleClearEnd) : null
+                            ]}
+                          >
+                            <AppText style={[styles.planName, planCopyAlign(isRtl)]}>{name}</AppText>
                           </View>
-                          <AppText style={[styles.planDescription, isRtl ? styles.rtl : styles.ltr]} numberOfLines={2}>
+                          <AppText style={[styles.planDescription, planCopyAlign(isRtl)]} numberOfLines={2}>
                             {planDescription}
                           </AppText>
                           {credit ? (
-                            <AppText style={[styles.planVat, isRtl ? styles.rtl : styles.ltr]}>
+                            <AppText style={[styles.planVat, planCopyAlign(isRtl)]}>
                               {formatFreeCredit(t.addOffer.freePlanCredit, credit.remaining, credit.durationDays)}
                             </AppText>
                           ) : null}
-                          <AppText style={[styles.planPrice, active && styles.planPriceActive]}>{planPricing.main}</AppText>
+                          <AppText style={[styles.planPrice, active && styles.planPriceActive, planCopyAlign(isRtl)]}>
+                            {planPricing.main}
+                          </AppText>
                           {planPricing.sub ? (
-                            <AppText style={[styles.planVat, active && styles.planVatActive]}>{planPricing.sub}</AppText>
+                            <AppText style={[styles.planVat, active && styles.planVatActive, planCopyAlign(isRtl)]}>
+                              {planPricing.sub}
+                            </AppText>
                           ) : null}
                         </Pressable>
                       );
@@ -971,6 +1010,12 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
       </View>
     </KeyboardAwareScrollView>
   );
+}
+
+/** Physical right edge in Arabic. AppText remaps left/right, and RTL writing treats start as the right side. */
+function planCopyAlign(isRtl: boolean) {
+  if (!isRtl) return styles.ltr;
+  return I18nManager.isRTL ? styles.rtl : styles.planCopyRight;
 }
 
 function Field({
@@ -1196,6 +1241,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     padding: 12
   },
+  planCardWithBadge: {
+    paddingTop: 36
+  },
+  planCopyRight: {
+    width: '100%',
+    textAlign: 'left'
+  },
   planCardActive: {
     borderColor: colors.brand,
     backgroundColor: colors.brandSoft
@@ -1203,31 +1255,44 @@ const styles = StyleSheet.create({
   planCheck: {
     position: 'absolute',
     top: 8,
-    right: 8,
     width: 22,
     height: 22,
     borderRadius: 11,
     backgroundColor: colors.brand,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 1
+    zIndex: 2
+  },
+  cornerStart: {
+    right: 8
+  },
+  cornerEnd: {
+    left: 8
   },
   planHeader: {
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 6,
-    paddingEnd: 24
+    alignSelf: 'stretch',
+    marginBottom: 6
+  },
+  titleClearStart: {
+    paddingRight: 26
+  },
+  titleClearEnd: {
+    paddingLeft: 26
   },
   planName: {
-    flex: 1,
+    alignSelf: 'stretch',
     fontWeight: '800',
     fontSize: 14,
     color: colors.ink
   },
   planBadge: {
+    position: 'absolute',
+    top: 8,
+    zIndex: 2,
+    maxWidth: 108,
     borderRadius: radius.pill,
     paddingHorizontal: 8,
-    paddingVertical: 2
+    paddingVertical: 3
   },
   planBadgeText: {
     color: '#fff',
@@ -1235,6 +1300,7 @@ const styles = StyleSheet.create({
     fontWeight: '800'
   },
   planDescription: {
+    alignSelf: 'stretch',
     fontSize: 12,
     color: colors.muted,
     lineHeight: 16,
@@ -1242,6 +1308,7 @@ const styles = StyleSheet.create({
     marginBottom: 8
   },
   planPrice: {
+    alignSelf: 'stretch',
     fontSize: 16,
     fontWeight: '800',
     color: colors.ink
@@ -1251,6 +1318,7 @@ const styles = StyleSheet.create({
     color: colors.brandDark
   },
   planVat: {
+    alignSelf: 'stretch',
     marginTop: 4,
     fontSize: 11,
     color: colors.muted

@@ -3,7 +3,7 @@ import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native
 
 import { useI18n } from '../i18n';
 import { insetEnd, rowDirection } from '../lib/layout-direction';
-import { colors } from '../theme';
+import { colors, shadow } from '../theme';
 
 /** Matches `assets/nav-logo.png` (84×104 @1x). */
 const NAV_LOGO_WIDTH = 48;
@@ -58,11 +58,14 @@ export function AppHeader({
 const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 12,
+    marginHorizontal: 14,
+    marginTop: 8,
+    marginBottom: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.line
+    borderRadius: 24,
+    ...shadow
   },
   headerSpacer: {
     flex: 1

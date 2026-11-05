@@ -24,8 +24,13 @@ export function LandmarkCard({ index, image, title, place, description, width, o
   const cta = locale === 'en' ? 'Photos, weather & best time' : 'الصور والطقس ووقت الزيارة';
 
   return (
-    <Pressable onPress={onPress} disabled={!onPress} style={({ pressed }) => [styles.card, { width }, pressed && styles.pressed]}>
-      <View style={styles.media}>
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      collapsable={false}
+      style={({ pressed }) => [styles.card, { width }, pressed && styles.pressed]}
+    >
+      <View style={styles.media} pointerEvents="none">
         <LinearGradient colors={['#dcfce7', '#e2e8f0']} style={StyleSheet.absoluteFill} />
         {image && !broken ? (
           <Image source={{ uri: image }} style={StyleSheet.absoluteFill} resizeMode="cover" onError={() => setBroken(true)} />
@@ -34,7 +39,7 @@ export function LandmarkCard({ index, image, title, place, description, width, o
           <AppText style={styles.rankText}>{index + 1}</AppText>
         </View>
       </View>
-      <View style={styles.body}>
+      <View style={styles.body} pointerEvents="none">
         <AppText style={styles.title} numberOfLines={2}>
           {title}
         </AppText>
@@ -65,7 +70,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    overflow: 'hidden',
     shadowColor: '#0f172a',
     shadowOpacity: 0.06,
     shadowRadius: 10,

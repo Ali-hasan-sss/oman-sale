@@ -26,6 +26,7 @@ import {
   type SearchSuggestionType
 } from '../services/search.service';
 import { fetchPublicStores, type PublicStore } from '../services/stores.service';
+import { fetchTourismDestinations, type TourismDestination } from '../services/tourism.service';
 import type { Listing } from '../types';
 import { colors, radius, shadow } from '../theme';
 
@@ -39,6 +40,7 @@ type GlobalSearchScreenProps = {
   onStorePress: (slug: string) => void;
   onCategoryPress: (categoryId: string) => void;
   onArticlePress: (slug: string) => void;
+  onLandmarkPress: (idOrSlug: string) => void;
   onBrowseOffers: () => void;
   onBrowseStores: () => void;
   onBrowseNews: () => void;
@@ -49,6 +51,7 @@ export function GlobalSearchScreen({
   onStorePress,
   onCategoryPress,
   onArticlePress,
+  onLandmarkPress,
   onBrowseOffers,
   onBrowseStores,
   onBrowseNews
@@ -64,6 +67,7 @@ export function GlobalSearchScreen({
   const [listings, setListings] = useState<Listing[]>([]);
   const [stores, setStores] = useState<PublicStore[]>([]);
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
+  const [landmarks, setLandmarks] = useState<TourismDestination[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
@@ -73,11 +77,12 @@ export function GlobalSearchScreen({
   const trimmedInput = searchInput.trim();
   const showSuggestions = suggestionsOpen && trimmedInput.length >= MIN_SUGGESTIONS_LENGTH;
 
-  const suggestionTypeLabels: Record<Exclude<SearchSuggestionType, 'tourism'>, string> = {
+  const suggestionTypeLabels: Record<SearchSuggestionType, string> = {
     listing: text.suggestionListing,
     category: text.suggestionCategory,
     article: text.suggestionArticle,
-    store: text.suggestionStore
+    store: text.suggestionStore,
+    tourism: text.suggestionTourism
   };
 
   useEffect(() => {
@@ -102,7 +107,7 @@ export function GlobalSearchScreen({
       fetchSearchSuggestions({ q: trimmedInput, locale, limit: 5 })
         .then((items) => {
           if (controller.signal.aborted) return;
-          setSuggestions(items.filter((item) => item.type !== 'tourism'));
+          setSuggestions(items);
         })
         .catch(() => {
           if (!controller.signal.aborted) setSuggestions([]);
@@ -133,28 +138,45 @@ export function GlobalSearchScreen({
       setListings([]);
       setStores([]);
       setArticles([]);
+      setLandmarks([]);
       setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
     try {
-      const [listingsResult, storesResult, articlesResult] = await Promise.all([
+      const [listingsResult, storesResult, articlesResult, destinations] = await Promise.all([
         fetchFilteredListings({ q: trimmed, page: 1, limit: RESULT_LIMIT }),
         fetchPublicStores({ q: trimmed, page: 1, limit: RESULT_LIMIT }),
-        fetchArticles({ q: trimmed, page: 1, limit: RESULT_LIMIT })
+        fetchArticles({ q: trimmed, page: 1, limit: RESULT_LIMIT }),
+        fetchTourismDestinations().catch(() => [] as TourismDestination[])
       ]);
+      const term = trimmed.toLowerCase();
       setListings(listingsResult.items);
       setStores(storesResult.items);
       setArticles(articlesResult.items);
+      setLandmarks(
+        destinations
+          .filter((destination) => {
+            const title = locale === 'en' ? destination.titleEn : destination.titleAr;
+            return (
+              title.toLowerCase().includes(term) ||
+              destination.slug.toLowerCase().includes(term) ||
+              destination.titleAr.toLowerCase().includes(term) ||
+              destination.titleEn.toLowerCase().includes(term)
+            );
+          })
+          .slice(0, RESULT_LIMIT)
+      );
     } catch {
       setListings([]);
       setStores([]);
       setArticles([]);
+      setLandmarks([]);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [locale]);
 
   useEffect(() => {
     loadResults(query).catch(() => undefined);
@@ -183,13 +205,16 @@ export function GlobalSearchScreen({
       case 'article':
         if (suggestion.slug) onArticlePress(suggestion.slug);
         break;
+      case 'tourism':
+        onLandmarkPress(suggestion.slug || suggestion.id);
+        break;
       default:
         break;
     }
   };
 
   const hasResults =
-    matchedCategories.length > 0 || listings.length > 0 || stores.length > 0 || articles.length > 0;
+    matchedCategories.length > 0 || listings.length > 0 || stores.length > 0 || articles.length > 0 || landmarks.length > 0;
 
   const localizedArticleTitle = (article: ArticleSummary) =>
     locale === 'en' ? article.titleEn : article.titleAr;
@@ -242,7 +267,6 @@ export function GlobalSearchScreen({
               <AppText style={[styles.suggestionsEmpty, textAlign]}>{text.suggestionsEmpty}</AppText>
             ) : (
               suggestions.map((suggestion, index) => {
-                if (suggestion.type === 'tourism') return null;
                 const typeLabel = suggestionTypeLabels[suggestion.type];
                 return (
                   <Pressable
@@ -346,6 +370,34 @@ export function GlobalSearchScreen({
               <View style={styles.articleBody}>
                 <AppText style={[styles.articleTitle, textAlign]} numberOfLines={2}>
                   {localizedArticleTitle(article)}
+                </AppText>
+              </View>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+
+      {query && !isLoading && landmarks.length > 0 ? (
+        <View style={styles.section}>
+          <View style={[styles.sectionHeader, rowDirection(isRtl)]}>
+            <AppText style={[styles.sectionTitle, textAlign]}>{text.landmarks}</AppText>
+          </View>
+          {landmarks.map((destination) => (
+            <Pressable
+              key={destination.id}
+              style={({ pressed }) => [styles.articleCard, pressed && styles.chipPressed]}
+              onPress={() => onLandmarkPress(destination.slug || destination.id)}
+            >
+              {destination.imageUrl ? (
+                <Image source={{ uri: destination.imageUrl }} style={styles.articleCover} />
+              ) : (
+                <View style={styles.articleCoverFallback}>
+                  <Image source={fallbackLogo} style={styles.articleCoverLogo} resizeMode="contain" />
+                </View>
+              )}
+              <View style={styles.articleBody}>
+                <AppText style={[styles.articleTitle, textAlign]} numberOfLines={2}>
+                  {locale === 'en' ? destination.titleEn : destination.titleAr}
                 </AppText>
               </View>
             </Pressable>

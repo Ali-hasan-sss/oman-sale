@@ -61,6 +61,9 @@ type ProfileMessages = {
   storeActive: string;
   storeTrial: string;
   storeExpired: string;
+  freeAdsTitle: string;
+  freeAdsHint: string;
+  freeAdsItem: string;
 };
 
 const messages: Record<'ar' | 'en', ProfileMessages> = {
@@ -102,7 +105,10 @@ const messages: Record<'ar' | 'en', ProfileMessages> = {
     createStore: 'إنشاء متجر',
     storeActive: 'متجر نشط',
     storeTrial: 'تجربة مجانية',
-    storeExpired: 'اشتراك منتهٍ'
+    storeExpired: 'اشتراك منتهٍ',
+    freeAdsTitle: 'إعلاناتك المجانية',
+    freeAdsHint: 'يمكنك نشر هذه الإعلانات دون دفع.',
+    freeAdsItem: 'متبقي {count} من «{plan}» لمدة {days} يوم'
   },
   en: {
     title: 'My Profile',
@@ -142,7 +148,10 @@ const messages: Record<'ar' | 'en', ProfileMessages> = {
     createStore: 'Create store',
     storeActive: 'Active store',
     storeTrial: 'Free trial',
-    storeExpired: 'Subscription expired'
+    storeExpired: 'Subscription expired',
+    freeAdsTitle: 'Your free ads',
+    freeAdsHint: 'You can publish these ads without paying.',
+    freeAdsItem: '{count} «{plan}» left for {days} days'
   }
 };
 
@@ -180,6 +189,9 @@ export function ProfilePage() {
     nameEn: string;
     accessStatus: string;
   } | null>(null);
+  const [freeCredits, setFreeCredits] = useState<
+    Array<{ planId: string; remaining: number; durationDays: number; nameAr: string; nameEn: string }>
+  >([]);
 
   const inputClass = 'w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:ring-2 focus:ring-green-500';
 
@@ -217,6 +229,13 @@ export function ProfilePage() {
       })
       .then((response) => setOwnerStore(response.data.data[0] ?? null))
       .catch(() => setOwnerStore(null));
+
+    api
+      .get<{
+        data: Array<{ planId: string; remaining: number; durationDays: number; nameAr: string; nameEn: string }>;
+      }>('/promotions/credits', { headers: { Authorization: `Bearer ${token}` } })
+      .then((response) => setFreeCredits((response.data.data ?? []).filter((credit) => credit.remaining > 0)))
+      .catch(() => setFreeCredits([]));
   }, []);
 
   useEffect(() => {
@@ -374,6 +393,23 @@ export function ProfilePage() {
             />
           </div>
         </section>
+
+        {freeCredits.length > 0 ? (
+          <section className="mb-8 rounded-3xl bg-white p-6 shadow-sm md:p-8">
+            <h2 className="text-2xl font-black">{profileMessages.freeAdsTitle}</h2>
+            <p className="mt-1 text-sm text-slate-500">{profileMessages.freeAdsHint}</p>
+            <ul className="mt-4 space-y-2">
+              {freeCredits.map((credit) => (
+                <li key={credit.planId} className="font-bold text-slate-900">
+                  {profileMessages.freeAdsItem
+                    .replace('{count}', String(credit.remaining))
+                    .replace('{plan}', locale === 'en' ? credit.nameEn : credit.nameAr)
+                    .replace('{days}', String(credit.durationDays))}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         <section className="mb-8 rounded-3xl bg-white p-6 shadow-sm md:p-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">

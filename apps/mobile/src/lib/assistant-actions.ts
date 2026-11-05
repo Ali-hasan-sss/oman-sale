@@ -1,13 +1,8 @@
 import { Linking } from 'react-native';
 
 import { requestBannerAd } from './banner-ad-nav';
-import { getWebsiteOrigin, openExternalWebPage } from './open-external-web';
+import { openExternalWebPage } from './open-external-web';
 import type { ScreenName } from '../types';
-
-function openWebPath(href: string) {
-  const url = href.startsWith('http') ? href : `${getWebsiteOrigin()}${href.startsWith('/') ? href : `/${href}`}`;
-  void openExternalWebPage(url);
-}
 
 export function handleAssistantAction(
   href: string,
@@ -15,6 +10,7 @@ export function handleAssistantAction(
     onListingPress: (id: string) => void;
     onStorePress: (slug: string) => void;
     onArticlePress: (slug: string) => void;
+    onLandmarkPress: (idOrSlug: string) => void;
     onNavigate: (screen: ScreenName) => void;
     onLogin: () => void;
     onRegister: () => void;
@@ -60,9 +56,16 @@ export function handleAssistantAction(
     return;
   }
 
-  if (path.startsWith('/tourism') || path.startsWith('/destination')) {
-    openWebPath(href);
+  const destinationMatch = path.match(/^\/destination\/([^/?#]+)/);
+  if (destinationMatch?.[1]) {
     handlers.onClose();
+    handlers.onLandmarkPress(decodeURIComponent(destinationMatch[1]));
+    return;
+  }
+
+  if (path.startsWith('/tourism')) {
+    handlers.onClose();
+    handlers.onNavigate('landmarks');
     return;
   }
 

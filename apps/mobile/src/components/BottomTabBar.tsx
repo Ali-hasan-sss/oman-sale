@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from './AppText';
 import { useI18n } from '../i18n';
@@ -23,7 +22,6 @@ const endTabs: TabKey[] = ['myOffers', 'chat'];
 
 export function BottomTabBar({ activeScreen, onChange, onAddPress, chatUnreadCount = 0 }: BottomTabBarProps) {
   const { t, isRtl } = useI18n();
-  const insets = useSafeAreaInsets();
 
   const labels: Record<TabKey, string> = {
     home: t.common.home,
@@ -54,13 +52,20 @@ export function BottomTabBar({ activeScreen, onChange, onAddPress, chatUnreadCou
             </View>
           ) : null}
         </View>
-        <AppText style={[styles.label, active && styles.labelActive]}>{labels[tab]}</AppText>
+        <AppText
+          style={[styles.label, active && styles.labelActive]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.75}
+        >
+          {labels[tab]}
+        </AppText>
       </Pressable>
     );
   };
 
   return (
-    <View style={[styles.wrapper, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+    <View style={styles.wrapper}>
       <View style={[styles.bar, rowDirection(isRtl)]}>
         <View style={[styles.group, rowDirection(isRtl)]}>{startTabs.map(renderTab)}</View>
         <View style={styles.fabSpace} />
@@ -75,29 +80,34 @@ export function BottomTabBar({ activeScreen, onChange, onAddPress, chatUnreadCou
 
 const styles = StyleSheet.create({
   wrapper: {
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.line,
     zIndex: 40
   },
   bar: {
     minHeight: 64,
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 8
+    paddingHorizontal: 14,
+    paddingTop: 8,
+    paddingBottom: 10,
+    backgroundColor: colors.surface,
+    borderRadius: 28,
+    ...shadow
   },
   group: {
     flex: 1,
-    justifyContent: 'space-around'
+    minWidth: 0,
+    alignItems: 'stretch'
   },
   fabSpace: {
-    width: 88
+    width: 76
   },
   tab: {
+    flex: 1,
+    minWidth: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 68,
-    gap: 4
+    paddingHorizontal: 2,
+    gap: 3
   },
   tabIconWrap: {
     position: 'relative'
@@ -122,6 +132,7 @@ const styles = StyleSheet.create({
     fontWeight: '800'
   },
   label: {
+    width: '100%',
     fontSize: 11,
     fontWeight: '700',
     color: colors.muted,

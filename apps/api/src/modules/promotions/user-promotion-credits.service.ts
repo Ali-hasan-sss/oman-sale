@@ -1,21 +1,36 @@
 import { prisma } from '../../shared/prisma/client';
+import { notificationsService } from '../notifications/notifications.service';
 
 export async function grantNewUserPromotionCredits(userId: string) {
   const plans = await prisma.promotionPlan.findMany({
     where: { deletedAt: null, isActive: true, freeAdsForNewUsers: { gt: 0 } },
-    select: { id: true, freeAdsForNewUsers: true }
+    select: { id: true, freeAdsForNewUsers: true, name: true, nameAr: true, nameEn: true },
+    orderBy: { priorityScore: 'asc' }
   });
 
-  if (plans.length === 0) return;
+  if (plans.length > 0) {
+    await prisma.userPromotionCredit.createMany({
+      data: plans.map((plan) => ({
+        userId,
+        planId: plan.id,
+        remaining: plan.freeAdsForNewUsers
+      })),
+      skipDuplicates: true
+    });
+  }
 
-  await prisma.userPromotionCredit.createMany({
-    data: plans.map((plan) => ({
+  try {
+    await notificationsService.sendNewUserWelcome(
       userId,
-      planId: plan.id,
-      remaining: plan.freeAdsForNewUsers
-    })),
-    skipDuplicates: true
-  });
+      plans.map((plan) => ({
+        count: plan.freeAdsForNewUsers,
+        nameAr: plan.nameAr.trim() || plan.name,
+        nameEn: plan.nameEn.trim() || plan.name
+      }))
+    );
+  } catch (error) {
+    console.error('[notifications] failed to send new-user welcome', error);
+  }
 }
 
 export async function listNewUserPromotionCredits(userId: string) {

@@ -6,6 +6,9 @@ import { useScreenInsetsContext } from '../context/screen-insets-context';
 const TAB_BAR_CONTENT_HEIGHT = 74;
 /** Extra scroll space for the center FAB overlapping content. */
 const TAB_BAR_FAB_CLEARANCE = 36;
+/** Gap between the floating tab bar and the screen edge / home indicator. */
+export const TAB_BAR_FLOAT_GAP = 12;
+export const TAB_BAR_SIDE_INSET = 14;
 
 type ScreenInsetsOptions = {
   /** Override tab bar visibility for this screen (defaults to MainShell context). */
@@ -19,7 +22,7 @@ export function useScreenInsets(options?: ScreenInsetsOptions) {
 
   const tabBarBottom = Math.max(insets.bottom, 10);
   const scrollBottomPadding = withTabBar
-    ? TAB_BAR_CONTENT_HEIGHT + TAB_BAR_FAB_CLEARANCE + tabBarBottom
+    ? TAB_BAR_CONTENT_HEIGHT + TAB_BAR_FAB_CLEARANCE + tabBarBottom + TAB_BAR_FLOAT_GAP
     : Math.max(insets.bottom, 16);
 
   return {

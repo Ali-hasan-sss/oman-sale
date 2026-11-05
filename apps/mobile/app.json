@@ -33,7 +33,7 @@
         "foregroundImage": "./assets/adaptive-icon-foreground.png",
         "backgroundColor": "#000000"
       },
-      "versionCode": 15
+      "versionCode": 24
     },
     "extra": {
       "supportsRTL": true,

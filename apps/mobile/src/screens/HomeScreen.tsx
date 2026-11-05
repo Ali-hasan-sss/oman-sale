@@ -28,6 +28,7 @@ type HomeScreenProps = {
   onOpenPrivacy: () => void;
   onOpenRefund: () => void;
   onStorePress: (slug: string) => void;
+  onDestinationPress: (idOrSlug: string) => void;
   onAddListing?: () => void;
 };
 
@@ -42,6 +43,7 @@ export function HomeScreen({
   onOpenPrivacy,
   onOpenRefund,
   onStorePress,
+  onDestinationPress,
   onAddListing
 }: HomeScreenProps) {
   const { locale, t } = useI18n();
@@ -65,7 +67,7 @@ export function HomeScreen({
 
   return (
     <ScrollView
-      contentContainerStyle={[styles.content, { paddingBottom: scrollBottomPadding }]}
+      contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl
@@ -105,8 +107,9 @@ export function HomeScreen({
 
       <HomeArticlesSection onOpenArticle={onArticlePress} onBrowseNews={onBrowseNews} />
       <HeroBannersSection placement="HOME_BELOW_ARTICLES" />
-      <HomeTourismSection />
+      <HomeTourismSection onDestinationPress={onDestinationPress} />
       <HomeWhySection
+        bottomInset={scrollBottomPadding}
         onBrowseNews={onBrowseNews}
         onOpenTerms={onOpenTerms}
         onOpenPrivacy={onOpenPrivacy}

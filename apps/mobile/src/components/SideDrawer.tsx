@@ -41,7 +41,8 @@ export function SideDrawer({ visible, onClose, onNavigate, onLogoutRequest }: Si
 
   const items: DrawerItem[] = useMemo(() => {
     const list: DrawerItem[] = [
-      { screen: 'storesBrowse', label: t.common.browseStores, icon: 'storefront-outline' }
+      { screen: 'storesBrowse', label: t.common.browseStores, icon: 'storefront-outline' },
+      { screen: 'landmarks', label: t.common.landmarks, icon: 'map-outline' }
     ];
 
     if (user) {
@@ -68,6 +69,7 @@ export function SideDrawer({ visible, onClose, onNavigate, onLogoutRequest }: Si
     hasStore,
     user,
     t.common.browseStores,
+    t.common.landmarks,
     t.common.createStore,
     t.common.favorites,
     t.common.myStore,

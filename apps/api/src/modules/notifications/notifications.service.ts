@@ -25,6 +25,36 @@ export class NotificationsService {
     return pushTokensRepository.remove(userId, token);
   }
 
+  sendNewUserWelcome(
+    userId: string,
+    grants: Array<{ count: number; nameAr: string; nameEn: string }>
+  ) {
+    const gifted = grants.filter((grant) => grant.count > 0);
+    const welcomeAr = 'نسعد بانضمامك إلى عمان سيل.';
+    const welcomeEn = 'We are glad you joined Oman Sale.';
+
+    const bodyAr =
+      gifted.length === 0
+        ? `${welcomeAr} يمكنك الآن تصفح الإعلانات ونشر إعلانك.`
+        : `${welcomeAr} تم منحك ${gifted.map((grant) => `${arabicAdCount(grant.count)} «${grant.nameAr}»`).join(' و ')} مجاناً.`;
+
+    const bodyEn =
+      gifted.length === 0
+        ? `${welcomeEn} You can browse listings and publish your own.`
+        : `${welcomeEn} You have been granted ${joinEnglish(gifted.map((grant) => `${grant.count} «${grant.nameEn}» ${grant.count === 1 ? 'ad' : 'ads'}`))} for free.`;
+
+    return sendUserNotification({
+      userId,
+      type: NotificationType.SYSTEM,
+      title: {
+        ar: 'مرحباً بك في عمان سيل',
+        en: 'Welcome to Oman Sale'
+      },
+      body: { ar: bodyAr, en: bodyEn },
+      channels: { inApp: true, email: false, whatsapp: false, push: true }
+    });
+  }
+
   sendAccountBlockedNotification(userId: string) {
     return sendUserNotification({
       userId,
@@ -64,6 +94,19 @@ export class NotificationsService {
   markAllRead(userId: string) {
     return notificationsRepository.markAllRead(userId);
   }
+}
+
+function arabicAdCount(count: number) {
+  if (count === 1) return 'إعلاناً واحداً';
+  if (count === 2) return 'إعلانين';
+  if (count >= 3 && count <= 10) return `${count} إعلانات`;
+  return `${count} إعلاناً`;
+}
+
+function joinEnglish(parts: string[]) {
+  if (parts.length <= 1) return parts[0] ?? '';
+  if (parts.length === 2) return `${parts[0]} and ${parts[1]}`;
+  return `${parts.slice(0, -1).join(', ')}, and ${parts[parts.length - 1]}`;
 }
 
 export const notificationsService = new NotificationsService();

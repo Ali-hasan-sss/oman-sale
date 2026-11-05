@@ -1,32 +1,16 @@
 import { useEffect, useState } from 'react';
-import { Image, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { AppText } from './AppText';
 import { LandmarkCard } from './vertex/LandmarkCard';
 import { OmanFlag } from './vertex/OmanFlag';
 import { SectionHeader } from './vertex/SectionHeader';
-import { rowDirection } from '../lib/layout-direction';
-import { API_ENDPOINTS, http, type ApiEnvelope } from '../lib/api';
 import { useI18n } from '../i18n';
+import { fetchTourismDestinations, type TourismDestination } from '../services/tourism.service';
 import { colors, radius } from '../theme';
 
-type Destination = {
-  id: string;
-  slug: string;
-  imageUrl: string;
-  titleAr: string;
-  titleEn: string;
-  rating: string;
-  ratingLabelAr: string;
-  ratingLabelEn: string;
-  bestTimeAr: string;
-  bestTimeEn: string;
-  addressAr: string;
-  addressEn: string;
-  aboutAr?: string;
-  aboutEn?: string;
-};
+type Destination = TourismDestination;
 
 const fallbackImages = [
   'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=600&h=450&fit=crop',
@@ -35,7 +19,7 @@ const fallbackImages = [
   'https://images.unsplash.com/photo-1548013146-72479768bada?w=600&h=450&fit=crop'
 ];
 
-export function HomeTourismSection() {
+export function HomeTourismSection({ onDestinationPress }: { onDestinationPress?: (idOrSlug: string) => void }) {
   const { locale, t, isRtl } = useI18n();
   const copyAlign = isRtl ? 'right' : 'left';
   const { width } = useWindowDimensions();
@@ -45,10 +29,9 @@ export function HomeTourismSection() {
 
   useEffect(() => {
     let cancelled = false;
-    http
-      .get<ApiEnvelope<Destination[]>>(API_ENDPOINTS.tourism.destinations)
-      .then((response) => {
-        if (!cancelled) setDestinations(Array.isArray(response.data.data) ? response.data.data : []);
+    fetchTourismDestinations()
+      .then((items) => {
+        if (!cancelled) setDestinations(items);
       })
       .catch(() => {
         if (!cancelled) setDestinations([]);
@@ -78,21 +61,28 @@ export function HomeTourismSection() {
   return (
     <View style={styles.wrap}>
       <LinearGradient colors={['#0e5630', '#8c1414']} style={styles.hero}>
-        <View style={styles.experienceGrid}>
+        <View style={[styles.experienceGrid, isRtl ? styles.gridRtl : null]}>
           {featured.map((destination, index) => {
             const title = locale === 'en' ? destination.titleEn : destination.titleAr;
             const description = t.home.experiences[index]?.[1] ?? '';
+            const canOpen = destinations.length > 0 && Boolean(onDestinationPress);
             return (
-              <View key={destination.id} style={[styles.experience, { width: innerTile, height: 150 }]}>
-                <Image source={{ uri: destination.imageUrl }} style={StyleSheet.absoluteFill} />
-                <View style={styles.experienceShade} />
-                <AppText style={styles.experienceTitle} numberOfLines={1}>
+              <Pressable
+                key={destination.id}
+                disabled={!canOpen}
+                collapsable={false}
+                onPress={() => onDestinationPress?.(destination.id)}
+                style={[styles.experience, { width: innerTile, height: 150 }]}
+              >
+                <Image pointerEvents="none" source={{ uri: destination.imageUrl }} style={StyleSheet.absoluteFill} />
+                <View pointerEvents="none" style={styles.experienceShade} />
+                <AppText pointerEvents="none" style={styles.experienceTitle} numberOfLines={1}>
                   {title}
                 </AppText>
-                <AppText style={styles.experienceText} numberOfLines={2}>
+                <AppText pointerEvents="none" style={styles.experienceText} numberOfLines={2}>
                   {description}
                 </AppText>
-              </View>
+              </Pressable>
             );
           })}
         </View>
@@ -109,7 +99,7 @@ export function HomeTourismSection() {
         }
         subtitle={t.home.destinationsSubtitle}
       />
-      <View style={[styles.experienceGrid, rowDirection(isRtl)]}>
+      <View style={[styles.experienceGrid, isRtl ? styles.gridRtl : null]}>
         {grid.map((destination, index) => (
           <LandmarkCard
             key={`grid-${destination.id}`}
@@ -123,6 +113,7 @@ export function HomeTourismSection() {
               (locale === 'en' ? destination.bestTimeEn : destination.bestTimeAr) ||
               undefined
             }
+            onPress={onDestinationPress ? () => onDestinationPress(destination.id) : undefined}
           />
         ))}
       </View>
@@ -144,6 +135,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12
+  },
+  gridRtl: {
+    direction: 'rtl'
   },
   experience: {
     borderRadius: radius.lg,

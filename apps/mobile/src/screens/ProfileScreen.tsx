@@ -32,6 +32,7 @@ import {
   updateProfileRequest,
   verifyEmailChangeRequest
 } from '../services/user.service';
+import { fetchPromotionCredits, type PromotionCredit } from '../services/promotions.service';
 import { fetchMyStores, type OwnerStore } from '../services/stores.service';
 import { useAuthStore } from '../stores';
 import { colors, radius, shadow } from '../theme';
@@ -117,6 +118,7 @@ export function ProfileScreen({ onLogin, onManageStore, onCreateStore }: Profile
   const [emailMessage, setEmailMessage] = useState('');
   const [emailError, setEmailError] = useState('');
   const [ownerStore, setOwnerStore] = useState<OwnerStore | null>(null);
+  const [freeCredits, setFreeCredits] = useState<PromotionCredit[]>([]);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [deleteAccountError, setDeleteAccountError] = useState('');
@@ -190,6 +192,9 @@ export function ProfileScreen({ onLogin, onManageStore, onCreateStore }: Profile
     fetchMyStores()
       .then((stores) => setOwnerStore(stores[0] ?? null))
       .catch(() => setOwnerStore(null));
+    fetchPromotionCredits()
+      .then((credits) => setFreeCredits(credits.filter((credit) => credit.remaining > 0)))
+      .catch(() => setFreeCredits([]));
   }, [accessToken, user?.id]);
 
   const pickAvatar = async () => {
@@ -352,6 +357,21 @@ export function ProfileScreen({ onLogin, onManageStore, onCreateStore }: Profile
           <AppText style={[styles.heroTitle, textAlign]}>{t.profile.title}</AppText>
           <AppText style={[styles.heroSubtitle, textAlign]}>{t.profile.subtitle}</AppText>
         </LinearGradient>
+
+        {freeCredits.length > 0 ? (
+          <View style={styles.card}>
+            <AppText style={[styles.cardTitle, textAlign]}>{t.profile.freeAdsTitle}</AppText>
+            <AppText style={[styles.avatarHint, textAlign]}>{t.profile.freeAdsHint}</AppText>
+            {freeCredits.map((credit) => (
+              <AppText key={credit.planId} style={[styles.freeCreditItem, textAlign]}>
+                {t.profile.freeAdsItem
+                  .replace('{count}', String(credit.remaining))
+                  .replace('{plan}', locale === 'en' ? credit.nameEn : credit.nameAr)
+                  .replace('{days}', String(credit.durationDays))}
+              </AppText>
+            ))}
+          </View>
+        ) : null}
 
         <View style={styles.card}>
           <AppText style={[styles.cardTitle, textAlign]}>{t.profile.storeTitle}</AppText>
@@ -660,6 +680,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10
+  },
+  freeCreditItem: {
+    color: colors.ink,
+    fontSize: 15,
+    fontWeight: '800',
+    lineHeight: 22,
+    marginBottom: 8
   },
   cardTitle: {
     fontSize: 18,
