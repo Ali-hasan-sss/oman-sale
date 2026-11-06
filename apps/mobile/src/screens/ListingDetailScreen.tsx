@@ -566,7 +566,10 @@ export function ListingDetailScreen({
         initialIndex={activeImage}
         title={listing.title}
         imageLabel={text.imageOf}
-        onClose={() => setGalleryOpen(false)}
+        onClose={(index) => {
+          setGalleryOpen(false);
+          if (typeof index === 'number') showMedia(index);
+        }}
       />
 
       <Modal visible={reportOpen} transparent animationType="fade" onRequestClose={() => setReportOpen(false)}>

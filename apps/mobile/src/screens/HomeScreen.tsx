@@ -1,6 +1,8 @@
 import { useCallback, useEffect } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
+import { usePreservedScroll } from '../hooks/use-preserved-scroll';
+
 import { EmptyState } from '../components/EmptyState';
 import { HeroBannersSection } from '../components/HeroBannersSection';
 import { HomeArticlesSection } from '../components/HomeArticlesSection';
@@ -48,6 +50,7 @@ export function HomeScreen({
 }: HomeScreenProps) {
   const { locale, t } = useI18n();
   const { scrollBottomPadding } = useScreenInsets();
+  const preservedScroll = usePreservedScroll('home');
   const listings = useListingsStore((state) => state.latest);
   const isLoading = useListingsStore((state) => state.isLoadingLatest);
   const isRefreshing = useListingsStore((state) => state.isRefreshingLatest);
@@ -67,6 +70,13 @@ export function HomeScreen({
 
   return (
     <ScrollView
+      ref={preservedScroll.ref}
+      contentOffset={preservedScroll.contentOffset}
+      onLayout={preservedScroll.onLayout}
+      onScroll={preservedScroll.onScroll}
+      onContentSizeChange={preservedScroll.onContentSizeChange}
+      scrollEventThrottle={preservedScroll.scrollEventThrottle}
+      style={preservedScroll.hiddenStyle}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
       refreshControl={

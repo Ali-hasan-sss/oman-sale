@@ -1,6 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  Image,
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { AppText } from '../components/AppText';
@@ -24,6 +36,8 @@ export function LandmarkDetailScreen({ idOrSlug }: LandmarkDetailScreenProps) {
   const text = t.landmark;
   const textAlign = isRtl ? styles.rtl : styles.ltr;
   const { scrollBottomPadding } = useScreenInsets();
+  const { width: pageWidth } = useWindowDimensions();
+  const pagerRef = useRef<FlatList<string>>(null);
   const [destination, setDestination] = useState<TourismDestination | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -74,11 +88,19 @@ export function LandmarkDetailScreen({ idOrSlug }: LandmarkDetailScreenProps) {
   const bestTime = locale === 'en' ? destination.bestTimeEn : destination.bestTimeAr;
   const address = locale === 'en' ? destination.addressEn : destination.addressAr;
   const ratingLabel = locale === 'en' ? destination.ratingLabelEn : destination.ratingLabelAr;
-  const hero = gallery[activeImage] ?? destination.imageUrl;
+  const showImage = (index: number) => {
+    setActiveImage(index);
+    pagerRef.current?.scrollToIndex({ index, animated: true });
+  };
 
   const openGallery = (index: number) => {
-    setActiveImage(index);
+    showImage(index);
     setGalleryOpen(true);
+  };
+
+  const onHeroSwipeEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const index = Math.round(event.nativeEvent.contentOffset.x / pageWidth);
+    if (index >= 0 && index < gallery.length && index !== activeImage) setActiveImage(index);
   };
 
   return (
@@ -87,10 +109,31 @@ export function LandmarkDetailScreen({ idOrSlug }: LandmarkDetailScreenProps) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: scrollBottomPadding }}
       >
-        <Pressable style={styles.hero} onPress={() => gallery.length > 0 && openGallery(activeImage)}>
-          {hero ? <Image source={{ uri: hero }} style={StyleSheet.absoluteFill} resizeMode="cover" /> : null}
-          <LinearGradient colors={['transparent', 'rgba(0,0,0,0.72)']} style={styles.heroShade} />
-          <View style={styles.heroCopy}>
+        <View style={styles.hero}>
+          {gallery.length === 0 ? null : (
+            <FlatList
+              ref={pagerRef}
+              data={gallery}
+              horizontal
+              pagingEnabled
+              nestedScrollEnabled
+              directionalLockEnabled
+              showsHorizontalScrollIndicator={false}
+              style={styles.heroPager}
+              keyExtractor={(uri, index) => `${uri}-${index}`}
+              getItemLayout={(_, index) => ({ length: pageWidth, offset: pageWidth * index, index })}
+              extraData={activeImage}
+              onMomentumScrollEnd={onHeroSwipeEnd}
+              onScrollToIndexFailed={() => undefined}
+              renderItem={({ item, index }) => (
+                <Pressable style={{ width: pageWidth, height: '100%' }} onPress={() => openGallery(index)}>
+                  <Image source={{ uri: item }} style={styles.heroImage} resizeMode="cover" />
+                </Pressable>
+              )}
+            />
+          )}
+          <LinearGradient pointerEvents="none" colors={['transparent', 'rgba(0,0,0,0.72)']} style={styles.heroShade} />
+          <View pointerEvents="none" style={styles.heroCopy}>
             <AppText style={[styles.heroTitle, textAlign]}>{title}</AppText>
             <View style={[styles.ratingRow, rowDirection(isRtl)]}>
               <Ionicons name="star" size={16} color="#facc15" />
@@ -102,11 +145,11 @@ export function LandmarkDetailScreen({ idOrSlug }: LandmarkDetailScreenProps) {
             <View style={styles.photoCount}>
               <Ionicons name="images-outline" size={14} color="#0f172a" />
               <AppText style={styles.photoCountText}>
-                {gallery.length} {text.photos}
+                {activeImage + 1}/{gallery.length}
               </AppText>
             </View>
           ) : null}
-        </Pressable>
+        </View>
 
         <View style={styles.banner}>
           <HeroBannersSection placement="DESTINATION" flush />
@@ -118,7 +161,7 @@ export function LandmarkDetailScreen({ idOrSlug }: LandmarkDetailScreenProps) {
             <AppText style={[styles.hint, textAlign]}>{text.galleryHint}</AppText>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.thumbs, rowDirection(isRtl)]}>
               {gallery.map((uri, index) => (
-                <Pressable key={`${uri}-${index}`} onPress={() => openGallery(index)} style={[styles.thumb, activeImage === index && styles.thumbActive]}>
+                <Pressable key={`${uri}-${index}`} onPress={() => showImage(index)} style={[styles.thumb, activeImage === index && styles.thumbActive]}>
                   <Image source={{ uri }} style={styles.thumbImage} resizeMode="cover" />
                 </Pressable>
               ))}
@@ -187,7 +230,10 @@ export function LandmarkDetailScreen({ idOrSlug }: LandmarkDetailScreenProps) {
         images={gallery.map((uri) => ({ uri }))}
         initialIndex={activeImage}
         imageLabel={text.photo}
-        onClose={() => setGalleryOpen(false)}
+        onClose={(index) => {
+          setGalleryOpen(false);
+          if (typeof index === 'number') showImage(index);
+        }}
       />
     </>
   );
@@ -204,10 +250,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#0f172a',
     justifyContent: 'flex-end'
   },
+  heroPager: {
+    height: 280
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%'
+  },
   heroShade: {
     ...StyleSheet.absoluteFillObject
   },
   heroCopy: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
     padding: 16
   },
   heroTitle: {

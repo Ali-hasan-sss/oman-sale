@@ -33,7 +33,7 @@ export function LandmarkCard({ index, image, title, place, description, width, o
       <View style={styles.media} pointerEvents="none">
         <LinearGradient colors={['#dcfce7', '#e2e8f0']} style={StyleSheet.absoluteFill} />
         {image && !broken ? (
-          <Image source={{ uri: image }} style={StyleSheet.absoluteFill} resizeMode="cover" onError={() => setBroken(true)} />
+          <Image source={{ uri: image }} style={styles.image} resizeMode="cover" onError={() => setBroken(true)} />
         ) : null}
         <View style={[styles.rank, insetEnd(isRtl, 10)]}>
           <AppText style={styles.rankText}>{index + 1}</AppText>
@@ -81,7 +81,15 @@ const styles = StyleSheet.create({
   },
   media: {
     height: 118,
-    overflow: 'hidden'
+    overflow: 'hidden',
+    borderTopLeftRadius: 21,
+    borderTopRightRadius: 21,
+    backgroundColor: '#e2e8f0'
+  },
+  image: {
+    ...StyleSheet.absoluteFillObject,
+    borderTopLeftRadius: 21,
+    borderTopRightRadius: 21
   },
   rank: {
     position: 'absolute',

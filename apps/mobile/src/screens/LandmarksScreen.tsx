@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, u
 import { AppText } from '../components/AppText';
 import { EmptyState } from '../components/EmptyState';
 import { LandmarkCard } from '../components/vertex/LandmarkCard';
+import { usePreservedScroll } from '../hooks/use-preserved-scroll';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
 import { fetchTourismDestinations, type TourismDestination } from '../services/tourism.service';
@@ -17,6 +18,7 @@ export function LandmarksScreen({ onOpenLandmark }: LandmarksScreenProps) {
   const { locale, t, isRtl } = useI18n();
   const text = t.landmark;
   const { scrollBottomPadding } = useScreenInsets();
+  const preservedScroll = usePreservedScroll('landmarks');
   const { width } = useWindowDimensions();
   const cardWidth = Math.max(width - 32, 0);
   const [destinations, setDestinations] = useState<TourismDestination[]>([]);
@@ -44,6 +46,13 @@ export function LandmarksScreen({ onOpenLandmark }: LandmarksScreenProps) {
 
   return (
     <ScrollView
+      ref={preservedScroll.ref}
+      contentOffset={preservedScroll.contentOffset}
+      onLayout={preservedScroll.onLayout}
+      onScroll={preservedScroll.onScroll}
+      onContentSizeChange={preservedScroll.onContentSizeChange}
+      scrollEventThrottle={preservedScroll.scrollEventThrottle}
+      style={preservedScroll.hiddenStyle}
       contentContainerStyle={[styles.content, { paddingBottom: scrollBottomPadding }]}
       showsVerticalScrollIndicator={false}
       refreshControl={

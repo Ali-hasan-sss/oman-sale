@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from './AppText';
+import { useI18n } from '../i18n';
 import { colors } from '../theme';
 
 export type ListingGalleryItem = {
@@ -28,7 +29,7 @@ type ListingImageModalProps = {
   initialIndex?: number;
   title?: string;
   imageLabel: string;
-  onClose: () => void;
+  onClose: (index?: number) => void;
 };
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -42,6 +43,9 @@ export function ListingImageModal({
   onClose
 }: ListingImageModalProps) {
   const insets = useSafeAreaInsets();
+  const { isRtl } = useI18n();
+  const prevIcon = isRtl ? 'chevron-forward' : 'chevron-back';
+  const nextIcon = isRtl ? 'chevron-back' : 'chevron-forward';
   const listRef = useRef<FlatList<ListingGalleryItem>>(null);
   const [activeIndex, setActiveIndex] = useState(initialIndex);
 
@@ -75,10 +79,10 @@ export function ListingImageModal({
   if (images.length === 0) return null;
 
   return (
-    <Modal visible={visible} animationType="fade" transparent={false} onRequestClose={onClose}>
+    <Modal visible={visible} animationType="fade" transparent={false} onRequestClose={() => onClose(activeIndex)}>
       <View style={styles.root}>
         <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
-          <Pressable style={styles.closeButton} onPress={onClose} accessibilityRole="button">
+          <Pressable style={styles.closeButton} onPress={() => onClose(activeIndex)} accessibilityRole="button">
             <Ionicons name="close" size={26} color="#fff" />
           </Pressable>
           <View style={styles.topMeta}>
@@ -123,14 +127,22 @@ export function ListingImageModal({
         />
 
         {images.length > 1 ? (
-          <>
-            <Pressable style={[styles.navButton, styles.navButtonPrev]} onPress={goPrev} accessibilityRole="button">
-              <Ionicons name="chevron-back" size={28} color="#fff" />
+          <View style={styles.navLayer} pointerEvents="box-none">
+            <Pressable
+              style={[styles.navButton, isRtl ? styles.navButtonEnd : styles.navButtonStart]}
+              onPress={goPrev}
+              accessibilityRole="button"
+            >
+              <Ionicons name={prevIcon} size={28} color="#fff" />
             </Pressable>
-            <Pressable style={[styles.navButton, styles.navButtonNext]} onPress={goNext} accessibilityRole="button">
-              <Ionicons name="chevron-forward" size={28} color="#fff" />
+            <Pressable
+              style={[styles.navButton, isRtl ? styles.navButtonStart : styles.navButtonEnd]}
+              onPress={goNext}
+              accessibilityRole="button"
+            >
+              <Ionicons name={nextIcon} size={28} color="#fff" />
             </Pressable>
-          </>
+          </View>
         ) : null}
 
         {images.length > 1 ? (
@@ -213,6 +225,11 @@ const styles = StyleSheet.create({
     width: 20,
     backgroundColor: colors.brand
   },
+  navLayer: {
+    ...StyleSheet.absoluteFillObject,
+    direction: 'ltr',
+    zIndex: 2
+  },
   navButton: {
     position: 'absolute',
     top: '50%',
@@ -224,10 +241,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(0,0,0,0.45)'
   },
-  navButtonPrev: {
+  navButtonStart: {
     left: 12
   },
-  navButtonNext: {
+  navButtonEnd: {
     right: 12
   }
 });
