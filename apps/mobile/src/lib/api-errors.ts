@@ -60,6 +60,14 @@ function mapZodIssueToMessageKey(issue: ZodIssue): string {
   if (field === 'modelYear') return 'fieldModelYearRequired';
   if (field === 'imageUrls' || field === 'videoUrl') return 'fieldMediaInvalid';
   if (field === 'filterOptionIds') return 'fieldFilterRequired';
+  if (field === 'nameAr') return 'fieldStoreNameAr';
+  if (field === 'nameEn') return 'fieldStoreNameEn';
+  if (field === 'phone') return 'fieldStorePhone';
+  if (field === 'nationalId') return 'fieldStoreNationalId';
+  if (field === 'storeTypeId') return 'fieldStoreType';
+  if (field === 'rootCategoryId') return 'fieldCategoryRequired';
+  if (field === 'planId') return 'fieldStorePlan';
+  if (field === 'commercialRegistrationNumber') return 'fieldStoreCr';
 
   return 'VALIDATION_FAILED';
 }
@@ -107,7 +115,8 @@ const apiCodeField: Record<string, string> = {
   CATEGORY_SUBCATEGORY_REQUIRED: 'subcategoryPath',
   CATEGORY_NOT_FOUND: 'categoryId',
   MODEL_YEAR_REQUIRED: 'modelYear',
-  MODEL_YEAR_INVALID: 'modelYear'
+  MODEL_YEAR_INVALID: 'modelYear',
+  PHONE_VERIFICATION_REQUIRED: 'phone'
 };
 
 const apiCodeMessageKey: Record<string, string> = {
@@ -116,7 +125,8 @@ const apiCodeMessageKey: Record<string, string> = {
   CATEGORY_SUBCATEGORY_REQUIRED: 'fieldSubcategoryRequired',
   CATEGORY_NOT_FOUND: 'fieldCategoryRequired',
   MODEL_YEAR_REQUIRED: 'fieldModelYearRequired',
-  MODEL_YEAR_INVALID: 'fieldModelYearRequired'
+  MODEL_YEAR_INVALID: 'fieldModelYearRequired',
+  PHONE_VERIFICATION_REQUIRED: 'PHONE_VERIFICATION_REQUIRED'
 };
 
 export function getApiCodeFieldErrors(error: unknown, messages: ErrorMessages): Record<string, string> {

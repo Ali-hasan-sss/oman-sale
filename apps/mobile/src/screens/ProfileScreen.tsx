@@ -366,8 +366,7 @@ export function ProfileScreen({ onLogin, onManageStore, onCreateStore }: Profile
               <AppText key={credit.planId} style={[styles.freeCreditItem, textAlign]}>
                 {t.profile.freeAdsItem
                   .replace('{count}', String(credit.remaining))
-                  .replace('{plan}', locale === 'en' ? credit.nameEn : credit.nameAr)
-                  .replace('{days}', String(credit.durationDays))}
+                  .replace('{plan}', locale === 'en' ? credit.nameEn : credit.nameAr)}
               </AppText>
             ))}
           </View>

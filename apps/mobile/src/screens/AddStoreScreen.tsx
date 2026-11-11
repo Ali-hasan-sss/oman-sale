@@ -1,17 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Keyboard, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import type { ScrollView as ScrollViewType } from 'react-native';
 
 import { AppText } from '../components/AppText';
 import { AppTextInput } from '../components/AppTextInput';
 import { ErrorNotice } from '../components/ErrorNotice';
+import { KeyboardAwareScrollView } from '../components/KeyboardAwareScrollView';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { StoreBrandingPicker } from '../components/vertex/StoreBrandingPicker';
 import { useScreenInsets } from '../hooks/use-screen-insets';
 import { useI18n } from '../i18n';
 import { rowDirection } from '../lib/layout-direction';
 import { buildCategoryTree } from '../lib/category-tree';
-import { resolveApiErrorMessage } from '../lib/api-errors';
+import { getApiCodeFieldErrors, getValidationFieldErrors, resolveApiErrorMessage } from '../lib/api-errors';
 import { openWebPaymentPage } from '../lib/open-external-web';
 import { getWilayahsForGovernorate, omanGovernorates } from '../lib/oman-locations';
 import { formatPlanVatBreakdown } from '../lib/plan-pricing';
@@ -38,6 +40,28 @@ type AddStoreScreenProps = {
 
 function FieldLabel({ children, isRtl }: { children: string; isRtl: boolean }) {
   return <AppText style={[styles.fieldLabel, isRtl ? styles.rtl : styles.ltr]}>{children}</AppText>;
+}
+
+const STORE_FIELD_ORDER = [
+  'rootCategoryId',
+  'storeTypeId',
+  'city',
+  'wilayah',
+  'planId',
+  'nameAr',
+  'nameEn',
+  'phone',
+  'nationalId',
+  'commercialRegistrationNumber'
+] as const;
+
+function summarizeFieldErrors(errors: Record<string, string>, fallback: string) {
+  const unique = [...new Set(Object.values(errors).filter(Boolean))];
+  return unique.length > 0 ? unique.join('\n') : fallback;
+}
+
+function firstInvalidField(errors: Record<string, string>) {
+  return STORE_FIELD_ORDER.find((field) => errors[field]) ?? Object.keys(errors)[0];
 }
 
 export function AddStoreScreen({ onCreated, onAlreadyHasStore }: AddStoreScreenProps) {
@@ -67,7 +91,11 @@ export function AddStoreScreen({ onCreated, onAlreadyHasStore }: AddStoreScreenP
   const [nationalId, setNationalId] = useState('');
   const [commercialRegistrationNumber, setCommercialRegistrationNumber] = useState('');
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const scrollViewRef = useRef<ScrollViewType>(null);
+  const contentRef = useRef<View>(null);
+  const fieldNodes = useRef<Partial<Record<string, View | null>>>({});
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittingMode, setSubmittingMode] = useState<'trial' | 'plan' | null>(null);
@@ -128,22 +156,76 @@ export function AddStoreScreen({ onCreated, onAlreadyHasStore }: AddStoreScreenP
       .finally(() => setIsLoadingPlans(false));
   }, [rootCategoryId, text.loadError]);
 
-  const isFormComplete = Boolean(
-    nameAr.trim().length >= 2 &&
-      nameEn.trim().length >= 2 &&
-      phone.trim() &&
-      nationalId.trim().length >= 5 &&
-      rootCategoryId &&
-      storeTypeId &&
-      city &&
-      wilayah &&
-      planId &&
-      (businessType !== 'COMMERCIAL' || commercialRegistrationNumber.trim())
+  const scrollToField = useCallback((field?: string) => {
+    Keyboard.dismiss();
+
+    const runScroll = () => {
+      const node = (field && fieldNodes.current[field]) || null;
+      const content = contentRef.current;
+      if (!node || !content) {
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+        return;
+      }
+
+      content.measureInWindow((_contentX, contentY) => {
+        node.measureInWindow((_fieldX, fieldY) => {
+          scrollViewRef.current?.scrollTo({
+            y: Math.max(fieldY - contentY - 12, 0),
+            animated: true
+          });
+        });
+      });
+    };
+
+    requestAnimationFrame(runScroll);
+    setTimeout(runScroll, 80);
+    setTimeout(runScroll, 320);
+  }, []);
+
+  const showFieldErrors = useCallback(
+    (errors: Record<string, string>) => {
+      setFieldErrors(errors);
+      setError(summarizeFieldErrors(errors, t.errors.VALIDATION_FAILED));
+      scrollToField(firstInvalidField(errors));
+    },
+    [scrollToField, t.errors.VALIDATION_FAILED]
   );
 
+  const clearFieldError = (field: string) => {
+    setFieldErrors((current) => {
+      if (!current[field]) return current;
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+  };
+
+  const collectFieldErrors = () => {
+    const errors: Record<string, string> = {};
+    if (!rootCategoryId) errors.rootCategoryId = t.errors.fieldCategoryRequired;
+    if (!storeTypeId) errors.storeTypeId = t.errors.fieldStoreType;
+    if (!city) errors.city = t.errors.fieldCityRequired;
+    else if (!wilayah) errors.wilayah = t.errors.fieldWilayahRequired;
+    if (!planId) errors.planId = t.errors.fieldStorePlan;
+    if (nameAr.trim().length < 2) errors.nameAr = t.errors.fieldStoreNameAr;
+    if (nameEn.trim().length < 2) errors.nameEn = t.errors.fieldStoreNameEn;
+    if (phone.trim().length < 6) errors.phone = t.errors.fieldStorePhone;
+    if (nationalId.trim().length < 5) errors.nationalId = t.errors.fieldStoreNationalId;
+    if (businessType === 'COMMERCIAL' && commercialRegistrationNumber.trim().length < 3) {
+      errors.commercialRegistrationNumber = t.errors.fieldStoreCr;
+    }
+    return errors;
+  };
+
   const submit = async (activationMode: 'trial' | 'plan') => {
-    if (!accessToken || !isFormComplete) return;
+    if (!accessToken) return;
+    const nextFieldErrors = collectFieldErrors();
+    if (Object.keys(nextFieldErrors).length > 0) {
+      showFieldErrors(nextFieldErrors);
+      return;
+    }
     setError('');
+    setFieldErrors({});
     setIsSubmitting(true);
     setSubmittingMode(activationMode);
     try {
@@ -180,7 +262,17 @@ export function AddStoreScreen({ onCreated, onAlreadyHasStore }: AddStoreScreenP
 
       onCreated?.();
     } catch (submitError) {
-      setError(resolveApiErrorMessage(submitError, t.errors, text.createError));
+      const apiFieldErrors = {
+        ...getApiCodeFieldErrors(submitError, t.errors),
+        ...getValidationFieldErrors(submitError, t.errors)
+      };
+      if (Object.keys(apiFieldErrors).length > 0) {
+        showFieldErrors(apiFieldErrors);
+      } else {
+        setFieldErrors({});
+        setError(resolveApiErrorMessage(submitError, t.errors, text.createError));
+        scrollToField();
+      }
     } finally {
       setIsSubmitting(false);
       setSubmittingMode(null);
@@ -204,7 +296,12 @@ export function AddStoreScreen({ onCreated, onAlreadyHasStore }: AddStoreScreenP
   }
 
   return (
-    <ScrollView contentContainerStyle={[styles.content, { paddingBottom: scrollBottomPadding }]} showsVerticalScrollIndicator={false}>
+    <KeyboardAwareScrollView
+      ref={scrollViewRef}
+      contentContainerStyle={{ paddingBottom: scrollBottomPadding }}
+      showsVerticalScrollIndicator={false}
+    >
+      <View ref={contentRef} collapsable={false} style={styles.content}>
       <View style={[styles.headerRow, rowDirection(isRtl)]}>
         <View style={styles.headerIcon}>
           <Ionicons name="storefront" size={22} color={colors.brandDark} />
@@ -220,32 +317,69 @@ export function AddStoreScreen({ onCreated, onAlreadyHasStore }: AddStoreScreenP
       <View style={styles.section}>
         <AppText style={[styles.sectionTitle, textAlign]}>{text.classificationAndLocation}</AppText>
 
-        <FieldLabel isRtl={isRtl}>{text.category}</FieldLabel>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.chips, rowDirection(isRtl)]}>
-          {rootCategories.map((category) => {
-            const active = category.id === rootCategoryId;
-            const label = locale === 'en' ? category.nameEn || category.name : category.nameAr || category.name;
-            return (
-              <Pressable key={category.id} style={[styles.chip, active && styles.chipActive]} onPress={() => setRootCategoryId(category.id)}>
-                <AppText style={[styles.chipText, active && styles.chipTextActive]}>{label}</AppText>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+        <View
+          collapsable={false}
+          ref={(node) => {
+            fieldNodes.current.rootCategoryId = node;
+          }}
+        >
+          <FieldLabel isRtl={isRtl}>{text.category}</FieldLabel>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.chips, rowDirection(isRtl)]}>
+            {rootCategories.map((category) => {
+              const active = category.id === rootCategoryId;
+              const label = locale === 'en' ? category.nameEn || category.name : category.nameAr || category.name;
+              return (
+                <Pressable
+                  key={category.id}
+                  style={[styles.chip, active && styles.chipActive, fieldErrors.rootCategoryId ? styles.chipError : undefined]}
+                  onPress={() => {
+                    setRootCategoryId(category.id);
+                    clearFieldError('rootCategoryId');
+                    clearFieldError('planId');
+                  }}
+                >
+                  <AppText style={[styles.chipText, active && styles.chipTextActive]}>{label}</AppText>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+          {fieldErrors.rootCategoryId ? <AppText style={[styles.fieldError, textAlign]}>{fieldErrors.rootCategoryId}</AppText> : null}
+        </View>
 
-        <FieldLabel isRtl={isRtl}>{text.storeType}</FieldLabel>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.chips, rowDirection(isRtl)]}>
-          {storeTypes.map((storeType) => {
-            const active = storeType.id === storeTypeId;
-            const label = locale === 'en' ? storeType.nameEn : storeType.nameAr;
-            return (
-              <Pressable key={storeType.id} style={[styles.chip, active && styles.chipActive]} onPress={() => setStoreTypeId(storeType.id)}>
-                <AppText style={[styles.chipText, active && styles.chipTextActive]}>{label}</AppText>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+        <View
+          collapsable={false}
+          ref={(node) => {
+            fieldNodes.current.storeTypeId = node;
+          }}
+        >
+          <FieldLabel isRtl={isRtl}>{text.storeType}</FieldLabel>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.chips, rowDirection(isRtl)]}>
+            {storeTypes.map((storeType) => {
+              const active = storeType.id === storeTypeId;
+              const label = locale === 'en' ? storeType.nameEn : storeType.nameAr;
+              return (
+                <Pressable
+                  key={storeType.id}
+                  style={[styles.chip, active && styles.chipActive, fieldErrors.storeTypeId ? styles.chipError : undefined]}
+                  onPress={() => {
+                    setStoreTypeId(storeType.id);
+                    clearFieldError('storeTypeId');
+                  }}
+                >
+                  <AppText style={[styles.chipText, active && styles.chipTextActive]}>{label}</AppText>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+          {fieldErrors.storeTypeId ? <AppText style={[styles.fieldError, textAlign]}>{fieldErrors.storeTypeId}</AppText> : null}
+        </View>
 
+        <View
+          collapsable={false}
+          ref={(node) => {
+            fieldNodes.current.city = node;
+          }}
+        >
         <FieldLabel isRtl={isRtl}>{text.city}</FieldLabel>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.chips, rowDirection(isRtl)]}>
           {omanGovernorates.map((cityOption) => {
@@ -254,10 +388,12 @@ export function AddStoreScreen({ onCreated, onAlreadyHasStore }: AddStoreScreenP
             return (
               <Pressable
                 key={cityOption.value}
-                style={[styles.chip, active && styles.chipActive]}
+                style={[styles.chip, active && styles.chipActive, fieldErrors.city ? styles.chipError : undefined]}
                 onPress={() => {
                   setCity(cityOption.value);
                   setWilayah('');
+                  clearFieldError('city');
+                  clearFieldError('wilayah');
                 }}
               >
                 <AppText style={[styles.chipText, active && styles.chipTextActive]}>{label}</AppText>
@@ -265,26 +401,47 @@ export function AddStoreScreen({ onCreated, onAlreadyHasStore }: AddStoreScreenP
             );
           })}
         </ScrollView>
+        {fieldErrors.city ? <AppText style={[styles.fieldError, textAlign]}>{fieldErrors.city}</AppText> : null}
+        </View>
 
         {city ? (
-          <>
+          <View
+            collapsable={false}
+            ref={(node) => {
+              fieldNodes.current.wilayah = node;
+            }}
+          >
             <FieldLabel isRtl={isRtl}>{text.wilayah}</FieldLabel>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.chips, rowDirection(isRtl)]}>
               {wilayahOptions.map((wilayahOption) => {
                 const active = wilayahOption.value === wilayah;
                 const label = locale === 'en' ? wilayahOption.en : wilayahOption.ar;
                 return (
-                  <Pressable key={wilayahOption.value} style={[styles.chip, active && styles.chipActive]} onPress={() => setWilayah(wilayahOption.value)}>
+                  <Pressable
+                  key={wilayahOption.value}
+                  style={[styles.chip, active && styles.chipActive, fieldErrors.wilayah ? styles.chipError : undefined]}
+                  onPress={() => {
+                    setWilayah(wilayahOption.value);
+                    clearFieldError('wilayah');
+                  }}
+                >
                     <AppText style={[styles.chipText, active && styles.chipTextActive]}>{label}</AppText>
                   </Pressable>
                 );
               })}
             </ScrollView>
-          </>
+            {fieldErrors.wilayah ? <AppText style={[styles.fieldError, textAlign]}>{fieldErrors.wilayah}</AppText> : null}
+          </View>
         ) : null}
       </View>
 
-      <View style={styles.section}>
+      <View
+        style={styles.section}
+        collapsable={false}
+        ref={(node) => {
+          fieldNodes.current.planId = node;
+        }}
+      >
         <AppText style={[styles.sectionTitle, textAlign]}>{text.plan}</AppText>
         {!rootCategoryId ? (
           <AppText style={[styles.empty, textAlign]}>{text.selectCategoryFirst}</AppText>
@@ -297,7 +454,14 @@ export function AddStoreScreen({ onCreated, onAlreadyHasStore }: AddStoreScreenP
             {plans.map((plan) => {
               const active = planId === plan.id;
               return (
-                <Pressable key={plan.id} style={[styles.planCard, active && styles.planCardActive]} onPress={() => setPlanId(plan.id)}>
+                <Pressable
+                  key={plan.id}
+                  style={[styles.planCard, active && styles.planCardActive, fieldErrors.planId ? styles.chipError : undefined]}
+                  onPress={() => {
+                    setPlanId(plan.id);
+                    clearFieldError('planId');
+                  }}
+                >
                   <View style={[styles.planHeader, rowDirection(isRtl)]}>
                     <AppText style={styles.planTitle}>{locale === 'en' ? plan.nameEn : plan.nameAr}</AppText>
                     {plan.trialAvailable ? (
@@ -348,6 +512,7 @@ export function AddStoreScreen({ onCreated, onAlreadyHasStore }: AddStoreScreenP
             ) : null}
           </>
         )}
+        {fieldErrors.planId ? <AppText style={[styles.fieldError, textAlign]}>{fieldErrors.planId}</AppText> : null}
       </View>
 
       <View style={styles.section}>
@@ -355,11 +520,41 @@ export function AddStoreScreen({ onCreated, onAlreadyHasStore }: AddStoreScreenP
 
         <StoreBrandingPicker logoUrl={logoUrl} coverUrl={coverUrl} onLogoChange={setLogoUrl} onCoverChange={setCoverUrl} />
 
-        <FieldLabel isRtl={isRtl}>{text.nameAr}</FieldLabel>
-        <AppTextInput value={nameAr} onChangeText={setNameAr} style={[styles.input, inputAlign]} />
+        <View
+          collapsable={false}
+          ref={(node) => {
+            fieldNodes.current.nameAr = node;
+          }}
+        >
+          <FieldLabel isRtl={isRtl}>{text.nameAr}</FieldLabel>
+          <AppTextInput
+            value={nameAr}
+            onChangeText={(value) => {
+              setNameAr(value);
+              clearFieldError('nameAr');
+            }}
+            style={[styles.input, inputAlign, fieldErrors.nameAr ? styles.inputError : undefined]}
+          />
+          {fieldErrors.nameAr ? <AppText style={[styles.fieldError, textAlign]}>{fieldErrors.nameAr}</AppText> : null}
+        </View>
 
-        <FieldLabel isRtl={isRtl}>{text.nameEn}</FieldLabel>
-        <AppTextInput value={nameEn} onChangeText={setNameEn} style={[styles.input, inputAlign]} />
+        <View
+          collapsable={false}
+          ref={(node) => {
+            fieldNodes.current.nameEn = node;
+          }}
+        >
+          <FieldLabel isRtl={isRtl}>{text.nameEn}</FieldLabel>
+          <AppTextInput
+            value={nameEn}
+            onChangeText={(value) => {
+              setNameEn(value);
+              clearFieldError('nameEn');
+            }}
+            style={[styles.input, inputAlign, fieldErrors.nameEn ? styles.inputError : undefined]}
+          />
+          {fieldErrors.nameEn ? <AppText style={[styles.fieldError, textAlign]}>{fieldErrors.nameEn}</AppText> : null}
+        </View>
 
         <FieldLabel isRtl={isRtl}>{text.bioAr}</FieldLabel>
         <AppTextInput value={bioAr} onChangeText={setBioAr} multiline style={[styles.input, styles.multiline, inputAlign]} />
@@ -380,28 +575,71 @@ export function AddStoreScreen({ onCreated, onAlreadyHasStore }: AddStoreScreenP
           onPress={() => {
             setBusinessType('HOME');
             setCommercialRegistrationNumber('');
+            clearFieldError('commercialRegistrationNumber');
           }}
         >
           <AppText style={[styles.choiceTitle, textAlign]}>{text.homeBusiness}</AppText>
           <AppText style={[styles.choiceHint, textAlign]}>{text.homeBusinessHint}</AppText>
         </Pressable>
 
-        <FieldLabel isRtl={isRtl}>{text.phone}</FieldLabel>
-        <AppTextInput value={phone} onChangeText={setPhone} keyboardType="phone-pad" style={[styles.input, inputAlign]} />
+        <View
+          collapsable={false}
+          ref={(node) => {
+            fieldNodes.current.phone = node;
+          }}
+        >
+          <FieldLabel isRtl={isRtl}>{text.phone}</FieldLabel>
+          <AppTextInput
+            value={phone}
+            onChangeText={(value) => {
+              setPhone(value);
+              clearFieldError('phone');
+            }}
+            keyboardType="phone-pad"
+            style={[styles.input, inputAlign, fieldErrors.phone ? styles.inputError : undefined]}
+          />
+          {fieldErrors.phone ? <AppText style={[styles.fieldError, textAlign]}>{fieldErrors.phone}</AppText> : null}
+        </View>
 
-        <FieldLabel isRtl={isRtl}>{text.nationalId}</FieldLabel>
-        <AppText style={[styles.hint, textAlign]}>{text.nationalIdHint}</AppText>
-        <AppTextInput value={nationalId} onChangeText={setNationalId} style={[styles.input, inputAlign]} />
+        <View
+          collapsable={false}
+          ref={(node) => {
+            fieldNodes.current.nationalId = node;
+          }}
+        >
+          <FieldLabel isRtl={isRtl}>{text.nationalId}</FieldLabel>
+          <AppText style={[styles.hint, textAlign]}>{text.nationalIdHint}</AppText>
+          <AppTextInput
+            value={nationalId}
+            onChangeText={(value) => {
+              setNationalId(value);
+              clearFieldError('nationalId');
+            }}
+            style={[styles.input, inputAlign, fieldErrors.nationalId ? styles.inputError : undefined]}
+          />
+          {fieldErrors.nationalId ? <AppText style={[styles.fieldError, textAlign]}>{fieldErrors.nationalId}</AppText> : null}
+        </View>
 
         {businessType === 'COMMERCIAL' ? (
-          <>
+          <View
+            collapsable={false}
+            ref={(node) => {
+              fieldNodes.current.commercialRegistrationNumber = node;
+            }}
+          >
             <FieldLabel isRtl={isRtl}>{text.crNumber}</FieldLabel>
             <AppTextInput
               value={commercialRegistrationNumber}
-              onChangeText={setCommercialRegistrationNumber}
-              style={[styles.input, inputAlign]}
+              onChangeText={(value) => {
+                setCommercialRegistrationNumber(value);
+                clearFieldError('commercialRegistrationNumber');
+              }}
+              style={[styles.input, inputAlign, fieldErrors.commercialRegistrationNumber ? styles.inputError : undefined]}
             />
-          </>
+            {fieldErrors.commercialRegistrationNumber ? (
+              <AppText style={[styles.fieldError, textAlign]}>{fieldErrors.commercialRegistrationNumber}</AppText>
+            ) : null}
+          </View>
         ) : null}
 
         {selectedPlan ? (
@@ -425,7 +663,7 @@ export function AddStoreScreen({ onCreated, onAlreadyHasStore }: AddStoreScreenP
             label={submittingMode === 'trial' ? text.submitting : text.submitTrial}
             onPress={() => void submit('trial')}
             loading={isSubmitting && submittingMode === 'trial'}
-            disabled={!isFormComplete || isSubmitting}
+            disabled={isSubmitting}
             variant="soft"
             style={styles.submit}
           />
@@ -436,11 +674,12 @@ export function AddStoreScreen({ onCreated, onAlreadyHasStore }: AddStoreScreenP
           }
           onPress={() => void submit('plan')}
           loading={isSubmitting && submittingMode === 'plan'}
-          disabled={!isFormComplete || isSubmitting}
+          disabled={isSubmitting}
           style={styles.submit}
         />
       </View>
-    </ScrollView>
+      </View>
+    </KeyboardAwareScrollView>
   );
 }
 
@@ -486,6 +725,9 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: colors.brand, borderColor: colors.brand },
   chipText: { fontWeight: '700', color: colors.ink },
   chipTextActive: { color: '#fff' },
+  chipError: { borderColor: colors.danger },
+  inputError: { borderColor: colors.danger },
+  fieldError: { marginTop: 4, marginBottom: 6, color: colors.danger, fontSize: 13, fontWeight: '600' },
   planCard: { borderWidth: 1, borderColor: colors.line, borderRadius: radius.lg, padding: 12, marginBottom: 8 },
   planCardActive: { borderColor: colors.brand, backgroundColor: colors.brandSoft },
   planHeader: { alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 },

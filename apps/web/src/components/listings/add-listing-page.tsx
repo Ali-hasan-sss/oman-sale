@@ -54,7 +54,6 @@ type CategoryFilter = {
 type PromotionCredit = {
   planId: string;
   remaining: number;
-  durationDays: number;
   nameAr?: string;
   nameEn?: string;
 };
@@ -127,7 +126,7 @@ const labels = {
     normalDescription: 'مجاني',
     promotionPlansEmpty: 'لا توجد خطط ترويج متاحة حالياً.',
     free: 'مجاني',
-    freePlanCredit: 'مجاني لك: متبقي {count} لمدة {days} يوم',
+    freePlanCredit: 'مجاني لك: متبقي {count}',
     freeCreditNotCharged: 'هذه الخطة مجانية لك، ولن يتم فتح الدفع. أعد المحاولة.',
     duration: 'مدة الترويج',
     oneWeek: 'أسبوع واحد',
@@ -186,7 +185,7 @@ const labels = {
     normalDescription: 'Free',
     promotionPlansEmpty: 'No promotion plans are available right now.',
     free: 'Free',
-    freePlanCredit: 'Free for you: {count} left, {days} days',
+    freePlanCredit: 'Free for you: {count} left',
     freeCreditNotCharged: 'This plan is free for you, so payment will not open. Please try again.',
     duration: 'Promotion duration',
     oneWeek: 'One week',
@@ -490,7 +489,7 @@ export function AddListingPage() {
           {
             ad: adPayload,
             planId: selectedPlan.id,
-            days: creditForPlan?.durationDays ?? duration
+            days: duration
           },
           { headers: authHeaders, params: { locale } }
         );
@@ -836,7 +835,7 @@ export function AddListingPage() {
                   color={plan.color}
                   basePrice={credit ? 0 : getPlanPrice(plan, duration)}
                   freeLabel={text.free}
-                  note={credit ? formatFreeCredit(text.freePlanCredit, credit.remaining, credit.durationDays) : undefined}
+                  note={credit ? formatFreeCredit(text.freePlanCredit, credit.remaining) : undefined}
                   vatShort={text.vatShort}
                   locale={locale}
                   onClick={() => setSelectedPlanId(plan.id)}
@@ -853,7 +852,7 @@ export function AddListingPage() {
 
             {selectedPlan && selectedCredit ? (
               <p className="mb-6 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-bold text-green-800">
-                {formatFreeCredit(text.freePlanCredit, selectedCredit.remaining, selectedCredit.durationDays)}
+                {formatFreeCredit(text.freePlanCredit, selectedCredit.remaining)}
               </p>
             ) : null}
 
@@ -975,8 +974,8 @@ function PublishSourceCard({
   );
 }
 
-function formatFreeCredit(template: string, count: number, days: number) {
-  return template.replace('{count}', String(count)).replace('{days}', String(days));
+function formatFreeCredit(template: string, count: number) {
+  return template.replace('{count}', String(count));
 }
 
 function PlanCard({

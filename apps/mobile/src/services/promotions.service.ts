@@ -16,13 +16,12 @@ export type PromotionPlan = {
 export type PromotionCredit = {
   planId: string;
   remaining: number;
-  durationDays: number;
   nameAr: string;
   nameEn: string;
 };
 
-export function formatFreeCredit(template: string, count: number, days: number) {
-  return template.replace('{count}', String(count)).replace('{days}', String(days));
+export function formatFreeCredit(template: string, count: number) {
+  return template.replace('{count}', String(count));
 }
 
 export async function fetchPromotionCredits() {

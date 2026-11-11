@@ -25,7 +25,6 @@ type PromotionPlan = {
   color?: string | null;
   isActive: boolean;
   freeAdsForNewUsers?: number;
-  freeAdDurationDays?: number;
 };
 
 type PromotionFormState = {
@@ -43,7 +42,6 @@ type PromotionFormState = {
   color: string;
   isActive: boolean;
   freeAdsForNewUsers: string;
-  freeAdDurationDays: string;
 };
 
 type PromotionFormErrors = Partial<Record<keyof PromotionFormState, string>>;
@@ -62,8 +60,7 @@ const initialForm: PromotionFormState = {
   badgeLabel: '',
   color: '#168c4e',
   isActive: true,
-  freeAdsForNewUsers: '0',
-  freeAdDurationDays: '7'
+  freeAdsForNewUsers: '0'
 };
 
 export function AdminPromotionsManagement() {
@@ -114,7 +111,6 @@ export function AdminPromotionsManagement() {
     if (!Number.isInteger(Number(form.priorityScore)) || Number(form.priorityScore) < 0) nextErrors.priorityScore = m.admin.requiredField;
     if (!Number.isInteger(Number(form.dailyImpressions)) || Number(form.dailyImpressions) < 1) nextErrors.dailyImpressions = m.admin.requiredField;
     if (!Number.isInteger(Number(form.freeAdsForNewUsers)) || Number(form.freeAdsForNewUsers) < 0) nextErrors.freeAdsForNewUsers = m.admin.requiredField;
-    if (!Number.isInteger(Number(form.freeAdDurationDays)) || Number(form.freeAdDurationDays) < 1) nextErrors.freeAdDurationDays = m.admin.requiredField;
 
     setFormErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
@@ -150,8 +146,7 @@ export function AdminPromotionsManagement() {
       badgeLabel: plan.badgeLabel ?? '',
       color: plan.color ?? '#168c4e',
       isActive: plan.isActive,
-      freeAdsForNewUsers: String(plan.freeAdsForNewUsers ?? 0),
-      freeAdDurationDays: String(plan.freeAdDurationDays ?? 7)
+      freeAdsForNewUsers: String(plan.freeAdsForNewUsers ?? 0)
     });
     setFormErrors({});
     setFormModalOpen(true);
@@ -177,8 +172,7 @@ export function AdminPromotionsManagement() {
       badgeLabel: form.badgeLabel || undefined,
       color: form.color || undefined,
       isActive: form.isActive,
-      freeAdsForNewUsers: Number(form.freeAdsForNewUsers),
-      freeAdDurationDays: Number(form.freeAdDurationDays)
+      freeAdsForNewUsers: Number(form.freeAdsForNewUsers)
     };
 
     try {
@@ -455,16 +449,6 @@ export function AdminPromotionsManagement() {
                   step="1"
                   value={form.freeAdsForNewUsers}
                   onChange={(event) => setForm((current) => ({ ...current, freeAdsForNewUsers: event.target.value }))}
-                  className={inputClass}
-                />
-              </Field>
-              <Field label={m.admin.freeAdDurationDays} labelHint={m.admin.freeAdDurationDaysHint} error={formErrors.freeAdDurationDays}>
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={form.freeAdDurationDays}
-                  onChange={(event) => setForm((current) => ({ ...current, freeAdDurationDays: event.target.value }))}
                   className={inputClass}
                 />
               </Field>

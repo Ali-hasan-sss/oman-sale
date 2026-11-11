@@ -74,7 +74,7 @@ type PromotionPlan = {
   color?: string | null;
 };
 
-const fallbackImage = 'https://images.unsplash.com/photo-1521791136064-7986c2920216?w=600&h=400&fit=crop';
+const fallbackImage = '/logo.png';
 
 const labels = {
   ar: {
@@ -115,7 +115,7 @@ const labels = {
     promoteNow: 'ترقية الآن',
     vatShort: 'ضريبة القيمة المضافة',
     free: 'مجاني',
-    freePlanCredit: 'مجاني لك: متبقي {count} لمدة {days} يوم',
+    freePlanCredit: 'مجاني لك: متبقي {count}',
     confirmDeleteTitle: 'تأكيد حذف الإعلان',
     confirmDeleteDescription: 'سيتم حذف الإعلان من حسابك ولن يظهر للمستخدمين بعد ذلك. هل تريد المتابعة؟',
     confirmDeleteAction: 'حذف الإعلان',
@@ -166,7 +166,7 @@ const labels = {
     promoteNow: 'Promote now',
     vatShort: 'VAT',
     free: 'Free',
-    freePlanCredit: 'Free for you: {count} left, {days} days',
+    freePlanCredit: 'Free for you: {count} left',
     confirmDeleteTitle: 'Confirm listing deletion',
     confirmDeleteDescription: 'This listing will be removed from your account and will no longer be visible to users. Do you want to continue?',
     confirmDeleteAction: 'Delete listing',
@@ -437,8 +437,8 @@ function ListingCard({
             items={listing.images}
             alt={listing.title}
             fallbackSrc={fallbackImage}
-            className="h-full w-full rounded-lg"
-            imageClassName="h-full w-full rounded-lg"
+            className="h-full w-full rounded-lg bg-slate-50"
+            imageClassName="h-full w-full rounded-lg bg-slate-50"
           />
         </div>
         <div className="flex-1">
@@ -620,7 +620,7 @@ function PromoteListingModal({
   const [planId, setPlanId] = useState(plans[0]?.id ?? '');
   const [days, setDays] = useState(7);
   const [isSaving, setIsSaving] = useState(false);
-  const [credits, setCredits] = useState<Array<{ planId: string; remaining: number; durationDays: number }>>([]);
+  const [credits, setCredits] = useState<Array<{ planId: string; remaining: number }>>([]);
   const selectedPlan = plans.find((plan) => plan.id === planId);
   const selectedCredit = listing.store?.id
     ? undefined
@@ -629,7 +629,7 @@ function PromoteListingModal({
 
   useEffect(() => {
     api
-      .get<{ data: Array<{ planId: string; remaining: number; durationDays: number }> }>('/promotions/credits', {
+      .get<{ data: Array<{ planId: string; remaining: number }> }>('/promotions/credits', {
         headers: authHeaders
       })
       .then((response) => setCredits(response.data.data ?? []))
@@ -703,7 +703,7 @@ function PromoteListingModal({
                     />
                     {credit ? (
                       <p className="mt-1 text-sm font-bold text-green-700">
-                        {text.freePlanCredit.replace('{count}', String(credit.remaining)).replace('{days}', String(credit.durationDays))}
+                        {text.freePlanCredit.replace('{count}', String(credit.remaining))}
                       </p>
                     ) : null}
                   </div>
@@ -714,7 +714,7 @@ function PromoteListingModal({
         </div>
         {selectedCredit ? (
           <p className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-bold text-green-800">
-            {text.freePlanCredit.replace('{count}', String(selectedCredit.remaining)).replace('{days}', String(selectedCredit.durationDays))}
+            {text.freePlanCredit.replace('{count}', String(selectedCredit.remaining))}
           </p>
         ) : (
         <Field label={text.duration}>
@@ -802,7 +802,9 @@ function formatDate(value: string) {
 
 function getDaysLeft(value?: string | null) {
   if (!value) return null;
-  const diff = new Date(value).getTime() - Date.now();
+  const end = new Date(value);
+  if (Number.isNaN(end.getTime()) || end.getUTCFullYear() >= 9000) return null;
+  const diff = end.getTime() - Date.now();
   return Math.max(0, Math.ceil(diff / (24 * 60 * 60 * 1000)));
 }
 

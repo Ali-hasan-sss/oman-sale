@@ -236,9 +236,9 @@ export class PromotionsRepository {
     });
   }
 
-  activateFreePromotion(input: { adId: string; planId: string; days: number }) {
+  activateFreePromotion(input: { adId: string; planId: string }) {
     const startsAt = new Date();
-    const endsAt = new Date(startsAt.getTime() + input.days * 24 * 60 * 60 * 1000);
+    const endsAt = new Date('9999-12-31T00:00:00.000Z');
 
     return prisma.$transaction(async (tx) => {
       const promotion = await tx.adPromotion.upsert({

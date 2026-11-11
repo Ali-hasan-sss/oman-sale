@@ -108,7 +108,7 @@ const messages: Record<'ar' | 'en', ProfileMessages> = {
     storeExpired: 'اشتراك منتهٍ',
     freeAdsTitle: 'إعلاناتك المجانية',
     freeAdsHint: 'يمكنك نشر هذه الإعلانات دون دفع.',
-    freeAdsItem: 'متبقي {count} من «{plan}» لمدة {days} يوم'
+    freeAdsItem: 'متبقي {count} من «{plan}»'
   },
   en: {
     title: 'My Profile',
@@ -151,7 +151,7 @@ const messages: Record<'ar' | 'en', ProfileMessages> = {
     storeExpired: 'Subscription expired',
     freeAdsTitle: 'Your free ads',
     freeAdsHint: 'You can publish these ads without paying.',
-    freeAdsItem: '{count} «{plan}» left for {days} days'
+    freeAdsItem: '{count} «{plan}» left'
   }
 };
 
@@ -190,7 +190,7 @@ export function ProfilePage() {
     accessStatus: string;
   } | null>(null);
   const [freeCredits, setFreeCredits] = useState<
-    Array<{ planId: string; remaining: number; durationDays: number; nameAr: string; nameEn: string }>
+    Array<{ planId: string; remaining: number; nameAr: string; nameEn: string }>
   >([]);
 
   const inputClass = 'w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:ring-2 focus:ring-green-500';
@@ -232,7 +232,7 @@ export function ProfilePage() {
 
     api
       .get<{
-        data: Array<{ planId: string; remaining: number; durationDays: number; nameAr: string; nameEn: string }>;
+        data: Array<{ planId: string; remaining: number; nameAr: string; nameEn: string }>;
       }>('/promotions/credits', { headers: { Authorization: `Bearer ${token}` } })
       .then((response) => setFreeCredits((response.data.data ?? []).filter((credit) => credit.remaining > 0)))
       .catch(() => setFreeCredits([]));
@@ -403,8 +403,7 @@ export function ProfilePage() {
                 <li key={credit.planId} className="font-bold text-slate-900">
                   {profileMessages.freeAdsItem
                     .replace('{count}', String(credit.remaining))
-                    .replace('{plan}', locale === 'en' ? credit.nameEn : credit.nameAr)
-                    .replace('{days}', String(credit.durationDays))}
+                    .replace('{plan}', locale === 'en' ? credit.nameEn : credit.nameAr)}
                 </li>
               ))}
             </ul>

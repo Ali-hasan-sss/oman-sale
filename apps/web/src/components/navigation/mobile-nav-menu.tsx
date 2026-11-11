@@ -2,7 +2,7 @@
 
 import { Menu, X } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { HeaderAuthAction } from '@/components/auth/user-menu';
 import { HeaderCustomNavButtons } from '@/components/navigation/header-custom-nav-buttons';
@@ -13,9 +13,13 @@ type MobileNavMenuProps = {
   variant?: 'light' | 'hero';
 };
 
+const DRAWER_MS = 320;
+
 export function MobileNavMenu({ variant = 'light' }: MobileNavMenuProps) {
   const { dir, localizedPath, m } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
+  const [rendered, setRendered] = useState(false);
+  const [shown, setShown] = useState(false);
   const buttonClass =
     variant === 'hero'
       ? 'vx-navbtn flex h-11 w-11 items-center justify-center'
@@ -24,6 +28,27 @@ export function MobileNavMenu({ variant = 'light' }: MobileNavMenuProps) {
     variant === 'hero'
       ? 'vx-navbtn px-3 py-2 text-sm'
       : 'rounded-lg border border-gray-300 px-3 py-2 text-sm transition hover:bg-gray-50';
+  const fromEdge = dir === 'rtl' ? '-translate-x-[calc(100%+1.25rem)]' : 'translate-x-[calc(100%+1.25rem)]';
+
+  useEffect(() => {
+    if (isOpen) {
+      setRendered(true);
+      let cancelled = false;
+      const frame = requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (!cancelled) setShown(true);
+        });
+      });
+      return () => {
+        cancelled = true;
+        cancelAnimationFrame(frame);
+      };
+    }
+
+    setShown(false);
+    const timer = window.setTimeout(() => setRendered(false), DRAWER_MS);
+    return () => window.clearTimeout(timer);
+  }, [isOpen]);
 
   return (
     <div className="flex items-center gap-2 md:hidden">
@@ -33,13 +58,20 @@ export function MobileNavMenu({ variant = 'light' }: MobileNavMenuProps) {
         <Menu size={22} />
       </button>
 
-      {isOpen ? (
+      {rendered ? (
         <div className="fixed inset-0 z-[90] md:hidden">
-          <button className="absolute inset-0 bg-black/40" onClick={() => setIsOpen(false)} type="button" aria-label="Close navigation" />
-          <aside
-            className={`absolute top-0 flex h-full w-80 max-w-[85vw] flex-col overflow-hidden bg-white p-5 shadow-2xl ${
-              dir === 'rtl' ? 'right-0' : 'left-0'
+          <button
+            className={`absolute inset-0 bg-black/40 transition-opacity duration-300 motion-reduce:transition-none ${
+              shown ? 'opacity-100' : 'opacity-0'
             }`}
+            onClick={() => setIsOpen(false)}
+            type="button"
+            aria-label="Close navigation"
+          />
+          <aside
+            className={`absolute bottom-4 top-4 flex w-80 max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-3xl bg-white p-5 shadow-2xl ring-1 ring-black/5 transition-transform duration-300 ease-out motion-reduce:transition-none ${
+              dir === 'rtl' ? 'left-4' : 'right-4'
+            } ${shown ? 'translate-x-0' : fromEdge}`}
           >
             <div className="mb-6 flex shrink-0 items-center justify-between">
               <Link href={localizedPath('/')} onClick={() => setIsOpen(false)} className="flex items-center">

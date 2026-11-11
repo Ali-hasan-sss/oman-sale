@@ -49,6 +49,30 @@ export class CheckoutService {
       days: dto.days
     };
 
+    if (!dto.ad.storeId) {
+      const usedCredit = await takeNewUserPromotionCredit(userId, dto.planId);
+      if (usedCredit) {
+        let createdAdId = '';
+        try {
+          const createdAd = await adsService.create(userId, dto.ad);
+          if (!createdAd?.id) throw new ApiError(500, 'Failed to create listing');
+          createdAdId = createdAd.id;
+          const promotion = await promotionsRepository.activateFreePromotion({
+            adId: createdAd.id,
+            planId: dto.planId
+          });
+          eventBus.emit(AppEvents.PROMOTION_ACTIVATED, promotion);
+          return { ad: createdAd, promotion, checkout: { paid: true, usedFreeCredit: true } };
+        } catch (error) {
+          if (createdAdId) {
+            await adsService.deleteForAdmin(createdAdId).catch(() => undefined);
+          }
+          await refundNewUserPromotionCredit(userId, dto.planId);
+          throw error;
+        }
+      }
+    }
+
     if (totalPrice <= 0) {
       const createdAd = await adsService.create(userId, dto.ad);
       if (!createdAd?.id) throw new ApiError(500, 'Failed to create listing');
@@ -59,26 +83,6 @@ export class CheckoutService {
       });
       eventBus.emit(AppEvents.PROMOTION_ACTIVATED, promotion);
       return { ad: createdAd, promotion, checkout: { paid: true } };
-    }
-
-    if (!dto.ad.storeId) {
-      const credit = await takeNewUserPromotionCredit(userId, dto.planId);
-      if (credit) {
-        try {
-          const createdAd = await adsService.create(userId, dto.ad);
-          if (!createdAd?.id) throw new ApiError(500, 'Failed to create listing');
-          const promotion = await promotionsRepository.activateFreePromotion({
-            adId: createdAd.id,
-            planId: dto.planId,
-            days: credit.days
-          });
-          eventBus.emit(AppEvents.PROMOTION_ACTIVATED, promotion);
-          return { ad: createdAd, promotion, checkout: { paid: true, usedFreeCredit: true } };
-        } catch (error) {
-          await refundNewUserPromotionCredit(userId, dto.planId);
-          throw error;
-        }
-      }
     }
 
     const checkout = await startListingPromotionCheckout({

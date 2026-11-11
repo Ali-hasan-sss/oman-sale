@@ -1,4 +1,4 @@
-import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View, type ImageSourcePropType } from 'react-native';
 
 import { AppText } from './AppText';
 import { ListingCoverImage } from './ListingCoverImage';
@@ -16,6 +16,7 @@ type ListingCardProps = {
   featuredLabel: string;
   layout?: 'vertical' | 'horizontal';
   embedded?: boolean;
+  emptyCoverSource?: ImageSourcePropType;
   onPress?: () => void;
   onStorePress?: (slug: string) => void;
 };
@@ -26,6 +27,7 @@ export function ListingCard({
   featuredLabel,
   layout = 'vertical',
   embedded = false,
+  emptyCoverSource,
   onPress,
   onStorePress
 }: ListingCardProps) {
@@ -43,6 +45,7 @@ export function ListingCard({
         <ListingCoverImage
           uri={image}
           variant={isHorizontal ? 'cardHorizontal' : 'card'}
+          fallbackSource={emptyCoverSource}
           style={styles.cover}
         />
         {isFeatured ? (

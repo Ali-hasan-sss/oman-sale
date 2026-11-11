@@ -46,6 +46,8 @@ import { useAuthStore, useListingsStore } from '../stores';
 import { colors, radius, shadow } from '../theme';
 import type { Listing } from '../types';
 
+const platformLogo = require('../../assets/nav-logo.png');
+
 type MyOffersScreenProps = {
   onListingPress: (listingId: string) => void;
   onStorePress?: (slug: string) => void;
@@ -150,6 +152,7 @@ export function MyOffersScreen({ onListingPress, onStorePress }: MyOffersScreenP
                 locale={locale}
                 featuredLabel={t.common.featured}
                 embedded
+                emptyCoverSource={platformLogo}
                 onPress={() => onListingPress(listing.id)}
                 onStorePress={onStorePress}
               />
@@ -483,7 +486,7 @@ function PromoteListingModal({
                 <AppText style={styles.planPrice}>{pricing.main}</AppText>
                 {credit ? (
                   <AppText style={styles.planPrice}>
-                    {formatFreeCredit(t.addOffer.freePlanCredit, credit.remaining, credit.durationDays)}
+                    {formatFreeCredit(t.addOffer.freePlanCredit, credit.remaining)}
                   </AppText>
                 ) : null}
               </Pressable>
@@ -491,7 +494,7 @@ function PromoteListingModal({
           })}
           {selectedCredit ? (
             <AppText style={[styles.fieldLabel, textAlign]}>
-              {formatFreeCredit(t.addOffer.freePlanCredit, selectedCredit.remaining, selectedCredit.durationDays)}
+              {formatFreeCredit(t.addOffer.freePlanCredit, selectedCredit.remaining)}
             </AppText>
           ) : (
           <View style={[styles.chipRow, rowDirection(isRtl)]}>

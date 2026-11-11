@@ -43,34 +43,32 @@ export async function listNewUserPromotionCredits(userId: string) {
     select: {
       planId: true,
       remaining: true,
-      plan: { select: { freeAdDurationDays: true, nameAr: true, nameEn: true } }
+      plan: { select: { nameAr: true, nameEn: true } }
     }
   });
 
   return credits.map((credit) => ({
     planId: credit.planId,
     remaining: credit.remaining,
-    durationDays: Math.max(1, credit.plan.freeAdDurationDays),
     nameAr: credit.plan.nameAr,
     nameEn: credit.plan.nameEn
   }));
 }
 
-/** Decrements one free credit. Returns the promotion length, or null when none remain. */
+/** Decrements one free credit. Returns true when a credit was used. */
 export async function takeNewUserPromotionCredit(userId: string, planId: string) {
   const plan = await prisma.promotionPlan.findFirst({
     where: { id: planId, deletedAt: null, isActive: true },
-    select: { freeAdDurationDays: true }
+    select: { id: true }
   });
-  if (!plan) return null;
+  if (!plan) return false;
 
   const updated = await prisma.userPromotionCredit.updateMany({
     where: { userId, planId, remaining: { gt: 0 } },
     data: { remaining: { decrement: 1 } }
   });
-  if (updated.count !== 1) return null;
 
-  return { days: Math.max(1, plan.freeAdDurationDays) };
+  return updated.count === 1;
 }
 
 export async function refundNewUserPromotionCredit(userId: string, planId: string) {

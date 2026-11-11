@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image, StyleSheet, View, type ImageStyle, type StyleProp, type ViewStyle } from 'react-native';
+import { Image, StyleSheet, View, type ImageSourcePropType, type ImageStyle, type StyleProp, type ViewStyle } from 'react-native';
 
 import { resolveDeviceMediaUrl } from '../lib/media-url';
 import { colors } from '../theme';
@@ -16,14 +16,23 @@ const ICON_SIZE: Record<ListingCoverVariant, number> = {
 type ListingCoverImageProps = {
   uri?: string | null;
   variant?: ListingCoverVariant;
+  fallbackSource?: ImageSourcePropType;
   style?: StyleProp<ViewStyle | ImageStyle>;
 };
 
-export function ListingCoverImage({ uri, variant = 'card', style }: ListingCoverImageProps) {
+export function ListingCoverImage({ uri, variant = 'card', fallbackSource, style }: ListingCoverImageProps) {
   const resolved = resolveDeviceMediaUrl(uri);
   if (resolved) {
     return (
       <Image source={{ uri: resolved }} style={[styles.media, style as StyleProp<ImageStyle>]} resizeMode="cover" />
+    );
+  }
+
+  if (fallbackSource) {
+    return (
+      <View style={[styles.placeholder, style]}>
+        <Image source={fallbackSource} style={styles.fallbackLogo} resizeMode="contain" />
+      </View>
     );
   }
 
@@ -46,5 +55,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.brandSoft
+  },
+  fallbackLogo: {
+    width: '72%',
+    height: '72%'
   }
 });

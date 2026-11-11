@@ -47,20 +47,13 @@ export class PromotionsService {
 
     const totalPrice = getPromotionPlanPrice(plan, dto.days);
 
-    if (totalPrice <= 0) {
-      const promotion = await promotionsRepository.promoteAd(dto);
-      eventBus.emit(AppEvents.PROMOTION_ACTIVATED, promotion);
-      return { promotion, checkout: { paid: true } };
-    }
-
     if (!ad.storeId) {
-      const credit = await takeNewUserPromotionCredit(userId, dto.planId);
-      if (credit) {
+      const usedCredit = await takeNewUserPromotionCredit(userId, dto.planId);
+      if (usedCredit) {
         try {
           const promotion = await promotionsRepository.activateFreePromotion({
             adId: dto.adId,
-            planId: dto.planId,
-            days: credit.days
+            planId: dto.planId
           });
           eventBus.emit(AppEvents.PROMOTION_ACTIVATED, promotion);
           return { promotion, checkout: { paid: true, usedFreeCredit: true } };
@@ -69,6 +62,12 @@ export class PromotionsService {
           throw error;
         }
       }
+    }
+
+    if (totalPrice <= 0) {
+      const promotion = await promotionsRepository.promoteAd(dto);
+      eventBus.emit(AppEvents.PROMOTION_ACTIVATED, promotion);
+      return { promotion, checkout: { paid: true } };
     }
 
     const payload: ListingPromotionIntentPayload = {

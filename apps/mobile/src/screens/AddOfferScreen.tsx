@@ -411,7 +411,7 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
 
       try {
         const checkout = await checkoutPaidListingRequest(
-          { ad: adPayload, planId: selectedPlan.id, days: creditForPlan?.durationDays ?? duration },
+          { ad: adPayload, planId: selectedPlan.id, days: duration },
           locale
         );
         const paymentUrl = checkout.checkout?.paymentUrl;
@@ -932,7 +932,7 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
                           </AppText>
                           {credit ? (
                             <AppText style={[styles.planVat, planCopyAlign(isRtl)]}>
-                              {formatFreeCredit(t.addOffer.freePlanCredit, credit.remaining, credit.durationDays)}
+                              {formatFreeCredit(t.addOffer.freePlanCredit, credit.remaining)}
                             </AppText>
                           ) : null}
                           <AppText style={[styles.planPrice, active && styles.planPriceActive, planCopyAlign(isRtl)]}>
@@ -950,7 +950,7 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
 
                   {selectedPlan && selectedCredit ? (
                     <AppText style={[styles.promotionSubtitle, isRtl ? styles.rtl : styles.ltr]}>
-                      {formatFreeCredit(t.addOffer.freePlanCredit, selectedCredit.remaining, selectedCredit.durationDays)}
+                      {formatFreeCredit(t.addOffer.freePlanCredit, selectedCredit.remaining)}
                     </AppText>
                   ) : null}
 
