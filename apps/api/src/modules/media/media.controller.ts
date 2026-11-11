@@ -17,9 +17,15 @@ export class MediaController {
       res.setHeader('Cache-Control', file.cacheControl);
     }
 
+    const release = () => {
+      file.stream.destroy();
+    };
+    res.on('close', release);
     file.stream.on('error', () => {
       if (!res.headersSent) {
         res.status(404).end();
+      } else {
+        res.destroy();
       }
     });
 

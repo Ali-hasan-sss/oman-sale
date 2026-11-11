@@ -368,7 +368,7 @@ export function AddListingPage() {
   }
 
   useEffect(() => {
-    if (!categoryId || !subcategoryComplete) {
+    if (!categoryId) {
       setCategoryFilters([]);
       setSelectedFilterOptionIds([]);
       return;
@@ -386,7 +386,7 @@ export function AddListingPage() {
       })
       .catch(() => setCategoryFilters([]))
       .finally(() => setIsCategoryFiltersLoading(false));
-  }, [categoryId, locale, subcategoryComplete]);
+  }, [categoryId, locale]);
 
   useEffect(() => {
     hydrateFromStorage();
@@ -450,8 +450,6 @@ export function AddListingPage() {
       return;
     }
 
-    if (!selectedCategory || !subcategoryComplete || !filtersComplete) return;
-
     setError('');
     setMessage('');
     setFieldErrors({});
@@ -461,12 +459,12 @@ export function AddListingPage() {
       const adPayload = {
         title: title.trim(),
         description: description.trim(),
-        type: selectedCategory.type,
+        type: selectedCategory?.type ?? 'PRODUCT',
         price: parseListingPrice(price),
         currency: 'OMR',
         city,
         wilayah,
-        categoryId,
+        ...(selectedCategory ? { categoryId: selectedCategory.id } : {}),
         filterOptionIds: selectedFilterOptionIds,
         ...(isPassengerCarsCategory ? { modelYear: Number(modelYear) } : {}),
         imageUrls,
@@ -632,15 +630,15 @@ export function AddListingPage() {
                 ))
               : null}
 
-            {subcategoryComplete && (categoryFilters.length > 0 || isCategoryFiltersLoading) ? (
+            {categoryId && (categoryFilters.length > 0 || isCategoryFiltersLoading) ? (
               <div className="mt-4 space-y-4">
-                <p className="text-sm font-bold text-gray-700">{text.categoryFilters} *</p>
+                <p className="text-sm font-bold text-gray-700">{text.categoryFilters}</p>
                 {isCategoryFiltersLoading ? (
                   <p className="text-sm text-gray-500">{text.loadingFilters}</p>
                 ) : (
                   categoryFilters.map((filter) => (
                     <div key={filter.id}>
-                      <p className="mb-2 text-sm font-bold text-gray-600">{filter.title} *</p>
+                      <p className="mb-2 text-sm font-bold text-gray-600">{filter.title}</p>
                       <div className="flex flex-wrap gap-2">
                         {filter.options.map((option) => {
                           const active = selectedFilterOptionIds.includes(option.id);
@@ -680,7 +678,7 @@ export function AddListingPage() {
               <p className="mt-2 text-sm font-medium text-red-600">{fieldErrors.filters}</p>
             ) : null}
 
-            {subcategoryComplete && isPassengerCarsCategory ? (
+            {isPassengerCarsCategory ? (
               <div className="mt-4">
                 <p className="mb-2 text-sm font-bold text-gray-600">{text.modelYear}</p>
                 <select

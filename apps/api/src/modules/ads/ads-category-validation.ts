@@ -6,45 +6,48 @@ export const MODEL_YEAR_MIN = 1900;
 export const MODEL_YEAR_MAX = 2028;
 
 export async function assertValidAdCategorySelection(
-  categoryId: string,
+  categoryId: string | null | undefined,
   filterOptionIds: string[],
   modelYear?: number | null
 ) {
+  if (!categoryId) {
+    if (filterOptionIds.length > 0) {
+      throw new ApiError(400, 'Invalid filter option for selected category', 'CATEGORY_FILTER_INVALID');
+    }
+
+    if (modelYear !== undefined && modelYear !== null) {
+      throw new ApiError(400, 'Model year is only allowed for passenger cars', 'MODEL_YEAR_INVALID');
+    }
+
+    return;
+  }
+
   const category = await categoriesRepository.findById(categoryId);
   if (!category || !category.isActive) {
     throw new ApiError(400, 'Category not found', 'CATEGORY_NOT_FOUND');
   }
 
-  const hasChildren = await categoriesRepository.hasChildren(categoryId);
-  if (hasChildren) {
-    throw new ApiError(400, 'Select a subcategory to continue', 'CATEGORY_SUBCATEGORY_REQUIRED');
-  }
-
   const pathIds = await categoriesRepository.collectCategoryPathIds(categoryId);
-  const requiredFilters = await categoriesRepository.listFiltersForPathIds(pathIds, 'ar');
+  const categoryFilters = await categoriesRepository.listFiltersForPathIds(pathIds, 'ar');
 
-  if (requiredFilters.length === 0) return;
-
-  const options = await categoriesRepository.findActiveFilterOptions(filterOptionIds);
-  const optionsByFilter = new Map<string, string>();
-
-  for (const option of options) {
-    if (!requiredFilters.some((filter) => filter.id === option.filterId)) {
+  if (filterOptionIds.length > 0) {
+    const options = await categoriesRepository.findActiveFilterOptions(filterOptionIds);
+    if (options.length !== new Set(filterOptionIds).size) {
       throw new ApiError(400, 'Invalid filter option for selected category', 'CATEGORY_FILTER_INVALID');
     }
 
-    if (optionsByFilter.has(option.filterId)) {
-      throw new ApiError(400, 'Only one option per filter is allowed', 'CATEGORY_FILTER_INVALID');
-    }
+    const optionsByFilter = new Set<string>();
 
-    optionsByFilter.set(option.filterId, option.id);
-  }
+    for (const option of options) {
+      if (!categoryFilters.some((filter) => filter.id === option.filterId)) {
+        throw new ApiError(400, 'Invalid filter option for selected category', 'CATEGORY_FILTER_INVALID');
+      }
 
-  for (const filter of requiredFilters) {
-    if (!optionsByFilter.has(filter.id)) {
-      throw new ApiError(400, 'All category filters are required', 'CATEGORY_FILTER_REQUIRED', {
-        filterId: filter.id
-      });
+      if (optionsByFilter.has(option.filterId)) {
+        throw new ApiError(400, 'Only one option per filter is allowed', 'CATEGORY_FILTER_INVALID');
+      }
+
+      optionsByFilter.add(option.filterId);
     }
   }
 

@@ -300,7 +300,7 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
   }, [locale, loadCategories]);
 
   useEffect(() => {
-    if (!subcategoryComplete || !categoryId) {
+    if (!categoryId) {
       setCategoryFilters([]);
       setSelectedFilterOptionIds([]);
       return;
@@ -323,7 +323,7 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
     return () => {
       cancelled = true;
     };
-  }, [categoryId, locale, subcategoryComplete]);
+  }, [categoryId, locale]);
 
   useEffect(() => {
     plansFetchStartedRef.current = false;
@@ -369,21 +369,16 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
         rootCategoryId,
         subcategoryComplete,
         filtersComplete,
-        requiresModelYear: subcategoryComplete && isPassengerCarsCategory
+        requiresModelYear: isPassengerCarsCategory
       }
     );
-
-    if (subcategoryComplete && isCategoryFiltersLoading) {
-      showFieldErrors({ filters: t.addOffer.loadingFilters });
-      return;
-    }
 
     if (Object.keys(nextFieldErrors).length > 0) {
       showFieldErrors(nextFieldErrors);
       return;
     }
 
-    if (!accessToken || !selectedCategory) return;
+    if (!accessToken) return;
 
     setSubmitError('');
     setFieldErrors({});
@@ -391,12 +386,12 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
     const adPayload = {
       title: title.trim(),
       description: description.trim(),
-      type: selectedCategory.type,
+      type: selectedCategory?.type ?? 'PRODUCT',
       price: parseListingPrice(price),
       currency: 'OMR',
       city,
       wilayah,
-      categoryId,
+      ...(selectedCategory ? { categoryId: selectedCategory.id } : {}),
       imageUrls,
       videoUrl: videoUrl ?? undefined,
       filterOptionIds: selectedFilterOptionIds,
@@ -614,7 +609,7 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
               <AppText style={[styles.fieldError, isRtl ? styles.rtl : styles.ltr]}>{fieldErrors.subcategoryPath}</AppText>
             ) : null}
 
-            {subcategoryComplete && (categoryFilters.length > 0 || isCategoryFiltersLoading) ? (
+            {categoryId && (categoryFilters.length > 0 || isCategoryFiltersLoading) ? (
               <View
                 style={styles.subcategoryBlock}
                 collapsable={false}
@@ -628,7 +623,7 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
                 ) : (
                   categoryFilters.map((filter) => (
                     <View key={filter.id} style={styles.filterGroup}>
-                      <AppText style={[styles.filterTitle, isRtl ? styles.rtl : styles.ltr]}>{`${filter.title} *`}</AppText>
+                      <AppText style={[styles.filterTitle, isRtl ? styles.rtl : styles.ltr]}>{filter.title}</AppText>
                       <View style={[styles.wrapChips, rowDirection(isRtl)]}>
                         {filter.options.map((option) => {
                           const active = selectedFilterOptionIds.includes(option.id);
@@ -665,7 +660,7 @@ export function AddOfferScreen({ onPublished }: AddOfferScreenProps) {
               </View>
             ) : null}
 
-            {subcategoryComplete && isPassengerCarsCategory ? (
+            {isPassengerCarsCategory ? (
               <View
                 style={styles.subcategoryBlock}
                 collapsable={false}

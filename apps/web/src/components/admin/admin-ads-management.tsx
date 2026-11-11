@@ -320,7 +320,7 @@ export function AdminAdsManagement() {
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!form.title.trim() || !form.description.trim() || !form.categoryId) {
+    if (!form.title.trim() || !form.description.trim()) {
       setError(text.formError);
       return;
     }
@@ -336,7 +336,7 @@ export function AdminAdsManagement() {
       area: form.area || undefined,
       contactPhone: form.contactPhone || undefined,
       status: form.status,
-      categoryId: form.categoryId,
+      ...(form.categoryId ? { categoryId: form.categoryId } : { categoryId: null }),
       imageUrls: form.imageUrls,
       videoUrl: form.videoUrl
     };

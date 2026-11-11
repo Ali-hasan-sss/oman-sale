@@ -138,7 +138,7 @@ export type CreateListingPayload = {
   currency?: string;
   city: string;
   wilayah: string;
-  categoryId: string;
+  categoryId?: string;
   imageUrls: string[];
   videoUrl?: string;
   filterOptionIds?: string[];

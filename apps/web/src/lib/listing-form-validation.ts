@@ -33,8 +33,6 @@ export type ListingFormValidationContext = {
   requiresModelYear?: boolean;
 };
 
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
 export function sanitizePriceInput(value: string): string {
   let next = value.replace(/[^\d.]/g, '');
   const firstDot = next.indexOf('.');
@@ -70,18 +68,6 @@ export function validateListingForm(
 
   if (!description) errors.description = messages.descriptionRequired;
   else if (description.length < 10) errors.description = messages.descriptionMin;
-
-  if (!context.rootCategoryId) {
-    errors.categoryId = messages.categoryRequired;
-  } else if (context.subcategoryComplete === false) {
-    errors.subcategoryPath = messages.subcategoryRequired;
-  } else if (!values.categoryId || !uuidPattern.test(values.categoryId)) {
-    errors.categoryId = messages.categoryRequired;
-  }
-
-  if (context.filtersComplete === false) {
-    errors.filters = messages.filterRequired;
-  }
 
   if (context.requiresModelYear) {
     const year = Number(values.modelYear);

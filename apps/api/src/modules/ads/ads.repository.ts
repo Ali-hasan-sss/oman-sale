@@ -268,7 +268,7 @@ export class AdsRepository {
       where: { id: adId, deletedAt: null },
       select: { categoryId: true, city: true }
     });
-    if (!ad) return [];
+    if (!ad?.categoryId) return [];
 
     const now = new Date();
     return prisma.ad.findMany({
@@ -345,7 +345,7 @@ export class AdsRepository {
         isSold: false,
         approvedAt: new Date(),
         userId,
-        categoryId: data.categoryId,
+        categoryId: data.categoryId ?? null,
         ...(data.storeId && { storeId: data.storeId }),
         images: {
           create: [

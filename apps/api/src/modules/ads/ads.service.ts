@@ -102,7 +102,7 @@ export class AdsService {
     if (!ad) throw new ApiError(404, 'Ad not found');
     if (ad.userId !== userId) throw new ApiError(403, 'Only owner can update ad');
 
-    const nextCategoryId = dto.categoryId ?? ad.categoryId;
+    const nextCategoryId = dto.categoryId !== undefined ? dto.categoryId : ad.categoryId;
     const nextFilterOptionIds = dto.filterOptionIds ?? [];
     const nextModelYear = dto.modelYear !== undefined ? dto.modelYear : ad.modelYear;
 
@@ -118,7 +118,7 @@ export class AdsService {
     const ad = await adsRepository.findById(id);
     if (!ad) throw new ApiError(404, 'Ad not found');
 
-    const nextCategoryId = dto.categoryId ?? ad.categoryId;
+    const nextCategoryId = dto.categoryId !== undefined ? dto.categoryId : ad.categoryId;
     const nextFilterOptionIds = dto.filterOptionIds ?? [];
     const nextModelYear = dto.modelYear !== undefined ? dto.modelYear : ad.modelYear;
 

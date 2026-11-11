@@ -1,9 +1,12 @@
 import { randomUUID } from 'node:crypto';
+import dns from 'node:dns';
 import { createReadStream } from 'node:fs';
 import fs from 'node:fs/promises';
+import https from 'node:https';
 import path from 'node:path';
 
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { NodeHttpHandler } from '@smithy/node-http-handler';
 import type { Readable } from 'node:stream';
 
 import { env } from '../../config/env';
@@ -123,12 +126,23 @@ export class S3MediaStorage implements MediaStorage {
       throw new Error('S3 media provider requires AWS_REGION, AWS_S3_BUCKET, AWS_ACCESS_KEY_ID, and AWS_SECRET_ACCESS_KEY');
     }
 
+    dns.setDefaultResultOrder('ipv4first');
     this.client = new S3Client({
       region: env.AWS_REGION,
       credentials: {
         accessKeyId: env.AWS_ACCESS_KEY_ID,
         secretAccessKey: env.AWS_SECRET_ACCESS_KEY
-      }
+      },
+      requestHandler: new NodeHttpHandler({
+        connectionTimeout: 10_000,
+        httpsAgent: new https.Agent({
+          keepAlive: true,
+          maxSockets: 200,
+          lookup: (hostname, options, callback) => {
+            dns.lookup(hostname, { ...options, family: 4 }, callback);
+          }
+        })
+      })
     });
   }
 
