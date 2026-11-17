@@ -45,7 +45,7 @@ export function isAllowedImageReference(value: string): boolean {
 
 export const imageReferenceSchema = z
   .string()
-  .max(2000)
+  .max(1_600_000)
   .refine((value) => isAllowedMediaReference(value, { allowVideo: false }), {
     message: 'Image must be a media reference, URL, or data image'
   });
@@ -64,7 +64,7 @@ export function isAllowedVideoReference(value: string): boolean {
 
 export const videoReferenceSchema = z
   .string()
-  .max(2000)
+  .max(60_000_000)
   .refine(isAllowedVideoReference, { message: 'Video must be a media reference, URL, or data video' });
 
 export function buildS3PublicBaseUrl(bucket: string, region: string): string {

@@ -41,7 +41,20 @@ export class MediaService {
 
     try {
       return await mediaStorage.read(objectKey);
-    } catch {
+    } catch (error) {
+      const metadata =
+        typeof error === 'object' && error && '$metadata' in error
+          ? (error as { $metadata?: { httpStatusCode?: number } }).$metadata
+          : undefined;
+      const status = Number(metadata?.httpStatusCode);
+      const name = typeof error === 'object' && error && 'name' in error ? String((error as { name?: string }).name) : '';
+      const missing = status === 404 || name === 'NoSuchKey' || name === 'NotFound';
+
+      if (!missing) {
+        console.error('[media] failed to stream object', objectKey, name || error);
+        throw new ApiError(503, 'Media temporarily unavailable');
+      }
+
       throw new ApiError(404, 'Media not found');
     }
   }

@@ -44,15 +44,22 @@ export const app = express();
 app.set('trust proxy', env.TRUST_PROXY);
 
 app.use(
-  helmet(
-    env.NODE_ENV === 'development'
-      ? { crossOriginResourcePolicy: { policy: 'cross-origin' } }
-      : undefined
-  )
+  helmet({
+    // Media files are embedded by the website and native WebViews as <img>/<video>.
+    // Helmet's default same-origin CORP makes those responses unusable in production.
+    crossOriginResourcePolicy: { policy: 'cross-origin' }
+  })
 );
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
-app.use(compression());
+app.use(
+  compression({
+    filter: (req, res) => {
+      if (req.path.startsWith('/api/v1/media/files')) return false;
+      return compression.filter(req, res);
+    }
+  })
+);
 app.use(cookieParser());
 
 const thawaniWebhookRouter = Router();
@@ -63,7 +70,7 @@ thawaniWebhookRouter.post(
 );
 app.use('/api/v1/payments', thawaniWebhookRouter);
 
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '12mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(apiRateLimiter);
 app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));

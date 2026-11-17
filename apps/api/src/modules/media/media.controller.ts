@@ -13,6 +13,7 @@ export class MediaController {
     const file = await mediaService.streamObject(objectKey);
 
     res.setHeader('Content-Type', file.contentType);
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     if (file.cacheControl) {
       res.setHeader('Cache-Control', file.cacheControl);
     }
